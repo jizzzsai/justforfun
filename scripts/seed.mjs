@@ -173,7 +173,7 @@ must((await db.from("expert_assignments").insert(assignments)).error, "insert as
 
 must((await db.from("approvals").insert([
   { application_id: appId["AU-2026-007"], president_id: id("pres"), approved: true, approved_amount: 100000, conditions: "Quarterly progress reports required.", created_at: daysAgo(50) },
-]).error), "insert approvals");
+])).error, "insert approvals");
 
 const { data: contracts, error: cErr } = await db.from("contracts").insert([
   { application_id: appId["AU-2026-007"], contract_no: "AU-CT-2026-007", amount: 100000, start_date: ymd(-45), end_date: ymd(320), status: "active", issued_by: id("pres"), issued_at: daysAgo(45) },
@@ -185,11 +185,11 @@ must((await db.from("payments").insert([
   { application_id: appId["AU-2026-007"], contract_id: contractId, instalment: 1, pct: 30, amount: 30000, trigger: "On contract signing",          status: "paid",      due_date: ymd(-44), paid_at: daysAgo(43), processed_by: id("ofm") },
   { application_id: appId["AU-2026-007"], contract_id: contractId, instalment: 2, pct: 40, amount: 40000, trigger: "On approved progress report",   status: "scheduled", due_date: ymd(20) },
   { application_id: appId["AU-2026-007"], contract_id: contractId, instalment: 3, pct: 30, amount: 30000, trigger: "On approved final report",      status: "pending",   due_date: ymd(300) },
-]).error), "insert payments");
+])).error, "insert payments");
 
 must((await db.from("reports").insert([
   { application_id: appId["AU-2026-007"], kind: "progress", summary: "Knowledge-tracing model trained; classroom trial recruiting participants. On schedule.", status: "submitted", submitted_at: daysAgo(5) },
-]).error), "insert reports");
+])).error, "insert reports");
 
 console.log("✓ Seed complete.\n");
 console.log("Demo logins (all use password: " + DEMO_PASSWORD + "):");
