@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=1440" />
+  <title>AU Research Grant Portal · Figma View</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif; }
+    body { background: #f0eee9; }
+
+    /* Each artboard wraps an iframe of the live prototype.
+       We render at native 1280px width and let the canvas scale down. */
+    .ab-frame {
+      width: 100%;
+      height: 100%;
+      border: 0;
+      background: #fff;
+      display: block;
+    }
+
+    /* Small device frame label inside artboards */
+    .ab-tag {
+      position: absolute; top: 12px; left: 12px;
+      background: rgba(255,255,255,0.9);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(0,0,0,0.08);
+      padding: 4px 10px; border-radius: 999px;
+      font-size: 10px; font-weight: 600; letter-spacing: 0.08em;
+      text-transform: uppercase; color: #6b5b3a;
+      z-index: 2; pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React 18 -->
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="design-canvas.jsx"></script>
+
+  <script type="text/babel">
+    // -----------------------------------------------------------------
+    // AU RGMS · Figma-style design canvas
+    //
+    // Each artboard iframes the production prototype at a deep-link hash
+    // so it boots directly to that screen (skip login, jump to page).
+    // -----------------------------------------------------------------
+
+    const PROTO = "AU Research Grant Portal.html";
+    const W = 1280;  // prototype's design width
+
+    // Build the iframe src for a given role + page. The hash makes the
+    // prototype skip login and boot straight to that screen.
+    function src(role, page) {
+      if (!page) return PROTO; // login
+      return `${PROTO}#role=${role}&page=${page}&skipLogin=1`;
+    }
+
+    // Render one artboard. DCSection filters by child.type === DCArtboard,
+    // so we MUST inline DCArtboard (not a wrapper component).
+    function ab({ id, role, page, label, w = W, h = 900, login }) {
+      return (
+        <DCArtboard key={id} id={id} label={label} width={w} height={h}>
+          <iframe
+            className="ab-frame"
+            src={login ? PROTO : src(role, page)}
+            title={label}
+            loading="lazy"
+          />
+        </DCArtboard>
+      );
+    }
+
+    function Canvas() {
+      return (
+        <DesignCanvas>
+          {/* ===== 1. ENTRY ===== */}
+          <DCSection id="entry" title="Sign In · Entry" subtitle="AU-branded login + role selection">
+            {ab({ id: "login", login: true, label: "01 · Login (Researcher selected)", w: 1280, h: 820 })}
+          </DCSection>
+
+          {/* ===== 2. RESEARCHER ===== */}
+          <DCSection id="researcher" title="Researcher Dashboard"
+            subtitle="For AU lecturers submitting and tracking grant applications">
+            {ab({ id: "r-dashboard",    role: "researcher", page: "r-dashboard",    label: "01 · Dashboard Overview" })}
+            {ab({ id: "r-submit",       role: "researcher", page: "r-submit",       label: "02 · Submit Application", h: 1600 })}
+            {ab({ id: "r-applications", role: "researcher", page: "r-applications", label: "03 · My Applications" })}
+            {ab({ id: "r-detail",       role: "researcher", page: "r-detail",       label: "04 · Application Detail", h: 1200 })}
+            {ab({ id: "r-progress",     role: "researcher", page: "r-progress",     label: "05 · Progress Report", h: 1000 })}
+            {ab({ id: "r-final",        role: "researcher", page: "r-final",        label: "06 · Final Report", h: 1000 })}
+            {ab({ id: "r-payments",     role: "researcher", page: "r-payments",     label: "07 · Payment Status", h: 1000 })}
+          </DCSection>
+
+          {/* ===== 3. DEAN ===== */}
+          <DCSection id="dean" title="Dean's Office"
+            subtitle="First screening of new proposals + sign-and-forward queue from committee">
+            {ab({ id: "d-dashboard",     role: "dean", page: "d-dashboard",     label: "01 · Dean Dashboard" })}
+            {ab({ id: "d-screen",        role: "dean", page: "d-screen",        label: "02 · First Screening Queue" })}
+            {ab({ id: "d-screen-detail", role: "dean", page: "d-screen-detail", label: "03 · First Screening · Detail", h: 1100 })}
+            {ab({ id: "d-sign",          role: "dean", page: "d-sign",          label: "04 · Sign & Forward Queue" })}
+            {ab({ id: "d-sign-detail",   role: "dean", page: "d-sign-detail",   label: "05 · Sign & Forward · Detail", h: 1300 })}
+            {ab({ id: "d-history",       role: "dean", page: "d-history",       label: "06 · Decision History" })}
+          </DCSection>
+
+          {/* ===== 4. FACULTY COMMITTEE ===== */}
+          <DCSection id="committee" title="Faculty Academic Committee"
+            subtitle="Scholarly review and recommendation back to the Dean">
+            {ab({ id: "c-dashboard", role: "committee", page: "c-dashboard", label: "01 · Committee Dashboard" })}
+            {ab({ id: "c-queue",     role: "committee", page: "c-queue",     label: "02 · Review Queue" })}
+            {ab({ id: "c-review",    role: "committee", page: "c-review",    label: "03 · Active Review", h: 1400 })}
+            {ab({ id: "c-history",   role: "committee", page: "c-history",   label: "04 · Past Reviews" })}
+          </DCSection>
+
+          {/* ===== 5. IRAS ===== */}
+          <DCSection id="iras" title="HR / IRAS Research Office"
+            subtitle="Receive forwarded proposals, screen them, assign experts">
+            {ab({ id: "i-dashboard", role: "iras", page: "i-dashboard", label: "01 · IRAS Dashboard" })}
+            {ab({ id: "i-received",  role: "iras", page: "i-received",  label: "02 · Received from Dean" })}
+            {ab({ id: "i-screen",    role: "iras", page: "i-screen",    label: "03 · Office Screening", h: 950 })}
+            {ab({ id: "i-assign",    role: "iras", page: "i-assign",    label: "04 · Assign Experts", h: 1100 })}
+            {ab({ id: "i-reviewers", role: "iras", page: "i-reviewers", label: "05 · Reviewer Pool", h: 950 })}
+          </DCSection>
+
+          {/* ===== 6. EXPERT REVIEWER ===== */}
+          <DCSection id="expert" title="Expert Reviewer"
+            subtitle="Evaluate assigned proposals, submit favorable / unfavorable verdict">
+            {ab({ id: "e-dashboard",   role: "expert", page: "e-dashboard",   label: "01 · Expert Dashboard" })}
+            {ab({ id: "e-assignments", role: "expert", page: "e-assignments", label: "02 · My Assignments" })}
+            {ab({ id: "e-evaluate",    role: "expert", page: "e-evaluate",    label: "03 · Evaluation Form", h: 1300 })}
+            {ab({ id: "e-history",     role: "expert", page: "e-history",     label: "04 · Submitted Reviews" })}
+          </DCSection>
+
+          {/* ===== 7. PRESIDENT ===== */}
+          <DCSection id="president" title="Office of the President"
+            subtitle="Final approval queue, contract issuance & tracking">
+            {ab({ id: "p-dashboard", role: "president", page: "p-dashboard", label: "01 · President Dashboard" })}
+            {ab({ id: "p-queue",     role: "president", page: "p-queue",     label: "02 · Final Approval Queue" })}
+            {ab({ id: "p-approve",   role: "president", page: "p-approve",   label: "03 · Approve / Reject", h: 1300 })}
+            {ab({ id: "p-contracts", role: "president", page: "p-contracts", label: "04 · Contract Tracking", h: 1100 })}
+          </DCSection>
+
+          {/* ===== 8. OFM / FINANCE ===== */}
+          <DCSection id="ofm" title="OFM / Finance"
+            subtitle="30 / 40 / 30 disbursement tracking">
+            {ab({ id: "o-dashboard", role: "ofm", page: "o-dashboard", label: "01 · OFM Dashboard" })}
+            {ab({ id: "o-payments",  role: "ofm", page: "o-payments",  label: "02 · Payment Queue", h: 1000 })}
+            {ab({ id: "o-detail",    role: "ofm", page: "o-detail",    label: "03 · Grant Detail", h: 1050 })}
+            {ab({ id: "o-history",   role: "ofm", page: "o-history",   label: "04 · Payment History" })}
+          </DCSection>
+
+          {/* ===== 9. ADMINISTRATOR ===== */}
+          <DCSection id="admin" title="Administrator"
+            subtitle="Users, journal tier reference, audit log, system settings">
+            {ab({ id: "a-dashboard", role: "admin", page: "a-dashboard", label: "01 · Admin Dashboard" })}
+            {ab({ id: "a-users",     role: "admin", page: "a-users",     label: "02 · User Management" })}
+            {ab({ id: "a-journals",  role: "admin", page: "a-journals",  label: "03 · Journal Tier Reference" })}
+            {ab({ id: "a-audit",     role: "admin", page: "a-audit",     label: "04 · Audit Log" })}
+            {ab({ id: "a-settings",  role: "admin", page: "a-settings",  label: "05 · System Settings", h: 1100 })}
+          </DCSection>
+        </DesignCanvas>
+      );
+    }
+
+    ReactDOM.createRoot(document.getElementById("root")).render(<Canvas />);
+  </script>
+</body>
+</html>
