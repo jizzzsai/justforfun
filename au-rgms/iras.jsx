@@ -669,7 +669,7 @@ function RASSCPresident({ onDownload, toast, setConfirm }) {
                 <Icon name="ShieldCheck" size={18} style={{color: "var(--au-crimson)", flexShrink: 0, marginTop: 2}} />
                 <div style={{fontSize: 12, color: "var(--ink-2)", lineHeight: 1.5}}>
                   Approval issues a research grant contract for the researcher. The contract must be signed
-                  within <b>15 days</b> of issuance.
+                  within <b>45 days</b> of issuance.
                 </div>
               </div>
 
@@ -683,7 +683,7 @@ function RASSCPresident({ onDownload, toast, setConfirm }) {
                   setConfirm({
                     kind: "success",
                     title: "Approve and issue contract?",
-                    message: "A contract template will be generated for the researcher to sign within 15 days.",
+                    message: "A contract template will be generated for the researcher to sign within 45 days.",
                     confirmLabel: "Approve",
                     onConfirm: () => toast("Approved by President (demo)"),
                   })
@@ -742,8 +742,8 @@ function RASSCContract({ onDownload, toast, setConfirm }) {
                 </div>
                 <div style={{padding: 14, border: "1px solid var(--line)", borderRadius: "var(--r-md)"}}>
                   <div className="text-sm text-muted">Signing deadline</div>
-                  <div style={{fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 500, marginTop: 4, color: "var(--au-crimson)"}}>Nov 29, 2025</div>
-                  <div className="text-sm text-muted" style={{marginTop: 2}}>Within 15 days of approval</div>
+                  <div style={{fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 500, marginTop: 4, color: "var(--au-crimson)"}}>Dec 29, 2025</div>
+                  <div className="text-sm text-muted" style={{marginTop: 2}}>Within 45 days of approval</div>
                 </div>
                 <div style={{padding: 14, border: "1px solid var(--line)", borderRadius: "var(--r-md)"}}>
                   <div className="text-sm text-muted">Contract status</div>
@@ -872,8 +872,8 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
     { id: "RG-2025-001", title: "AI-Based Research Grant Tracking System", who: "Dr. Phyo Min Tun",         total: 100000, p1: "pending", p2: "draft", p3: "draft", clearance: "Awaiting contract" },
     { id: "RG-2025-004", title: "Privacy-Preserving Recommender Systems",  who: "Dr. Chayanon Inthawong",   total:  95000, p1: "pending", p2: "draft", p3: "draft", clearance: "Awaiting contract" },
     { id: "RG-2025-005", title: "Cultural Heritage Preservation",          who: "Dr. Nisachon Charoenwong", total:  75000, p1: "ready",   p2: "draft", p3: "draft", clearance: "Contract signed" },
-    { id: "RG-2025-006", title: "Wearable EEG Monitoring",                 who: "Dr. Karunee Sritrakul",    total: 140000, p1: "paid",    p2: "pending", p3: "draft", clearance: "Progress report under review" },
-    { id: "RG-2025-007", title: "Mangrove Resilience to Salinity",         who: "Dr. Apichat Phongphan",    total: 210000, p1: "paid",    p2: "paid",   p3: "pending", clearance: "Final report under review" },
+    { id: "RG-2025-006", title: "Wearable EEG Monitoring",                 who: "Dr. Karunee Sritrakul",    total: 90000, p1: "paid",    p2: "pending", p3: "draft", clearance: "Progress report under review" },
+    { id: "RG-2025-007", title: "Mangrove Resilience to Salinity",         who: "Dr. Apichat Phongphan",    total: 100000, p1: "paid",    p2: "paid",   p3: "pending", clearance: "Final report under review" },
   ];
 
   const cell = (v) => {
@@ -895,8 +895,8 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
       />
 
       <div className="stats" style={{gridTemplateColumns: "repeat(4, 1fr)"}}>
-        <Stat label="Total Allocated"   value="620k THB" icon="Coins" />
-        <Stat label="Disbursed YTD"     value="430k THB" icon="TrendingUp" tone="green" />
+        <Stat label="Total Allocated"   value="460k THB" icon="Coins" />
+        <Stat label="Disbursed YTD"     value="97k THB" icon="TrendingUp" tone="green" />
         <Stat label="Pending Approval"  value="3"        icon="Clock"      tone="gold" />
         <Stat label="Receipts Cleared"  value="9 / 12"   icon="CheckCircle" tone="navy" />
       </div>
