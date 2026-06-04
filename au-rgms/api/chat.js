@@ -42,7 +42,7 @@ module.exports = async (req, res) => {
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: String(m.content || "").slice(0, 4000) }],
     }));
-    const model = process.env.GEMINI_MODEL || "gemini-2.0-flash";
+    const model = process.env.GEMINI_MODEL || "gemini-2.5-flash";
     const url =
       "https://generativelanguage.googleapis.com/v1beta/models/" +
       model +
@@ -54,7 +54,7 @@ module.exports = async (req, res) => {
       body: JSON.stringify({
         systemInstruction: { parts: [{ text: SYSTEM }] },
         contents,
-        generationConfig: { temperature: 0.4, topP: 0.9, maxOutputTokens: 800 },
+        generationConfig: { temperature: 0.4, topP: 0.9, maxOutputTokens: 2000 },
       }),
     });
     const data = await gr.json();
