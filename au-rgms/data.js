@@ -454,3 +454,9 @@ window.AU = {
   FACULTY_QUEUE: APPLICATIONS.filter(a => ["submitted", "deanScreen", "committee", "deanSign", "revision"].includes(a.status.key)),
   RASSC_QUEUE: APPLICATIONS.filter(a => ["iras", "expertReview", "presidentApproval", "contractSigned", "pay1", "progressSubmitted", "pay2", "finalSubmitted", "pay3"].includes(a.status.key)),
 };
+
+/* --- Shared "Forms & Templates" page in every role's sidebar --- */
+[NAV_RESEARCHER, NAV_DEAN, NAV_COMMITTEE, NAV_RASSC, NAV_EXPERT, NAV_PRESIDENT, NAV_OFM, NAV_ADMIN].forEach(function (nav) {
+  nav.push({ section: "RESOURCES" });
+  nav.push({ key: "forms", label: "Forms & Templates", icon: "FileText" });
+});

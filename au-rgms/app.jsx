@@ -390,6 +390,9 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "a-audit":          return <AdminAudit />;
     case "a-settings":       return <AdminSettings toast={c.toast} />;
 
+    /* ---- Shared ---- */
+    case "forms":            return <FormsLibrary />;
+
     default:                 return <Empty title="Page not found" desc="Use the sidebar to navigate." icon="Folder" />;
   }
 }
