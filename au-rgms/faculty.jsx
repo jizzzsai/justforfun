@@ -10,7 +10,7 @@ function FacultyDashboard({ navigate }) {
     <>
       <PageHeader
         title="Faculty Office Dashboard"
-        desc="Review submissions from VMS-EST researchers and forward eligible applications to IRAS."
+        desc="Review submissions from VMS-EST researchers and forward eligible applications to RASSC."
         actions={
           <>
             <button className="btn btn-secondary"><Icon name="Calendar" size={14} /> AY 2025–2026</button>
@@ -26,7 +26,7 @@ function FacultyDashboard({ navigate }) {
         <Stat label="Waiting Document Check"      value="3" icon="ClipboardCheck"  tone="gold" />
         <Stat label="Waiting Academic Committee"  value="2" icon="Users"           tone="navy" />
         <Stat label="Waiting Dean Approval"       value="1" icon="ShieldCheck"     tone="green" />
-        <Stat label="Forwarded to IRAS"           value="9" icon="Send" />
+        <Stat label="Forwarded to RASSC"           value="9" icon="Send" />
         <Stat label="Revision Required"           value="2" icon="AlertCircle"     tone="gold" />
       </div>
 
@@ -459,7 +459,7 @@ function FacultyDean({ onDownload, onView, toast, setConfirm }) {
     <>
       <PageHeader
         title="Dean Approval"
-        desc="Final faculty-level decision before forwarding to IRAS."
+        desc="Final faculty-level decision before forwarding to RASSC."
         actions={
           <>
             <Badge status={FA.STATUS.dean} />
@@ -549,27 +549,27 @@ function FacultyDean({ onDownload, onView, toast, setConfirm }) {
               }}>
                 <Icon name="Info" size={18} style={{color: "var(--au-gold)", flexShrink: 0, marginTop: 2}} />
                 <div style={{fontSize: 12, color: "var(--ink-2)", lineHeight: 1.5}}>
-                  Approval forwards the application to <b>IRAS</b> for expert review and Research Support
+                  Approval forwards the application to <b>RASSC</b> for expert review and Research Support
                   Committee evaluation. This action cannot be undone from the Faculty Office.
                 </div>
               </div>
 
               <div className="field">
                 <label>Decision note</label>
-                <textarea className="comment-input" placeholder="Optional note to attach with the decision…" defaultValue="Approved with the conditions noted by the Academic Committee. Forwarding to IRAS for expert review." />
+                <textarea className="comment-input" placeholder="Optional note to attach with the decision…" defaultValue="Approved with the conditions noted by the Academic Committee. Forwarding to RASSC for expert review." />
               </div>
 
               <div className="flex flex-col gap-2">
                 <button className="btn btn-primary btn-block" onClick={() =>
                   setConfirm({
                     kind: "success",
-                    title: "Approve and forward to IRAS?",
-                    message: "The application will be transferred to the IRAS office for expert review.",
+                    title: "Approve and forward to RASSC?",
+                    message: "The application will be transferred to the RASSC office for expert review.",
                     confirmLabel: "Approve & Forward",
-                    onConfirm: () => toast("Approved and forwarded to IRAS (demo)"),
+                    onConfirm: () => toast("Approved and forwarded to RASSC (demo)"),
                   })
                 }>
-                  <Icon name="ShieldCheck" size={14} /> Approve and Forward to IRAS
+                  <Icon name="ShieldCheck" size={14} /> Approve and Forward to RASSC
                 </button>
                 <button className="btn btn-secondary btn-block" onClick={() =>
                   setConfirm({
@@ -616,7 +616,7 @@ function FacultyTimeline() {
     <>
       <PageHeader
         title="Faculty Timeline"
-        desc="Faculty-level progress for RG-2025-001 — Researcher → Faculty Office → Academic Committee → Dean → IRAS."
+        desc="Faculty-level progress for RG-2025-001 — Researcher → Faculty Office → Academic Committee → Dean → RASSC."
         actions={<Badge status={FA.STATUS.iras} />}
       />
 

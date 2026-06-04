@@ -4,7 +4,7 @@
 
    8 roles · 14-step workflow:
    Submitted → Dean Screening → Faculty Committee Review →
-   Dean Sign & Forward → IRAS → Expert Review → President →
+   Dean Sign & Forward → RASSC → Expert Review → President →
    Contract Signed → Payment 30% → Progress Report →
    Payment 40% → Final Report → Payment 30% → Closed
    ============================================================ */
@@ -15,7 +15,7 @@ const ALL_STAGES = [
   { key: "deanScreen",   label: "Dean Screening" },
   { key: "committee",    label: "Faculty Committee Review" },
   { key: "deanSign",     label: "Dean Sign & Forward" },
-  { key: "iras",         label: "IRAS Received" },
+  { key: "iras",         label: "RASSC Received" },
   { key: "expert",       label: "Expert Review" },
   { key: "president",    label: "President Approval" },
   { key: "contract",     label: "Contract Signed" },
@@ -34,7 +34,7 @@ const STATUS = {
   deanScreen:       { key: "deanScreen",       label: "Dean Screening",              cls: "badge-faculty" },
   committee:        { key: "committee",        label: "Faculty Committee Review",    cls: "badge-academic" },
   deanSign:         { key: "deanSign",         label: "Dean Sign & Forward",         cls: "badge-dean" },
-  iras:             { key: "iras",             label: "IRAS Screening",              cls: "badge-iras" },
+  iras:             { key: "iras",             label: "RASSC Screening",              cls: "badge-iras" },
   expertReview:     { key: "expertReview",     label: "Under Expert Review",         cls: "badge-expert" },
   presidentApproval:{ key: "presidentApproval",label: "President Approval",          cls: "badge-president" },
   contractPending:  { key: "contractPending",  label: "Contract Pending",            cls: "badge-contract" },
@@ -65,7 +65,7 @@ const PRIMARY_APP = {
   abstract: "This study proposes a web-based grant lifecycle platform that consolidates the fourteen-stage AU research grant workflow into a single transparent dashboard. The system applies machine-learning techniques to flag missing documents, predict review duration, and surface anomalous budget items at submission time. A pilot will be conducted with three faculties over two academic semesters.",
   objectives: [
     "Reduce average submission-to-disbursement cycle time by 35%.",
-    "Provide unified visibility across Faculty Office, IRAS, and Finance.",
+    "Provide unified visibility across Faculty Office, RASSC, and Finance.",
     "Automate document completeness checks at submission.",
     "Enable expert-review scoring with explainable recommendations.",
   ],
@@ -87,12 +87,10 @@ const PRIMARY_APP = {
   budgetTotal: 100000,
   budgetCurrency: "THB",
   budgetBreakdown: [
-    { item: "Personnel (Research Assistant, 6 months)", amount: 36000 },
-    { item: "Equipment and software licences",          amount: 22000 },
-    { item: "Pilot user incentives",                    amount: 12000 },
-    { item: "Publication and conference fees",          amount: 18000 },
-    { item: "Travel for field interviews",              amount:  8000 },
-    { item: "Miscellaneous and contingency",            amount:  4000 },
+    { item: "Remuneration (research assistant, 6 months)", amount: 30000 },
+    { item: "Research equipment", amount: 40000 },
+    { item: "Travel for off-campus data collection", amount: 18000 },
+    { item: "Miscellaneous (postage, photocopying, binding)", amount: 12000 },
   ],
   duration: "12 months (Nov 2025 – Oct 2026)",
   submittedAt: "Oct 18, 2025",
@@ -107,8 +105,8 @@ const PRIMARY_APP = {
     submission:  { done: true,  date: "Oct 18, 2025", who: "Dr. Phyo Min Tun",                        note: "Initial submission with all four required forms." },
     deanScreen:  { done: true,  date: "Oct 20, 2025", who: "Dean, VMS-EST",                            note: "Approved at first screening. Forwarded to Faculty Committee." },
     committee:   { done: true,  date: "Oct 24, 2025", who: "Assoc. Prof. Dr. Watcharee (Chair)",       note: "Strong methodology. Recommended back to Dean for forwarding." },
-    deanSign:    { done: true,  date: "Oct 28, 2025", who: "Dean, VMS-EST",                            note: "Signed and forwarded to IRAS." },
-    iras:        { done: true,  date: "Oct 30, 2025", who: "IRAS Office",                              note: "Logged. Three reviewers assigned." },
+    deanSign:    { done: true,  date: "Oct 28, 2025", who: "Dean, VMS-EST",                            note: "Signed and forwarded to RASSC." },
+    iras:        { done: true,  date: "Oct 30, 2025", who: "RASSC",                              note: "Logged. Three reviewers assigned." },
     expert:      { done: false, current: true, date: "In review",  who: "3 experts assigned, 2 completed" },
     president:   { done: false, date: "Pending" },
     contract:    { done: false, date: "Pending" },
@@ -131,7 +129,7 @@ const APPLICATIONS = [
     faculty: "Albert Laurence School of Communication Arts",
     department: "Educational Technology",
     submittedAt: "Oct 15, 2025",
-    budgetTotal: 120000,
+    budgetTotal: 95000,
     status: STATUS.committee,
     currentStage: "committee",
   },
@@ -142,7 +140,7 @@ const APPLICATIONS = [
     faculty: "Vincent Mary School of Engineering, Science and Technology",
     department: "Biotechnology",
     submittedAt: "Oct 11, 2025",
-    budgetTotal: 180000,
+    budgetTotal: 98000,
     status: STATUS.deanSign,
     currentStage: "deanSign",
   },
@@ -175,7 +173,7 @@ const APPLICATIONS = [
     faculty: "Bernadette de Lourdes School of Nursing Science",
     department: "Adult Nursing",
     submittedAt: "Sep 28, 2025",
-    budgetTotal: 140000,
+    budgetTotal: 90000,
     status: STATUS.progressSubmitted,
     currentStage: "pay2",
   },
@@ -186,7 +184,7 @@ const APPLICATIONS = [
     faculty: "Vincent Mary School of Engineering, Science and Technology",
     department: "Environmental Science",
     submittedAt: "Sep 14, 2025",
-    budgetTotal: 210000,
+    budgetTotal: 100000,
     status: STATUS.finalSubmitted,
     currentStage: "pay3",
   },
@@ -219,7 +217,7 @@ const APPLICATIONS = [
     faculty: "Montfort del Rosario School of Architecture and Design",
     department: "Architecture",
     submittedAt: "Oct 21, 2025",
-    budgetTotal: 160000,
+    budgetTotal: 96000,
     status: STATUS.deanScreen,
     currentStage: "deanScreen",
   },
@@ -230,7 +228,7 @@ const APPLICATIONS = [
     faculty: "Vincent Mary School of Engineering, Science and Technology",
     department: "Computer Engineering",
     submittedAt: "Oct 22, 2025",
-    budgetTotal: 145000,
+    budgetTotal: 92000,
     status: STATUS.submitted,
     currentStage: "deanScreen",
   },
@@ -241,7 +239,7 @@ const APPLICATIONS = [
     faculty: "Vincent Mary School of Engineering, Science and Technology",
     department: "Information Technology",
     submittedAt: "Oct 22, 2025",
-    budgetTotal: 110000,
+    budgetTotal: 88000,
     status: STATUS.deanScreen,
     currentStage: "deanScreen",
   },
@@ -271,10 +269,10 @@ const APPLICATIONS = [
 
 /* --- Notifications ------------------------------------------- */
 const NOTIFS = [
-  { id: 1, unread: true,  icon: "Bell",      who: "IRAS Office",    text: "Your application <b>RG-2025-001</b> has been assigned to three expert reviewers.", when: "2 hours ago" },
+  { id: 1, unread: true,  icon: "Bell",      who: "RASSC",    text: "Your application <b>RG-2025-001</b> has been assigned to three expert reviewers.", when: "2 hours ago" },
   { id: 2, unread: true,  icon: "FileCheck", who: "Faculty Committee", text: "Comments added to <b>RG-2025-001</b> by Assoc. Prof. Dr. Watcharee.", when: "Yesterday, 4:12 PM" },
   { id: 3, unread: true,  icon: "Coins",     who: "Finance / OFM",  text: "First disbursement of <b>30,000 THB</b> is scheduled after contract signing.", when: "2 days ago" },
-  { id: 4, unread: false, icon: "Send",      who: "Dean's Office",  text: "Application <b>RG-2025-001</b> was forwarded to IRAS on Oct 28.", when: "Oct 28, 2025" },
+  { id: 4, unread: false, icon: "Send",      who: "Dean's Office",  text: "Application <b>RG-2025-001</b> was forwarded to RASSC on Oct 28.", when: "Oct 28, 2025" },
   { id: 5, unread: false, icon: "FileText",  who: "Faculty Office", text: "Document check completed for <b>RG-2025-001</b>.", when: "Oct 20, 2025" },
 ];
 
@@ -288,7 +286,7 @@ const PAYMENTS = [
 /* --- Activity feed ------------------------------------------- */
 const ACTIVITY = [
   { t: "2h ago",       text: "Expert review submitted by <b>Assoc. Prof. Dr. Suthep Lertsiri</b>",          kind: "expert" },
-  { t: "Yesterday",    text: "Dean forwarded <b>RG-2025-001</b> to IRAS",                                   kind: "approval" },
+  { t: "Yesterday",    text: "Dean forwarded <b>RG-2025-001</b> to RASSC",                                   kind: "approval" },
   { t: "3 days ago",   text: "Faculty Committee added comments to <b>RG-2025-001</b>",                      kind: "comment" },
   { t: "5 days ago",   text: "Dean screening completed for <b>RG-2025-001</b>",                             kind: "check" },
   { t: "Oct 18, 2025", text: "Initial submission of <b>RG-2025-001</b>",                                    kind: "submit" },
@@ -299,9 +297,9 @@ const ROLES = [
   { key: "researcher", name: "Researcher",            full: "Dr. Phyo Min Tun",                 subtitle: "Asst. Professor · IT",                initials: "PT", iconName: "GraduationCap" },
   { key: "dean",       name: "Dean",                  full: "Assoc. Prof. Dr. Surasak Chamnongpol", subtitle: "Dean · VMS-EST",                  initials: "SC", iconName: "Building2" },
   { key: "committee",  name: "Faculty Committee",     full: "Assoc. Prof. Dr. Watcharee S.",    subtitle: "Committee Chair · VMS-EST",           initials: "WS", iconName: "Users" },
-  { key: "iras",       name: "HR / IRAS",             full: "Prof. Dr. Sirilak Khempila",       subtitle: "Director · IRAS Office",              initials: "SK", iconName: "Landmark" },
+  { key: "iras",       name: "RASSC",             full: "Prof. Dr. Sirilak Khempila",       subtitle: "Director · RASSC",              initials: "SK", iconName: "Landmark" },
   { key: "expert",     name: "Expert Reviewer",       full: "Assoc. Prof. Dr. Suthep Lertsiri", subtitle: "External · Chulalongkorn",            initials: "SL", iconName: "FileSearch" },
-  { key: "president",  name: "President",             full: "Rev. Bro. Dr. Bancha Saenghiran",  subtitle: "President · Assumption University",   initials: "BS", iconName: "Award" },
+  { key: "president",  name: "President",             full: "Rev. Bro. Dr. Srichai Fonseka",  subtitle: "President · Assumption University",   initials: "SF", iconName: "Award" },
   { key: "ofm",        name: "OFM / Finance",         full: "K. Wanida Charoenphon",            subtitle: "Director · OFM",                      initials: "WC", iconName: "Coins" },
   { key: "admin",      name: "Administrator",         full: "K. Tanapong Wisetphan",            subtitle: "System Administrator",                initials: "TW", iconName: "Settings" },
 ];
@@ -339,7 +337,7 @@ const NAV_COMMITTEE = [
   { key: "c-history",     label: "Past Reviews",               icon: "Clock" },
 ];
 
-const NAV_IRAS = [
+const NAV_RASSC = [
   { section: "WORKSPACE" },
   { key: "i-dashboard",   label: "Dashboard",                  icon: "LayoutDashboard" },
   { key: "i-received",    label: "Received from Dean",         icon: "Inbox", badge: 3 },
@@ -393,11 +391,11 @@ const SYSTEM_USERS = [
   { id: "U001", name: "Dr. Phyo Min Tun",                       email: "phyomintun@au.edu",      role: "Researcher",         dept: "Information Technology",     status: "Active",   lastLogin: "Today, 09:42" },
   { id: "U002", name: "Assoc. Prof. Dr. Surasak Chamnongpol",   email: "surasak.c@au.edu",       role: "Dean",               dept: "VMS-EST",                    status: "Active",   lastLogin: "Today, 08:11" },
   { id: "U003", name: "Assoc. Prof. Dr. Watcharee Suwannarat",  email: "watcharee.s@au.edu",     role: "Faculty Committee",  dept: "VMS-EST",                    status: "Active",   lastLogin: "Yesterday" },
-  { id: "U004", name: "Prof. Dr. Sirilak Khempila",             email: "sirilak.k@au.edu",       role: "HR / IRAS",          dept: "IRAS Office",                status: "Active",   lastLogin: "Today, 10:02" },
+  { id: "U004", name: "Prof. Dr. Sirilak Khempila",             email: "sirilak.k@au.edu",       role: "RASSC",          dept: "RASSC",                status: "Active",   lastLogin: "Today, 10:02" },
   { id: "U005", name: "Assoc. Prof. Dr. Suthep Lertsiri",       email: "suthep.l@chula.ac.th",   role: "Expert Reviewer",    dept: "Chulalongkorn University",   status: "Active",   lastLogin: "2 days ago" },
   { id: "U006", name: "Asst. Prof. Dr. Marisa Anuwong",         email: "marisa.a@mahidol.ac.th", role: "Expert Reviewer",    dept: "Mahidol University",         status: "Active",   lastLogin: "Yesterday" },
   { id: "U007", name: "Dr. Kittipan Chaiprasart",               email: "kittipan.c@au.edu",      role: "Expert Reviewer",    dept: "VMS-EST",                    status: "Active",   lastLogin: "3 days ago" },
-  { id: "U008", name: "Rev. Bro. Dr. Bancha Saenghiran",        email: "president@au.edu",       role: "President",          dept: "Office of the President",    status: "Active",   lastLogin: "Today, 07:30" },
+  { id: "U008", name: "Rev. Bro. Dr. Srichai Fonseka",        email: "president@au.edu",       role: "President",          dept: "Office of the President",    status: "Active",   lastLogin: "Today, 07:30" },
   { id: "U009", name: "K. Wanida Charoenphon",                  email: "wanida.c@au.edu",        role: "OFM / Finance",      dept: "Office of Financial Mgmt.",  status: "Active",   lastLogin: "Today, 09:15" },
   { id: "U010", name: "K. Tanapong Wisetphan",                  email: "admin@au.edu",           role: "Administrator",      dept: "IT Services",                status: "Active",   lastLogin: "Today, 06:55" },
   { id: "U011", name: "Asst. Prof. Dr. Naphat Wongsakulchai",   email: "naphat.w@au.edu",        role: "Researcher",         dept: "Educational Technology",     status: "Active",   lastLogin: "Yesterday" },
@@ -408,13 +406,16 @@ const SYSTEM_USERS = [
 
 /* --- Journal tier reference (Admin) -------------------------- */
 const JOURNAL_TIERS = [
-  { code: "Q1", name: "Tier 1 · International (Scopus Q1 / WoS top quartile)",   incentive: 50000, count: 142 },
-  { code: "Q2", name: "Tier 2 · International (Scopus Q2 / WoS mid quartile)",   incentive: 35000, count: 218 },
-  { code: "Q3", name: "Tier 3 · International (Scopus Q3 / WoS lower quartile)", incentive: 20000, count: 191 },
-  { code: "Q4", name: "Tier 4 · International (Scopus Q4)",                       incentive: 12000, count: 88  },
-  { code: "TCI1", name: "Tier 1 · Thai Citation Index (TCI Group 1)",             incentive: 15000, count: 64  },
-  { code: "TCI2", name: "Tier 2 · Thai Citation Index (TCI Group 2)",             incentive:  8000, count: 32  },
-  { code: "CONF", name: "International Conference Proceedings",                   incentive:  6000, count: 119 },
+  { code: "SJR-Q1", name: "Scopus · SJR Quartile 1",                    incentive: 80000,         count: 142 },
+  { code: "SJR-Q2", name: "Scopus · SJR Quartile 2",                    incentive: 60000,         count: 188 },
+  { code: "SJR-Q3", name: "Scopus · SJR Quartile 3",                    incentive: 50000,         count: 191 },
+  { code: "SJR-Q4", name: "Scopus · SJR Quartile 4",                    incentive: 40000,         count: 88  },
+  { code: "WoS",    name: "Web of Science · SCIE / SSCI / AHCI",        incentive: 80000,         count: 96  },
+  { code: "TCI1",   name: "Thai Citation Index · Tier 1",              incentive: "Actual fees", count: 64  },
+  { code: "TCI2",   name: "Thai Citation Index · Tier 2",              incentive: "Actual fees", count: 32  },
+  { code: "CREATE", name: "Creative work · ASEAN / international",      incentive: 25000,         count: 18  },
+  { code: "PATENT", name: "Patent / new plant or animal registration", incentive: 10000,         count: 7   },
+  { code: "PETTY",  name: "Petty patent",                               incentive: 3000,          count: 11  },
 ];
 
 /* --- Audit log (Admin) --------------------------------------- */
@@ -424,7 +425,7 @@ const AUDIT_LOG = [
   { t: "Today, 09:42", who: "Dr. Phyo Min Tun",             act: "Viewed Application RG-2025-001 details",   ip: "192.168.4.18" },
   { t: "Today, 09:15", who: "K. Wanida Charoenphon",        act: "Marked RG-2025-005 first payment as paid", ip: "10.0.7.9"  },
   { t: "Today, 08:11", who: "Dr. Surasak Chamnongpol",      act: "Approved RG-2025-010 at first screening",  ip: "10.0.3.2"  },
-  { t: "Today, 07:30", who: "Rev. Bro. Dr. Bancha S.",      act: "Approved RG-2025-004 final approval",      ip: "10.0.1.1"  },
+  { t: "Today, 07:30", who: "Rev. Bro. Dr. Srichai F.",      act: "Approved RG-2025-004 final approval",      ip: "10.0.1.1"  },
   { t: "Today, 06:55", who: "K. Tanapong Wisetphan",        act: "Updated journal tier reference table",      ip: "10.0.0.4"  },
   { t: "Yesterday",    who: "Assoc. Prof. Dr. Watcharee",   act: "Submitted committee review for RG-2025-002", ip: "10.0.9.3" },
 ];
@@ -433,7 +434,7 @@ const AUDIT_LOG = [
 const Q_DEAN_SCREEN  = APPLICATIONS.filter(a => ["submitted", "deanScreen"].includes(a.status.key));
 const Q_DEAN_SIGN    = APPLICATIONS.filter(a => a.status.key === "deanSign");
 const Q_COMMITTEE    = APPLICATIONS.filter(a => a.status.key === "committee");
-const Q_IRAS         = APPLICATIONS.filter(a => ["iras", "expertReview"].includes(a.status.key));
+const Q_RASSC         = APPLICATIONS.filter(a => ["iras", "expertReview"].includes(a.status.key));
 const Q_EXPERT       = APPLICATIONS.filter(a => a.status.key === "expertReview");
 const Q_PRESIDENT    = APPLICATIONS.filter(a => a.status.key === "presidentApproval");
 const Q_OFM          = APPLICATIONS.filter(a => ["contractSigned", "pay1", "progressSubmitted", "pay2", "finalSubmitted", "pay3"].includes(a.status.key));
@@ -444,12 +445,12 @@ window.AU = {
   PRIMARY_APP, APPLICATIONS,
   NOTIFS, PAYMENTS, ACTIVITY,
   ROLES,
-  NAV_RESEARCHER, NAV_DEAN, NAV_COMMITTEE, NAV_IRAS,
+  NAV_RESEARCHER, NAV_DEAN, NAV_COMMITTEE, NAV_RASSC,
   NAV_EXPERT, NAV_PRESIDENT, NAV_OFM, NAV_ADMIN,
   SYSTEM_USERS, JOURNAL_TIERS, AUDIT_LOG,
-  Q_DEAN_SCREEN, Q_DEAN_SIGN, Q_COMMITTEE, Q_IRAS, Q_EXPERT, Q_PRESIDENT, Q_OFM,
+  Q_DEAN_SCREEN, Q_DEAN_SIGN, Q_COMMITTEE, Q_RASSC, Q_EXPERT, Q_PRESIDENT, Q_OFM,
   // Legacy aliases used by existing pages
   MOCK_DOCS: REQUIRED_DOCS,
   FACULTY_QUEUE: APPLICATIONS.filter(a => ["submitted", "deanScreen", "committee", "deanSign", "revision"].includes(a.status.key)),
-  IRAS_QUEUE: APPLICATIONS.filter(a => ["iras", "expertReview", "presidentApproval", "contractSigned", "pay1", "progressSubmitted", "pay2", "finalSubmitted", "pay3"].includes(a.status.key)),
+  RASSC_QUEUE: APPLICATIONS.filter(a => ["iras", "expertReview", "presidentApproval", "contractSigned", "pay1", "progressSubmitted", "pay2", "finalSubmitted", "pay3"].includes(a.status.key)),
 };

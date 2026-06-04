@@ -3,7 +3,7 @@
    Plus genuinely new pages for Expert Reviewer and Administrator.
 
    Existing detail components (FacultyAcademic, FacultyDean,
-   IRASExpert, IRASPresident, IRASContract, IRASPayment) are
+   RASSCExpert, RASSCPresident, RASSCContract, RASSCPayment) are
    reused by the router for workflow screens.
    ============================================================ */
 
@@ -172,7 +172,7 @@ function DeanSignQueue({ navigate, onDownload }) {
     <>
       <PageHeader
         title="Sign &amp; Forward Queue"
-        desc="Proposals returning from the Faculty Committee. Sign and forward to IRAS, or return to committee."
+        desc="Proposals returning from the Faculty Committee. Sign and forward to RASSC, or return to committee."
       />
       <div className="card card-pad-0">
         <div className="toolbar">
@@ -321,13 +321,13 @@ function CommitteeHistory({ onDownload }) {
 }
 
 /* -----------------------------------------------------------
-   IRAS — Dashboard (refreshed for 8-role flow)
+   RASSC — Dashboard (refreshed for 8-role flow)
    ----------------------------------------------------------- */
-function IRASDashboardV2({ navigate }) {
+function RASSCDashboardV2({ navigate }) {
   return (
     <>
       <PageHeader
-        title="IRAS Research Office"
+        title="RASSC Research Office"
         desc="Receive forwarded proposals, screen them, and assign three expert reviewers."
         actions={
           <button className="btn btn-primary" onClick={() => navigate("i-assign")}>
@@ -337,7 +337,7 @@ function IRASDashboardV2({ navigate }) {
       />
 
       <div className="stats">
-        <Stat label="Received from Dean"        value={D.Q_IRAS.length}      icon="Inbox" tone="gold" />
+        <Stat label="Received from Dean"        value={D.Q_RASSC.length}      icon="Inbox" tone="gold" />
         <Stat label="Awaiting Screening"        value="3"                     icon="ClipboardCheck" />
         <Stat label="Pending Expert Assignment" value="2"                     icon="UserPlus" tone="navy" />
         <Stat label="Under Expert Review"       value={D.Q_EXPERT.length}    icon="FileSearch" tone="green" />
@@ -345,7 +345,7 @@ function IRASDashboardV2({ navigate }) {
 
       <div className="grid-2">
         <div className="card card-pad-0">
-          <div className="card-head"><h3>Active IRAS Workload</h3>
+          <div className="card-head"><h3>Active RASSC Workload</h3>
             <div className="grow"></div>
             <button className="btn btn-ghost btn-sm" onClick={() => navigate("i-received")}>
               See all <Icon name="ArrowRight" size={12} />
@@ -354,7 +354,7 @@ function IRASDashboardV2({ navigate }) {
           <table className="tbl">
             <thead><tr><th>ID</th><th>Title</th><th>Faculty</th><th>Status</th></tr></thead>
             <tbody>
-              {D.Q_IRAS.map(a => (
+              {D.Q_RASSC.map(a => (
                 <tr key={a.id} style={{cursor: "pointer"}} onClick={() => navigate("i-assign")}>
                   <td><span className="id">{a.id}</span></td>
                   <td className="title-cell"><div className="t" style={{maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.title}</div></td>
@@ -397,8 +397,8 @@ function IRASDashboardV2({ navigate }) {
   );
 }
 
-/* IRAS — Office Screening */
-function IRASScreen({ navigate, onDownload, onView, toast, setConfirm }) {
+/* RASSC — Office Screening */
+function RASSCScreen({ navigate, onDownload, onView, toast, setConfirm }) {
   return (
     <>
       <PageHeader
@@ -461,8 +461,8 @@ function IRASScreen({ navigate, onDownload, onView, toast, setConfirm }) {
   );
 }
 
-/* IRAS — Reviewer Pool */
-function IRASReviewerPool({ toast }) {
+/* RASSC — Reviewer Pool */
+function RASSCReviewerPool({ toast }) {
   const pool = [
     { n: "Assoc. Prof. Dr. Suthep Lertsiri",   a: "Chulalongkorn University",  t: "External", expertise: "AI · ML · NLP",         status: "Active",   load: 2 },
     { n: "Asst. Prof. Dr. Marisa Anuwong",     a: "Mahidol University",         t: "External", expertise: "HCI · Edu Tech",        status: "Active",   load: 1 },
@@ -634,7 +634,7 @@ function ExpertAssignments({ navigate, onDownload }) {
   ];
   return (
     <>
-      <PageHeader title="My Assignments" desc="Proposals assigned to you by the IRAS office." />
+      <PageHeader title="My Assignments" desc="Proposals assigned to you by the RASSC office." />
       <div className="card card-pad-0">
         <table className="tbl">
           <thead>
@@ -1169,7 +1169,7 @@ function AdminJournals({ toast }) {
               <tr key={t.code}>
                 <td><span className="id" style={{fontSize: 12, fontWeight: 700}}>{t.code}</span></td>
                 <td style={{fontWeight: 600, fontSize: 13}}>{t.name}</td>
-                <td style={{textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 600}}>{t.incentive.toLocaleString()}</td>
+                <td style={{textAlign: "right", fontFamily: "ui-monospace, monospace", fontWeight: 600}}>{typeof t.incentive === "number" ? t.incentive.toLocaleString() : t.incentive}</td>
                 <td style={{textAlign: "right", fontSize: 12, color: "var(--ink-3)"}}>{t.count}</td>
                 <td className="actions">
                   <button className="btn btn-ghost btn-sm"><Icon name="Edit" size={13} /></button>
@@ -1303,7 +1303,7 @@ function Toggle({ defaultOn = false }) {
 Object.assign(window, {
   DeanDashboard, DeanScreenQueue, DeanSignQueue, DeanHistory,
   CommitteeDashboard, CommitteeQueue, CommitteeHistory,
-  IRASDashboardV2, IRASScreen, IRASReviewerPool,
+  RASSCDashboardV2, RASSCScreen, RASSCReviewerPool,
   ExpertDashboard, ExpertAssignments, ExpertHistory,
   PresidentDashboard, PresidentQueue,
   OFMDashboard, OFMDetail, OFMHistory,

@@ -476,7 +476,7 @@ function ResearcherApplicationDetail({ navigate, onDownload, onView }) {
                   <div className="av" style={{background: "var(--au-gold)"}}>SK</div>
                   <div>
                     <div className="name">Prof. Dr. Sirilak Khempila</div>
-                    <div className="role">IRAS Director · Oct 30, 2025</div>
+                    <div className="role">RASSC Director · Oct 30, 2025</div>
                   </div>
                   <div className="when">2 weeks ago</div>
                 </div>
@@ -486,7 +486,7 @@ function ResearcherApplicationDetail({ navigate, onDownload, onView }) {
               </div>
               <textarea className="comment-input mt-3" placeholder="Reply to reviewers…"></textarea>
               <div className="flex justify-between items-center mt-2">
-                <span className="text-sm text-muted">Comments are visible to Faculty, IRAS, and the President.</span>
+                <span className="text-sm text-muted">Comments are visible to Faculty, RASSC, and the President.</span>
                 <button className="btn btn-primary btn-sm"><Icon name="Send" size={12} /> Post Reply</button>
               </div>
             </div>
@@ -550,7 +550,7 @@ function ResearcherProgress({ onDownload, onView, toast }) {
                 </div>
               </div>
               <div className="flex justify-between items-center mt-4">
-                <span className="text-sm text-muted">Once submitted, the IRAS office and Finance will be notified.</span>
+                <span className="text-sm text-muted">Once submitted, the RASSC office and Finance will be notified.</span>
                 <button className="btn btn-primary" onClick={() => toast("Progress report submitted (demo)")}>
                   <Icon name="Send" size={13} /> Submit Report
                 </button>

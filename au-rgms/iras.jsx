@@ -1,15 +1,15 @@
 /* ============================================================
-   IRAS / Research Support Committee / President / Finance pages
+   RASSC / Research Support Committee / President / Finance pages
    ============================================================ */
 
 const IR = window.AU;
 
 /* ---------- A. Dashboard Overview ---------- */
-function IRASDashboard({ navigate }) {
+function RASSCDashboard({ navigate }) {
   return (
     <>
       <PageHeader
-        title="IRAS Dashboard"
+        title="RASSC Dashboard"
         desc="University-level review, expert evaluation, contracts, and disbursement oversight."
         actions={
           <>
@@ -44,7 +44,7 @@ function IRASDashboard({ navigate }) {
               <tr><th>ID</th><th>Title</th><th>Researcher</th><th>Status</th></tr>
             </thead>
             <tbody>
-              {IR.IRAS_QUEUE.slice(0, 6).map(a => (
+              {IR.RASSC_QUEUE.slice(0, 6).map(a => (
                 <tr key={a.id} style={{cursor: "pointer"}} onClick={() => navigate("i-expert")}>
                   <td><span className="id">{a.id}</span></td>
                   <td className="title-cell">
@@ -112,7 +112,7 @@ function IRASDashboard({ navigate }) {
 }
 
 /* ---------- B. Received Applications ---------- */
-function IRASReceived({ navigate, onDownload }) {
+function RASSCReceived({ navigate, onDownload }) {
   return (
     <>
       <PageHeader
@@ -144,7 +144,7 @@ function IRASReceived({ navigate, onDownload }) {
             </tr>
           </thead>
           <tbody>
-            {IR.IRAS_QUEUE.map(a => (
+            {IR.RASSC_QUEUE.map(a => (
               <tr key={a.id}>
                 <td><span className="id">{a.id}</span></td>
                 <td className="title-cell"><div className="t" style={{maxWidth: 260}}>{a.title}</div></td>
@@ -168,7 +168,7 @@ function IRASReceived({ navigate, onDownload }) {
 }
 
 /* ---------- C. Assign Expert Reviewers ---------- */
-function IRASAssign({ toast, setConfirm }) {
+function RASSCAssign({ toast, setConfirm }) {
   return (
     <>
       <PageHeader
@@ -293,7 +293,7 @@ function IRASAssign({ toast, setConfirm }) {
 }
 
 /* ---------- D. Expert Review ---------- */
-function IRASExpert({ onDownload, onView, toast, setConfirm }) {
+function RASSCExpert({ onDownload, onView, toast, setConfirm }) {
   const app = IR.PRIMARY_APP;
   return (
     <>
@@ -428,7 +428,7 @@ function IRASExpert({ onDownload, onView, toast, setConfirm }) {
 }
 
 /* ---------- E. Committee Decision ---------- */
-function IRASCommittee({ onDownload, toast, setConfirm }) {
+function RASSCCommittee({ onDownload, toast, setConfirm }) {
   const app = IR.PRIMARY_APP;
   const submitted = app.experts.filter(e => e.score !== null);
   const avg = submitted.length ? (submitted.reduce((s, e) => s + e.score, 0) / submitted.length).toFixed(1) : "—";
@@ -565,7 +565,7 @@ function IRASCommittee({ onDownload, toast, setConfirm }) {
                   setConfirm({
                     kind: "danger",
                     title: "Reject this application?",
-                    message: "Rejection by the committee is final at the IRAS level.",
+                    message: "Rejection by the committee is final at the RASSC level.",
                     confirmLabel: "Reject",
                     onConfirm: () => toast("Application rejected (demo)"),
                   })
@@ -582,7 +582,7 @@ function IRASCommittee({ onDownload, toast, setConfirm }) {
 }
 
 /* ---------- F. President Approval ---------- */
-function IRASPresident({ onDownload, toast, setConfirm }) {
+function RASSCPresident({ onDownload, toast, setConfirm }) {
   const app = IR.PRIMARY_APP;
   return (
     <>
@@ -721,7 +721,7 @@ function IRASPresident({ onDownload, toast, setConfirm }) {
 }
 
 /* ---------- G. Contract Management ---------- */
-function IRASContract({ onDownload, toast, setConfirm }) {
+function RASSCContract({ onDownload, toast, setConfirm }) {
   return (
     <>
       <PageHeader
@@ -796,7 +796,7 @@ function IRASContract({ onDownload, toast, setConfirm }) {
                   { key: "pay",    label: "First payment 30% released" },
                 ]}
                 app={{ timeline: {
-                  issue:  { done: true,    date: "Nov 14, 2025", who: "IRAS Office" },
+                  issue:  { done: true,    date: "Nov 14, 2025", who: "RASSC" },
                   review: { current: true, date: "In progress",  who: "Dr. Phyo Min Tun" },
                   sign:   { date: "Pending" },
                   file:   { date: "Pending" },
@@ -867,7 +867,7 @@ function IRASContract({ onDownload, toast, setConfirm }) {
 }
 
 /* ---------- H. Finance / OFM Payment ---------- */
-function IRASPayment({ onDownload, toast, setConfirm }) {
+function RASSCPayment({ onDownload, toast, setConfirm }) {
   const rows = [
     { id: "RG-2025-001", title: "AI-Based Research Grant Tracking System", who: "Dr. Phyo Min Tun",         total: 100000, p1: "pending", p2: "draft", p3: "draft", clearance: "Awaiting contract" },
     { id: "RG-2025-004", title: "Privacy-Preserving Recommender Systems",  who: "Dr. Chayanon Inthawong",   total:  95000, p1: "pending", p2: "draft", p3: "draft", clearance: "Awaiting contract" },
@@ -965,7 +965,7 @@ function IRASPayment({ onDownload, toast, setConfirm }) {
 }
 
 /* ---------- I. Report Review ---------- */
-function IRASReports({ onDownload, onView, toast, setConfirm }) {
+function RASSCReports({ onDownload, onView, toast, setConfirm }) {
   return (
     <>
       <PageHeader
@@ -1079,7 +1079,7 @@ function IRASReports({ onDownload, onView, toast, setConfirm }) {
 }
 
 /* ---------- J. Full Application Timeline ---------- */
-function IRASFullTimeline() {
+function RASSCFullTimeline() {
   const app = IR.PRIMARY_APP;
   return (
     <>
@@ -1135,7 +1135,7 @@ function IRASFullTimeline() {
                 { n: "K. Suthida (Faculty Office)",         r: "Document Check",             c: "var(--au-navy)" },
                 { n: "Assoc. Prof. Dr. Watcharee S.",       r: "Academic Committee Chair",   c: "var(--au-gold)" },
                 { n: "Dean, VMS-EST",                       r: "Faculty Approval",           c: "var(--au-navy)" },
-                { n: "Prof. Dr. Sirilak Khempila",          r: "IRAS Director",              c: "var(--au-crimson)" },
+                { n: "Prof. Dr. Sirilak Khempila",          r: "RASSC Director",              c: "var(--au-crimson)" },
                 { n: "Office of Financial Management",      r: "Disbursement",               c: "var(--au-gold)" },
               ].map((p, i) => (
                 <div key={i} style={{display: "flex", alignItems: "center", gap: 10, padding: "10px 20px"}}>
@@ -1155,7 +1155,7 @@ function IRASFullTimeline() {
 }
 
 Object.assign(window, {
-  IRASDashboard, IRASReceived, IRASAssign, IRASExpert,
-  IRASCommittee, IRASPresident, IRASContract, IRASPayment,
-  IRASReports, IRASFullTimeline,
+  RASSCDashboard, RASSCReceived, RASSCAssign, RASSCExpert,
+  RASSCCommittee, RASSCPresident, RASSCContract, RASSCPayment,
+  RASSCReports, RASSCFullTimeline,
 });

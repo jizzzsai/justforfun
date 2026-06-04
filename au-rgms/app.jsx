@@ -28,7 +28,7 @@ function LoginPage({ onLogin }) {
             Research Grant <em>Management</em> System
           </h1>
           <p>
-            A unified portal for AU researchers, deans, committees, IRAS,
+            A unified portal for AU researchers, deans, committees, RASSC,
             the President, and the Office of Financial Management to submit,
             review, and disburse research grants — across the fourteen-stage
             workflow.
@@ -90,7 +90,7 @@ function LoginPage({ onLogin }) {
 
           <div className="flex justify-between items-center mt-4" style={{fontSize: 12}}>
             <a href="#" style={{color: "var(--au-crimson)", fontWeight: 600, textDecoration: "none"}}>Forgot password?</a>
-            <span className="text-muted">Need help? <a href="#" style={{color: "var(--ink-1)"}}>Contact IRAS</a></span>
+            <span className="text-muted">Need help? <a href="#" style={{color: "var(--ink-1)"}}>Contact RASSC</a></span>
           </div>
         </div>
       </div>
@@ -115,7 +115,7 @@ const ROLE_CONFIG = {
     crumbRoot: "Dean's Office",
     sidebarFooter: {
       title: "Dean's Office",
-      body: "Forward eligible applications to IRAS within five working days of receipt.",
+      body: "Forward eligible applications to the RASSC once the Faculty Academic Committee approves.",
     },
   },
   committee: {
@@ -128,11 +128,11 @@ const ROLE_CONFIG = {
     },
   },
   iras: {
-    nav: APP.NAV_IRAS,
+    nav: APP.NAV_RASSC,
     homeKey: "i-dashboard",
-    crumbRoot: "IRAS Office",
+    crumbRoot: "RASSC",
     sidebarFooter: {
-      title: "IRAS Office",
+      title: "RASSC",
       body: "Assign three experts per proposal — at least two external where possible.",
     },
   },
@@ -151,7 +151,7 @@ const ROLE_CONFIG = {
     crumbRoot: "Office of the President",
     sidebarFooter: {
       title: "President's Office",
-      body: "Approvals must be marked within five working days. Contracts must be signed within fifteen.",
+      body: "Final approval rests with the President. The grant contract must be signed within 45 days.",
     },
   },
   ofm: {
@@ -358,28 +358,28 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "c-review":         return <FacultyAcademic onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "c-history":        return <CommitteeHistory onDownload={c.onDownload} />;
 
-    /* ---- IRAS ---- */
-    case "i-dashboard":      return <IRASDashboardV2 navigate={navigate} />;
-    case "i-received":       return <IRASReceived navigate={navigate} onDownload={c.onDownload} />;
-    case "i-screen":         return <IRASScreen navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "i-assign":         return <IRASAssign toast={c.toast} setConfirm={c.setConfirm} />;
-    case "i-reviewers":      return <IRASReviewerPool toast={c.toast} />;
+    /* ---- RASSC ---- */
+    case "i-dashboard":      return <RASSCDashboardV2 navigate={navigate} />;
+    case "i-received":       return <RASSCReceived navigate={navigate} onDownload={c.onDownload} />;
+    case "i-screen":         return <RASSCScreen navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "i-assign":         return <RASSCAssign toast={c.toast} setConfirm={c.setConfirm} />;
+    case "i-reviewers":      return <RASSCReviewerPool toast={c.toast} />;
 
     /* ---- Expert Reviewer ---- */
     case "e-dashboard":      return <ExpertDashboard navigate={navigate} />;
     case "e-assignments":    return <ExpertAssignments navigate={navigate} onDownload={c.onDownload} />;
-    case "e-evaluate":       return <IRASExpert onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "e-evaluate":       return <RASSCExpert onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "e-history":        return <ExpertHistory onDownload={c.onDownload} />;
 
     /* ---- President ---- */
     case "p-dashboard":      return <PresidentDashboard navigate={navigate} />;
     case "p-queue":          return <PresidentQueue navigate={navigate} onDownload={c.onDownload} />;
-    case "p-approve":        return <IRASPresident onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "p-contracts":      return <IRASContract onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "p-approve":        return <RASSCPresident onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "p-contracts":      return <RASSCContract onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
 
     /* ---- OFM / Finance ---- */
     case "o-dashboard":      return <OFMDashboard navigate={navigate} />;
-    case "o-payments":       return <IRASPayment onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "o-payments":       return <RASSCPayment onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-detail":         return <OFMDetail onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-history":        return <OFMHistory onDownload={c.onDownload} />;
 
@@ -495,7 +495,7 @@ function App() {
         <a href="#">Privacy</a>
         <a href="#">Terms</a>
         <a href="#">User Guide</a>
-        <a href="#">Contact IRAS</a>
+        <a href="#">Contact RASSC</a>
         <span className="right">© 2025 Assumption University · Office of Research Affairs</span>
       </footer>
 
