@@ -1,5 +1,5 @@
-/* AU Grant Assistant — floating AI chat widget.
-   Talks to /api/chat (serverless → Google Gemini). Mounts in its own root
+/* AU AI — floating AI assistant for Assumption University research grants.
+   Talks to /api/chat (serverless -> Google Gemini). Mounts in its own root
    so the prototype's app.jsx is untouched. Uses the global Icon + React. */
 const { useState, useRef, useEffect } = React;
 
@@ -11,7 +11,7 @@ function AIChat() {
     {
       role: "assistant",
       content:
-        "Hi! I'm the AU Grant Assistant. Ask me about the Research Grant Management System — the 14-stage workflow, what each role does, the 4 required documents, application status, or the 30 / 40 / 30 payments.",
+        "Hi, I'm AU AI — Assumption University's research-grant assistant. Ask me about the grant workflow, the RASSC review process, the 4 required documents, payment stages (30 / 40 / 30), or publication rewards.",
     },
   ]);
   const bodyRef = useRef(null);
@@ -38,7 +38,7 @@ function AIChat() {
       const data = await r.json();
       setMsgs((m) => [...m, { role: "assistant", content: data.reply || "Sorry, no response." }]);
     } catch (err) {
-      setMsgs((m) => [...m, { role: "assistant", content: "Sorry, I couldn't reach the assistant right now." }]);
+      setMsgs((m) => [...m, { role: "assistant", content: "Sorry, I couldn't reach AU AI right now." }]);
     } finally {
       setBusy(false);
     }
@@ -47,7 +47,7 @@ function AIChat() {
   const suggestions = [
     "What are the 14 workflow stages?",
     "What documents do I need to apply?",
-    "How do the 30 / 40 / 30 payments work?",
+    "How much is the reward for a Scopus Q1 paper?",
   ];
 
   return (
@@ -55,21 +55,21 @@ function AIChat() {
       <button
         className="ai-fab"
         onClick={() => setOpen((v) => !v)}
-        title="AU Grant Assistant"
-        aria-label="AU Grant Assistant"
+        title="AU AI"
+        aria-label="AU AI assistant"
       >
         <Icon name={open ? "ChevronDown" : "HelpCircle"} size={22} />
       </button>
 
       {open && (
-        <div className="ai-panel" role="dialog" aria-label="AU Grant Assistant">
+        <div className="ai-panel" role="dialog" aria-label="AU AI assistant">
           <div className="ai-head">
             <div className="ai-bot-ic">
               <Icon name="GraduationCap" size={16} />
             </div>
             <div className="ai-head-t">
-              <b>AU Grant Assistant</b>
-              <span>Answers about this system only</span>
+              <b>AU AI</b>
+              <span>AU research grants · RASSC</span>
             </div>
             <button className="ai-x" onClick={() => setOpen(false)} aria-label="Close">
               <Icon name="X" size={16} />
@@ -98,7 +98,7 @@ function AIChat() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask about the grant system…"
+              placeholder="Ask AU AI about research grants…"
             />
             <button type="submit" className="btn btn-primary" disabled={busy} aria-label="Send">
               <Icon name="Send" size={15} />
