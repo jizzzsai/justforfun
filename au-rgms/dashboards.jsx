@@ -136,6 +136,21 @@ function DeanDashboard({ navigate }) {
    DEAN — First Screening Queue
    ----------------------------------------------------------- */
 function DeanScreenQueue({ navigate, onDownload }) {
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const apps = await window.DB.deanQueue();
+        setRows(apps.map(a => ({
+          id: a.code, _uuid: a.id, title: a.title,
+          researcher: { name: a.researcher ? a.researcher.full_name : "—" },
+          department: a.department,
+          submittedAt: a.submitted_at ? window.DB.fmtDate(a.submitted_at) : "—",
+          budgetTotal: a.requested_amount, status: window.DB.statusBadge(a.status),
+        })));
+      } catch (e) { setRows([]); }
+    })();
+  }, []);
   return (
     <>
       <PageHeader
@@ -154,7 +169,7 @@ function DeanScreenQueue({ navigate, onDownload }) {
           <button className="btn btn-secondary btn-sm"><Icon name="Download" size={12} /> Export</button>
         </div>
         <QueueTable
-          rows={D.Q_DEAN_SCREEN}
+          rows={rows || []}
           openLabel="Screen"
           onOpen={() => navigate("d-screen-detail")}
           onDownload={onDownload}

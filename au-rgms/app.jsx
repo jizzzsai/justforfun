@@ -468,11 +468,14 @@ function App() {
   };
 
   useEffect(() => {
-    if (initial.skipLogin) return;
     (async () => {
       try {
         const sess = await window.AUTH.session();
-        if (sess) { const prof = await window.AUTH.profile(); if (prof) onLogin(prof); }
+        if (!sess) return;
+        const prof = await window.AUTH.profile();
+        if (!prof) return;
+        if (initial.skipLogin) setProfile(prof);
+        else onLogin(prof);
       } catch (e) {}
     })();
   }, []);

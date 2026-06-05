@@ -130,16 +130,52 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
     type: "Individual Research",
     duration: "12",
     keywords: "research management, workflow, machine learning, higher education",
-    name: "Dr. Phyo Min Tun",
-    title2: "Assistant Professor",
-    email: "phyomintun@au.edu",
-    phone: "+66 2 300 4543 ext. 3621",
+    name: "", title2: "", email: "", phone: "",
     school: "Vincent Mary School of Engineering, Science and Technology",
     department: "Information Technology",
-    budget: 100000,
     outcome: "A production-ready research grant management portal, two peer-reviewed conference papers, an open dataset of anonymised workflow durations, and training materials.",
   });
   const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
+
+  const [budgetRows, setBudgetRows] = useState([
+    { item: "Remuneration (research assistant)", amount: 30000 },
+    { item: "Research equipment", amount: 40000 },
+    { item: "Travel for off-campus data collection", amount: 18000 },
+    { item: "Miscellaneous (postage, photocopying, binding)", amount: 12000 },
+  ]);
+  const total = budgetRows.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const setAmt = (i, v) => setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, amount: (v + "").replace(/[^0-9]/g, "") } : r));
+
+  const [files, setFiles] = useState([]);
+  const onFiles = (e) => { const fs = Array.from(e.target.files || []); setFiles(prev => prev.concat(fs)); e.target.value = ""; };
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const p = await window.AUTH.profile();
+        if (p) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.title || d.title2, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone }));
+      } catch (e) {}
+    })();
+  }, []);
+
+  async function save(submit) {
+    setErr("");
+    if (submit && !draft.title.trim()) { setErr("Research title is required."); return; }
+    if (submit && total > 100000) { setErr("Total budget (" + total.toLocaleString() + " THB) exceeds the 100,000 THB cap."); return; }
+    setBusy(true);
+    try {
+      const app = await window.DB.createApplication({
+        title: draft.title, abstract: draft.outcome, field: draft.field,
+        faculty: draft.school, department: draft.department, keywords: draft.keywords,
+        requested_amount: total, duration_months: draft.duration, budget_breakdown: budgetRows,
+      }, submit);
+      for (const f of files) { try { await window.DB.uploadDocument(app.id, f, null); } catch (e) {} }
+      toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
+      navigate("r-applications");
+    } catch (ex) { setErr((ex && ex.message) || "Could not save the application."); setBusy(false); }
+  }
 
   return (
     <>
@@ -148,9 +184,9 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
         desc="Complete each section and upload the four required forms before submitting."
         actions={
           <>
-            <button className="btn btn-secondary">Save as Draft</button>
-            <button className="btn btn-primary" onClick={() => toast("Submitted RG-2025-001 (demo)")}>
-              <Icon name="Send" size={13} /> Submit Application
+            <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
+            <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
+              <Icon name="Send" size={13} /> {busy ? "Saving…" : "Submit Application"}
             </button>
           </>
         }
@@ -234,34 +270,38 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
 
         <div className="form-section">
           <h4><span className="num">4</span> Budget Information</h4>
-          <p className="section-sub">Total request not to exceed 250,000 THB without committee waiver.</p>
+          <p className="section-sub">Maximum 100,000 THB per project (AU Announcement No.12/2024). Caps: remuneration ≤30%, travel ≤40%, equipment ≤50%, misc ≤20%.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field">
                 <label>Total Grant Requested (THB)</label>
-                <input value={draft.budget} onChange={e => upd("budget", e.target.value)} />
+                <input value={total.toLocaleString()} readOnly title="Auto-calculated from the breakdown below"
+                  style={total > 100000 ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)", fontWeight: 600 } : {}} />
               </div>
               <div className="field">
                 <label>Currency</label>
                 <select><option>Thai Baht (THB)</option></select>
               </div>
               <div className="field full">
-                <label>Budget Breakdown</label>
+                <label>Budget Breakdown — edit each amount</label>
                 <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
                   <table className="tbl">
                     <thead>
-                      <tr><th>Budget Item</th><th style={{ width: 160, textAlign: "right" }}>Amount (THB)</th></tr>
+                      <tr><th>Budget Item</th><th style={{ width: 180, textAlign: "right" }}>Amount (THB)</th></tr>
                     </thead>
                     <tbody>
-                      {RA.PRIMARY_APP.budgetBreakdown.map((b, i) => (
+                      {budgetRows.map((b, i) => (
                         <tr key={i}>
                           <td>{b.item}</td>
-                          <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{b.amount.toLocaleString()}</td>
+                          <td style={{ textAlign: "right" }}>
+                            <input value={(Number(b.amount) || 0).toLocaleString()} onChange={e => setAmt(i, e.target.value)}
+                              style={{ width: 130, textAlign: "right", fontFamily: "ui-monospace, monospace" }} />
+                          </td>
                         </tr>
                       ))}
                       <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}>
                         <td>Total</td>
-                        <td style={{ textAlign: "right" }}>{fmtBaht(RA.PRIMARY_APP.budgetTotal)}</td>
+                        <td style={{ textAlign: "right", color: total > 100000 ? "var(--au-crimson)" : "inherit" }}>{fmtBaht(total)}</td>
                       </tr>
                     </tbody>
                   </table>
@@ -290,16 +330,30 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
           <h4><span className="num">6</span> Required Documents</h4>
           <p className="section-sub">Upload all four forms. PDF only, maximum 10 MB each.</p>
           <div className="section-body">
-            <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
-              {RA.MOCK_DOCS.map(doc => (
-                <FileRow key={doc.id} doc={doc} onDownload={onDownload} onView={onView} />
-              ))}
-            </div>
-            <div className="upload-box mt-4">
+            {files.length > 0 && (
+              <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
+                {files.map((f, i) => (
+                  <div className="file-row" key={i}>
+                    <div className="ficon"><Icon name="FileText" size={18} /></div>
+                    <div className="fmeta">
+                      <div className="fn">{f.name}</div>
+                      <div className="fs">{(f.size / 1024).toFixed(0)} KB · ready to upload</div>
+                    </div>
+                    <div className="factions">
+                      <button className="btn btn-secondary btn-sm" onClick={() => setFiles(fs => fs.filter((_, j) => j !== i))}>
+                        <Icon name="X" size={13} /> Remove
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <label className="upload-box mt-1" style={{ cursor: "pointer", display: "block" }}>
+              <input type="file" accept="application/pdf,.pdf" multiple style={{ display: "none" }} onChange={onFiles} />
               <Icon name="Upload" size={26} className="icon" />
-              <div className="t">Drag files here or click to upload</div>
+              <div className="t">Click to upload the required forms</div>
               <div className="s">PDF · max 10 MB per file</div>
-            </div>
+            </label>
           </div>
         </div>
 
@@ -308,9 +362,10 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
           background: "var(--paper-warm)",
           display: "flex", gap: 8, justifyContent: "flex-end",
         }}>
-          <button className="btn btn-secondary">Save as Draft</button>
-          <button className="btn btn-primary" onClick={() => toast("Submitted RG-2025-001 (demo)")}>
-            <Icon name="Send" size={13} /> Submit Application
+          {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, alignSelf: "center", marginRight: "auto" }}>{err}</div>}
+          <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
+          <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
+            <Icon name="Send" size={13} /> {busy ? "Saving…" : "Submit Application"}
           </button>
         </div>
       </div>
@@ -320,12 +375,19 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
 
 /* ---------- C. My Applications ---------- */
 function ResearcherApplications({ navigate, onDownload, openDetail }) {
-  const myApps = [
-    { ...RA.PRIMARY_APP, stage: "Expert Review" },
-    { id: "RG-2025-012", title: "Lightweight On-Device Speech Models for Thai Lecturers", submittedAt: "Oct 22, 2025", stage: "Faculty Office Check", status: RA.STATUS.faculty },
-    { id: "RG-2024-114", title: "Federated Plagiarism Detection across Thai Universities", submittedAt: "Jul 09, 2024", stage: "Final Payment", status: RA.STATUS.paid },
-    { id: "RG-2025-018", title: "Reinforcement Learning for Adaptive Curriculum Sequencing", submittedAt: "—", stage: "Draft", status: RA.STATUS.draft },
-  ];
+  const [myApps, setMyApps] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const apps = await window.DB.myApplications();
+        setMyApps(apps.map(a => ({
+          id: a.code, _uuid: a.id, title: a.title, faculty: a.faculty, department: a.department,
+          submittedAt: a.submitted_at ? window.DB.fmtDate(a.submitted_at) : "—",
+          stage: window.DB.statusBadge(a.status).label, status: window.DB.statusBadge(a.status),
+        })));
+      } catch (e) { setMyApps([]); }
+    })();
+  }, []);
 
   return (
     <>
@@ -362,7 +424,9 @@ function ResearcherApplications({ navigate, onDownload, openDetail }) {
             </tr>
           </thead>
           <tbody>
-            {myApps.map(a => (
+            {myApps === null && <tr><td colSpan="6" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading your applications…</td></tr>}
+            {myApps && myApps.length === 0 && <tr><td colSpan="6" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No applications yet — click "New Application" to submit your first.</td></tr>}
+            {(myApps || []).map(a => (
               <tr key={a.id}>
                 <td><span className="id">{a.id}</span></td>
                 <td className="title-cell">
