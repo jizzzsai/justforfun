@@ -363,34 +363,34 @@ function PageRouter({ pageKey, navigate, ctx }) {
 
     /* ---- Dean ---- */
     case "d-dashboard":      return <DeanDashboard navigate={navigate} />;
-    case "d-screen":         return <DeanScreenQueue navigate={navigate} onDownload={c.onDownload} />;
+    case "d-screen":         return <DeanScreenQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-screen-detail":  return <FacultyChecklist navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "d-sign":           return <DeanSignQueue navigate={navigate} onDownload={c.onDownload} />;
+    case "d-sign":           return <DeanSignQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-sign-detail":    return <FacultyDean onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-history":        return <DeanHistory onDownload={c.onDownload} />;
 
     /* ---- Committee ---- */
     case "c-dashboard":      return <CommitteeDashboard navigate={navigate} />;
-    case "c-queue":          return <CommitteeQueue navigate={navigate} onDownload={c.onDownload} />;
+    case "c-queue":          return <CommitteeQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "c-review":         return <FacultyAcademic onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "c-history":        return <CommitteeHistory onDownload={c.onDownload} />;
 
     /* ---- RASSC ---- */
     case "i-dashboard":      return <RASSCDashboardV2 navigate={navigate} />;
-    case "i-received":       return <RASSCReceived navigate={navigate} onDownload={c.onDownload} />;
+    case "i-received":       return <RASSCReceived navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-screen":         return <RASSCScreen navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-assign":         return <RASSCAssign toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-reviewers":      return <RASSCReviewerPool toast={c.toast} />;
 
     /* ---- Expert Reviewer ---- */
     case "e-dashboard":      return <ExpertDashboard navigate={navigate} />;
-    case "e-assignments":    return <ExpertAssignments navigate={navigate} onDownload={c.onDownload} />;
+    case "e-assignments":    return <ExpertAssignments navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "e-evaluate":       return <RASSCExpert onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "e-history":        return <ExpertHistory onDownload={c.onDownload} />;
 
     /* ---- President ---- */
     case "p-dashboard":      return <PresidentDashboard navigate={navigate} />;
-    case "p-queue":          return <PresidentQueue navigate={navigate} onDownload={c.onDownload} />;
+    case "p-queue":          return <PresidentQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "p-approve":        return <RASSCPresident onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "p-contracts":      return <RASSCContract onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
 

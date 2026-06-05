@@ -112,7 +112,7 @@ function RASSCDashboard({ navigate }) {
 }
 
 /* ---------- B. Received Applications ---------- */
-function RASSCReceived({ navigate, onDownload }) {
+function RASSCReceived({ navigate, onDownload, toast, setConfirm }) {
   return (
     <>
       <PageHeader
@@ -131,37 +131,9 @@ function RASSCReceived({ navigate, onDownload }) {
           <div style={{flex: 1}}></div>
           <button className="btn btn-secondary btn-sm"><Icon name="Download" size={12} /> Export</button>
         </div>
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th>Application ID</th>
-              <th>Research Title</th>
-              <th>Researcher</th>
-              <th>Faculty</th>
-              <th>Date Received</th>
-              <th>Status</th>
-              <th style={{textAlign: "right"}}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {IR.RASSC_QUEUE.map(a => (
-              <tr key={a.id}>
-                <td><span className="id">{a.id}</span></td>
-                <td className="title-cell"><div className="t" style={{maxWidth: 260}}>{a.title}</div></td>
-                <td style={{fontSize: 12}}>{(a.researcher?.name) || "—"}</td>
-                <td style={{fontSize: 11, color: "var(--ink-3)", maxWidth: 180}}>{a.faculty}</td>
-                <td style={{fontSize: 12}}>{a.submittedAt}</td>
-                <td><Badge status={a.status} /></td>
-                <td className="actions">
-                  <button className="btn btn-secondary btn-sm" onClick={() => navigate("i-expert")}>Open</button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => onDownload({ name: a.id + "_files.zip" })}>
-                    <Icon name="Download" size={13} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <WiredQueue status="iras_review" openLabel="Assign experts →"
+          confirmTitle="Assign experts & send for review?" confirmLabel="Send to experts"
+          onDownload={onDownload} setConfirm={setConfirm} toast={toast} />
       </div>
     </>
   );

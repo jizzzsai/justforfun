@@ -52,6 +52,26 @@ function QueueTable({ rows, openLabel = "Review", onOpen, onDownload, columns = 
   );
 }
 
+/* Shared queue wired to live Supabase data + a forward action. */
+function WiredQueue({ status, openLabel, confirmTitle, confirmLabel, onDownload, setConfirm, toast }) {
+  const [rows, setRows] = useState(null);
+  const load = () => window.DB.queue(status).then(setRows).catch(() => setRows([]));
+  useEffect(() => { load(); }, []);
+  const act = (row) => setConfirm({
+    kind: "success",
+    title: confirmTitle || "Forward this application?",
+    confirmLabel: confirmLabel || "Confirm",
+    message: "Application " + row.id + " · " + row.title + ".",
+    onConfirm: async () => {
+      try { await window.DB.transition(row._uuid, status, "advance"); toast(row.id + " forwarded to the next stage."); load(); }
+      catch (e) { toast("Error: " + (e.message || e)); }
+    },
+  });
+  if (rows === null) return <div style={{ padding: "36px", textAlign: "center", color: "var(--ink-3)" }}>Loading queue…</div>;
+  if (rows.length === 0) return <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>Nothing in this queue right now.</div>;
+  return <QueueTable rows={rows} openLabel={openLabel} onOpen={act} onDownload={onDownload} />;
+}
+
 /* -----------------------------------------------------------
    DEAN — Dashboard
    ----------------------------------------------------------- */
@@ -135,22 +155,7 @@ function DeanDashboard({ navigate }) {
 /* -----------------------------------------------------------
    DEAN — First Screening Queue
    ----------------------------------------------------------- */
-function DeanScreenQueue({ navigate, onDownload }) {
-  const [rows, setRows] = useState(null);
-  useEffect(() => {
-    (async () => {
-      try {
-        const apps = await window.DB.deanQueue();
-        setRows(apps.map(a => ({
-          id: a.code, _uuid: a.id, title: a.title,
-          researcher: { name: a.researcher ? a.researcher.full_name : "—" },
-          department: a.department,
-          submittedAt: a.submitted_at ? window.DB.fmtDate(a.submitted_at) : "—",
-          budgetTotal: a.requested_amount, status: window.DB.statusBadge(a.status),
-        })));
-      } catch (e) { setRows([]); }
-    })();
-  }, []);
+function DeanScreenQueue({ navigate, onDownload, toast, setConfirm }) {
   return (
     <>
       <PageHeader
@@ -168,12 +173,9 @@ function DeanScreenQueue({ navigate, onDownload }) {
           <div style={{ flex: 1 }}></div>
           <button className="btn btn-secondary btn-sm"><Icon name="Download" size={12} /> Export</button>
         </div>
-        <QueueTable
-          rows={rows || []}
-          openLabel="Screen"
-          onOpen={() => navigate("d-screen-detail")}
-          onDownload={onDownload}
-        />
+        <WiredQueue status="submitted" openLabel="Approve →"
+          confirmTitle="Approve & send to Faculty Committee?" confirmLabel="Approve"
+          onDownload={onDownload} setConfirm={setConfirm} toast={toast} />
       </div>
     </>
   );
@@ -182,7 +184,7 @@ function DeanScreenQueue({ navigate, onDownload }) {
 /* -----------------------------------------------------------
    DEAN — Sign & Forward Queue
    ----------------------------------------------------------- */
-function DeanSignQueue({ navigate, onDownload }) {
+function DeanSignQueue({ navigate, onDownload, toast, setConfirm }) {
   return (
     <>
       <PageHeader
@@ -199,12 +201,9 @@ function DeanSignQueue({ navigate, onDownload }) {
           <div style={{ flex: 1 }}></div>
           <button className="btn btn-secondary btn-sm"><Icon name="Download" size={12} /> Export</button>
         </div>
-        <QueueTable
-          rows={D.Q_DEAN_SIGN}
-          openLabel="Open"
-          onOpen={() => navigate("d-sign-detail")}
-          onDownload={onDownload}
-        />
+        <WiredQueue status="dean_sign" openLabel="Sign & Forward →"
+          confirmTitle="Sign & forward to RASSC?" confirmLabel="Sign & Forward"
+          onDownload={onDownload} setConfirm={setConfirm} toast={toast} />
       </div>
     </>
   );
@@ -301,7 +300,7 @@ function CommitteeDashboard({ navigate }) {
 }
 
 /* COMMITTEE — Queue */
-function CommitteeQueue({ navigate, onDownload }) {
+function CommitteeQueue({ navigate, onDownload, toast, setConfirm }) {
   return (
     <>
       <PageHeader title="Review Queue" desc="Proposals from the Dean awaiting committee review." />
@@ -315,7 +314,9 @@ function CommitteeQueue({ navigate, onDownload }) {
           <div style={{flex: 1}}></div>
           <button className="btn btn-secondary btn-sm"><Icon name="Download" size={12} /> Export</button>
         </div>
-        <QueueTable rows={D.Q_COMMITTEE} openLabel="Review" onOpen={() => navigate("c-review")} onDownload={onDownload} />
+        <WiredQueue status="committee_review" openLabel="Recommend →"
+          confirmTitle="Recommend & return to the Dean?" confirmLabel="Recommend"
+          onDownload={onDownload} setConfirm={setConfirm} toast={toast} />
       </div>
     </>
   );
@@ -641,40 +642,14 @@ function ExpertDashboard({ navigate }) {
 }
 
 /* EXPERT — Assignments list */
-function ExpertAssignments({ navigate, onDownload }) {
-  const assignments = [
-    { id: "RG-2025-001", title: "AI-Based Research Grant Tracking System for Assumption University", researcher: "Dr. Phyo Min Tun",          deadline: "Nov 25, 2025", status: "In Progress" },
-    { id: "RG-2025-014", title: "Pedagogical Agents for Bilingual Foundation Programmes",            researcher: "Dr. Watcharin Krairat",     deadline: "Nov 30, 2025", status: "Not Started" },
-    { id: "RG-2025-013", title: "Microcredentials and Lifelong Learning Adoption in Thai SMEs",       researcher: "Dr. Anchalee Tipsuwan",     deadline: "Dec 04, 2025", status: "Not Started" },
-  ];
+function ExpertAssignments({ navigate, onDownload, toast, setConfirm }) {
   return (
     <>
       <PageHeader title="My Assignments" desc="Proposals assigned to you by the RASSC office." />
       <div className="card card-pad-0">
-        <table className="tbl">
-          <thead>
-            <tr><th>ID</th><th>Title</th><th>Researcher</th><th>Deadline</th><th>Status</th><th style={{textAlign: "right"}}>Actions</th></tr>
-          </thead>
-          <tbody>
-            {assignments.map(a => (
-              <tr key={a.id}>
-                <td><span className="id">{a.id}</span></td>
-                <td className="title-cell"><div className="t" style={{maxWidth: 320}}>{a.title}</div></td>
-                <td style={{fontSize: 12}}>{a.researcher}</td>
-                <td style={{fontSize: 12}}>{a.deadline}</td>
-                <td><span className={`badge ${a.status === "In Progress" ? "badge-academic" : "badge-draft"}`}><span className="dot"></span>{a.status}</span></td>
-                <td className="actions">
-                  <button className="btn btn-primary btn-sm" onClick={() => navigate("e-evaluate")}>
-                    {a.status === "Not Started" ? "Start" : "Continue"}
-                  </button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => onDownload({ name: `${a.id}_proposal.pdf` })}>
-                    <Icon name="Download" size={13} />
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <WiredQueue status="expert_review" openLabel="Submit review →"
+          confirmTitle="Submit your review & send to the President?" confirmLabel="Submit review"
+          onDownload={onDownload} setConfirm={setConfirm} toast={toast} />
       </div>
     </>
   );
@@ -813,12 +788,14 @@ function PresidentDashboard({ navigate }) {
 }
 
 /* PRESIDENT — Approval queue */
-function PresidentQueue({ navigate, onDownload }) {
+function PresidentQueue({ navigate, onDownload, toast, setConfirm }) {
   return (
     <>
       <PageHeader title="Final Approval Queue" desc="Proposals awaiting your decision." />
       <div className="card card-pad-0">
-        <QueueTable rows={D.Q_PRESIDENT} openLabel="Open" onOpen={() => navigate("p-approve")} onDownload={onDownload} />
+        <WiredQueue status="president_review" openLabel="Approve →"
+          confirmTitle="Approve this application?" confirmLabel="Approve"
+          onDownload={onDownload} setConfirm={setConfirm} toast={toast} />
       </div>
     </>
   );
