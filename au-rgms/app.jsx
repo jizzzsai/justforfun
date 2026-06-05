@@ -7,9 +7,21 @@ const APP = window.AU;
 
 /* ============= LOGIN PAGE ============= */
 function LoginPage({ onLogin }) {
+  const EMAIL_FOR = { researcher: "somchai.r@au.edu", dean: "dean.sci@au.edu", committee: "comm.chair@au.edu", iras: "iras.office@au.edu", expert: "expert.ml@au.edu", president: "president@au.edu", ofm: "finance@au.edu", admin: "admin@au.edu" };
   const [role, setRole] = useState("researcher");
-  const [email, setEmail] = useState("phyomintun@au.edu");
-  const [pass, setPass] = useState("•••••••••");
+  const [email, setEmail] = useState("somchai.r@au.edu");
+  const [pass, setPass] = useState("AuResearch#2026");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  async function doLogin(e) {
+    e.preventDefault(); setErr(""); setBusy(true);
+    try {
+      const prof = await window.AUTH.signIn(email, pass);
+      if (!prof) throw new Error("No profile found for this account.");
+      onLogin(prof);
+    } catch (ex) { setErr((ex && ex.message) || "Sign-in failed."); setBusy(false); }
+  }
 
   return (
     <div className="login-shell">
@@ -50,7 +62,7 @@ function LoginPage({ onLogin }) {
           <h2>Welcome back</h2>
           <p className="sub">Sign in with your AU credentials to continue.</p>
 
-          <form onSubmit={(e) => { e.preventDefault(); onLogin(role); }}>
+          <form onSubmit={doLogin}>
             <div className="field">
               <label>AU Email</label>
               <input value={email} onChange={e => setEmail(e.target.value)} type="email" autoComplete="email" />
@@ -70,7 +82,7 @@ function LoginPage({ onLogin }) {
                       name="role"
                       value={r.key}
                       checked={role === r.key}
-                      onChange={() => setRole(r.key)}
+                      onChange={() => { setRole(r.key); setEmail(EMAIL_FOR[r.key] || email); }}
                       style={{display: "none"}}
                     />
                     <Icon name={r.iconName} size={16} style={{color: role === r.key ? "var(--au-crimson)" : "var(--ink-3)"}} />
@@ -83,8 +95,9 @@ function LoginPage({ onLogin }) {
               </div>
             </div>
 
-            <button className="btn btn-primary btn-block mt-4" type="submit">
-              Sign In <Icon name="ArrowRight" size={14} />
+            {err && <div style={{color: "var(--au-crimson)", fontSize: 12, marginTop: 8}}>{err}</div>}
+            <button className="btn btn-primary btn-block mt-4" type="submit" disabled={busy}>
+              {busy ? "Signing in…" : <>Sign In <Icon name="ArrowRight" size={14} /></>}
             </button>
           </form>
 
@@ -175,10 +188,14 @@ const ROLE_CONFIG = {
 };
 
 /* ============= APP HEADER ============= */
-function AppHeader({ role, onSwitchRole, onLogout }) {
+function AppHeader({ role, profile, onSwitchRole, onLogout }) {
   const [roleOpen, setRoleOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const current = APP.ROLES.find(r => r.key === role);
+  const displayName = (profile && profile.full_name) || current.full;
+  const displayInitials = (profile && profile.full_name)
+    ? profile.full_name.trim().split(/\s+/).slice(-2).map(s => s[0]).join("").toUpperCase()
+    : current.initials;
   const wrapRef = useRef(null);
 
   useEffect(() => {
@@ -223,9 +240,9 @@ function AppHeader({ role, onSwitchRole, onLogout }) {
 
         <div style={{position: "relative", marginLeft: 8}}>
           <button className="role-switch" onClick={() => { setRoleOpen(v => !v); setNotifOpen(false); }}>
-            <div className="avatar">{current.initials}</div>
+            <div className="avatar">{displayInitials}</div>
             <div className="role-info">
-              <b>{current.full}</b>
+              <b>{displayName}</b>
               <span>{current.subtitle}</span>
             </div>
             <Icon name="ChevronDown" size={14} />
@@ -420,6 +437,7 @@ function App() {
   const [loggedIn, setLoggedIn] = useState(!!initial.skipLogin);
   const [role, setRole] = useState(startingRole);
   const [page, setPage] = useState(startingPage);
+  const [profile, setProfile] = useState(null);
 
   // shared UI state
   const [previewDoc, setPreviewDoc] = useState(null);
@@ -430,9 +448,11 @@ function App() {
   const onView = (doc) => setPreviewDoc(doc);
   const toast = (msg) => setToastMsg(msg);
 
-  const onLogin = (selectedRole) => {
-    setRole(selectedRole);
-    setPage(ROLE_CONFIG[selectedRole].homeKey);
+  const onLogin = (prof) => {
+    const r = prof && ROLE_CONFIG[prof.role] ? prof.role : "researcher";
+    setProfile(prof || null);
+    setRole(r);
+    setPage(ROLE_CONFIG[r].homeKey);
     setLoggedIn(true);
   };
 
@@ -442,7 +462,20 @@ function App() {
     setPage(ROLE_CONFIG[newRole].homeKey);
   };
 
-  const onLogout = () => setLoggedIn(false);
+  const onLogout = async () => {
+    try { await window.AUTH.signOut(); } catch (e) {}
+    setProfile(null); setLoggedIn(false);
+  };
+
+  useEffect(() => {
+    if (initial.skipLogin) return;
+    (async () => {
+      try {
+        const sess = await window.AUTH.session();
+        if (sess) { const prof = await window.AUTH.profile(); if (prof) onLogin(prof); }
+      } catch (e) {}
+    })();
+  }, []);
 
   const cfg = ROLE_CONFIG[role];
 
@@ -466,7 +499,7 @@ function App() {
 
   return (
     <div className="app">
-      <AppHeader role={role} onSwitchRole={onSwitchRole} onLogout={onLogout} />
+      <AppHeader role={role} profile={profile} onSwitchRole={onSwitchRole} onLogout={onLogout} />
       <SubBar
         crumbs={crumbs}
         onHome={() => setPage(cfg.homeKey)}
