@@ -840,23 +840,29 @@ function RASSCContract({ onDownload, toast, setConfirm }) {
 
 /* ---------- H. Finance / OFM Payment ---------- */
 function RASSCPayment({ onDownload, toast, setConfirm }) {
-  const rows = [
-    { id: "RG-2025-001", title: "AI-Based Research Grant Tracking System", who: "Dr. Phyo Min Tun",         total: 100000, p1: "pending", p2: "draft", p3: "draft", clearance: "Awaiting contract" },
-    { id: "RG-2025-004", title: "Privacy-Preserving Recommender Systems",  who: "Dr. Chayanon Inthawong",   total:  95000, p1: "pending", p2: "draft", p3: "draft", clearance: "Awaiting contract" },
-    { id: "RG-2025-005", title: "Cultural Heritage Preservation",          who: "Dr. Nisachon Charoenwong", total:  75000, p1: "ready",   p2: "draft", p3: "draft", clearance: "Contract signed" },
-    { id: "RG-2025-006", title: "Wearable EEG Monitoring",                 who: "Dr. Karunee Sritrakul",    total: 90000, p1: "paid",    p2: "pending", p3: "draft", clearance: "Progress report under review" },
-    { id: "RG-2025-007", title: "Mangrove Resilience to Salinity",         who: "Dr. Apichat Phongphan",    total: 100000, p1: "paid",    p2: "paid",   p3: "pending", clearance: "Final report under review" },
-  ];
+  const [apps, setApps] = useState(null);
+  const load = () => window.DB.ofmPayments().then(setApps).catch(() => setApps([]));
+  useEffect(() => { load(); }, []);
 
-  const cell = (v) => {
-    const map = {
-      paid:    { cls: "badge-paid",     label: "Paid" },
-      ready:   { cls: "badge-approved", label: "Ready" },
-      pending: { cls: "badge-pending",  label: "Pending" },
-      draft:   { cls: "badge-draft",    label: "Not due" },
-    };
-    const x = map[v];
-    return <span className={`badge ${x.cls}`}><span className="dot"></span>{x.label}</span>;
+  const totalAllocated = (apps || []).reduce((s, a) => s + Number(a.approved_amount || a.requested_amount || 0), 0);
+  const disbursed = (apps || []).reduce((s, a) => s + (a.payments || []).filter(p => p.status === "paid").reduce((t, p) => t + Number(p.amount), 0), 0);
+
+  const payCell = (app, p) => {
+    if (!p) return "—";
+    if (p.status === "paid") return <span className="badge badge-paid"><span className="dot"></span>Paid</span>;
+    if (!window.DB.payable(app, p.instalment)) return <span className="badge badge-draft"><span className="dot"></span>Not due</span>;
+    return (
+      <button className="btn btn-primary btn-sm" onClick={() => setConfirm({
+        kind: "success",
+        title: "Disburse tranche " + p.instalment + " (" + p.pct + "%)?",
+        message: "Pay " + fmtBaht(p.amount) + " for " + app.code + ".",
+        confirmLabel: "Pay " + fmtBaht(p.amount),
+        onConfirm: async () => {
+          try { await window.DB.markPaid(p.id, p.instalment, app.id); toast("Tranche " + p.instalment + " paid for " + app.code); load(); }
+          catch (e) { toast("Error: " + (e.message || e)); }
+        },
+      })}>Pay {p.pct}%</button>
+    );
   };
 
   return (
@@ -866,71 +872,48 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
         desc="Process disbursements after each milestone: contract, progress report, final report."
       />
 
-      <div className="stats" style={{gridTemplateColumns: "repeat(4, 1fr)"}}>
-        <Stat label="Total Allocated"   value="460k THB" icon="Coins" />
-        <Stat label="Disbursed YTD"     value="97k THB" icon="TrendingUp" tone="green" />
-        <Stat label="Pending Approval"  value="3"        icon="Clock"      tone="gold" />
-        <Stat label="Receipts Cleared"  value="9 / 12"   icon="CheckCircle" tone="navy" />
+      <div className="stats" style={{gridTemplateColumns: "repeat(3, 1fr)"}}>
+        <Stat label="Total Allocated" value={fmtBaht(totalAllocated)} icon="Coins" />
+        <Stat label="Disbursed" value={fmtBaht(disbursed)} icon="TrendingUp" tone="green" />
+        <Stat label="Active Grants" value={(apps || []).length} icon="Briefcase" tone="navy" />
       </div>
 
       <div className="card card-pad-0">
-        <div className="toolbar">
-          <div className="search">
-            <Icon name="Search" size={14} className="icon" />
-            <input placeholder="Search by ID or researcher…" />
-          </div>
-          <button className="filter active"><Icon name="Filter" size={12} /> All payments</button>
-          <button className="filter"><Icon name="Calendar" size={12} /> This semester</button>
-          <div style={{flex: 1}}></div>
-          <button className="btn btn-secondary btn-sm" onClick={() => onDownload({ name: "Disbursement_Log.csv" })}>
-            <Icon name="Download" size={12} /> Export
-          </button>
-        </div>
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th>Research</th>
-              <th>Researcher</th>
-              <th style={{textAlign: "right"}}>Total</th>
-              <th>1st 30%</th>
-              <th>2nd 40%</th>
-              <th>3rd 30%</th>
-              <th>Receipt clearance</th>
-              <th style={{textAlign: "right"}}>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map(r => (
-              <tr key={r.id}>
-                <td className="title-cell">
-                  <div className="t">{r.id}</div>
-                  <div className="s" style={{maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{r.title}</div>
-                </td>
-                <td style={{fontSize: 12}}>{r.who}</td>
-                <td style={{textAlign: "right", fontWeight: 600}}>{fmtBaht(r.total)}</td>
-                <td>{cell(r.p1)}</td>
-                <td>{cell(r.p2)}</td>
-                <td>{cell(r.p3)}</td>
-                <td style={{fontSize: 12, color: "var(--ink-3)"}}>{r.clearance}</td>
-                <td className="actions">
-                  <button className="btn btn-ghost btn-sm" onClick={() => onDownload({ name: `${r.id}_receipt.pdf` })}>
-                    <Icon name="Download" size={13} /> Receipt
-                  </button>
-                  <button className="btn btn-primary btn-sm" disabled={r.p1 !== "ready" && r.p2 !== "pending" && r.p3 !== "pending"}
-                    onClick={() => setConfirm({
-                      kind: "success",
-                      title: "Process payment?",
-                      message: `Disburse next tranche for ${r.id}. The researcher will be notified.`,
-                      confirmLabel: "Process Payment",
-                      onConfirm: () => toast("Payment processed (demo)"),
-                    })}>
-                    Process
-                  </button>
-                </td>
+        {apps === null && <div style={{ padding: "36px", textAlign: "center", color: "var(--ink-3)" }}>Loading payments…</div>}
+        {apps && apps.length === 0 && <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>No approved grants yet. Approve an application (as President) to set up its 30 / 40 / 30 payments.</div>}
+        {apps && apps.length > 0 && (
+          <table className="tbl">
+            <thead>
+              <tr>
+                <th>Research</th>
+                <th>Researcher</th>
+                <th style={{ textAlign: "right" }}>Grant</th>
+                <th>1st · 30%</th>
+                <th>2nd · 40%</th>
+                <th>3rd · 30%</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {apps.map(a => {
+                const p = {};
+                (a.payments || []).forEach(x => { p[x.instalment] = x; });
+                return (
+                  <tr key={a.id}>
+                    <td className="title-cell">
+                      <div className="t">{a.code}</div>
+                      <div className="s" style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div>
+                    </td>
+                    <td style={{ fontSize: 12 }}>{a.researcher ? a.researcher.full_name : "—"}</td>
+                    <td style={{ textAlign: "right", fontWeight: 600 }}>{fmtBaht(a.approved_amount || a.requested_amount)}</td>
+                    <td>{payCell(a, p[1])}</td>
+                    <td>{payCell(a, p[2])}</td>
+                    <td>{payCell(a, p[3])}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        )}
       </div>
     </>
   );

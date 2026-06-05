@@ -155,7 +155,73 @@
           action: label, from_status: fromStatus, to_status: to,
         });
       } catch (e) {}
+      if (to === "approved") {
+        try {
+          var amt = Number(res.data.approved_amount || res.data.requested_amount || 0);
+          if (!res.data.approved_amount) await sb.from("applications").update({ approved_amount: amt }).eq("id", appId);
+          await sb.from("contracts").insert({ application_id: appId, contract_no: "CT-" + res.data.code, amount: amt, status: "issued" });
+        } catch (e) {}
+      }
       return res.data;
+    },
+
+    // ---- Layer 4: contracts, payments (30/40/30), reports ----
+    async ofmPayments() {
+      var res = await sb.from("applications")
+        .select("*, researcher:profiles(full_name), payments(*), reports(kind,status), contracts(contract_no,status)")
+        .in("status", ["approved", "active", "completed"]).order("decided_at", { ascending: false });
+      if (res.error) throw res.error;
+      var apps = res.data || [];
+      for (var i = 0; i < apps.length; i++) {
+        var a = apps[i];
+        if (!a.payments || a.payments.length === 0) {
+          var amount = Number(a.approved_amount || a.requested_amount || 0);
+          var p1 = Math.round(amount * 0.30), p3 = Math.round(amount * 0.30), p2 = amount - p1 - p3;
+          var ins = await sb.from("payments").insert([
+            { application_id: a.id, instalment: 1, pct: 30, amount: p1, trigger: "After contract signing", status: "pending" },
+            { application_id: a.id, instalment: 2, pct: 40, amount: p2, trigger: "After progress report", status: "pending" },
+            { application_id: a.id, instalment: 3, pct: 30, amount: p3, trigger: "After final report", status: "pending" },
+          ]).select();
+          a.payments = ins.data || [];
+        }
+        a.payments.sort(function (x, y) { return x.instalment - y.instalment; });
+      }
+      return apps;
+    },
+    // can this instalment be paid yet? (report-gated)
+    payable: function (app, inst) {
+      if (inst === 1) return true;
+      var reps = app.reports || [];
+      if (inst === 2) return reps.some(function (r) { return r.kind === "progress"; });
+      if (inst === 3) return reps.some(function (r) { return r.kind === "final"; });
+      return false;
+    },
+    async markPaid(paymentId, instalment, appId) {
+      var r = await sb.from("payments").update({ status: "paid", paid_at: new Date().toISOString() }).eq("id", paymentId);
+      if (r.error) throw r.error;
+      if (instalment === 1) await sb.from("applications").update({ status: "active" }).eq("id", appId);
+      if (instalment === 3) await sb.from("applications").update({ status: "completed" }).eq("id", appId);
+    },
+    async submitReport(appId, kind) {
+      var me = await uid();
+      var r = await sb.from("reports").insert({
+        application_id: appId, kind: kind, status: "submitted",
+        summary: (kind === "progress" ? "Progress" : "Final") + " report submitted by researcher.",
+      }).select().single();
+      if (r.error) throw r.error;
+      try { await sb.from("application_events").insert({ application_id: appId, actor_id: me, actor_role: "researcher", action: (kind === "progress" ? "Progress" : "Final") + " report submitted" }); } catch (e) {}
+      return r.data;
+    },
+    async myGrant() {
+      var me = await uid();
+      var res = await sb.from("applications")
+        .select("*, payments(*), reports(kind,status), contracts(contract_no,status,amount)")
+        .eq("researcher_id", me).in("status", ["approved", "active", "completed"])
+        .order("decided_at", { ascending: false }).limit(1);
+      if (res.error) throw res.error;
+      var a = (res.data && res.data[0]) || null;
+      if (a && a.payments) a.payments.sort(function (x, y) { return x.instalment - y.instalment; });
+      return a;
     },
   };
 })();

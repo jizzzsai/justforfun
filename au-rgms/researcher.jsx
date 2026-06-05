@@ -575,6 +575,16 @@ function ResearcherApplicationDetail({ navigate, onDownload, onView }) {
 
 /* ---------- E. Progress Report ---------- */
 function ResearcherProgress({ onDownload, onView, toast }) {
+  const [grant, setGrant] = useState(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { window.DB.myGrant().then(setGrant).catch(() => {}); }, []);
+  const submit = async () => {
+    if (!grant) { toast("No approved grant found — your application must be approved first."); return; }
+    setBusy(true);
+    try { await window.DB.submitReport(grant.id, "progress"); toast("Progress report submitted — the 40% tranche is now eligible."); }
+    catch (e) { toast("Error: " + (e.message || e)); }
+    setBusy(false);
+  };
   return (
     <>
       <PageHeader
@@ -615,8 +625,8 @@ function ResearcherProgress({ onDownload, onView, toast }) {
               </div>
               <div className="flex justify-between items-center mt-4">
                 <span className="text-sm text-muted">Once submitted, the RASSC office and Finance will be notified.</span>
-                <button className="btn btn-primary" onClick={() => toast("Progress report submitted (demo)")}>
-                  <Icon name="Send" size={13} /> Submit Report
+                <button className="btn btn-primary" onClick={submit} disabled={busy}>
+                  <Icon name="Send" size={13} /> {busy ? "Submitting…" : "Submit Report"}
                 </button>
               </div>
             </div>
@@ -662,6 +672,16 @@ function ResearcherProgress({ onDownload, onView, toast }) {
 
 /* ---------- F. Final Report ---------- */
 function ResearcherFinal({ onDownload, onView, toast }) {
+  const [grant, setGrant] = useState(null);
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { window.DB.myGrant().then(setGrant).catch(() => {}); }, []);
+  const submit = async () => {
+    if (!grant) { toast("No approved grant found — your application must be approved first."); return; }
+    setBusy(true);
+    try { await window.DB.submitReport(grant.id, "final"); toast("Final report submitted — the final 30% tranche is now eligible."); }
+    catch (e) { toast("Error: " + (e.message || e)); }
+    setBusy(false);
+  };
   return (
     <>
       <PageHeader
@@ -703,8 +723,8 @@ function ResearcherFinal({ onDownload, onView, toast }) {
               </div>
               <div className="flex justify-between items-center mt-4">
                 <span className="text-sm text-muted">Once submitted, the file will be routed to the Research Support Committee.</span>
-                <button className="btn btn-primary" onClick={() => toast("Final report submitted (demo)")}>
-                  <Icon name="Send" size={13} /> Submit Final Report
+                <button className="btn btn-primary" onClick={submit} disabled={busy}>
+                  <Icon name="Send" size={13} /> {busy ? "Submitting…" : "Submit Final Report"}
                 </button>
               </div>
             </div>
@@ -758,70 +778,55 @@ function ResearcherFinal({ onDownload, onView, toast }) {
 
 /* ---------- G. Payment Status ---------- */
 function ResearcherPayments({ onDownload, toast }) {
+  const [grant, setGrant] = useState(null);
+  useEffect(() => { window.DB.myGrant().then(g => setGrant(g || false)).catch(() => setGrant(false)); }, []);
+  const triggers = { 1: "After contract signing", 2: "After progress report", 3: "After final report" };
+  const trName = { 1: "1st · 30%", 2: "2nd · 40%", 3: "3rd · 30%" };
+
+  if (grant === null) {
+    return (<><PageHeader title="Payment Status" desc="Your grant disbursement tranches." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "40px" }}>Loading…</div></>);
+  }
+  if (!grant) {
+    return (<><PageHeader title="Payment Status" desc="Your grant disbursement tranches." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "48px" }}>No approved grant yet. Once the President approves your application, your 30 / 40 / 30 payments will appear here.</div></>);
+  }
+
+  const pays = grant.payments || [];
   return (
     <>
       <PageHeader
         title="Payment Status"
-        desc="Disbursement tranches for RG-2025-001 · Total grant 100,000 THB"
-        actions={<Badge status={RA.STATUS.expert} />}
+        desc={"Disbursement tranches for " + grant.code + " · Total grant " + fmtBaht(grant.approved_amount || grant.requested_amount)}
       />
 
       <div className="grid-3 mb-6">
-        {RA.PAYMENTS.map(p => (
-          <div key={p.n} className="pay-card">
+        {pays.map(p => (
+          <div key={p.id} className="pay-card">
             <div className="pay-num">{p.pct}%</div>
-            <div className="pct">{p.label} · Tranche {p.n}</div>
+            <div className="pct">Tranche {p.instalment}</div>
             <div className="amt">{fmtBaht(p.amount)}</div>
-            <span className={`badge ${p.badge}`}><span className="dot"></span>{p.status}</span>
-            <div className="meta-row mt-4"><span className="l">Schedule</span><span className="r">{p.date}</span></div>
-            <div className="meta-row"><span className="l">Required document</span><span className="r">{p.requiredDoc}</span></div>
-            <div className="meta-row"><span className="l">Receipt</span><span className="r">{p.receipt || "Not issued"}</span></div>
-            <div className="flex gap-2 mt-3">
-              <button className="btn btn-secondary btn-sm" style={{flex: 1}}
-                onClick={() => onDownload({ name: `Receipt_Tranche_${p.n}.pdf` })}>
-                <Icon name="Download" size={12} /> Receipt
-              </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => toast("Demo only: contact OFM")}>
-                <Icon name="Mail" size={12} /> Contact OFM
-              </button>
-            </div>
+            <span className={"badge " + (p.status === "paid" ? "badge-paid" : "badge-pending")}><span className="dot"></span>{p.status === "paid" ? "Paid" : "Pending"}</span>
+            <div className="meta-row mt-4"><span className="l">Condition</span><span className="r">{triggers[p.instalment]}</span></div>
+            <div className="meta-row"><span className="l">Paid on</span><span className="r">{p.paid_at ? window.DB.fmtDate(p.paid_at) : "—"}</span></div>
           </div>
         ))}
       </div>
 
       <div className="card card-pad-0">
-        <div className="card-head">
-          <h3>Disbursement Log</h3>
-        </div>
+        <div className="card-head"><h3>Disbursement Log</h3></div>
         <table className="tbl">
           <thead>
-            <tr><th>Date</th><th>Tranche</th><th>Amount</th><th>Reference</th><th>Status</th><th style={{textAlign:"right"}}>Receipt</th></tr>
+            <tr><th>Tranche</th><th>Amount</th><th>Condition</th><th>Status</th><th>Paid on</th></tr>
           </thead>
           <tbody>
-            <tr>
-              <td>Pending</td>
-              <td>1st · 30%</td>
-              <td>{fmtBaht(30000)}</td>
-              <td><span className="id">—</span></td>
-              <td><span className="badge badge-pending"><span className="dot"></span>Pending contract</span></td>
-              <td className="actions"><button className="btn btn-ghost btn-sm" disabled>Receipt</button></td>
-            </tr>
-            <tr>
-              <td>Scheduled</td>
-              <td>2nd · 40%</td>
-              <td>{fmtBaht(40000)}</td>
-              <td><span className="id">—</span></td>
-              <td><span className="badge badge-draft"><span className="dot"></span>Awaiting progress report</span></td>
-              <td className="actions"><button className="btn btn-ghost btn-sm" disabled>Receipt</button></td>
-            </tr>
-            <tr>
-              <td>Scheduled</td>
-              <td>3rd · 30%</td>
-              <td>{fmtBaht(30000)}</td>
-              <td><span className="id">—</span></td>
-              <td><span className="badge badge-draft"><span className="dot"></span>Awaiting final report</span></td>
-              <td className="actions"><button className="btn btn-ghost btn-sm" disabled>Receipt</button></td>
-            </tr>
+            {pays.map(p => (
+              <tr key={p.id}>
+                <td>{trName[p.instalment]}</td>
+                <td>{fmtBaht(p.amount)}</td>
+                <td style={{ fontSize: 12, color: "var(--ink-3)" }}>{triggers[p.instalment]}</td>
+                <td><span className={"badge " + (p.status === "paid" ? "badge-paid" : "badge-pending")}><span className="dot"></span>{p.status === "paid" ? "Paid" : "Pending"}</span></td>
+                <td style={{ fontSize: 12 }}>{p.paid_at ? window.DB.fmtDate(p.paid_at) : "—"}</td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
