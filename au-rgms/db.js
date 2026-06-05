@@ -223,5 +223,21 @@
       if (a && a.payments) a.payments.sort(function (x, y) { return x.instalment - y.instalment; });
       return a;
     },
+
+    // dashboard counts (RLS-scoped: staff see all, researcher sees own)
+    async statusCounts() {
+      var r = await sb.from("applications").select("status");
+      if (r.error) throw r.error;
+      var c = { _total: 0 };
+      (r.data || []).forEach(function (a) { c[a.status] = (c[a.status] || 0) + 1; c._total++; });
+      c._underReview = (c.submitted || 0) + (c.committee_review || 0) + (c.dean_sign || 0) + (c.iras_review || 0) + (c.expert_review || 0) + (c.president_review || 0);
+      c._approved = (c.approved || 0) + (c.active || 0) + (c.completed || 0);
+      return c;
+    },
+    async profileCount() {
+      var r = await sb.from("profiles").select("id", { count: "exact", head: true });
+      if (r.error) throw r.error;
+      return r.count || 0;
+    },
   };
 })();

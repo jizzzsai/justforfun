@@ -76,6 +76,9 @@ function WiredQueue({ status, openLabel, confirmTitle, confirmLabel, onDownload,
    DEAN — Dashboard
    ----------------------------------------------------------- */
 function DeanDashboard({ navigate }) {
+  const [c, setC] = useState(null);
+  useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
       <PageHeader
@@ -92,10 +95,10 @@ function DeanDashboard({ navigate }) {
       />
 
       <div className="stats">
-        <Stat label="Pending First Screening"  value={D.Q_DEAN_SCREEN.length} icon="ClipboardCheck"  tone="gold"  delta="+2 this week" deltaTone="up" />
-        <Stat label="Awaiting My Signature"    value={D.Q_DEAN_SIGN.length}   icon="FileSignature"   tone="navy" />
-        <Stat label="At Faculty Committee"     value={D.Q_COMMITTEE.length}   icon="Users" />
-        <Stat label="Approved This Semester"   value="9"                       icon="CheckCircle"    tone="green" />
+        <Stat label="Pending First Screening"  value={n("submitted")} icon="ClipboardCheck" tone="gold" />
+        <Stat label="Awaiting My Signature"    value={n("dean_sign")} icon="FileSignature" tone="navy" />
+        <Stat label="At Faculty Committee"     value={n("committee_review")} icon="Users" />
+        <Stat label="Approved (system)"        value={n("_approved")} icon="CheckCircle" tone="green" />
       </div>
 
       <div className="grid-2">
@@ -230,6 +233,9 @@ function DeanHistory({ onDownload }) {
    COMMITTEE — Dashboard
    ----------------------------------------------------------- */
 function CommitteeDashboard({ navigate }) {
+  const [c, setC] = useState(null);
+  useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
       <PageHeader
@@ -243,10 +249,10 @@ function CommitteeDashboard({ navigate }) {
       />
 
       <div className="stats">
-        <Stat label="Awaiting Review"        value={D.Q_COMMITTEE.length} icon="Users"        tone="gold" delta="+1 this week" deltaTone="up" />
-        <Stat label="Reviewed This Month"    value="11"                    icon="FileSearch"  tone="navy" />
-        <Stat label="Recommended"            value="8"                     icon="CheckCircle" tone="green" />
-        <Stat label="Revisions Requested"    value="2"                     icon="Repeat" />
+        <Stat label="Awaiting Review"        value={n("committee_review")} icon="Users" tone="gold" />
+        <Stat label="Forwarded to Dean"      value={n("dean_sign")} icon="FileSearch" tone="navy" />
+        <Stat label="Approved (system)"      value={n("_approved")} icon="CheckCircle" tone="green" />
+        <Stat label="Returned"               value={n("returned")} icon="Repeat" />
       </div>
 
       <div className="grid-2">
@@ -340,6 +346,9 @@ function CommitteeHistory({ onDownload }) {
    RASSC — Dashboard (refreshed for 8-role flow)
    ----------------------------------------------------------- */
 function RASSCDashboardV2({ navigate }) {
+  const [c, setC] = useState(null);
+  useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
       <PageHeader
@@ -353,10 +362,10 @@ function RASSCDashboardV2({ navigate }) {
       />
 
       <div className="stats">
-        <Stat label="Received from Dean"        value={D.Q_RASSC.length}      icon="Inbox" tone="gold" />
-        <Stat label="Awaiting Screening"        value="3"                     icon="ClipboardCheck" />
-        <Stat label="Pending Expert Assignment" value="2"                     icon="UserPlus" tone="navy" />
-        <Stat label="Under Expert Review"       value={D.Q_EXPERT.length}    icon="FileSearch" tone="green" />
+        <Stat label="Received from Dean"        value={n("iras_review")} icon="Inbox" tone="gold" />
+        <Stat label="Pending Expert Assignment" value={n("iras_review")} icon="UserPlus" tone="navy" />
+        <Stat label="Under Expert Review"       value={n("expert_review")} icon="FileSearch" tone="green" />
+        <Stat label="At President"              value={n("president_review")} icon="Award" />
       </div>
 
       <div className="grid-2">
@@ -549,6 +558,9 @@ function RASSCReviewerPool({ toast }) {
    EXPERT REVIEWER — Dashboard
    ----------------------------------------------------------- */
 function ExpertDashboard({ navigate }) {
+  const [c, setC] = useState(null);
+  useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
       <PageHeader
@@ -562,10 +574,10 @@ function ExpertDashboard({ navigate }) {
       />
 
       <div className="stats">
-        <Stat label="Active Assignments"     value="3"  icon="Folder"     tone="gold" />
-        <Stat label="Due Within 7 Days"      value="1"  icon="Clock"      tone="navy" />
-        <Stat label="Completed YTD"          value="12" icon="CheckCircle" tone="green" />
-        <Stat label="Avg. Turnaround"        value="8.4 d" icon="TrendingDown" />
+        <Stat label="Active Assignments"     value={n("expert_review")} icon="Folder" tone="gold" />
+        <Stat label="At President"           value={n("president_review")} icon="Award" tone="navy" />
+        <Stat label="Approved (system)"      value={n("_approved")} icon="CheckCircle" tone="green" />
+        <Stat label="Avg. Turnaround"        value="—" icon="TrendingDown" />
       </div>
 
       <div className="grid-2">
@@ -699,6 +711,9 @@ function ExpertHistory({ onDownload }) {
    PRESIDENT — Dashboard
    ----------------------------------------------------------- */
 function PresidentDashboard({ navigate }) {
+  const [c, setC] = useState(null);
+  useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
       <PageHeader
@@ -712,10 +727,10 @@ function PresidentDashboard({ navigate }) {
       />
 
       <div className="stats">
-        <Stat label="Awaiting My Approval"     value={D.Q_PRESIDENT.length} icon="Award" tone="gold" delta="+1 today" deltaTone="up" />
-        <Stat label="Contracts Pending"        value="2"                     icon="FileSignature" tone="navy" />
-        <Stat label="Approved YTD"             value="34"                    icon="CheckCircle" tone="green" />
-        <Stat label="Total Disbursed YTD"      value="5.2M THB"              icon="Coins" />
+        <Stat label="Awaiting My Approval"     value={n("president_review")} icon="Award" tone="gold" />
+        <Stat label="Active Grants"            value={n("active")} icon="FileSignature" tone="navy" />
+        <Stat label="Approved (system)"        value={n("_approved")} icon="CheckCircle" tone="green" />
+        <Stat label="Completed"                value={n("completed")} icon="Coins" />
       </div>
 
       <div className="grid-2">
@@ -805,6 +820,9 @@ function PresidentQueue({ navigate, onDownload, toast, setConfirm }) {
    OFM / FINANCE — Dashboard
    ----------------------------------------------------------- */
 function OFMDashboard({ navigate }) {
+  const [c, setC] = useState(null);
+  useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
       <PageHeader
@@ -818,10 +836,10 @@ function OFMDashboard({ navigate }) {
       />
 
       <div className="stats">
-        <Stat label="Pending Disbursement"   value="5"           icon="Clock"         tone="gold" />
-        <Stat label="Paid This Month"        value="430k THB"    icon="TrendingUp"    tone="green" delta="+18% vs last month" deltaTone="up" />
-        <Stat label="Receipts Cleared"       value="9 / 12"      icon="CheckCircle"   tone="navy" />
-        <Stat label="Total YTD"              value="5.2M THB"    icon="Coins" />
+        <Stat label="Awaiting Disbursement"  value={n("approved")} icon="Clock" tone="gold" />
+        <Stat label="Active Grants"          value={n("active")} icon="TrendingUp" tone="green" />
+        <Stat label="Completed"              value={n("completed")} icon="CheckCircle" tone="navy" />
+        <Stat label="Total Grants"           value={n("_approved")} icon="Coins" />
       </div>
 
       <div className="grid-2">
@@ -990,6 +1008,13 @@ function OFMHistory({ onDownload }) {
    ADMINISTRATOR — Dashboard + Users + Journals + Audit + Settings
    ----------------------------------------------------------- */
 function AdminDashboard({ navigate }) {
+  const [c, setC] = useState(null);
+  const [users, setUsers] = useState("…");
+  useEffect(() => {
+    window.DB.statusCounts().then(setC).catch(() => setC({}));
+    window.DB.profileCount().then(setUsers).catch(() => {});
+  }, []);
+  const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
       <PageHeader
@@ -1003,10 +1028,10 @@ function AdminDashboard({ navigate }) {
       />
 
       <div className="stats">
-        <Stat label="Total Users"          value={D.SYSTEM_USERS.length} icon="Users"  tone="gold" />
-        <Stat label="Active Sessions"      value="12"                     icon="Globe" tone="navy" />
-        <Stat label="Open Applications"    value={D.APPLICATIONS.length} icon="Folder" tone="green" />
-        <Stat label="System Uptime"        value="99.98%"                 icon="TrendingUp" />
+        <Stat label="Total Users"          value={users} icon="Users" tone="gold" />
+        <Stat label="Applications"         value={n("_total")} icon="Folder" tone="navy" />
+        <Stat label="Approved Grants"      value={n("_approved")} icon="CheckCircle" tone="green" />
+        <Stat label="System Uptime"        value="99.98%" icon="TrendingUp" />
       </div>
 
       <div className="grid-2">

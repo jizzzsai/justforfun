@@ -7,11 +7,18 @@ const RA = window.AU;
 /* ---------- A. Dashboard Overview ---------- */
 function ResearcherDashboard({ navigate, onDownload, onView }) {
   const app = RA.PRIMARY_APP;
+  const [c, setC] = useState(null);
+  const [me, setMe] = useState(null);
+  useEffect(() => {
+    window.DB.statusCounts().then(setC).catch(() => setC({}));
+    window.AUTH.profile().then(setMe).catch(() => {});
+  }, []);
+  const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
       <PageHeader
         title="Researcher Dashboard"
-        desc="Welcome back, Dr. Phyo Min Tun. Here is the status of your research grant applications."
+        desc={"Welcome back" + (me ? ", " + me.full_name : "") + ". Here is the status of your research grant applications."}
         actions={
           <>
             <button className="btn btn-secondary"><Icon name="Calendar" size={14} /> AY 2025–2026</button>
@@ -23,10 +30,10 @@ function ResearcherDashboard({ navigate, onDownload, onView }) {
       />
 
       <div className="stats">
-        <Stat label="Total Applications"  value="4" icon="Folder"     delta="+1 this semester" deltaTone="up" />
-        <Stat label="Draft Applications"  value="1" icon="FileText"   tone="navy" />
-        <Stat label="Under Review"        value="2" icon="FileSearch" tone="gold" />
-        <Stat label="Approved Projects"   value="1" icon="CheckCircle" tone="green" />
+        <Stat label="Total Applications"  value={n("_total")} icon="Folder" />
+        <Stat label="Draft Applications"  value={n("draft")} icon="FileText"   tone="navy" />
+        <Stat label="Under Review"        value={n("_underReview")} icon="FileSearch" tone="gold" />
+        <Stat label="Approved Projects"   value={n("_approved")} icon="CheckCircle" tone="green" />
       </div>
 
       <div className="grid-2">
