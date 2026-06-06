@@ -151,6 +151,7 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
     { item: "Miscellaneous (postage, photocopying, binding)", amount: 12000 },
   ]);
   const total = budgetRows.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const [reqTotal, setReqTotal] = useState("100000");
   const setAmt = (i, v) => setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, amount: (v + "").replace(/[^0-9]/g, "") } : r));
 
   const [files, setFiles] = useState([]);
@@ -170,13 +171,14 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
   async function save(submit) {
     setErr("");
     if (submit && !draft.title.trim()) { setErr("Research title is required."); return; }
-    if (submit && total > 100000) { setErr("Total budget (" + total.toLocaleString() + " THB) exceeds the 100,000 THB cap."); return; }
+    if (submit && Number(reqTotal) > 100000) { setErr("Requested amount (" + Number(reqTotal).toLocaleString() + " THB) exceeds the 100,000 THB maximum (AU Announcement No.12/2024)."); return; }
+    if (submit && Number(reqTotal) <= 0) { setErr("Enter the grant amount you are requesting."); return; }
     setBusy(true);
     try {
       const app = await window.DB.createApplication({
         title: draft.title, abstract: draft.outcome, field: draft.field,
         faculty: draft.school, department: draft.department, keywords: draft.keywords,
-        requested_amount: total, duration_months: draft.duration, budget_breakdown: budgetRows,
+        requested_amount: Number(reqTotal), duration_months: draft.duration, budget_breakdown: budgetRows,
       }, submit);
       for (const f of files) { try { await window.DB.uploadDocument(app.id, f, null); } catch (e) {} }
       toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
@@ -277,13 +279,15 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
 
         <div className="form-section">
           <h4><span className="num">4</span> Budget Information</h4>
-          <p className="section-sub">Maximum 100,000 THB per project (AU Announcement No.12/2024). Caps: remuneration ≤30%, travel ≤40%, equipment ≤50%, misc ≤20%.</p>
+          <p className="section-sub">Enter any amount up to the 100,000 THB maximum (AU Announcement No.12/2024), then itemise it below. Caps: remuneration ≤30%, travel ≤40%, equipment ≤50%, misc ≤20%.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field">
                 <label>Total Grant Requested (THB)</label>
-                <input value={total.toLocaleString()} readOnly title="Auto-calculated from the breakdown below"
-                  style={total > 100000 ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)", fontWeight: 600 } : {}} />
+                <input value={Number(reqTotal || 0).toLocaleString()}
+                  onChange={e => setReqTotal((e.target.value + "").replace(/[^0-9]/g, ""))}
+                  title="Enter any amount up to 100,000 THB"
+                  style={Number(reqTotal) > 100000 ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)", fontWeight: 600 } : {}} />
               </div>
               <div className="field">
                 <label>Currency</label>

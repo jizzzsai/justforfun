@@ -216,14 +216,15 @@ function DeanSignQueue({ navigate, onDownload, toast, setConfirm }) {
    DEAN — Decision History (read-only)
    ----------------------------------------------------------- */
 function DeanHistory({ onDownload }) {
-  const history = D.APPLICATIONS.filter(a =>
-    !["draft", "submitted", "deanScreen"].includes(a.status.key)
-  );
+  const [rows, setRows] = useState(null);
+  useEffect(() => { window.DB.byStatuses(["committee_review", "dean_sign", "iras_review", "expert_review", "president_review", "approved", "active", "completed", "rejected", "returned"]).then(setRows).catch(() => setRows([])); }, []);
   return (
     <>
       <PageHeader title="Decision History" desc="All proposals you've previously screened or signed." />
       <div className="card card-pad-0">
-        <QueueTable rows={history} openLabel="View" onDownload={onDownload} />
+        {rows && rows.length === 0
+          ? <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>No decisions yet.</div>
+          : <QueueTable rows={rows || []} openLabel="View" onDownload={onDownload} />}
       </div>
     </>
   );
@@ -329,14 +330,15 @@ function CommitteeQueue({ navigate, onDownload, toast, setConfirm }) {
 }
 
 function CommitteeHistory({ onDownload }) {
-  const history = D.APPLICATIONS.filter(a =>
-    ["deanSign", "iras", "expertReview", "presidentApproval", "contractSigned", "pay1", "progressSubmitted", "pay2", "finalSubmitted", "pay3", "revision", "rejected"].includes(a.status.key)
-  );
+  const [rows, setRows] = useState(null);
+  useEffect(() => { window.DB.byStatuses(["dean_sign", "iras_review", "expert_review", "president_review", "approved", "active", "completed", "rejected", "returned"]).then(setRows).catch(() => setRows([])); }, []);
   return (
     <>
       <PageHeader title="Past Reviews" desc="Proposals you've reviewed previously." />
       <div className="card card-pad-0">
-        <QueueTable rows={history} openLabel="View" onDownload={onDownload} />
+        {rows && rows.length === 0
+          ? <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>No past reviews yet.</div>
+          : <QueueTable rows={rows || []} openLabel="View" onDownload={onDownload} />}
       </div>
     </>
   );
@@ -669,12 +671,16 @@ function ExpertAssignments({ navigate, onDownload, toast, setConfirm }) {
 
 /* EXPERT — Submitted reviews history */
 function ExpertHistory({ onDownload }) {
-  const history = [
-    { id: "RG-2024-114", title: "Federated Plagiarism Detection across Thai Universities",     date: "Jul 22, 2024", score: 78, verdict: "Favorable" },
-    { id: "RG-2024-089", title: "Quantum-Inspired Optimization for Logistics Routing",         date: "Jun 14, 2024", score: 84, verdict: "Favorable" },
-    { id: "RG-2024-076", title: "Voice Authentication Robust to Accent Drift",                  date: "Apr 02, 2024", score: 62, verdict: "Revise" },
-    { id: "RG-2024-061", title: "Lightweight Transformer Inference for IoT Devices",            date: "Mar 18, 2024", score: 81, verdict: "Favorable" },
-  ];
+  const [history, setHistory] = useState(null);
+  useEffect(() => {
+    window.DB.myReviews().then(rs => setHistory(rs.map(r => ({
+      id: r.application ? r.application.code : "—",
+      title: r.application ? r.application.title : "—",
+      date: window.DB.fmtDate(r.submitted_at),
+      score: r.score == null ? "—" : r.score,
+      verdict: r.recommendation === "favorable" ? "Favorable" : r.recommendation === "revise" ? "Revise" : "Unfavorable",
+    })))).catch(() => setHistory([]));
+  }, []);
   return (
     <>
       <PageHeader title="Submitted Reviews" desc="Reviews you have previously submitted." />
@@ -684,7 +690,9 @@ function ExpertHistory({ onDownload }) {
             <tr><th>ID</th><th>Title</th><th>Submitted</th><th style={{textAlign: "right"}}>Score</th><th>Verdict</th><th style={{textAlign: "right"}}>Actions</th></tr>
           </thead>
           <tbody>
-            {history.map(h => (
+            {history === null && <tr><td colSpan="6" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading…</td></tr>}
+            {history && history.length === 0 && <tr><td colSpan="6" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No reviews submitted yet.</td></tr>}
+            {(history || []).map(h => (
               <tr key={h.id}>
                 <td><span className="id">{h.id}</span></td>
                 <td className="title-cell"><div className="t" style={{maxWidth: 360}}>{h.title}</div></td>
@@ -968,13 +976,17 @@ function OFMDetail({ onDownload, toast, setConfirm }) {
 
 /* OFM — Payment history */
 function OFMHistory({ onDownload }) {
-  const rows = [
-    { id: "RG-2024-114", who: "Dr. Phyo Min Tun",         stage: "Final 30%", amount: 24000, date: "Jul 28, 2024", ref: "OFM-2024-0331" },
-    { id: "RG-2025-007", who: "Dr. Apichat Phongphan",    stage: "2nd 40%",   amount: 84000, date: "May 14, 2025", ref: "OFM-2025-0144" },
-    { id: "RG-2025-007", who: "Dr. Apichat Phongphan",    stage: "1st 30%",   amount: 63000, date: "Nov 03, 2025", ref: "OFM-2025-0099" },
-    { id: "RG-2025-006", who: "Dr. Karunee Sritrakul",    stage: "1st 30%",   amount: 42000, date: "Oct 12, 2025", ref: "OFM-2025-0088" },
-    { id: "RG-2025-005", who: "Dr. Nisachon Charoenwong", stage: "1st 30%",   amount: 22500, date: "Today, 09:15", ref: "OFM-2025-0102" },
-  ];
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    window.DB.paidPayments().then(ps => setRows(ps.map(p => ({
+      id: p.application ? p.application.code : "—",
+      who: p.application && p.application.researcher ? p.application.researcher.full_name : "—",
+      stage: (p.instalment === 1 ? "1st · 30%" : p.instalment === 2 ? "2nd · 40%" : "3rd · 30%"),
+      amount: Number(p.amount),
+      date: window.DB.fmtDate(p.paid_at),
+      ref: "PAY-" + String(p.id || "").slice(0, 8),
+    })))).catch(() => setRows([]));
+  }, []);
   return (
     <>
       <PageHeader title="Payment History" desc="All disbursements processed by OFM." />
@@ -982,7 +994,9 @@ function OFMHistory({ onDownload }) {
         <table className="tbl">
           <thead><tr><th>Date</th><th>Application</th><th>Researcher</th><th>Tranche</th><th style={{textAlign: "right"}}>Amount</th><th>Reference</th><th style={{textAlign: "right"}}>Receipt</th></tr></thead>
           <tbody>
-            {rows.map((r, i) => (
+            {rows === null && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading…</td></tr>}
+            {rows && rows.length === 0 && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No payments processed yet.</td></tr>}
+            {(rows || []).map((r, i) => (
               <tr key={i}>
                 <td style={{fontSize: 12}}>{r.date}</td>
                 <td><span className="id">{r.id}</span></td>

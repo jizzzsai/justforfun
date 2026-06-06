@@ -239,5 +239,25 @@
       if (r.error) throw r.error;
       return r.count || 0;
     },
+    // history: applications in any of the given statuses (mapped for tables)
+    async byStatuses(arr) {
+      var res = await sb.from("applications").select("*, researcher:profiles(full_name)")
+        .in("status", arr).order("decided_at", { ascending: false, nullsFirst: false });
+      if (res.error) throw res.error;
+      return (res.data || []).map(mapRow);
+    },
+    async myReviews() {
+      var me = await uid();
+      var res = await sb.from("reviews").select("*, application:applications(code,title)")
+        .eq("reviewer_id", me).order("submitted_at", { ascending: false });
+      if (res.error) throw res.error;
+      return res.data || [];
+    },
+    async paidPayments() {
+      var res = await sb.from("payments").select("*, application:applications(code, researcher:profiles(full_name))")
+        .eq("status", "paid").order("paid_at", { ascending: false });
+      if (res.error) throw res.error;
+      return res.data || [];
+    },
   };
 })();
