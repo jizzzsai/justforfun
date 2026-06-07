@@ -285,8 +285,17 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
               <div className="field">
                 <label>Total Grant Requested (THB)</label>
                 <input value={Number(reqTotal || 0).toLocaleString()}
-                  onChange={e => setReqTotal((e.target.value + "").replace(/[^0-9]/g, ""))}
-                  title="Enter any amount up to 100,000 THB"
+                  onChange={e => {
+                    const v = (e.target.value + "").replace(/[^0-9]/g, ""); setReqTotal(v);
+                    const t = Number(v) || 0, a = Math.round(t * 0.30), b = Math.round(t * 0.40), c = Math.round(t * 0.18);
+                    setBudgetRows([
+                      { item: "Remuneration (research assistant)", amount: a },
+                      { item: "Research equipment", amount: b },
+                      { item: "Travel for off-campus data collection", amount: c },
+                      { item: "Miscellaneous (postage, photocopying, binding)", amount: t - a - b - c },
+                    ]);
+                  }}
+                  title="Enter any amount up to 100,000 THB — the breakdown below divides automatically"
                   style={Number(reqTotal) > 100000 ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)", fontWeight: 600 } : {}} />
               </div>
               <div className="field">
@@ -294,29 +303,37 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
                 <select><option>Thai Baht (THB)</option></select>
               </div>
               <div className="field full">
-                <label>Budget Breakdown — edit each amount</label>
+                <label>Budget Breakdown — divides automatically from the total above (edit any amount to customise)</label>
                 <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
                   <table className="tbl">
                     <thead>
-                      <tr><th>Budget Item</th><th style={{ width: 180, textAlign: "right" }}>Amount (THB)</th></tr>
+                      <tr><th>Budget Item</th><th style={{ textAlign: "center" }}>% of total</th><th style={{ textAlign: "center" }}>AU cap</th><th style={{ width: 150, textAlign: "right" }}>Amount (THB)</th></tr>
                     </thead>
                     <tbody>
-                      {budgetRows.map((b, i) => (
-                        <tr key={i}>
-                          <td>{b.item}</td>
-                          <td style={{ textAlign: "right" }}>
-                            <input value={(Number(b.amount) || 0).toLocaleString()} onChange={e => setAmt(i, e.target.value)}
-                              style={{ width: 130, textAlign: "right", fontFamily: "ui-monospace, monospace" }} />
-                          </td>
-                        </tr>
-                      ))}
+                      {budgetRows.map((b, i) => {
+                        const caps = [30, 50, 40, 20];
+                        const pct = total > 0 ? Math.round((Number(b.amount) || 0) / total * 100) : 0;
+                        const over = pct > caps[i];
+                        return (
+                          <tr key={i}>
+                            <td>{b.item}</td>
+                            <td style={{ textAlign: "center", color: over ? "var(--au-crimson)" : "var(--ink-3)", fontWeight: over ? 600 : 400 }}>{pct}%</td>
+                            <td style={{ textAlign: "center", fontSize: 12, color: "var(--ink-3)" }}>≤ {caps[i]}%</td>
+                            <td style={{ textAlign: "right" }}>
+                              <input value={(Number(b.amount) || 0).toLocaleString()} onChange={e => setAmt(i, e.target.value)}
+                                style={{ width: 120, textAlign: "right", fontFamily: "ui-monospace, monospace" }} />
+                            </td>
+                          </tr>
+                        );
+                      })}
                       <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}>
-                        <td>Total</td>
-                        <td style={{ textAlign: "right", color: total > 100000 ? "var(--au-crimson)" : "inherit" }}>{fmtBaht(total)}</td>
+                        <td>Total of breakdown</td><td></td><td></td>
+                        <td style={{ textAlign: "right", color: total !== Number(reqTotal) ? "var(--au-crimson)" : "inherit" }}>{fmtBaht(total)}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
+                {total !== Number(reqTotal) && <div style={{ fontSize: 12, color: "var(--au-crimson)", marginTop: 6 }}>Breakdown ({fmtBaht(total)}) doesn't match your requested total ({fmtBaht(Number(reqTotal))}) — adjust the amounts.</div>}
               </div>
             </div>
           </div>
