@@ -165,6 +165,49 @@
       return first ? this.applicationDetail(first.id) : null;
     },
 
+    async profilesByRole(role) {
+      var res = await sb.from("profiles").select("*").eq("role", role).order("full_name", { ascending: true });
+      if (res.error) throw res.error;
+      return res.data || [];
+    },
+
+    async myExpertAssignments() {
+      var me = await uid();
+      if (!me) throw new Error("You must be signed in.");
+      var res = await sb.from("expert_assignments")
+        .select("status,due_date, application:applications(*, researcher:profiles(full_name))")
+        .eq("expert_id", me).neq("status", "completed").order("due_date", { ascending: true });
+      if (res.error) throw res.error;
+      return (res.data || []).filter(function (x) {
+        return x.application && x.application.status === "expert_review";
+      }).map(function (x) {
+        var row = mapRow(x.application);
+        row.dueDate = fmtDate(x.due_date);
+        row.assignmentStatus = x.status;
+        return row;
+      });
+    },
+
+    async assignExperts(appId, expertIds, dueDate) {
+      var me = await uid();
+      if (!me) throw new Error("You must be signed in.");
+      if (!expertIds || expertIds.length === 0) throw new Error("Select at least one expert reviewer.");
+      var rows = expertIds.map(function (expertId) {
+        return {
+          application_id: appId,
+          expert_id: expertId,
+          assigned_by: me,
+          status: "pending",
+          due_date: dueDate || null,
+        };
+      });
+      var ins = await sb.from("expert_assignments").upsert(rows, {
+        onConflict: "application_id,expert_id",
+      }).select();
+      if (ins.error) throw ins.error;
+      return await this.transition(appId, "iras_review", "advance");
+    },
+
     async countByStatus(status) {
       var r = await sb.from("applications").select("id", { count: "exact", head: true }).eq("status", status);
       if (r.error) throw r.error;
@@ -237,15 +280,35 @@
         await sb.from("expert_assignments").update({ status: "completed" })
           .eq("application_id", appId).eq("expert_id", me);
       } catch (e) {}
+      var remaining = [];
       try {
-        await sb.from("application_events").insert({
-          application_id: appId, actor_id: me, actor_role: role || "expert",
-          action: "Expert review submitted",
-          from_status: "expert_review", to_status: "expert_review",
-          note: "Score " + score + " / 100; recommendation: " + recommendation + ".",
-        });
-      } catch (e) {}
-      await this.transition(appId, "expert_review", "advance");
+        var rem = await sb.from("expert_assignments")
+          .select("id").eq("application_id", appId).neq("status", "completed");
+        if (rem.error) throw rem.error;
+        remaining = rem.data || [];
+      } catch (e) {
+        remaining = [];
+      }
+      if (remaining.length === 0) {
+        try {
+          await sb.from("application_events").insert({
+            application_id: appId, actor_id: me, actor_role: role || "expert",
+            action: "All expert reviews complete",
+            from_status: "expert_review", to_status: "president_review",
+            note: "Final expert score " + score + " / 100; recommendation: " + recommendation + ".",
+          });
+        } catch (e) {}
+        await this.transition(appId, "expert_review", "advance");
+      } else {
+        try {
+          await sb.from("application_events").insert({
+            application_id: appId, actor_id: me, actor_role: role || "expert",
+            action: "Expert review submitted",
+            from_status: "expert_review", to_status: "expert_review",
+            note: "Score " + score + " / 100; recommendation: " + recommendation + ". Waiting for " + remaining.length + " expert review(s).",
+          });
+        } catch (e) {}
+      }
       return res.data;
     },
 

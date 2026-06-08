@@ -112,7 +112,15 @@ function RASSCDashboard({ navigate }) {
 }
 
 /* ---------- B. Received Applications ---------- */
-function RASSCReceived({ navigate, onDownload, toast, setConfirm }) {
+function RASSCReceived({ navigate, onDownload, setSelectedApplicationId }) {
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    window.DB.queue("iras_review").then(setRows).catch(() => setRows([]));
+  }, []);
+  const openScreening = (row) => {
+    setSelectedApplicationId(row._uuid);
+    navigate("i-screen");
+  };
   return (
     <>
       <PageHeader
@@ -131,16 +139,16 @@ function RASSCReceived({ navigate, onDownload, toast, setConfirm }) {
           <div style={{flex: 1}}></div>
           <button className="btn btn-secondary btn-sm"><Icon name="Download" size={12} /> Export</button>
         </div>
-        <WiredQueue status="iras_review" openLabel="Assign experts →"
-          confirmTitle="Assign experts & send for review?" confirmLabel="Send to experts"
-          onDownload={onDownload} setConfirm={setConfirm} toast={toast} />
+        {rows === null && <div style={{ padding: "36px", textAlign: "center", color: "var(--ink-3)" }}>Loading received applications...</div>}
+        {rows && rows.length === 0 && <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>Nothing in this queue right now.</div>}
+        {rows && rows.length > 0 && <QueueTable rows={rows} openLabel="Screen ->" onOpen={openScreening} onDownload={onDownload} />}
       </div>
     </>
   );
 }
 
 /* ---------- C. Assign Expert Reviewers ---------- */
-function RASSCAssign({ toast, setConfirm }) {
+function RASSCAssignDemo({ toast, setConfirm }) {
   return (
     <>
       <PageHeader
@@ -260,6 +268,180 @@ function RASSCAssign({ toast, setConfirm }) {
           </div>
         </div>
       </div>
+    </>
+  );
+}
+
+function RASSCAssign({ applicationId, setSelectedApplicationId, toast, setConfirm }) {
+  const [apps, setApps] = useState(null);
+  const [experts, setExperts] = useState(null);
+  const [selectedId, setSelectedId] = useState(applicationId || "");
+  const [selectedExpertIds, setSelectedExpertIds] = useState([]);
+  const [dueDate, setDueDate] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 10);
+    return d.toISOString().slice(0, 10);
+  });
+
+  const load = () => Promise.all([
+    window.DB.queue("iras_review"),
+    window.DB.profilesByRole("expert"),
+  ]).then(([appRows, expertRows]) => {
+    setApps(appRows);
+    setExperts(expertRows);
+  }).catch(() => {
+    setApps([]);
+    setExperts([]);
+  });
+
+  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    if (!apps) return;
+    const first = apps[0] && apps[0]._uuid;
+    const preferred = apps.some(a => a._uuid === selectedId) ? selectedId : (applicationId || first || "");
+    if (preferred && preferred !== selectedId) setSelectedId(preferred);
+  }, [apps, applicationId]);
+  useEffect(() => {
+    if (!experts || selectedExpertIds.length) return;
+    setSelectedExpertIds(experts.slice(0, 2).map(e => e.id));
+  }, [experts]);
+
+  const selectedApp = (apps || []).find(a => a._uuid === selectedId);
+  const expertName = (e, i) => (e && e.full_name) || ("Expert " + (i + 1));
+  const expertInitials = (e, i) => {
+    const name = expertName(e, i);
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 2 && /^\d+$/.test(parts[1])) return (parts[0][0] + parts[1]).toUpperCase();
+    return parts.map(p => p[0]).join("").slice(0, 2).toUpperCase();
+  };
+  const setSlot = (index, id) => {
+    const next = selectedExpertIds.slice();
+    next[index] = id;
+    setSelectedExpertIds(next);
+  };
+  const sendAssignments = () => {
+    const ids = Array.from(new Set(selectedExpertIds.filter(Boolean)));
+    if (!selectedId) { toast("Select an application first."); return; }
+    if (ids.length === 0) { toast("Select at least one expert."); return; }
+    setConfirm({
+      kind: "success",
+      title: "Send to expert dashboard?",
+      message: (selectedApp ? selectedApp.id : "This application") + " will appear in the selected expert account dashboard.",
+      confirmLabel: "Send to Experts",
+      onConfirm: async () => {
+        try {
+          await window.DB.assignExperts(selectedId, ids, dueDate);
+          if (setSelectedApplicationId) setSelectedApplicationId(selectedId);
+          toast((selectedApp ? selectedApp.id : "Application") + " sent to expert dashboard.");
+          load();
+        } catch (e) {
+          toast("Error: " + ((e && e.message) || e));
+        }
+      },
+    });
+  };
+
+  return (
+    <>
+      <PageHeader
+        title="Assign Expert Reviewers"
+        desc="Choose the test expert accounts that should receive this application."
+      />
+
+      {apps === null && <div className="card" style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>Loading assignment form...</div>}
+      {apps && apps.length === 0 && <div className="card"><Empty title="No applications waiting for expert assignment" desc="Applications appear here after RASSC office screening." icon="UserPlus" /></div>}
+      {apps && apps.length > 0 && (
+        <div className="grid-2">
+          <div>
+            <div className="card card-pad-0">
+              <div className="card-head"><h3>Assignment Form</h3></div>
+              <div className="card-body">
+                <div className="field">
+                  <label>Application</label>
+                  <select value={selectedId} onChange={e => setSelectedId(e.target.value)}>
+                    {apps.map(a => (
+                      <option key={a._uuid} value={a._uuid}>{a.id} - {a.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {[0, 1].map(i => {
+                  const expert = (experts || []).find(e => e.id === selectedExpertIds[i]);
+                  return (
+                    <div key={i} style={{ padding: 14, border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
+                      <div className="eyebrow mb-2">Expert Reviewer #{i + 1}</div>
+                      <div className="form-grid">
+                        <div className="field" style={{ margin: 0 }}>
+                          <label>Reviewer account</label>
+                          <select value={selectedExpertIds[i] || ""} onChange={e => setSlot(i, e.target.value)}>
+                            <option value="">Select expert</option>
+                            {(experts || []).map((e, idx) => (
+                              <option key={e.id} value={e.id} disabled={selectedExpertIds.includes(e.id) && selectedExpertIds[i] !== e.id}>
+                                {expertName(e, idx)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="field" style={{ margin: 0 }}>
+                          <label>Email</label>
+                          <input value={(expert && expert.email) || ""} readOnly />
+                        </div>
+                        <div className="field" style={{ margin: 0 }}>
+                          <label>Type</label>
+                          <input value={(expert && expert.department) || "Expert reviewer"} readOnly />
+                        </div>
+                        <div className="field" style={{ margin: 0 }}>
+                          <label>Status</label>
+                          <input value={expert ? "Ready" : "Not selected"} readOnly />
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                <div className="form-grid">
+                  <div className="field">
+                    <label>Review deadline</label>
+                    <input type="date" value={dueDate} onChange={e => setDueDate(e.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label>Next step</label>
+                    <input value="Expert dashboard, then President after all assigned reviews" readOnly />
+                  </div>
+                </div>
+
+                <div className="flex justify-between items-center mt-2">
+                  <span className="text-sm text-muted">Assigned experts will see this application in My Assignments.</span>
+                  <button className="btn btn-primary" onClick={sendAssignments}>
+                    <Icon name="Send" size={14} /> Send to Expert Dashboard
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div className="card card-pad-0">
+              <div className="card-head"><h3>Reviewer Pool</h3></div>
+              <div>
+                {experts === null && <div style={{ padding: "32px", textAlign: "center", color: "var(--ink-3)" }}>Loading experts...</div>}
+                {experts && experts.length === 0 && <Empty title="No expert accounts" desc="Create expert profiles to assign reviews." icon="Users" />}
+                {(experts || []).map((e, i) => (
+                  <div key={e.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "12px 16px", borderBottom: i < experts.length - 1 ? "1px solid var(--line-2)" : "none" }}>
+                    <Avatar initials={expertInitials(e, i)} size={32} color="var(--au-navy)" />
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontWeight: 600, fontSize: 13 }}>{expertName(e, i)}</div>
+                      <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{e.email}</div>
+                    </div>
+                    <span className="badge badge-iras"><span className="dot"></span>Expert</span>
+                    <span className="text-sm text-muted" style={{ minWidth: 70, textAlign: "right" }}>Available</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

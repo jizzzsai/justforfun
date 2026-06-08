@@ -77,7 +77,11 @@ function WiredQueue({ status, openLabel, confirmTitle, confirmLabel, onDownload,
    ----------------------------------------------------------- */
 function DeanDashboard({ navigate }) {
   const [c, setC] = useState(null);
+  const [screenRows, setScreenRows] = useState(null);
+  const [signRows, setSignRows] = useState(null);
   useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  useEffect(() => { window.DB.queue("submitted").then(setScreenRows).catch(() => setScreenRows([])); }, []);
+  useEffect(() => { window.DB.queue("dean_sign").then(setSignRows).catch(() => setSignRows([])); }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
@@ -113,7 +117,9 @@ function DeanDashboard({ navigate }) {
           <table className="tbl">
             <thead><tr><th>ID</th><th>Title</th><th>Researcher</th><th>Status</th></tr></thead>
             <tbody>
-              {D.Q_DEAN_SCREEN.slice(0, 4).map(a => (
+              {screenRows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
+              {screenRows && screenRows.length === 0 && <tr><td colSpan="4"><Empty title="Nothing to screen" desc="New submissions will appear here." icon="ClipboardCheck" /></td></tr>}
+              {(screenRows || []).slice(0, 4).map(a => (
                 <tr key={a.id} style={{ cursor: "pointer" }} onClick={() => navigate("d-screen-detail")}>
                   <td><span className="id">{a.id}</span></td>
                   <td className="title-cell"><div className="t" style={{ maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div></td>
@@ -136,7 +142,8 @@ function DeanDashboard({ navigate }) {
           <table className="tbl">
             <thead><tr><th>ID</th><th>Title</th><th>Committee Rec.</th><th>Status</th></tr></thead>
             <tbody>
-              {D.Q_DEAN_SIGN.map(a => (
+              {signRows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
+              {(signRows || []).map(a => (
                 <tr key={a.id} style={{ cursor: "pointer" }} onClick={() => navigate("d-sign-detail")}>
                   <td><span className="id">{a.id}</span></td>
                   <td className="title-cell"><div className="t" style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div></td>
@@ -144,7 +151,7 @@ function DeanDashboard({ navigate }) {
                   <td><Badge status={a.status} /></td>
                 </tr>
               ))}
-              {D.Q_DEAN_SIGN.length === 0 && (
+              {signRows && signRows.length === 0 && (
                 <tr><td colSpan={4}><Empty title="Nothing to sign" desc="Proposals will appear here after committee review." icon="FileSignature" /></td></tr>
               )}
             </tbody>
@@ -235,7 +242,11 @@ function DeanHistory({ onDownload }) {
    ----------------------------------------------------------- */
 function CommitteeDashboard({ navigate }) {
   const [c, setC] = useState(null);
+  const [rows, setRows] = useState(null);
+  const [members, setMembers] = useState(null);
   useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  useEffect(() => { window.DB.queue("committee_review").then(setRows).catch(() => setRows([])); }, []);
+  useEffect(() => { window.DB.profilesByRole("committee").then(setMembers).catch(() => setMembers([])); }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
@@ -267,7 +278,9 @@ function CommitteeDashboard({ navigate }) {
           <table className="tbl">
             <thead><tr><th>ID</th><th>Title</th><th>Researcher</th><th>Status</th></tr></thead>
             <tbody>
-              {D.Q_COMMITTEE.map(a => (
+              {rows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
+              {rows && rows.length === 0 && <tr><td colSpan="4"><Empty title="Nothing for committee review" desc="Dean-approved applications will appear here." icon="Users" /></td></tr>}
+              {(rows || []).map(a => (
                 <tr key={a.id} style={{cursor: "pointer"}} onClick={() => navigate("c-review")}>
                   <td><span className="id">{a.id}</span></td>
                   <td className="title-cell"><div className="t" style={{maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.title}</div></td>
@@ -282,21 +295,19 @@ function CommitteeDashboard({ navigate }) {
         <div className="card card-pad-0">
           <div className="card-head"><h3>Committee Members</h3>
             <div className="grow"></div>
-            <span className="text-sm text-muted">3 active</span>
+            <span className="text-sm text-muted">{members === null ? "..." : members.length + " active"}</span>
           </div>
           <div style={{padding: "8px 0"}}>
-            {[
-              { n: "Assoc. Prof. Dr. Watcharee Suwannarat", r: "Chair · IT",       k: 12, w: 1 },
-              { n: "Dr. Anuwat Yongprasong",                 r: "Member · Biotech", k:  9, w: 2 },
-              { n: "Dr. Lalita Chinokul",                    r: "Member · Edu Tech",k: 11, w: 0 },
-            ].map((m, i) => (
+            {members === null && <div style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>Loading members...</div>}
+            {members && members.length === 0 && <Empty title="No committee accounts" desc="Committee test accounts will appear here." icon="Users" />}
+            {(members || []).map((m, i) => (
               <div key={i} style={{display: "flex", alignItems: "center", gap: 10, padding: "12px 20px"}}>
-                <Avatar initials={m.n.split(" ").slice(-1)[0].slice(0,2).toUpperCase()} color="var(--au-navy)" />
+                <Avatar initials={m.full_name === "Committee Test 2" ? "C2" : "CT"} color="var(--au-navy)" />
                 <div style={{flex: 1}}>
-                  <div style={{fontSize: 13, fontWeight: 600}}>{m.n}</div>
-                  <div style={{fontSize: 11, color: "var(--ink-3)"}}>{m.r}</div>
+                  <div style={{fontSize: 13, fontWeight: 600}}>{m.full_name}</div>
+                  <div style={{fontSize: 11, color: "var(--ink-3)"}}>{m.email}</div>
                 </div>
-                <span className="text-sm text-muted">{m.k} reviews · {m.w} pending</span>
+                <span className="text-sm text-muted">Test account</span>
               </div>
             ))}
           </div>
@@ -349,8 +360,19 @@ function CommitteeHistory({ onDownload }) {
    ----------------------------------------------------------- */
 function RASSCDashboardV2({ navigate }) {
   const [c, setC] = useState(null);
+  const [rows, setRows] = useState(null);
+  const [experts, setExperts] = useState(null);
   useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  useEffect(() => {
+    window.DB.byStatuses(["iras_review", "expert_review", "president_review"]).then(setRows).catch(() => setRows([]));
+  }, []);
+  useEffect(() => {
+    window.DB.profilesByRole("expert").then(setExperts).catch(() => setExperts([]));
+  }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
+  const openWork = (row) => {
+    navigate(row.statusKey === "iras_review" ? "i-screen" : row.statusKey === "expert_review" ? "i-reviewers" : "i-received");
+  };
   return (
     <>
       <PageHeader
@@ -381,8 +403,10 @@ function RASSCDashboardV2({ navigate }) {
           <table className="tbl">
             <thead><tr><th>ID</th><th>Title</th><th>Faculty</th><th>Status</th></tr></thead>
             <tbody>
-              {D.Q_RASSC.map(a => (
-                <tr key={a.id} style={{cursor: "pointer"}} onClick={() => navigate("i-assign")}>
+              {rows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
+              {rows && rows.length === 0 && <tr><td colSpan="4"><Empty title="No active RASSC work" desc="Forwarded applications will appear here." icon="Inbox" /></td></tr>}
+              {(rows || []).map(a => (
+                <tr key={a.id} style={{cursor: "pointer"}} onClick={() => openWork(a)}>
                   <td><span className="id">{a.id}</span></td>
                   <td className="title-cell"><div className="t" style={{maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.title}</div></td>
                   <td style={{fontSize: 11, color: "var(--ink-3)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.faculty}</td>
@@ -401,20 +425,17 @@ function RASSCDashboardV2({ navigate }) {
             </button>
           </div>
           <div style={{padding: "8px 0"}}>
-            {[
-              { n: "Assoc. Prof. Dr. Suthep Lertsiri",   a: "Chulalongkorn University",  t: "External", load: "2 active" },
-              { n: "Asst. Prof. Dr. Marisa Anuwong",     a: "Mahidol University",        t: "External", load: "1 active" },
-              { n: "Dr. Kittipan Chaiprasart",           a: "Assumption University",     t: "Internal", load: "3 active" },
-              { n: "Prof. Dr. Sukit Nimnualrat",         a: "KMUTT",                     t: "External", load: "Available" },
-            ].map((e, i) => (
-              <div key={i} style={{display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", borderBottom: i < 3 ? "1px solid var(--line-2)" : "none"}}>
-                <Avatar initials={e.n.split(" ").slice(-1)[0].slice(0,2).toUpperCase()} color={e.t === "Internal" ? "var(--au-crimson)" : "var(--au-navy)"} />
+            {experts === null && <div style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>Loading experts...</div>}
+            {experts && experts.length === 0 && <Empty title="No expert accounts" desc="Expert test accounts will appear here." icon="Users" />}
+            {(experts || []).map((e, i) => (
+              <div key={e.id} style={{display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", borderBottom: i < experts.length - 1 ? "1px solid var(--line-2)" : "none"}}>
+                <Avatar initials={e.full_name === "Expert 2" ? "E2" : "E1"} color="var(--au-navy)" />
                 <div style={{flex: 1}}>
-                  <div style={{fontSize: 13, fontWeight: 600}}>{e.n}</div>
-                  <div style={{fontSize: 11, color: "var(--ink-3)"}}>{e.a}</div>
+                  <div style={{fontSize: 13, fontWeight: 600}}>{e.full_name}</div>
+                  <div style={{fontSize: 11, color: "var(--ink-3)"}}>{e.email}</div>
                 </div>
-                <span className={`badge ${e.t === "Internal" ? "badge-academic" : "badge-iras"}`}><span className="dot"></span>{e.t}</span>
-                <span className="text-sm text-muted" style={{minWidth: 70, textAlign: "right"}}>{e.load}</span>
+                <span className="badge badge-iras"><span className="dot"></span>Expert</span>
+                <span className="text-sm text-muted" style={{minWidth: 70, textAlign: "right"}}>Available</span>
               </div>
             ))}
           </div>
@@ -425,7 +446,7 @@ function RASSCDashboardV2({ navigate }) {
 }
 
 /* RASSC — Office Screening */
-function RASSCScreen({ navigate, onDownload, onView, toast, setConfirm }) {
+function RASSCScreenDemo({ navigate, onDownload, onView, toast, setConfirm }) {
   return (
     <>
       <PageHeader
@@ -488,8 +509,138 @@ function RASSCScreen({ navigate, onDownload, onView, toast, setConfirm }) {
   );
 }
 
+function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDownload, onView, toast, setConfirm }) {
+  const [app, setApp] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const load = () => {
+    setLoading(true);
+    const req = applicationId
+      ? window.DB.applicationDetail(applicationId)
+      : window.DB.firstApplicationForStatus("iras_review");
+    req.then(a => {
+      setApp(a);
+      if (a && setSelectedApplicationId) setSelectedApplicationId(a.id);
+    }).catch(() => setApp(null)).finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, [applicationId]);
+
+  const moveToAssignment = () => {
+    if (!app) return;
+    setConfirm({
+      kind: "success",
+      title: "Approve RASSC screening?",
+      message: app.code + " will move to the expert assignment form.",
+      confirmLabel: "Approve Screening",
+      onConfirm: () => {
+        if (setSelectedApplicationId) setSelectedApplicationId(app.id);
+        toast("RASSC screening approved. Select experts next.");
+        navigate("i-assign");
+      },
+    });
+  };
+  const returnToDean = () => {
+    if (!app) return;
+    setConfirm({
+      kind: "danger",
+      title: "Return to Dean?",
+      message: app.code + " will leave the RASSC queue and be marked returned.",
+      confirmLabel: "Return",
+      onConfirm: async () => {
+        try {
+          await window.DB.transition(app.id, "iras_review", "return");
+          toast(app.code + " returned.");
+          load();
+        } catch (e) {
+          toast("Error: " + ((e && e.message) || e));
+        }
+      },
+    });
+  };
+  const required = [
+    "AU Research Proposal Format",
+    "Project Budget Allocation",
+    "AU Research Submission Form",
+  ];
+  const docs = (app && app.documents) || [];
+
+  if (loading) {
+    return (
+      <>
+        <PageHeader title="Office Screening" desc="Verify proposal completeness before assigning expert reviewers." />
+        <div className="card" style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>Loading application...</div>
+      </>
+    );
+  }
+  if (!app) {
+    return (
+      <>
+        <PageHeader title="Office Screening" desc="Verify proposal completeness before assigning expert reviewers." />
+        <div className="card"><Empty title="No RASSC screening item" desc="Applications appear here after Dean sign and forward." icon="ClipboardCheck" /></div>
+      </>
+    );
+  }
+
+  return (
+    <>
+      <PageHeader
+        title={"Office Screening - " + app.code}
+        desc="Verify proposal completeness before assigning expert reviewers."
+        actions={<Badge status={window.DB.statusBadge(app.status)} />}
+      />
+      <div className="grid-2">
+        <div>
+          <div className="card card-pad-0 mb-4">
+            <div className="card-head"><h3>Forwarded Documents</h3></div>
+            <div>
+              {docs.length === 0 && required.map((name, i) => (
+                <FileRow key={i} doc={{ name: name + ".pdf" }} missing={true} onDownload={onDownload} onView={onView} />
+              ))}
+              {docs.map(d => <FileRow key={d.id || d.name} doc={d} onDownload={onDownload} onView={onView} />)}
+            </div>
+          </div>
+          <div className="card card-pad-0">
+            <div className="card-head"><h3>Application Summary</h3></div>
+            <div className="card-body">
+              <div className="meta-row"><span className="l">Title</span><span className="r">{app.title}</span></div>
+              <div className="meta-row"><span className="l">Researcher</span><span className="r">{app.researcher ? app.researcher.full_name : "-"}</span></div>
+              <div className="meta-row"><span className="l">Department</span><span className="r">{app.department || "-"}</span></div>
+              <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.requested_amount || 0))}</span></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <div className="card card-pad-0">
+            <div className="card-head"><h3>Screening Checklist</h3></div>
+            <div className="card-body">
+              {[
+                "Required application forms present",
+                "Budget total is within the 100,000 THB AU ceiling",
+                "Project budget allocation is attached",
+                "Proposal is ready for expert review",
+              ].map((t, i) => (
+                <label key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < 3 ? "1px solid var(--line-2)" : "none", cursor: "pointer" }}>
+                  <input type="checkbox" defaultChecked={true} style={{ accentColor: "var(--au-crimson)" }} />
+                  <span style={{ flex: 1, fontSize: 13 }}>{t}</span>
+                </label>
+              ))}
+              <div className="flex flex-col gap-2 mt-4">
+                <button className="btn btn-primary btn-block" onClick={moveToAssignment}>
+                  <Icon name="CheckCircle" size={14} /> Approve &amp; Move to Assignment
+                </button>
+                <button className="btn btn-secondary btn-block" onClick={returnToDean}>
+                  <Icon name="ArrowLeft" size={14} /> Return to Dean
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* RASSC — Reviewer Pool */
-function RASSCReviewerPool({ toast }) {
+function RASSCReviewerPoolDemo({ toast }) {
   const pool = [
     { n: "Assoc. Prof. Dr. Suthep Lertsiri",   a: "Chulalongkorn University",  t: "External", expertise: "AI · ML · NLP",         status: "Active",   load: 2 },
     { n: "Asst. Prof. Dr. Marisa Anuwong",     a: "Mahidol University",         t: "External", expertise: "HCI · Edu Tech",        status: "Active",   load: 1 },
@@ -556,10 +707,72 @@ function RASSCReviewerPool({ toast }) {
   );
 }
 
+function RASSCReviewerPool({ toast }) {
+  const [pool, setPool] = useState(null);
+  useEffect(() => {
+    window.DB.profilesByRole("expert").then(setPool).catch(() => setPool([]));
+  }, []);
+  return (
+    <>
+      <PageHeader
+        title="Reviewer Pool"
+        desc="Expert test accounts available for proposal evaluation."
+        actions={<button className="btn btn-primary" onClick={() => toast("Expert accounts are managed in Supabase profiles.")}><Icon name="Plus" size={14} /> Add Reviewer</button>}
+      />
+      <div className="card card-pad-0">
+        <div className="toolbar">
+          <div className="search">
+            <Icon name="Search" size={14} className="icon" />
+            <input placeholder="Search reviewers..." />
+          </div>
+          <button className="filter active"><Icon name="Filter" size={12} /> All experts</button>
+          <div style={{flex: 1}}></div>
+          <button className="btn btn-secondary btn-sm" onClick={() => toast("Reviewer pool export uses live Supabase profiles.")}><Icon name="Download" size={12} /> Export</button>
+        </div>
+        <table className="tbl">
+          <thead>
+            <tr>
+              <th>Reviewer</th>
+              <th>Email</th>
+              <th>Type</th>
+              <th>Expertise</th>
+              <th>Current Load</th>
+              <th>Status</th>
+              <th style={{textAlign: "right"}}>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pool === null && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading experts...</td></tr>}
+            {pool && pool.length === 0 && <tr><td colSpan="7"><Empty title="No expert accounts" desc="Expert profiles will appear here." icon="Users" /></td></tr>}
+            {(pool || []).map((r, i) => (
+              <tr key={r.id}>
+                <td>
+                  <div style={{display: "flex", alignItems: "center", gap: 8}}>
+                    <Avatar initials={r.full_name === "Expert 2" ? "E2" : "E1"} size={28} color="var(--au-navy)" />
+                    <span style={{fontSize: 13, fontWeight: 600}}>{r.full_name}</span>
+                  </div>
+                </td>
+                <td style={{fontSize: 12, color: "var(--ink-3)"}}>{r.email}</td>
+                <td><span className="badge badge-iras"><span className="dot"></span>Expert</span></td>
+                <td style={{fontSize: 12}}>{r.expertise || "General review"}</td>
+                <td style={{fontSize: 12, fontWeight: 600}}>Available</td>
+                <td><span className="badge badge-check"><span className="dot"></span>{r.is_active === false ? "Inactive" : "Active"}</span></td>
+                <td className="actions">
+                  <button className="btn btn-ghost btn-sm" onClick={() => toast(r.full_name + " is a live Supabase profile.")}><Icon name="Info" size={13} /></button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
 /* -----------------------------------------------------------
    EXPERT REVIEWER — Dashboard
    ----------------------------------------------------------- */
-function ExpertDashboard({ navigate }) {
+function ExpertDashboardDemo({ navigate }) {
   const [c, setC] = useState(null);
   useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
@@ -655,11 +868,92 @@ function ExpertDashboard({ navigate }) {
   );
 }
 
+function ExpertDashboard({ navigate, setSelectedApplicationId }) {
+  const [c, setC] = useState(null);
+  const [rows, setRows] = useState(null);
+  const [experts, setExperts] = useState(null);
+  useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  useEffect(() => { window.DB.myExpertAssignments().then(setRows).catch(() => setRows([])); }, []);
+  useEffect(() => { window.DB.profilesByRole("expert").then(setExperts).catch(() => setExperts([])); }, []);
+  const n = (k) => (c ? (c[k] || 0) : "...");
+  const openEvaluation = (row) => {
+    if (setSelectedApplicationId) setSelectedApplicationId(row._uuid);
+    navigate("e-evaluate");
+  };
+  const firstExpert = experts && experts[0];
+  return (
+    <>
+      <PageHeader
+        title="Expert Reviewer Dashboard"
+        desc="Proposals assigned to your test expert account for evaluation."
+        actions={
+          <button className="btn btn-primary" onClick={() => navigate("e-assignments")}>
+            <Icon name="Folder" size={14} /> Open Assignments
+          </button>
+        }
+      />
+
+      <div className="stats">
+        <Stat label="Active Assignments" value={rows === null ? "..." : rows.length} icon="Folder" tone="gold" />
+        <Stat label="At President" value={n("president_review")} icon="Award" tone="navy" />
+        <Stat label="Approved (system)" value={n("_approved")} icon="CheckCircle" tone="green" />
+        <Stat label="Avg. Turnaround" value="-" icon="TrendingDown" />
+      </div>
+
+      <div className="grid-2">
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Active Assignments</h3>
+            <div className="grow"></div>
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate("e-assignments")}>
+              See all <Icon name="ArrowRight" size={12} />
+            </button>
+          </div>
+          <div>
+            {rows === null && <div style={{ padding: "32px", textAlign: "center", color: "var(--ink-3)" }}>Loading assignments...</div>}
+            {rows && rows.length === 0 && <Empty title="No expert assignments" desc="RASSC assignments will appear here." icon="Folder" />}
+            {(rows || []).map(a => (
+              <div key={a._uuid} style={{ padding: "16px 20px", borderBottom: "1px solid var(--line-2)", cursor: "pointer" }} onClick={() => openEvaluation(a)}>
+                <div className="flex items-center gap-3 mb-2">
+                  <span className="id">{a.id}</span>
+                  <div style={{ flex: 1, fontWeight: 600, fontSize: 13, maxWidth: 360, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div>
+                  <Badge status={a.status} />
+                </div>
+                <div className="flex justify-between mt-2" style={{ fontSize: 11, color: "var(--ink-3)" }}>
+                  <span>{a.assignmentStatus || "pending"}</span>
+                  <span>Deadline: {a.dueDate || "-"}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Reviewer Profile</h3></div>
+          <div className="card-body">
+            <div className="flex items-center gap-3 mb-4">
+              <Avatar initials={firstExpert && firstExpert.full_name === "Expert 2" ? "E2" : "E1"} size={48} color="var(--au-crimson)" />
+              <div>
+                <div style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontSize: 18 }}>{firstExpert ? firstExpert.full_name : "Expert 1"}</div>
+                <div className="text-sm text-muted">Expert reviewer test account</div>
+              </div>
+            </div>
+            <div style={{ padding: 14, background: "var(--paper-warm)", borderRadius: "var(--r-md)" }}>
+              <div className="flex justify-between mb-2"><span className="text-sm text-muted">Assigned now</span><b>{rows === null ? "..." : rows.length}</b></div>
+              <div className="flex justify-between mb-2"><span className="text-sm text-muted">Reviews completed</span><b>0</b></div>
+              <div className="flex justify-between"><span className="text-sm text-muted">Current flow</span><b>RASSC to Expert to President</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* EXPERT — Assignments list */
 function ExpertAssignments({ navigate, onDownload, setSelectedApplicationId }) {
   const [rows, setRows] = useState(null);
   useEffect(() => {
-    window.DB.queue("expert_review").then(setRows).catch(() => setRows([]));
+    window.DB.myExpertAssignments().then(setRows).catch(() => setRows([]));
   }, []);
   const openEvaluation = (row) => {
     setSelectedApplicationId(row._uuid);
@@ -728,7 +1022,11 @@ function ExpertHistory({ onDownload }) {
    ----------------------------------------------------------- */
 function PresidentDashboard({ navigate }) {
   const [c, setC] = useState(null);
+  const [queueRows, setQueueRows] = useState(null);
+  const [approvedRows, setApprovedRows] = useState(null);
   useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  useEffect(() => { window.DB.queue("president_review").then(setQueueRows).catch(() => setQueueRows([])); }, []);
+  useEffect(() => { window.DB.byStatuses(["approved", "active", "completed"]).then(setApprovedRows).catch(() => setApprovedRows([])); }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
@@ -760,11 +1058,13 @@ function PresidentDashboard({ navigate }) {
           <table className="tbl">
             <thead><tr><th>ID</th><th>Title</th><th style={{textAlign: "right"}}>Budget</th><th>Status</th></tr></thead>
             <tbody>
-              {D.Q_PRESIDENT.map(a => (
+              {queueRows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
+              {queueRows && queueRows.length === 0 && <tr><td colSpan="4"><Empty title="No applications awaiting President approval" desc="Completed expert reviews will appear here." icon="Award" /></td></tr>}
+              {(queueRows || []).map(a => (
                 <tr key={a.id} style={{cursor: "pointer"}} onClick={() => navigate("p-approve")}>
                   <td><span className="id">{a.id}</span></td>
                   <td className="title-cell"><div className="t" style={{maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.title}</div></td>
-                  <td style={{textAlign: "right", fontFamily: "ui-monospace, monospace", fontSize: 12, fontWeight: 600}}>{a.budgetTotal.toLocaleString()}</td>
+                  <td style={{textAlign: "right", fontFamily: "ui-monospace, monospace", fontSize: 12, fontWeight: 600}}>{Number(a.budgetTotal || 0).toLocaleString()}</td>
                   <td><Badge status={a.status} /></td>
                 </tr>
               ))}
@@ -795,18 +1095,16 @@ function PresidentDashboard({ navigate }) {
           <div className="card card-pad-0">
             <div className="card-head"><h3>Recent Approvals</h3></div>
             <div style={{padding: "8px 0"}}>
-              {[
-                { id: "RG-2025-005", title: "Cultural Heritage Preservation", when: "Today, 07:30" },
-                { id: "RG-2024-114", title: "Federated Plagiarism Detection",  when: "Jul 12, 2024" },
-                { id: "RG-2024-089", title: "Quantum-Inspired Optimization",   when: "Jun 03, 2024" },
-              ].map((a, i) => (
+              {approvedRows === null && <div style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>Loading approvals...</div>}
+              {approvedRows && approvedRows.length === 0 && <Empty title="No recent approvals" desc="President-approved grants will appear here." icon="Award" />}
+              {(approvedRows || []).slice(0, 3).map((a, i) => (
                 <div key={i} style={{display: "flex", alignItems: "center", gap: 10, padding: "10px 20px", borderBottom: i < 2 ? "1px solid var(--line-2)" : "none"}}>
                   <div style={{width: 30, height: 30, borderRadius: "50%", background: "var(--au-cream)", color: "var(--au-crimson)", display: "grid", placeItems: "center"}}>
                     <Icon name="Award" size={14} />
                   </div>
                   <div style={{flex: 1}}>
-                    <div style={{fontSize: 13}}><b>{a.id}</b> · <span style={{color: "var(--ink-3)"}}>{a.title}</span></div>
-                    <div style={{fontSize: 11, color: "var(--ink-3)"}}>{a.when}</div>
+                    <div style={{fontSize: 13}}><b>{a.id}</b> - <span style={{color: "var(--ink-3)"}}>{a.title}</span></div>
+                    <div style={{fontSize: 11, color: "var(--ink-3)"}}>{a.submittedAt}</div>
                   </div>
                 </div>
               ))}
@@ -837,7 +1135,23 @@ function PresidentQueue({ navigate, onDownload, toast, setConfirm }) {
    ----------------------------------------------------------- */
 function OFMDashboard({ navigate }) {
   const [c, setC] = useState(null);
+  const [payments, setPayments] = useState(null);
   useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  useEffect(() => {
+    window.DB.ofmPayments().then(apps => {
+      const rows = [];
+      (apps || []).forEach(a => {
+        (a.payments || []).filter(p => p.status !== "paid").forEach(p => rows.push({
+          id: a.code,
+          who: a.researcher ? a.researcher.full_name : "-",
+          stage: p.instalment === 1 ? "1st 30%" : p.instalment === 2 ? "2nd 40%" : "Final 30%",
+          amount: Number(p.amount || 0),
+          status: p.status,
+        }));
+      });
+      setPayments(rows);
+    }).catch(() => setPayments([]));
+  }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
@@ -869,19 +1183,15 @@ function OFMDashboard({ navigate }) {
           <table className="tbl">
             <thead><tr><th>ID</th><th>Researcher</th><th>Stage</th><th style={{textAlign: "right"}}>Amount</th><th>Status</th></tr></thead>
             <tbody>
-              {[
-                { id: "RG-2025-001", who: "Dr. Phyo Min Tun",          stage: "1st 30%", amount: 30000, status: "paymentPending" },
-                { id: "RG-2025-004", who: "Dr. Chayanon Inthawong",    stage: "1st 30%", amount: 28500, status: "paymentPending" },
-                { id: "RG-2025-005", who: "Dr. Nisachon Charoenwong",  stage: "1st 30%", amount: 22500, status: "paymentPending" },
-                { id: "RG-2025-006", who: "Dr. Karunee Sritrakul",     stage: "2nd 40%", amount: 56000, status: "paymentPending" },
-                { id: "RG-2025-007", who: "Dr. Apichat Phongphan",     stage: "Final 30%", amount: 63000, status: "paymentPending" },
-              ].map(p => (
+              {payments === null && <tr><td colSpan="5" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
+              {payments && payments.length === 0 && <tr><td colSpan="5"><Empty title="No pending disbursements" desc="Approved grants will appear here after contract setup." icon="Coins" /></td></tr>}
+              {(payments || []).map(p => (
                 <tr key={p.id + p.stage} style={{cursor: "pointer"}} onClick={() => navigate("o-detail")}>
                   <td><span className="id">{p.id}</span></td>
                   <td style={{fontSize: 12}}>{p.who}</td>
                   <td style={{fontSize: 12}}>{p.stage}</td>
                   <td style={{textAlign: "right", fontFamily: "ui-monospace, monospace", fontSize: 12, fontWeight: 600}}>{p.amount.toLocaleString()} THB</td>
-                  <td><Badge status={D.STATUS[p.status]} /></td>
+                  <td><span className="badge badge-pending"><span className="dot"></span>{p.status}</span></td>
                 </tr>
               ))}
             </tbody>

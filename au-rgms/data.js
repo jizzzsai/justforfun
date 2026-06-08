@@ -294,14 +294,14 @@ const ACTIVITY = [
 
 /* --- 8 roles in the system ------------------------------------ */
 const ROLES = [
-  { key: "researcher", name: "Researcher",            full: "Dr. Phyo Min Tun",                 subtitle: "Asst. Professor · IT",                initials: "PT", iconName: "GraduationCap" },
-  { key: "dean",       name: "Dean",                  full: "Assoc. Prof. Dr. Surasak Chamnongpol", subtitle: "Dean · VMS-EST",                  initials: "SC", iconName: "Building2" },
-  { key: "committee",  name: "Faculty Committee",     full: "Assoc. Prof. Dr. Watcharee S.",    subtitle: "Committee Chair · VMS-EST",           initials: "WS", iconName: "Users" },
-  { key: "iras",       name: "RASSC",             full: "Prof. Dr. Sirilak Khempila",       subtitle: "Director · RASSC",              initials: "SK", iconName: "Landmark" },
-  { key: "expert",     name: "Expert Reviewer",       full: "Assoc. Prof. Dr. Suthep Lertsiri", subtitle: "External · Chulalongkorn",            initials: "SL", iconName: "FileSearch" },
-  { key: "president",  name: "President",             full: "Rev. Bro. Dr. Srichai Fonseka",  subtitle: "President · Assumption University",   initials: "SF", iconName: "Award" },
-  { key: "ofm",        name: "OFM / Finance",         full: "K. Wanida Charoenphon",            subtitle: "Director · OFM",                      initials: "WC", iconName: "Coins" },
-  { key: "admin",      name: "Administrator",         full: "K. Tanapong Wisetphan",            subtitle: "System Administrator",                initials: "TW", iconName: "Settings" },
+  { key: "researcher", name: "Researcher",            full: "Researcher Test",    subtitle: "Researcher - Test Account",       initials: "RT", iconName: "GraduationCap" },
+  { key: "dean",       name: "Dean",                  full: "Dean Test",          subtitle: "Dean - Test Account",             initials: "DT", iconName: "Building2" },
+  { key: "committee",  name: "Faculty Committee",     full: "Committee Test",     subtitle: "Committee - Test Account",        initials: "CT", iconName: "Users" },
+  { key: "iras",       name: "RASSC",                 full: "RASSC Test",         subtitle: "RASSC - Test Account",            initials: "RS", iconName: "Landmark" },
+  { key: "expert",     name: "Expert Reviewer",       full: "Expert 1",           subtitle: "Expert - Test Account",           initials: "E1", iconName: "FileSearch" },
+  { key: "president",  name: "President",             full: "President Test",     subtitle: "President - Test Account",        initials: "PT", iconName: "Award" },
+  { key: "ofm",        name: "OFM / Finance",         full: "Finance Test",       subtitle: "Finance - Test Account",          initials: "FT", iconName: "Coins" },
+  { key: "admin",      name: "Administrator",         full: "Admin Test",         subtitle: "Admin · Test Account",            initials: "AT", iconName: "Settings" },
 ];
 
 /* --- Per-role sidebar navigation ----------------------------- */

@@ -387,13 +387,13 @@ function PageRouter({ pageKey, navigate, ctx }) {
 
     /* ---- RASSC ---- */
     case "i-dashboard":      return <RASSCDashboardV2 navigate={navigate} />;
-    case "i-received":       return <RASSCReceived navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "i-screen":         return <RASSCScreen navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "i-assign":         return <RASSCAssign toast={c.toast} setConfirm={c.setConfirm} />;
+    case "i-received":       return <RASSCReceived navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} />;
+    case "i-screen":         return <RASSCScreen applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "i-assign":         return <RASSCAssign applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-reviewers":      return <RASSCReviewerPool toast={c.toast} />;
 
     /* ---- Expert Reviewer ---- */
-    case "e-dashboard":      return <ExpertDashboard navigate={navigate} />;
+    case "e-dashboard":      return <ExpertDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "e-assignments":    return <ExpertAssignments navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "e-evaluate":       return <RASSCExpert applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "e-history":        return <ExpertHistory onDownload={c.onDownload} />;
