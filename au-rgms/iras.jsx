@@ -265,7 +265,7 @@ function RASSCAssign({ toast, setConfirm }) {
 }
 
 /* ---------- D. Expert Review ---------- */
-function RASSCExpert({ onDownload, onView, toast, setConfirm }) {
+function RASSCExpertDemo({ onDownload, onView, toast, setConfirm }) {
   const app = IR.PRIMARY_APP;
   return (
     <>
@@ -382,6 +382,252 @@ function RASSCExpert({ onDownload, onView, toast, setConfirm }) {
               {app.experts.map((e, i) => (
                 <div key={i} style={{display: "flex", alignItems: "center", gap: 10, padding: "10px 20px"}}>
                   <Avatar initials={e.name.split(" ").slice(-1)[0].slice(0, 2).toUpperCase()} size={28} color={e.type === "Internal" ? "var(--au-crimson)" : "var(--au-navy)"} />
+                  <div style={{flex: 1}}>
+                    <div style={{fontSize: 13, fontWeight: 600}}>{e.name}</div>
+                    <div style={{fontSize: 11, color: "var(--ink-3)"}}>{e.affiliation} · {e.type}</div>
+                  </div>
+                  <span className={`badge ${e.status === "Submitted" ? "badge-check" : "badge-pending"}`}>
+                    <span className="dot"></span>{e.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* ---------- D. Expert Review (live) ---------- */
+function RASSCExpert({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
+  const [app, setApp] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [form, setForm] = useState({
+    score: "86",
+    strengths: "Clear research question. Methodology is well-defined and the evaluation plan is convincing. Budget breakdown is realistic and well-justified.",
+    weaknesses: "Risk of scope creep. Consider tightening the success metric and mitigation plan.",
+    recommendation: "favorable",
+    comments: "",
+  });
+
+  const setField = (key, value) => setForm(f => ({ ...f, [key]: value }));
+  const score = Math.max(0, Math.min(100, parseInt(form.score, 10) || 0));
+
+  const normalizeApp = (a) => {
+    if (!a) return null;
+    const expertReviews = (a.reviews || []).filter(r => r.kind === "expert");
+    return {
+      _uuid: a.id,
+      id: a.code,
+      title: a.title,
+      status: a.statusBadge || window.DB.statusBadge(a.status),
+      researcher: a.researcher ? a.researcher.full_name : "—",
+      methodology: a.abstract || "No abstract or methodology summary has been entered for this application.",
+      outcomes: [
+        "Research output aligned with the submitted proposal.",
+        "Progress and final reports required before gated disbursements.",
+        "Publication or dissemination evidence to be tracked after completion.",
+      ],
+      budgetTotal: Number(a.requested_amount || 0),
+      duration: (a.duration_months || 12) + " months",
+      documents: (a.documents && a.documents.length) ? a.documents : IR.MOCK_DOCS,
+      experts: expertReviews.map(r => ({
+        name: r.reviewer ? r.reviewer.full_name : "Expert reviewer",
+        affiliation: r.reviewer ? (r.reviewer.faculty || r.reviewer.department || "Assumption University") : "—",
+        type: "Expert",
+        status: "Submitted",
+        score: r.score,
+        verdict: r.recommendation,
+      })),
+    };
+  };
+
+  const load = () => {
+    setLoading(true);
+    const req = applicationId
+      ? window.DB.applicationDetail(applicationId)
+      : window.DB.firstApplicationForStatus("expert_review");
+    req.then(a => setApp(normalizeApp(a))).catch(() => setApp(null)).finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); }, [applicationId]);
+
+  const submitReview = () => {
+    if (!app || submitting) return;
+    if (form.recommendation === "favorable" && score < 70) {
+      toast("Favorable recommendation requires a score of at least 70.");
+      return;
+    }
+    setConfirm({
+      kind: "success",
+      title: "Submit expert review?",
+      message: "This saves your evaluation and sends " + app.id + " to the President approval queue.",
+      confirmLabel: "Submit Review",
+      onConfirm: async () => {
+        setSubmitting(true);
+        try {
+          await window.DB.submitExpertReview(app._uuid, {
+            score: score,
+            strengths: form.strengths,
+            weaknesses: form.weaknesses,
+            comments: form.comments,
+            recommendation: form.recommendation,
+          });
+          toast(app.id + " expert review submitted.");
+          if (navigate) navigate("e-history");
+        } catch (e) {
+          toast("Error: " + (e.message || e));
+        } finally {
+          setSubmitting(false);
+        }
+      },
+    });
+  };
+
+  if (loading) {
+    return (
+      <>
+        <PageHeader title="Expert Review" desc="Loading the assigned proposal." />
+        <div className="card card-pad-0">
+          <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>Loading expert review…</div>
+        </div>
+      </>
+    );
+  }
+
+  if (!app) {
+    return (
+      <>
+        <PageHeader
+          title="Expert Review"
+          desc="No active expert-review assignment is available."
+          actions={<button className="btn btn-secondary" onClick={() => navigate && navigate("e-assignments")}><Icon name="ArrowLeft" size={13} /> Assignments</button>}
+        />
+        <div className="card card-pad-0">
+          <Empty title="No assignment to evaluate" desc="Applications will appear here after RASSC sends them for expert review." icon="FileSearch" />
+        </div>
+      </>
+    );
+  }
+
+  const reviewers = app.experts.length ? app.experts : [{
+    name: "Current expert reviewer",
+    affiliation: "Signed-in AU-RGMS account",
+    type: "Expert",
+    status: "Pending",
+  }];
+
+  return (
+    <>
+      <PageHeader
+        title="Expert Review"
+        desc={app.id + " · Submit your scholarly evaluation."}
+        actions={
+          <>
+            <Badge status={app.status} />
+            <button className="btn btn-secondary" onClick={() => onDownload({ name: app.id + "_proposal.pdf" })}>
+              <Icon name="Download" size={13} /> Proposal
+            </button>
+            <button className="btn btn-secondary" onClick={() => onDownload({ name: app.id + "_all_documents.zip" })}>
+              <Icon name="Download" size={13} /> All Documents
+            </button>
+          </>
+        }
+      />
+
+      <div className="grid-2">
+        <div>
+          <div className="card card-pad-0 mb-4">
+            <div className="card-head"><h3>Proposal Snapshot</h3></div>
+            <div className="card-body">
+              <div className="eyebrow mb-2">Title</div>
+              <div style={{fontFamily: "var(--font-serif)", fontSize: 19, fontWeight: 500, marginBottom: 16, lineHeight: 1.3}}>{app.title}</div>
+
+              <div className="eyebrow mb-2">Researcher</div>
+              <p style={{margin: "0 0 16px", lineHeight: 1.6, color: "var(--ink-2)", fontSize: 13}}>{app.researcher}</p>
+
+              <div className="eyebrow mb-2">Abstract / Methodology</div>
+              <p style={{margin: "0 0 16px", lineHeight: 1.6, color: "var(--ink-2)", fontSize: 13}}>{app.methodology}</p>
+
+              <div className="eyebrow mb-2">Expected Outcomes</div>
+              <ul style={{margin: "0 0 16px 20px", padding: 0, color: "var(--ink-2)", lineHeight: 1.6, fontSize: 13}}>
+                {app.outcomes.map((o, i) => <li key={i} style={{marginBottom: 4}}>{o}</li>)}
+              </ul>
+
+              <div className="eyebrow mb-2">Budget</div>
+              <div style={{padding: 14, border: "1px solid var(--line)", borderRadius: "var(--r-md)"}}>
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm text-muted">Total requested</span>
+                  <b>{fmtBaht(app.budgetTotal)}</b>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-muted">Duration</span>
+                  <b style={{fontSize: 13}}>{app.duration}</b>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card card-pad-0">
+            <div className="card-head"><h3>Reviewer Documents</h3></div>
+            <div>
+              {app.documents.map(d => <FileRow key={d.id || d.name} doc={d} onDownload={onDownload} onView={onView} />)}
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div className="card card-pad-0">
+            <div className="card-head"><h3>Review Form</h3></div>
+            <div className="card-body">
+              <div className="text-sm text-muted mb-3">
+                Reviewer: <b>Signed-in expert reviewer</b>
+              </div>
+
+              <div className="field">
+                <label>Score (0-100)</label>
+                <input type="number" min="0" max="100" value={form.score} onChange={e => setField("score", e.target.value)} />
+                <div className="progress mt-2"><div className="bar" style={{width: score + "%"}}></div></div>
+              </div>
+
+              <div className="field">
+                <label>Strengths</label>
+                <textarea className="comment-input" value={form.strengths} onChange={e => setField("strengths", e.target.value)} />
+              </div>
+
+              <div className="field">
+                <label>Weaknesses</label>
+                <textarea className="comment-input" value={form.weaknesses} onChange={e => setField("weaknesses", e.target.value)} />
+              </div>
+
+              <div className="field">
+                <label>Additional comments</label>
+                <textarea className="comment-input" value={form.comments} onChange={e => setField("comments", e.target.value)} placeholder="Optional conditions or notes for RASSC and the President." />
+              </div>
+
+              <div className="field">
+                <label>Recommendation</label>
+                <select value={form.recommendation} onChange={e => setField("recommendation", e.target.value)}>
+                  <option value="favorable">Favorable</option>
+                  <option value="revise">Revise</option>
+                  <option value="unfavorable">Unfavorable</option>
+                </select>
+              </div>
+
+              <button className="btn btn-primary btn-block mt-2" disabled={submitting} onClick={submitReview}>
+                <Icon name="Send" size={14} /> {submitting ? "Submitting…" : "Submit Review"}
+              </button>
+            </div>
+          </div>
+
+          <div className="card card-pad-0 mt-4">
+            <div className="card-head"><h3>Assigned Reviewers</h3></div>
+            <div style={{padding: "8px 0"}}>
+              {reviewers.map((e, i) => (
+                <div key={i} style={{display: "flex", alignItems: "center", gap: 10, padding: "10px 20px"}}>
+                  <Avatar initials={e.name.split(" ").slice(-1)[0].slice(0, 2).toUpperCase()} size={28} color={e.status === "Submitted" ? "var(--au-navy)" : "var(--au-crimson)"} />
                   <div style={{flex: 1}}>
                     <div style={{fontSize: 13, fontWeight: 600}}>{e.name}</div>
                     <div style={{fontSize: 11, color: "var(--ink-3)"}}>{e.affiliation} · {e.type}</div>

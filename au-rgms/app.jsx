@@ -384,8 +384,8 @@ function PageRouter({ pageKey, navigate, ctx }) {
 
     /* ---- Expert Reviewer ---- */
     case "e-dashboard":      return <ExpertDashboard navigate={navigate} />;
-    case "e-assignments":    return <ExpertAssignments navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "e-evaluate":       return <RASSCExpert onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "e-assignments":    return <ExpertAssignments navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} />;
+    case "e-evaluate":       return <RASSCExpert applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "e-history":        return <ExpertHistory onDownload={c.onDownload} />;
 
     /* ---- President ---- */
@@ -438,6 +438,7 @@ function App() {
   const [role, setRole] = useState(startingRole);
   const [page, setPage] = useState(startingPage);
   const [profile, setProfile] = useState(null);
+  const [selectedApplicationId, setSelectedApplicationId] = useState(null);
 
   // shared UI state
   const [previewDoc, setPreviewDoc] = useState(null);
@@ -459,6 +460,7 @@ function App() {
   const onSwitchRole = (newRole) => {
     if (!ROLE_CONFIG[newRole]) return;
     setRole(newRole);
+    setSelectedApplicationId(null);
     setPage(ROLE_CONFIG[newRole].homeKey);
   };
 
@@ -518,7 +520,7 @@ function App() {
         <PageRouter
           pageKey={page}
           navigate={setPage}
-          ctx={{ onDownload, onView, toast, setConfirm }}
+          ctx={{ onDownload, onView, toast, setConfirm, selectedApplicationId, setSelectedApplicationId }}
         />
       </main>
       <footer className="app-footer">

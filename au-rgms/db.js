@@ -52,6 +52,21 @@
     try { return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" }); }
     catch (e) { return iso; }
   }
+  function fmtBytes(n) {
+    var v = Number(n || 0);
+    if (!v) return "PDF";
+    if (v < 1024 * 1024) return Math.max(1, Math.round(v / 1024)) + " KB";
+    return (v / 1024 / 1024).toFixed(1) + " MB";
+  }
+  function mapDocument(d) {
+    return {
+      id: d.id, name: d.name,
+      size: d.size ? fmtBytes(d.size) : "PDF",
+      uploadedAt: fmtDate(d.created_at),
+      storage_path: d.storage_path,
+      doc_type: d.doc_type,
+    };
+  }
   // map a DB application row -> the shape the QueueTable / tables expect
   function mapRow(a) {
     return {
@@ -128,6 +143,28 @@
     },
     async deanQueue() { return this.queue("submitted"); },
 
+    async applicationDetail(appId) {
+      var res = await sb.from("applications")
+        .select("*, researcher:profiles(full_name,email), documents:application_documents(*), reviews(*, reviewer:profiles(full_name,email,title,faculty,department))")
+        .eq("id", appId).single();
+      if (res.error) throw res.error;
+      var a = res.data;
+      a.statusBadge = badge(a.status);
+      a.documents = (a.documents || []).map(mapDocument);
+      a.reviews = (a.reviews || []).sort(function (x, y) {
+        return new Date(y.submitted_at || 0) - new Date(x.submitted_at || 0);
+      });
+      return a;
+    },
+
+    async firstApplicationForStatus(status) {
+      var res = await sb.from("applications")
+        .select("id").eq("status", status).order("submitted_at", { ascending: true }).limit(1);
+      if (res.error) throw res.error;
+      var first = res.data && res.data[0];
+      return first ? this.applicationDetail(first.id) : null;
+    },
+
     async countByStatus(status) {
       var r = await sb.from("applications").select("id", { count: "exact", head: true }).eq("status", status);
       if (r.error) throw r.error;
@@ -162,6 +199,46 @@
           await sb.from("contracts").insert({ application_id: appId, contract_no: "CT-" + res.data.code, amount: amt, status: "issued" });
         } catch (e) {}
       }
+      return res.data;
+    },
+
+    async submitExpertReview(appId, payload) {
+      var me = await uid();
+      var role = await myRole();
+      if (!me) throw new Error("You must be signed in.");
+      var score = Math.max(0, Math.min(100, parseInt(payload.score, 10) || 0));
+      var recommendation = payload.recommendation || (score >= 70 ? "favorable" : "unfavorable");
+      var row = {
+        application_id: appId,
+        kind: "expert",
+        reviewer_id: me,
+        recommendation: recommendation,
+        score: score,
+        strengths: payload.strengths || null,
+        weaknesses: payload.weaknesses || null,
+        comments: payload.comments || null,
+        submitted_at: new Date().toISOString(),
+      };
+      var existing = await sb.from("reviews").select("id")
+        .eq("application_id", appId).eq("kind", "expert").eq("reviewer_id", me).maybeSingle();
+      if (existing.error) throw existing.error;
+      var res = existing.data
+        ? await sb.from("reviews").update(row).eq("id", existing.data.id).select().single()
+        : await sb.from("reviews").insert(row).select().single();
+      if (res.error) throw res.error;
+      try {
+        await sb.from("expert_assignments").update({ status: "completed" })
+          .eq("application_id", appId).eq("expert_id", me);
+      } catch (e) {}
+      try {
+        await sb.from("application_events").insert({
+          application_id: appId, actor_id: me, actor_role: role || "expert",
+          action: "Expert review submitted",
+          from_status: "expert_review", to_status: "expert_review",
+          note: "Score " + score + " / 100; recommendation: " + recommendation + ".",
+        });
+      } catch (e) {}
+      await this.transition(appId, "expert_review", "advance");
       return res.data;
     },
 

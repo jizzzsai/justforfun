@@ -656,14 +656,22 @@ function ExpertDashboard({ navigate }) {
 }
 
 /* EXPERT — Assignments list */
-function ExpertAssignments({ navigate, onDownload, toast, setConfirm }) {
+function ExpertAssignments({ navigate, onDownload, setSelectedApplicationId }) {
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    window.DB.queue("expert_review").then(setRows).catch(() => setRows([]));
+  }, []);
+  const openEvaluation = (row) => {
+    setSelectedApplicationId(row._uuid);
+    navigate("e-evaluate");
+  };
   return (
     <>
       <PageHeader title="My Assignments" desc="Proposals assigned to you by the RASSC office." />
       <div className="card card-pad-0">
-        <WiredQueue status="expert_review" openLabel="Submit review →"
-          confirmTitle="Submit your review & send to the President?" confirmLabel="Submit review"
-          onDownload={onDownload} setConfirm={setConfirm} toast={toast} />
+        {rows === null && <div style={{ padding: "36px", textAlign: "center", color: "var(--ink-3)" }}>Loading assignments…</div>}
+        {rows && rows.length === 0 && <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>No expert-review assignments right now.</div>}
+        {rows && rows.length > 0 && <QueueTable rows={rows} openLabel="Evaluate →" onOpen={openEvaluation} onDownload={onDownload} />}
       </div>
     </>
   );
