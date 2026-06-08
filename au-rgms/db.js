@@ -181,8 +181,15 @@
       else { var n = NEXT[fromStatus]; if (!n) throw new Error("No next step from " + fromStatus); to = n.to; }
       var patch = { status: to };
       if (to === "approved" || to === "rejected") patch.decided_at = new Date().toISOString();
-      var res = await sb.from("applications").update(patch).eq("id", appId).select().single();
-      if (res.error) throw res.error;
+      var upd = await sb.from("applications").update(patch).eq("id", appId).eq("status", fromStatus).select();
+      if (upd.error) throw upd.error;
+      if (!upd.data || upd.data.length === 0) {
+        throw new Error("No application was updated. Sign in with the correct role for this queue, or refresh if the application already moved.");
+      }
+      if (upd.data.length > 1) {
+        throw new Error("More than one application matched this action. Refresh and try again.");
+      }
+      var app = upd.data[0];
       var label = kind === "return" ? "Returned to researcher"
         : kind === "reject" ? "Application rejected"
         : (NEXT[fromStatus] ? NEXT[fromStatus].verb : "Advanced");
@@ -194,12 +201,12 @@
       } catch (e) {}
       if (to === "approved") {
         try {
-          var amt = Number(res.data.approved_amount || res.data.requested_amount || 0);
-          if (!res.data.approved_amount) await sb.from("applications").update({ approved_amount: amt }).eq("id", appId);
-          await sb.from("contracts").insert({ application_id: appId, contract_no: "CT-" + res.data.code, amount: amt, status: "issued" });
+          var amt = Number(app.approved_amount || app.requested_amount || 0);
+          if (!app.approved_amount) await sb.from("applications").update({ approved_amount: amt }).eq("id", appId);
+          await sb.from("contracts").insert({ application_id: appId, contract_no: "CT-" + app.code, amount: amt, status: "issued" });
         } catch (e) {}
       }
-      return res.data;
+      return app;
     },
 
     async submitExpertReview(appId, payload) {

@@ -4,13 +4,23 @@
    ============================================================ */
 
 const APP = window.AU;
+const DEMO_PASSWORD = "AuResearch#2026";
+const DEMO_EMAIL_FOR = {
+  researcher: "somchai.r@au.edu",
+  dean: "dean.sci@au.edu",
+  committee: "comm.chair@au.edu",
+  iras: "iras.office@au.edu",
+  expert: "expert.ml@au.edu",
+  president: "president@au.edu",
+  ofm: "finance@au.edu",
+  admin: "admin@au.edu",
+};
 
 /* ============= LOGIN PAGE ============= */
 function LoginPage({ onLogin }) {
-  const EMAIL_FOR = { researcher: "somchai.r@au.edu", dean: "dean.sci@au.edu", committee: "comm.chair@au.edu", iras: "iras.office@au.edu", expert: "expert.ml@au.edu", president: "president@au.edu", ofm: "finance@au.edu", admin: "admin@au.edu" };
   const [role, setRole] = useState("researcher");
-  const [email, setEmail] = useState("somchai.r@au.edu");
-  const [pass, setPass] = useState("AuResearch#2026");
+  const [email, setEmail] = useState(DEMO_EMAIL_FOR.researcher);
+  const [pass, setPass] = useState(DEMO_PASSWORD);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -82,7 +92,7 @@ function LoginPage({ onLogin }) {
                       name="role"
                       value={r.key}
                       checked={role === r.key}
-                      onChange={() => { setRole(r.key); setEmail(EMAIL_FOR[r.key] || email); }}
+                      onChange={() => { setRole(r.key); setEmail(DEMO_EMAIL_FOR[r.key] || email); }}
                       style={{display: "none"}}
                     />
                     <Icon name={r.iconName} size={16} style={{color: role === r.key ? "var(--au-crimson)" : "var(--ink-3)"}} />
@@ -449,6 +459,25 @@ function App() {
   const onView = (doc) => setPreviewDoc(doc);
   const toast = (msg) => setToastMsg(msg);
 
+  const switchToDemoRole = async (newRole, opts = {}) => {
+    if (!ROLE_CONFIG[newRole]) return null;
+    const email = DEMO_EMAIL_FOR[newRole];
+    if (!email) return null;
+    try {
+      const prof = await window.AUTH.signIn(email, DEMO_PASSWORD);
+      const r = prof && ROLE_CONFIG[prof.role] ? prof.role : newRole;
+      setProfile(prof || null);
+      setRole(r);
+      setSelectedApplicationId(null);
+      setLoggedIn(true);
+      if (!opts.keepPage) setPage(ROLE_CONFIG[r].homeKey);
+      return prof;
+    } catch (ex) {
+      toast("Could not switch demo account: " + ((ex && ex.message) || "sign-in failed."));
+      return null;
+    }
+  };
+
   const onLogin = (prof) => {
     const r = prof && ROLE_CONFIG[prof.role] ? prof.role : "researcher";
     setProfile(prof || null);
@@ -459,9 +488,7 @@ function App() {
 
   const onSwitchRole = (newRole) => {
     if (!ROLE_CONFIG[newRole]) return;
-    setRole(newRole);
-    setSelectedApplicationId(null);
-    setPage(ROLE_CONFIG[newRole].homeKey);
+    switchToDemoRole(newRole);
   };
 
   const onLogout = async () => {
@@ -473,10 +500,20 @@ function App() {
     (async () => {
       try {
         const sess = await window.AUTH.session();
-        if (!sess) return;
+        if (!sess) {
+          if (initial.skipLogin) await switchToDemoRole(startingRole, { keepPage: true });
+          return;
+        }
         const prof = await window.AUTH.profile();
         if (!prof) return;
-        if (initial.skipLogin) setProfile(prof);
+        if (initial.skipLogin) {
+          if (initial.role && ROLE_CONFIG[initial.role] && prof.role !== initial.role) {
+            await switchToDemoRole(initial.role, { keepPage: true });
+          } else {
+            setProfile(prof);
+            if (ROLE_CONFIG[prof.role]) setRole(prof.role);
+          }
+        }
         else onLogin(prof);
       } catch (e) {}
     })();
