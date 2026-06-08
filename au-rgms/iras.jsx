@@ -225,7 +225,7 @@ function RASSCAssignDemo({ toast, setConfirm }) {
                     title: "Send review requests?",
                     message: "Three reviewers will receive secure invitation emails with the proposal package.",
                     confirmLabel: "Send Requests",
-                    onConfirm: () => toast("Review requests sent (demo)"),
+                    onConfirm: () => toast("Review requests sent"),
                   })
                 }>
                   <Icon name="Send" size={14} /> Send Review Request
