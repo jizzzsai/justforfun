@@ -311,12 +311,13 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
   );
 }
 
-function FacultyAcademic({ onDownload, onView, toast, setConfirm }) {
+function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
   const [form, setForm] = useState({ score: "84", recommendation: "favorable", comments: "Reviewed and recommended for Dean sign-off." });
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
   return (
     <LiveAppLoader
       status="committee_review"
+      applicationId={applicationId}
       title="Academic Committee Review"
       desc="Submit committee evaluation and recommendation."
       render={(app, load) => {
@@ -326,13 +327,21 @@ function FacultyAcademic({ onDownload, onView, toast, setConfirm }) {
           message: app.code + " will move according to the selected recommendation.",
           confirmLabel: "Submit Decision",
           onConfirm: async () => {
-            try { await window.DB.submitCommitteeReview(app.id, form); toast(app.code + " committee decision submitted."); load(); }
+            try {
+              await window.DB.submitCommitteeReview(app.id, form);
+              toast(app.code + " committee decision submitted.");
+              if (navigate) navigate("c-queue"); else load();
+            }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
         return (
           <>
-            <PageHeader title={"Academic Committee Review - " + app.code} desc={app.title} actions={<Badge status={window.DB.statusBadge(app.status)} />} />
+            <PageHeader
+              title={"Academic Committee Review - " + app.code}
+              desc={app.title}
+              actions={<><Badge status={window.DB.statusBadge(app.status)} /><button className="btn btn-secondary" onClick={() => navigate && navigate("c-queue")}><Icon name="ArrowLeft" size={13} /> Queue</button></>}
+            />
             <div className="grid-2">
               <div>
                 <div className="card card-pad-0 mb-4">

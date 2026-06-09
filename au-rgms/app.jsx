@@ -380,9 +380,9 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "d-history":        return <DeanHistory onDownload={c.onDownload} />;
 
     /* ---- Committee ---- */
-    case "c-dashboard":      return <CommitteeDashboard navigate={navigate} />;
-    case "c-queue":          return <CommitteeQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "c-review":         return <FacultyAcademic onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "c-dashboard":      return <CommitteeDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
+    case "c-queue":          return <CommitteeQueue navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
+    case "c-review":         return <FacultyAcademic applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "c-history":        return <CommitteeHistory onDownload={c.onDownload} />;
 
     /* ---- RASSC ---- */

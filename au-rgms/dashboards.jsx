@@ -244,7 +244,7 @@ function DeanHistory({ onDownload }) {
 /* -----------------------------------------------------------
    COMMITTEE — Dashboard
    ----------------------------------------------------------- */
-function CommitteeDashboard({ navigate }) {
+function CommitteeDashboard({ navigate, setSelectedApplicationId }) {
   const [c, setC] = useState(null);
   const [rows, setRows] = useState(null);
   const [members, setMembers] = useState(null);
@@ -285,7 +285,7 @@ function CommitteeDashboard({ navigate }) {
               {rows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
               {rows && rows.length === 0 && <tr><td colSpan="4"><Empty title="Nothing for committee review" desc="Dean-approved applications will appear here." icon="Users" /></td></tr>}
               {(rows || []).map(a => (
-                <tr key={a.id} style={{cursor: "pointer"}} onClick={() => navigate("c-review")}>
+                <tr key={a.id} style={{cursor: "pointer"}} onClick={() => { if (setSelectedApplicationId) setSelectedApplicationId(a._uuid); navigate("c-review"); }}>
                   <td><span className="id">{a.id}</span></td>
                   <td className="title-cell"><div className="t" style={{maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.title}</div></td>
                   <td style={{fontSize: 12}}>{a.researcher?.name}</td>
@@ -322,7 +322,13 @@ function CommitteeDashboard({ navigate }) {
 }
 
 /* COMMITTEE — Queue */
-function CommitteeQueue({ navigate, onDownload, toast, setConfirm }) {
+function CommitteeQueue({ navigate, setSelectedApplicationId }) {
+  const [rows, setRows] = useState(null);
+  useEffect(() => { window.DB.queue("committee_review").then(setRows).catch(() => setRows([])); }, []);
+  const openReview = (row) => {
+    if (setSelectedApplicationId) setSelectedApplicationId(row._uuid);
+    navigate("c-review");
+  };
   return (
     <>
       <PageHeader title="Review Queue" desc="Proposals from the Dean awaiting committee review." />
@@ -336,9 +342,9 @@ function CommitteeQueue({ navigate, onDownload, toast, setConfirm }) {
           <div style={{flex: 1}}></div>
           <button className="btn btn-secondary btn-sm"><Icon name="Download" size={12} /> Export</button>
         </div>
-        <WiredQueue status="committee_review" openLabel="Recommend →"
-          confirmTitle="Recommend & return to the Dean?" confirmLabel="Recommend"
-          onDownload={onDownload} setConfirm={setConfirm} toast={toast} />
+        {rows === null && <div style={{ padding: "36px", textAlign: "center", color: "var(--ink-3)" }}>Loading committee queue...</div>}
+        {rows && rows.length === 0 && <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>Nothing in this queue right now.</div>}
+        {rows && rows.length > 0 && <QueueTable rows={rows} openLabel="Review" onOpen={openReview} />}
       </div>
     </>
   );
