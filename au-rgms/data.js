@@ -3,8 +3,8 @@
    Policy-aligned local data and role configuration
 
    Source rules used here:
-   - AU-R1 research grant process and required documents, 2024-2025
-   - AU Announcement No.13/2024, Paper Presentation Grant
+   - AU Announcement No.12/2024, Research Grant (AU-R1 process & required documents)
+   - AU Announcement No.16/2024, Paper Publication Grant
    ============================================================ */
 
 const ALL_STAGES = [
@@ -267,8 +267,20 @@ const Q_EXPERT = APPLICATIONS.filter(a => a.status.key === "expert_review");
 const Q_PRESIDENT = APPLICATIONS.filter(a => a.status.key === "president_review");
 const Q_OFM = APPLICATIONS.filter(a => ["approved", "active", "completed"].includes(a.status.key));
 
+const FACULTIES = [
+  { code: "VMES", name: "Vincent Mary School of Engineering, Science and Technology", departments: ["Computer Science", "Information Technology", "Computer Engineering", "Electrical Engineering", "Mechatronics Engineering", "Aircraft Maintenance Engineering"] },
+  { code: "MSME", name: "Martin de Tours School of Management and Economics", departments: ["Business Administration", "Marketing", "Finance and Banking", "Accounting", "Business Economics", "Hospitality and Tourism Management"] },
+  { code: "ARTS", name: "Theodore Maria School of Arts", departments: ["English", "Business English", "French", "Chinese"] },
+  { code: "COMM", name: "Albert Laurence School of Communication Arts", departments: ["Advertising", "Public Relations", "New Media Communication"] },
+  { code: "ARCH", name: "Montfort del Rosario School of Architecture and Design", departments: ["Architecture", "Interior Architecture", "Design"] },
+  { code: "NURSE", name: "Bernadette de Lourdes School of Nursing Science", departments: ["Nursing Science"] },
+  { code: "LAW", name: "School of Law", departments: ["Business Law"] },
+  { code: "BIOTECH", name: "School of Biotechnology", departments: ["Food Technology", "Agro-Industry"] },
+  { code: "MUSIC", name: "School of Music", departments: ["Music Performance", "Music Business"] },
+];
+
 window.AU = {
-  ALL_STAGES, STATUS, REQUIRED_DOCS, PAPER_PRESENTATION_DOCS,
+  ALL_STAGES, STATUS, FACULTIES, REQUIRED_DOCS, PAPER_PRESENTATION_DOCS,
   PRIMARY_APP, APPLICATIONS,
   NOTIFS, PAYMENTS, ACTIVITY,
   ROLES,

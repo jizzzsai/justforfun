@@ -312,7 +312,7 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
 }
 
 function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
-  const [form, setForm] = useState({ score: "84", recommendation: "favorable", comments: "Reviewed and recommended for Dean sign-off." });
+  const [form, setForm] = useState({ score: "", recommendation: "favorable", comments: "" });
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
   return (
     <LiveAppLoader
@@ -440,32 +440,7 @@ function FacultyDean({ onDownload, onView, toast, setConfirm }) {
   );
 }
 
-/* ---------- F. Faculty Timeline ---------- */
-function FacultyTimeline() {
-  const app = FA.PRIMARY_APP;
-  return (
-    <>
-      <PageHeader
-        title="Faculty Timeline"
-        desc={`Faculty-level progress for ${app.id}: Researcher -> Faculty Office -> Academic Committee -> Dean -> RASSC.`}
-        actions={<Badge status={FA.STATUS.iras} />}
-      />
-
-      <div className="card mb-4">
-        <HTimeline steps={FA.ALL_STAGES.slice(0, 5)} app={app} />
-      </div>
-
-      <div className="card card-pad-0">
-        <div className="card-head"><h3>Full Stage Log</h3></div>
-        <div className="card-body">
-          <Timeline steps={FA.ALL_STAGES.slice(0, 5)} app={app} />
-        </div>
-      </div>
-    </>
-  );
-}
-
 Object.assign(window, {
   FacultyDashboard, FacultyIncoming, FacultyChecklist,
-  FacultyAcademic, FacultyDean, FacultyTimeline,
+  FacultyAcademic, FacultyDean,
 });

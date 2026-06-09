@@ -224,9 +224,9 @@ function RASSCExpert({ applicationId, navigate, onDownload, onView, toast, setCo
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [form, setForm] = useState({
-    score: "86",
-    strengths: "Clear research question. Methodology is well-defined and the evaluation plan is convincing. Budget breakdown is realistic and well-justified.",
-    weaknesses: "Risk of scope creep. Consider tightening the success metric and mitigation plan.",
+    score: "",
+    strengths: "",
+    weaknesses: "",
     recommendation: "favorable",
     comments: "",
   });

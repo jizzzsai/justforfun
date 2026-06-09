@@ -5,15 +5,37 @@
 const RA = window.AU;
 
 /* ---------- A. Dashboard Overview ---------- */
+function buildResearcherTimeline(statusKey) {
+  const order = ["submission", "deanScreen", "committee", "deanSign", "iras", "expert", "president", "contract", "pay1"];
+  const idxMap = { draft: 0, submitted: 1, committee_review: 2, dean_sign: 3, iras_review: 4, expert_review: 5, president_review: 6, approved: 7, active: 8, completed: 9, returned: 0, rejected: 0 };
+  let idx = idxMap[statusKey]; if (idx === undefined) idx = 0;
+  const tl = {};
+  order.forEach((k, i) => { tl[k] = i < idx ? { done: true } : (i === idx ? { current: true } : {}); });
+  return tl;
+}
+
 function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicationId }) {
-  const app = RA.PRIMARY_APP;
   const [c, setC] = useState(null);
   const [me, setMe] = useState(null);
+  const [grant, setGrant] = useState(null);
+  const [apps, setApps] = useState(null);
   useEffect(() => {
     window.DB.statusCounts().then(setC).catch(() => setC({}));
     window.AUTH.profile().then(setMe).catch(() => {});
+    window.DB.myGrant().then(g => setGrant(g || false)).catch(() => setGrant(false));
+    window.DB.myApplications().then(setApps).catch(() => setApps([]));
   }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
+  const latest = apps && apps.length ? apps[0] : null;
+  const pays = grant && grant.payments && grant.payments.length ? grant.payments.slice().sort((a, b) => a.instalment - b.instalment) : [];
+  const grantTotal = grant ? Number(grant.approved_amount || grant.requested_amount || 0) : 0;
+  const released = pays.filter(p => p.status === "paid").reduce((s, p) => s + Number(p.amount || 0), 0);
+  const progressPct = grantTotal > 0 ? Math.round(released / grantTotal * 100) : 0;
+  const displayPays = pays.length ? pays : (grant ? [
+    { id: "t1", instalment: 1, pct: 30, amount: Math.round(grantTotal * 0.30), status: "pending" },
+    { id: "t2", instalment: 2, pct: 40, amount: grantTotal - 2 * Math.round(grantTotal * 0.30), status: "pending" },
+    { id: "t3", instalment: 3, pct: 30, amount: Math.round(grantTotal * 0.30), status: "pending" },
+  ] : []);
   return (
     <>
       <PageHeader
@@ -37,92 +59,90 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
       </div>
 
       <div className="grid-2">
-        {/* Left: payment progress for primary app */}
+        {/* Left: payment progress (live) */}
         <div className="card card-pad-0">
           <div className="card-head">
-            <h3>Payment Progress · {app.id}</h3>
+            <h3>Payment Progress{grant ? " · " + grant.code : ""}</h3>
             <div className="grow"></div>
-            <Badge status={app.status} />
+            {grant && <Badge status={window.DB.statusBadge(grant.status)} />}
           </div>
           <div className="card-body">
-            <div style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontSize: 17, marginBottom: 4 }}>
-              {app.title}
-            </div>
-            <div className="text-sm text-muted mb-4">{app.faculty} · {app.department}</div>
-
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-sm text-muted">Disbursement progress</span>
-              <span className="text-sm font-semi">0 of 100,000 THB released</span>
-            </div>
-            <div className="progress mb-4">
-              <div className="bar" style={{ width: "0%" }}></div>
-            </div>
-
-            <div className="grid-3">
-              {RA.PAYMENTS.map(p => (
-                <div key={p.n} style={{
-                  padding: 14, border: "1px solid var(--line)",
-                  borderRadius: "var(--r-md)", background: "var(--paper-warm)",
-                }}>
-                  <div style={{ fontSize: 11, color: "var(--ink-3)" }}>Tranche {p.n} · {p.pct}%</div>
-                  <div style={{ fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 500, margin: "4px 0" }}>
-                    {fmtBaht(p.amount)}
-                  </div>
-                  <span className={`badge ${p.badge}`}><span className="dot"></span>{p.status}</span>
+            {grant === null && <div className="text-sm text-muted">Loading…</div>}
+            {grant === false && <Empty title="No approved grant yet" desc="Once the President approves your application, your 30 / 40 / 30 disbursements appear here." icon="Coins" />}
+            {grant && (
+              <>
+                <div style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontSize: 17, marginBottom: 4 }}>
+                  {grant.title}
                 </div>
-              ))}
-            </div>
+                <div className="text-sm text-muted mb-4">{grant.faculty || "—"}{grant.department ? " · " + grant.department : ""}</div>
 
-            <button className="btn btn-secondary mt-4" onClick={() => navigate("r-payments")}>
-              View payment status <Icon name="ArrowRight" size={13} />
-            </button>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm text-muted">Disbursement progress</span>
+                  <span className="text-sm font-semi">{fmtBaht(released)} of {fmtBaht(grantTotal)} released</span>
+                </div>
+                <div className="progress mb-4">
+                  <div className="bar" style={{ width: progressPct + "%" }}></div>
+                </div>
+
+                <div className="grid-3">
+                  {displayPays.map(p => (
+                    <div key={p.id} style={{
+                      padding: 14, border: "1px solid var(--line)",
+                      borderRadius: "var(--r-md)", background: "var(--paper-warm)",
+                    }}>
+                      <div style={{ fontSize: 11, color: "var(--ink-3)" }}>Tranche {p.instalment} · {p.pct}%</div>
+                      <div style={{ fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 500, margin: "4px 0" }}>
+                        {fmtBaht(p.amount)}
+                      </div>
+                      <span className={"badge " + (p.status === "paid" ? "badge-paid" : "badge-pending")}><span className="dot"></span>{p.status === "paid" ? "Paid" : "Pending"}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <button className="btn btn-secondary mt-4" onClick={() => navigate("r-payments")}>
+                  View payment status <Icon name="ArrowRight" size={13} />
+                </button>
+              </>
+            )}
           </div>
         </div>
 
-        {/* Right: recent activity */}
+        {/* Right: my applications (live) */}
         <div className="card card-pad-0">
           <div className="card-head">
-            <h3>Recent Activity</h3>
+            <h3>My Applications</h3>
           </div>
           <div style={{ padding: "8px 0" }}>
-            {RA.ACTIVITY.map((a, i) => (
-              <div key={i} style={{
-                display: "flex", gap: 12, padding: "10px 20px",
-                borderBottom: i < RA.ACTIVITY.length - 1 ? "1px solid var(--line-2)" : "none",
-              }}>
-                <div style={{
-                  width: 30, height: 30, borderRadius: "50%",
-                  background: "var(--au-gold-soft)", color: "var(--au-gold)",
-                  display: "grid", placeItems: "center", flexShrink: 0,
-                }}>
-                  <Icon name={
-                    a.kind === "expert" ? "FileSearch" :
-                    a.kind === "approval" ? "ShieldCheck" :
-                    a.kind === "comment" ? "Edit" :
-                    a.kind === "check" ? "ClipboardCheck" : "FilePlus"
-                  } size={14} />
+            {apps === null && <div style={{ padding: "12px 20px", color: "var(--ink-3)", fontSize: 12 }}>Loading…</div>}
+            {apps && apps.length === 0 && <div style={{ padding: "16px 20px" }}><Empty title="No applications yet" desc="Submit your first research grant application to get started." icon="FilePlus" /></div>}
+            {(apps || []).slice(0, 6).map((a, i) => (
+              <div key={a.id} style={{
+                display: "flex", gap: 12, alignItems: "center", padding: "10px 20px", cursor: "pointer",
+                borderBottom: i < Math.min(apps.length, 6) - 1 ? "1px solid var(--line-2)" : "none",
+              }} onClick={() => { if (setSelectedApplicationId) setSelectedApplicationId(a.id); navigate("r-detail"); }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.title || "Untitled application"}</div>
+                  <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 2 }}>{a.code} · {window.DB.fmtDate(a.submitted_at || a.created_at)}</div>
                 </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 12, lineHeight: 1.5 }} dangerouslySetInnerHTML={{ __html: a.text }}></div>
-                  <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 2 }}>{a.t}</div>
-                </div>
+                <Badge status={window.DB.statusBadge(a.status)} />
               </div>
             ))}
           </div>
         </div>
       </div>
 
-      {/* Quick application snapshot */}
+      {/* Quick application snapshot (live, latest application) */}
       <div className="card card-pad-0 mt-6">
         <div className="card-head">
-          <h3>Application Pipeline · {app.id}</h3>
+          <h3>Application Pipeline{latest ? " · " + latest.code : ""}</h3>
           <div className="grow"></div>
           <button className="btn btn-ghost btn-sm" onClick={() => navigate("r-applications")}>
             Open detail <Icon name="ArrowRight" size={12} />
           </button>
         </div>
         <div className="card-body">
-          <HTimeline steps={RA.ALL_STAGES.slice(0, 9)} app={app} />
+          {!latest && <Empty title="No application to track yet" desc="Your latest application's progress will appear here." icon="Folder" />}
+          {latest && <HTimeline steps={RA.ALL_STAGES.slice(0, 9)} app={{ timeline: buildResearcherTimeline(latest.status) }} />}
         </div>
       </div>
     </>
@@ -258,8 +278,15 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   async function save(submit) {
     setErr("");
     if (submit && !draft.title.trim()) { setErr("Research title is required."); return; }
+    if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
     if (submit && Number(reqTotal) > 100000) { setErr("Requested amount (" + Number(reqTotal).toLocaleString() + " THB) exceeds the 100,000 THB maximum for AU-R1 research grants."); return; }
     if (submit && Number(reqTotal) <= 0) { setErr("Enter the grant amount you are requesting."); return; }
+    if (submit && total !== Number(reqTotal)) { setErr("Budget breakdown (" + total.toLocaleString() + " THB) must equal the requested total (" + Number(reqTotal).toLocaleString() + " THB)."); return; }
+    if (submit) {
+      const caps = [30, 50, 40, 20];
+      const overIdx = budgetRows.findIndex((b, i) => total > 0 && Math.round((Number(b.amount) || 0) / total * 100) > caps[i]);
+      if (overIdx !== -1) { setErr(budgetRows[overIdx].item + " exceeds its AU cap of " + caps[overIdx] + "% of the total budget."); return; }
+    }
     setBusy(true);
     try {
       const app = await window.DB.createApplication({
@@ -364,11 +391,17 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
             <div className="form-grid">
               <div className="field">
                 <label>School / Faculty</label>
-                <input value={draft.school} onChange={e => upd("school", e.target.value)} />
+                <select value={draft.school} onChange={e => { upd("school", e.target.value); upd("department", ""); }}>
+                  <option value="">Select your faculty…</option>
+                  {RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}
+                </select>
               </div>
               <div className="field">
                 <label>Department</label>
-                <input value={draft.department} onChange={e => upd("department", e.target.value)} />
+                <select value={draft.department} onChange={e => upd("department", e.target.value)} disabled={!draft.school}>
+                  <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
+                  {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
               </div>
             </div>
           </div>
@@ -574,7 +607,7 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
                 <td><span className="id">{a.id}</span></td>
                 <td className="title-cell">
                   <div className="t">{a.title}</div>
-                  <div className="s">{a.faculty || RA.PRIMARY_APP.faculty} · {a.department || RA.PRIMARY_APP.department}</div>
+                  <div className="s">{a.faculty || "—"}{a.department ? " · " + a.department : ""}</div>
                 </td>
                 <td>{a.submittedAt}</td>
                 <td>{a.stage}</td>
