@@ -279,7 +279,7 @@ function FilePreviewModal({ doc, onClose, onDownload }) {
         <div className="page">
           <div className="eyebrow" style={{ color: "var(--au-crimson)", marginBottom: 12 }}>Assumption University</div>
           <h5>{doc.name.replace(/_/g, " ").replace(".pdf", "")}</h5>
-          <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 20 }}>Document preview — demo only</div>
+          <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 20 }}>Preview placeholder — no uploaded file is attached yet</div>
           <div className="ln med"></div>
           <div className="ln"></div>
           <div className="ln short"></div>
@@ -292,7 +292,7 @@ function FilePreviewModal({ doc, onClose, onDownload }) {
           <div className="ln"></div>
           <div className="ln short"></div>
         </div>
-        <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 12 }}>Demo preview — page 1 of 4</div>
+        <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 12 }}>Generated preview placeholder</div>
       </div>
     </Modal>
   );

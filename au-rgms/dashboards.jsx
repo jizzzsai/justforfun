@@ -377,7 +377,7 @@ function RASSCDashboardV2({ navigate }) {
     <>
       <PageHeader
         title="RASSC Research Office"
-        desc="Receive forwarded proposals, screen them, and assign three expert reviewers."
+        desc="Receive forwarded proposals, screen them, and assign the required expert reviewers."
         actions={
           <button className="btn btn-primary" onClick={() => navigate("i-assign")}>
             <Icon name="UserPlus" size={14} /> Assign Reviewers
@@ -446,69 +446,6 @@ function RASSCDashboardV2({ navigate }) {
 }
 
 /* RASSC — Office Screening */
-function RASSCScreenDemo({ navigate, onDownload, onView, toast, setConfirm }) {
-  return (
-    <>
-      <PageHeader
-        title="Office Screening · RG-2025-001"
-        desc="Verify proposal completeness before assigning expert reviewers."
-        actions={<Badge status={D.STATUS.iras} />}
-      />
-      <div className="grid-2">
-        <div>
-          <div className="card card-pad-0 mb-4">
-            <div className="card-head"><h3>Forwarded Documents</h3></div>
-            <div>
-              {D.REQUIRED_DOCS.map(d => <FileRow key={d.id} doc={d} onDownload={onDownload} onView={onView} />)}
-            </div>
-          </div>
-          <div className="card card-pad-0">
-            <div className="card-head"><h3>Faculty &amp; Committee Trail</h3></div>
-            <div className="card-body">
-              <Timeline steps={D.ALL_STAGES.slice(0, 5)} app={D.PRIMARY_APP} />
-            </div>
-          </div>
-        </div>
-        <div>
-          <div className="card card-pad-0">
-            <div className="card-head"><h3>Screening Checklist</h3></div>
-            <div className="card-body">
-              {[
-                "All 4 required forms present",
-                "Budget total within AU policy ceiling",
-                "Department head recommendation valid",
-                "Ethics clearance (if applicable) attached",
-                "Researcher has no overdue reports",
-              ].map((t, i) => (
-                <label key={i} style={{display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < 4 ? "1px solid var(--line-2)" : "none", cursor: "pointer"}}>
-                  <input type="checkbox" defaultChecked={i < 4} style={{accentColor: "var(--au-crimson)"}} />
-                  <span style={{flex: 1, fontSize: 13}}>{t}</span>
-                </label>
-              ))}
-              <div className="flex flex-col gap-2 mt-4">
-                <button className="btn btn-primary btn-block" onClick={() =>
-                  setConfirm({
-                    kind: "success",
-                    title: "Approve screening?",
-                    message: "The application is moved to the expert assignment queue.",
-                    confirmLabel: "Approve",
-                    onConfirm: () => { toast("Screening approved (demo)"); navigate("i-assign"); },
-                  })
-                }>
-                  <Icon name="CheckCircle" size={14} /> Approve &amp; Move to Assignment
-                </button>
-                <button className="btn btn-secondary btn-block" onClick={() => toast("Returned to Dean (demo)")}>
-                  <Icon name="ArrowLeft" size={14} /> Return to Dean
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDownload, onView, toast, setConfirm }) {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -640,73 +577,6 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
 }
 
 /* RASSC — Reviewer Pool */
-function RASSCReviewerPoolDemo({ toast }) {
-  const pool = [
-    { n: "Assoc. Prof. Dr. Suthep Lertsiri",   a: "Chulalongkorn University",  t: "External", expertise: "AI · ML · NLP",         status: "Active",   load: 2 },
-    { n: "Asst. Prof. Dr. Marisa Anuwong",     a: "Mahidol University",         t: "External", expertise: "HCI · Edu Tech",        status: "Active",   load: 1 },
-    { n: "Dr. Kittipan Chaiprasart",           a: "Assumption University",      t: "Internal", expertise: "Software Engineering",  status: "Active",   load: 3 },
-    { n: "Prof. Dr. Sukit Nimnualrat",         a: "KMUTT",                       t: "External", expertise: "Networks · Security",    status: "Active",   load: 0 },
-    { n: "Dr. Pranee Mongkonsil",              a: "Thammasat University",        t: "External", expertise: "Economics · Policy",     status: "Active",   load: 0 },
-    { n: "Assoc. Prof. Dr. Sasitorn Plee",     a: "Kasetsart University",        t: "External", expertise: "Biotechnology",          status: "Active",   load: 1 },
-    { n: "Dr. Anchana Roonsoongnern",          a: "Burapha University",          t: "External", expertise: "Public Health",          status: "Inactive", load: 0 },
-  ];
-  return (
-    <>
-      <PageHeader
-        title="Reviewer Pool"
-        desc="Manage internal and external experts used for proposal evaluation."
-        actions={<button className="btn btn-primary"><Icon name="Plus" size={14} /> Add Reviewer</button>}
-      />
-      <div className="card card-pad-0">
-        <div className="toolbar">
-          <div className="search">
-            <Icon name="Search" size={14} className="icon" />
-            <input placeholder="Search reviewers…" />
-          </div>
-          <button className="filter active"><Icon name="Filter" size={12} /> All types</button>
-          <button className="filter"><Icon name="Briefcase" size={12} /> Expertise</button>
-          <div style={{flex: 1}}></div>
-          <button className="btn btn-secondary btn-sm" onClick={() => toast("Demo only: exporting reviewer list")}><Icon name="Download" size={12} /> Export</button>
-        </div>
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th>Reviewer</th>
-              <th>Affiliation</th>
-              <th>Type</th>
-              <th>Expertise</th>
-              <th>Current Load</th>
-              <th>Status</th>
-              <th style={{textAlign: "right"}}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pool.map((r, i) => (
-              <tr key={i}>
-                <td>
-                  <div style={{display: "flex", alignItems: "center", gap: 8}}>
-                    <Avatar initials={r.n.split(" ").slice(-1)[0].slice(0,2).toUpperCase()} size={28} color={r.t === "Internal" ? "var(--au-crimson)" : "var(--au-navy)"} />
-                    <span style={{fontSize: 13, fontWeight: 600}}>{r.n}</span>
-                  </div>
-                </td>
-                <td style={{fontSize: 12, color: "var(--ink-3)"}}>{r.a}</td>
-                <td><span className={`badge ${r.t === "Internal" ? "badge-academic" : "badge-iras"}`}><span className="dot"></span>{r.t}</span></td>
-                <td style={{fontSize: 12}}>{r.expertise}</td>
-                <td style={{fontSize: 12, fontWeight: 600}}>{r.load} active</td>
-                <td><span className={`badge ${r.status === "Active" ? "badge-check" : "badge-draft"}`}><span className="dot"></span>{r.status}</span></td>
-                <td className="actions">
-                  <button className="btn btn-ghost btn-sm"><Icon name="Edit" size={13} /></button>
-                  <button className="btn btn-ghost btn-sm"><Icon name="MoreHorizontal" size={13} /></button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-}
-
 function RASSCReviewerPool({ toast }) {
   const [pool, setPool] = useState(null);
   useEffect(() => {
@@ -772,102 +642,6 @@ function RASSCReviewerPool({ toast }) {
 /* -----------------------------------------------------------
    EXPERT REVIEWER — Dashboard
    ----------------------------------------------------------- */
-function ExpertDashboardDemo({ navigate }) {
-  const [c, setC] = useState(null);
-  useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
-  const n = (k) => (c ? (c[k] || 0) : "…");
-  return (
-    <>
-      <PageHeader
-        title="Expert Reviewer Dashboard"
-        desc="Proposals assigned to you for scholarly evaluation."
-        actions={
-          <button className="btn btn-primary" onClick={() => navigate("e-assignments")}>
-            <Icon name="Folder" size={14} /> Open Assignments
-          </button>
-        }
-      />
-
-      <div className="stats">
-        <Stat label="Active Assignments"     value={n("expert_review")} icon="Folder" tone="gold" />
-        <Stat label="At President"           value={n("president_review")} icon="Award" tone="navy" />
-        <Stat label="Approved (system)"      value={n("_approved")} icon="CheckCircle" tone="green" />
-        <Stat label="Avg. Turnaround"        value="—" icon="TrendingDown" />
-      </div>
-
-      <div className="grid-2">
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>Active Assignments</h3>
-            <div className="grow"></div>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate("e-assignments")}>
-              See all <Icon name="ArrowRight" size={12} />
-            </button>
-          </div>
-          <div>
-            {[
-              { id: "RG-2025-001", title: "AI-Based Research Grant Tracking System for Assumption University", deadline: "Nov 25, 2025", progress: 80, daysLeft: 3 },
-              { id: "RG-2025-014", title: "Pedagogical Agents for Bilingual Foundation Programmes",            deadline: "Nov 30, 2025", progress: 25, daysLeft: 8 },
-              { id: "RG-2025-013", title: "Microcredentials and Lifelong Learning Adoption in Thai SMEs",       deadline: "Dec 04, 2025", progress: 0,  daysLeft: 12 },
-            ].map(a => (
-              <div key={a.id} style={{padding: "16px 20px", borderBottom: "1px solid var(--line-2)", cursor: "pointer"}} onClick={() => navigate("e-evaluate")}>
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="id">{a.id}</span>
-                  <div style={{flex: 1, fontWeight: 600, fontSize: 13, maxWidth: 360, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.title}</div>
-                  <span className={`badge ${a.daysLeft < 5 ? "badge-pending" : "badge-draft"}`}>
-                    <span className="dot"></span>{a.daysLeft} days left
-                  </span>
-                </div>
-                <div className="progress" style={{height: 5}}><div className="bar" style={{width: `${a.progress}%`}}></div></div>
-                <div className="flex justify-between mt-2" style={{fontSize: 11, color: "var(--ink-3)"}}>
-                  <span>{a.progress}% complete</span>
-                  <span>Deadline · {a.deadline}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>Reviewer Profile</h3></div>
-          <div className="card-body">
-            <div className="flex items-center gap-3 mb-4">
-              <Avatar initials="SL" size={48} color="var(--au-crimson)" />
-              <div>
-                <div style={{fontFamily: "var(--font-serif)", fontWeight: 500, fontSize: 18}}>Assoc. Prof. Dr. Suthep Lertsiri</div>
-                <div className="text-sm text-muted">External · Chulalongkorn University</div>
-              </div>
-            </div>
-            <div style={{padding: 14, background: "var(--paper-warm)", borderRadius: "var(--r-md)"}}>
-              <div className="flex justify-between mb-2"><span className="text-sm text-muted">Expertise</span><b style={{fontSize: 13}}>AI · ML · NLP</b></div>
-              <div className="flex justify-between mb-2"><span className="text-sm text-muted">Reviews completed</span><b>12</b></div>
-              <div className="flex justify-between mb-2"><span className="text-sm text-muted">Avg. score given</span><b>78 / 100</b></div>
-              <div className="flex justify-between"><span className="text-sm text-muted">Avg. turnaround</span><b>8.4 days</b></div>
-            </div>
-
-            <div className="mt-4">
-              <div className="eyebrow mb-2">Recent recommendations</div>
-              <div className="flex gap-2">
-                <div style={{flex: 1, padding: 12, background: "#DCFCE7", borderRadius: "var(--r-md)", textAlign: "center"}}>
-                  <div style={{fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 600, color: "#166534"}}>9</div>
-                  <div style={{fontSize: 11, color: "#166534"}}>Favorable</div>
-                </div>
-                <div style={{flex: 1, padding: 12, background: "#FEF3C7", borderRadius: "var(--r-md)", textAlign: "center"}}>
-                  <div style={{fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 600, color: "#92400E"}}>2</div>
-                  <div style={{fontSize: 11, color: "#92400E"}}>Revise</div>
-                </div>
-                <div style={{flex: 1, padding: 12, background: "#FEE2E2", borderRadius: "var(--r-md)", textAlign: "center"}}>
-                  <div style={{fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 600, color: "#991B1B"}}>1</div>
-                  <div style={{fontSize: 11, color: "#991B1B"}}>Unfavorable</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
 function ExpertDashboard({ navigate, setSelectedApplicationId }) {
   const [c, setC] = useState(null);
   const [rows, setRows] = useState(null);
@@ -1241,51 +1015,52 @@ function OFMDashboard({ navigate }) {
 
 /* OFM — Grant detail (single grant's three tranches) */
 function OFMDetail({ onDownload, toast, setConfirm }) {
+  const [apps, setApps] = useState(null);
+  const load = () => window.DB.ofmPayments().then(setApps).catch(() => setApps([]));
+  useEffect(() => { load(); }, []);
+  if (apps === null) return <><PageHeader title="Grant Detail" desc="Payment tranches for an approved grant." /><div className="card" style={{ padding: 44, textAlign: "center", color: "var(--ink-3)" }}>Loading...</div></>;
+  if (apps.length === 0) return <><PageHeader title="Grant Detail" desc="Payment tranches for an approved grant." /><div className="card"><Empty title="No approved grant detail" desc="Approved grants will appear here after President approval." icon="Coins" /></div></>;
+
+  const app = apps[0];
+  const pays = (app.payments || []).slice().sort((a, b) => a.instalment - b.instalment);
+  const pay = (p) => setConfirm({
+    kind: "success",
+    title: "Mark tranche " + p.instalment + " as paid?",
+    message: "Disburse " + fmtBaht(p.amount) + " for " + app.code + ".",
+    confirmLabel: "Mark as Paid",
+    onConfirm: async () => {
+      try { await window.DB.markPaid(p.id, p.instalment, app.id); toast("Tranche " + p.instalment + " paid for " + app.code); load(); }
+      catch (e) { toast("Error: " + ((e && e.message) || e)); }
+    },
+  });
+
   return (
     <>
-      <PageHeader
-        title="Grant Detail · RG-2025-005"
-        desc="Cultural Heritage Preservation · Dr. Nisachon Charoenwong · 75,000 THB total"
-        actions={<Badge status={D.STATUS.contractSigned} />}
-      />
-
+      <PageHeader title={"Grant Detail - " + app.code} desc={app.title + " - " + fmtBaht(app.approved_amount || app.requested_amount)} actions={<Badge status={window.DB.statusBadge(app.status)} />} />
       <div className="grid-3 mb-6">
-        {[
-          { n: 1, pct: 30, amount: 22500, label: "First Disbursement",  status: "Ready to Process",        badge: "badge-approved", date: "Contract signed Nov 14, 2025",  receipt: null,                action: "Process Payment" },
-          { n: 2, pct: 40, amount: 30000, label: "Second Disbursement", status: "Awaiting Progress Report",badge: "badge-draft",    date: "Scheduled after M6 approval",   receipt: null,                action: "Not yet due" },
-          { n: 3, pct: 30, amount: 22500, label: "Final Disbursement",  status: "Awaiting Final Report",   badge: "badge-draft",    date: "Scheduled after M12 approval", receipt: null,                action: "Not yet due" },
-        ].map(p => (
-          <div key={p.n} className="pay-card">
-            <div className="pay-num">{p.pct}%</div>
-            <div className="pct">{p.label} · Tranche {p.n}</div>
-            <div className="amt">{fmtBaht(p.amount)}</div>
-            <span className={`badge ${p.badge}`}><span className="dot"></span>{p.status}</span>
-            <div className="meta-row mt-4"><span className="l">Schedule</span><span className="r">{p.date}</span></div>
-            <div className="meta-row"><span className="l">Receipt</span><span className="r">{p.receipt || "Not issued"}</span></div>
-            <button
-              className={`btn ${p.n === 1 ? "btn-primary" : "btn-secondary"} mt-3`}
-              style={{width: "100%"}}
-              disabled={p.n !== 1}
-              onClick={() => p.n === 1 && setConfirm({
-                kind: "success",
-                title: "Mark as paid?",
-                message: `Disburse ${fmtBaht(p.amount)} for tranche ${p.n}. The researcher will be notified.`,
-                confirmLabel: "Mark as Paid",
-                onConfirm: () => toast("Payment marked as paid (demo)"),
-              })}
-            >
-              {p.n === 1 ? "Mark as Paid" : "Not yet due"}
-            </button>
-          </div>
-        ))}
+        {pays.map(p => {
+          const ready = window.DB.payable(app, p.instalment);
+          return (
+            <div key={p.id} className="pay-card">
+              <div className="pay-num">{p.pct}%</div>
+              <div className="pct">Tranche {p.instalment}</div>
+              <div className="amt">{fmtBaht(p.amount)}</div>
+              <span className={"badge " + (p.status === "paid" ? "badge-paid" : ready ? "badge-approved" : "badge-draft")}><span className="dot"></span>{p.status === "paid" ? "Paid" : ready ? "Ready" : "Not due"}</span>
+              <div className="meta-row mt-4"><span className="l">Trigger</span><span className="r">{p.trigger}</span></div>
+              <div className="meta-row"><span className="l">Paid on</span><span className="r">{p.paid_at ? window.DB.fmtDate(p.paid_at) : "Not paid"}</span></div>
+              <button className={"btn " + (ready && p.status !== "paid" ? "btn-primary" : "btn-secondary") + " mt-3"} style={{ width: "100%" }} disabled={!ready || p.status === "paid"} onClick={() => pay(p)}>
+                {p.status === "paid" ? "Paid" : ready ? "Mark as Paid" : "Waiting for gate"}
+              </button>
+            </div>
+          );
+        })}
       </div>
-
       <div className="card card-pad-0">
-        <div className="card-head"><h3>Documents</h3></div>
-        <div>
-          <FileRow doc={{ name: "Signed_Contract_RG-2025-005.pdf", size: "1.2 MB", uploadedAt: "Nov 14, 2025" }} onDownload={onDownload} />
-          <FileRow doc={{ name: "Bank_Authorization_Letter.pdf",   size: "84 KB",  uploadedAt: "Nov 14, 2025" }} onDownload={onDownload} />
-          <FileRow doc={{ name: "Withholding_Tax_Cert.pdf",         size: "72 KB",  uploadedAt: "Nov 14, 2025" }} onDownload={onDownload} />
+        <div className="card-head"><h3>Grant Payment Conditions</h3></div>
+        <div className="card-body">
+          <div className="meta-row"><span className="l">1st 30%</span><span className="r">Available after contract signing</span></div>
+          <div className="meta-row"><span className="l">2nd 40%</span><span className="r">Available after accepted progress report</span></div>
+          <div className="meta-row"><span className="l">Final 30%</span><span className="r">Available after accepted final report</span></div>
         </div>
       </div>
     </>
@@ -1411,75 +1186,6 @@ function AdminDashboard({ navigate }) {
 }
 
 /* ADMIN — User management */
-function AdminUsers({ toast }) {
-  const [search, setSearch] = useState("");
-  const filtered = D.SYSTEM_USERS.filter(u =>
-    !search || (u.name + u.email + u.role + u.dept).toLowerCase().includes(search.toLowerCase())
-  );
-  return (
-    <>
-      <PageHeader
-        title="User Management"
-        desc="Add, edit, and assign roles to users of the AU-RGMS portal."
-        actions={<button className="btn btn-primary"><Icon name="Plus" size={14} /> Add User</button>}
-      />
-      <div className="card card-pad-0">
-        <div className="toolbar">
-          <div className="search">
-            <Icon name="Search" size={14} className="icon" />
-            <input placeholder="Search by name, email, role…" value={search} onChange={e => setSearch(e.target.value)} />
-          </div>
-          <button className="filter active"><Icon name="Filter" size={12} /> All roles</button>
-          <button className="filter"><Icon name="Briefcase" size={12} /> Department</button>
-          <div style={{flex: 1}}></div>
-          <button className="btn btn-secondary btn-sm" onClick={() => toast("Demo only: exporting users")}><Icon name="Download" size={12} /> Export</button>
-        </div>
-        <table className="tbl">
-          <thead>
-            <tr>
-              <th>User</th>
-              <th>Email</th>
-              <th>Role</th>
-              <th>Department</th>
-              <th>Status</th>
-              <th>Last Login</th>
-              <th style={{textAlign: "right"}}>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map(u => (
-              <tr key={u.id}>
-                <td>
-                  <div style={{display: "flex", alignItems: "center", gap: 8}}>
-                    <Avatar initials={u.name.split(" ").slice(-1)[0].slice(0,2).toUpperCase()} size={28} color="var(--au-navy)" />
-                    <div>
-                      <div style={{fontSize: 13, fontWeight: 600}}>{u.name}</div>
-                      <div style={{fontSize: 11, color: "var(--ink-3)"}} className="id">{u.id}</div>
-                    </div>
-                  </div>
-                </td>
-                <td style={{fontSize: 12, color: "var(--ink-2)"}}>{u.email}</td>
-                <td>
-                  <span className="badge badge-academic" style={{fontSize: 10}}>
-                    <span className="dot"></span>{u.role}
-                  </span>
-                </td>
-                <td style={{fontSize: 12, color: "var(--ink-3)"}}>{u.dept}</td>
-                <td><span className={`badge ${u.status === "Active" ? "badge-check" : "badge-draft"}`}><span className="dot"></span>{u.status}</span></td>
-                <td style={{fontSize: 11, color: "var(--ink-3)"}}>{u.lastLogin}</td>
-                <td className="actions">
-                  <button className="btn btn-ghost btn-sm"><Icon name="Edit" size={13} /></button>
-                  <button className="btn btn-ghost btn-sm"><Icon name="MoreHorizontal" size={13} /></button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-}
-
 /* ADMIN — Journal tier reference */
 function AdminJournals({ toast }) {
   return (
@@ -1493,7 +1199,7 @@ function AdminJournals({ toast }) {
         <div className="card">
           <div className="eyebrow mb-2">Last updated</div>
           <div style={{fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 500}}>Today, 06:55</div>
-          <div className="text-sm text-muted">By K. Tanapong Wisetphan</div>
+          <div className="text-sm text-muted">By Admin Test</div>
         </div>
         <div className="card">
           <div className="eyebrow mb-2">Total tiers configured</div>
@@ -1534,30 +1240,36 @@ function AdminJournals({ toast }) {
 }
 
 /* ADMIN — Audit log */
-function AdminAudit() {
+/* ADMIN — System settings */
+function AdminUsers({ toast }) {
+  const [search, setSearch] = useState("");
+  const [users, setUsers] = useState(null);
+  useEffect(() => { window.DB.allProfiles().then(setUsers).catch(() => setUsers([])); }, []);
+  const filtered = (users || []).filter(u => !search || (u.full_name + u.email + u.role + (u.department || "")).toLowerCase().includes(search.toLowerCase()));
   return (
     <>
-      <PageHeader title="Audit Log" desc="Immutable record of all sensitive user actions." />
+      <PageHeader title="User Management" desc="Live Supabase user profiles for AU-RGMS." actions={<button className="btn btn-primary" onClick={() => toast("Create users from Supabase Auth, then profiles appear here.")}><Icon name="Plus" size={14} /> Add User</button>} />
       <div className="card card-pad-0">
         <div className="toolbar">
-          <div className="search">
-            <Icon name="Search" size={14} className="icon" />
-            <input placeholder="Filter audit entries…" />
-          </div>
-          <button className="filter active"><Icon name="Filter" size={12} /> All events</button>
-          <button className="filter"><Icon name="Calendar" size={12} /> Today</button>
+          <div className="search"><Icon name="Search" size={14} className="icon" /><input placeholder="Search by name, email, role..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+          <button className="filter active"><Icon name="Filter" size={12} /> All roles</button>
           <div style={{flex: 1}}></div>
-          <button className="btn btn-secondary btn-sm"><Icon name="Download" size={12} /> Export</button>
+          <button className="btn btn-secondary btn-sm" onClick={() => toast("Profile export is based on live Supabase profiles.")}><Icon name="Download" size={12} /> Export</button>
         </div>
         <table className="tbl">
-          <thead><tr><th>Timestamp</th><th>User</th><th>Action</th><th>IP</th></tr></thead>
+          <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Department</th><th>Status</th><th>Created</th><th style={{textAlign: "right"}}>Actions</th></tr></thead>
           <tbody>
-            {D.AUDIT_LOG.map((e, i) => (
-              <tr key={i}>
-                <td style={{fontSize: 12}}>{e.t}</td>
-                <td style={{fontSize: 12, fontWeight: 600}}>{e.who}</td>
-                <td style={{fontSize: 12, color: "var(--ink-2)"}}>{e.act}</td>
-                <td><span className="id" style={{fontSize: 11}}>{e.ip}</span></td>
+            {users === null && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading users...</td></tr>}
+            {users && filtered.length === 0 && <tr><td colSpan="7"><Empty title="No users found" desc="Try another search." icon="Users" /></td></tr>}
+            {filtered.map(u => (
+              <tr key={u.id}>
+                <td><div style={{display: "flex", alignItems: "center", gap: 8}}><Avatar initials={(u.full_name || "U").split(" ").map(p => p[0]).join("").slice(0,2).toUpperCase()} size={28} color="var(--au-navy)" /><div><div style={{fontSize: 13, fontWeight: 600}}>{u.full_name}</div><div style={{fontSize: 11, color: "var(--ink-3)"}} className="id">{String(u.id).slice(0, 8)}</div></div></div></td>
+                <td style={{fontSize: 12, color: "var(--ink-2)"}}>{u.email}</td>
+                <td><span className="badge badge-academic" style={{fontSize: 10}}><span className="dot"></span>{u.role}</span></td>
+                <td style={{fontSize: 12, color: "var(--ink-3)"}}>{u.department || "-"}</td>
+                <td><span className={"badge " + (u.is_active === false ? "badge-draft" : "badge-check")}><span className="dot"></span>{u.is_active === false ? "Inactive" : "Active"}</span></td>
+                <td style={{fontSize: 11, color: "var(--ink-3)"}}>{window.DB.fmtDate(u.created_at)}</td>
+                <td className="actions"><button className="btn btn-ghost btn-sm" onClick={() => toast(u.full_name + " is stored in Supabase profiles.")}><Icon name="Info" size={13} /></button></td>
               </tr>
             ))}
           </tbody>
@@ -1567,60 +1279,66 @@ function AdminAudit() {
   );
 }
 
-/* ADMIN — System settings */
-function AdminSettings({ toast }) {
-  const settings = [
-    { section: "Application Workflow", items: [
-      { k: "Auto-screen if all forms uploaded",      v: true,  type: "toggle" },
-      { k: "Allow Dean to skip first screening",    v: false, type: "toggle" },
-      { k: "Require 3 experts (vs minimum 2)",       v: true,  type: "toggle" },
-      { k: "Days to sign contract after approval",   v: 15,    type: "number", unit: "days" },
-    ]},
-    { section: "Payments", items: [
-      { k: "First tranche %",  v: 30, type: "number", unit: "%" },
-      { k: "Second tranche %", v: 40, type: "number", unit: "%" },
-      { k: "Final tranche %",  v: 30, type: "number", unit: "%" },
-      { k: "Auto-notify researcher on disbursement", v: true, type: "toggle" },
-    ]},
-    { section: "Notifications", items: [
-      { k: "Email reviewers 5 days before deadline", v: true, type: "toggle" },
-      { k: "Send weekly digest to all Deans",        v: true, type: "toggle" },
-      { k: "Slack integration",                       v: false, type: "toggle" },
-    ]},
-  ];
+function AdminAudit() {
+  const [events, setEvents] = useState(null);
+  useEffect(() => { window.DB.auditEvents().then(setEvents).catch(() => setEvents([])); }, []);
   return (
     <>
-      <PageHeader
-        title="System Settings"
-        desc="Toggle workflow rules, payment splits, and notification preferences."
-        actions={<button className="btn btn-primary" onClick={() => toast("Settings saved (demo)")}>Save Changes</button>}
-      />
-      {settings.map(s => (
-        <div key={s.section} className="card card-pad-0 mb-4">
-          <div className="card-head"><h3>{s.section}</h3></div>
-          <div>
-            {s.items.map((it, i) => (
-              <div key={it.k} style={{
-                display: "flex", alignItems: "center", padding: "16px 20px",
-                borderBottom: i < s.items.length - 1 ? "1px solid var(--line-2)" : "none",
-              }}>
-                <div style={{flex: 1, fontSize: 13, fontWeight: 600}}>{it.k}</div>
-                {it.type === "toggle" ? (
-                  <Toggle defaultOn={it.v} />
-                ) : (
-                  <div style={{display: "flex", alignItems: "center", gap: 6}}>
-                    <input
-                      defaultValue={it.v}
-                      style={{width: 70, padding: "6px 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", textAlign: "right", fontWeight: 600}}
-                    />
-                    <span className="text-sm text-muted">{it.unit}</span>
-                  </div>
-                )}
-              </div>
+      <PageHeader title="Audit Log" desc="Live workflow events recorded in Supabase." />
+      <div className="card card-pad-0">
+        <table className="tbl">
+          <thead><tr><th>Timestamp</th><th>User</th><th>Application</th><th>Action</th></tr></thead>
+          <tbody>
+            {events === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading audit events...</td></tr>}
+            {events && events.length === 0 && <tr><td colSpan="4"><Empty title="No audit events yet" desc="Workflow actions will appear here." icon="Clock" /></td></tr>}
+            {(events || []).map(e => (
+              <tr key={e.id}>
+                <td style={{fontSize: 12}}>{window.DB.fmtDate(e.created_at)}</td>
+                <td style={{fontSize: 12, fontWeight: 600}}>{e.actor ? e.actor.full_name : (e.actor_role || "-")}</td>
+                <td style={{fontSize: 12}}>{e.application ? e.application.code : "-"}</td>
+                <td style={{fontSize: 12, color: "var(--ink-2)"}}>{e.action}</td>
+              </tr>
             ))}
-          </div>
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+function AdminSettings({ toast }) {
+  const settings = [
+    { key: "grant_limit", label: "Maximum internal grant amount", value: 100000, unit: "THB" },
+    { key: "contract_days", label: "Days to sign contract after approval", value: 45, unit: "days" },
+    { key: "tranche_1", label: "First tranche", value: 30, unit: "%" },
+    { key: "tranche_2", label: "Second tranche", value: 40, unit: "%" },
+    { key: "tranche_3", label: "Final tranche", value: 30, unit: "%" },
+  ];
+  const save = async () => {
+    try {
+      await window.DB.saveSetting("workflow_policy", { settings: settings }, "Workflow policy");
+      toast("Settings saved to Supabase.");
+    } catch (e) {
+      toast("Error: " + ((e && e.message) || e));
+    }
+  };
+  return (
+    <>
+      <PageHeader title="System Settings" desc="Workflow rules, payment splits, and policy values." actions={<button className="btn btn-primary" onClick={save}>Save Changes</button>} />
+      <div className="card card-pad-0">
+        <div className="card-head"><h3>Workflow Policy</h3></div>
+        <div>
+          {settings.map((it, i) => (
+            <div key={it.key} style={{ display: "flex", alignItems: "center", padding: "16px 20px", borderBottom: i < settings.length - 1 ? "1px solid var(--line-2)" : "none" }}>
+              <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{it.label}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <input defaultValue={it.value} style={{ width: 90, padding: "6px 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", textAlign: "right", fontWeight: 600 }} />
+                <span className="text-sm text-muted">{it.unit}</span>
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
+      </div>
     </>
   );
 }

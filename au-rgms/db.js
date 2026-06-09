@@ -126,6 +126,15 @@
       return res.data;
     },
 
+    async documentUrl(doc, download) {
+      if (!doc || !doc.storage_path) throw new Error("No uploaded file is attached to this document row.");
+      var res = await sb.storage.from("documents").createSignedUrl(doc.storage_path, 60 * 5, {
+        download: download ? (doc.name || true) : false,
+      });
+      if (res.error) throw res.error;
+      return res.data.signedUrl;
+    },
+
     async myApplications() {
       var me = await uid();
       var res = await sb.from("applications").select("*").eq("researcher_id", me).order("created_at", { ascending: false });
@@ -212,6 +221,42 @@
       var r = await sb.from("applications").select("id", { count: "exact", head: true }).eq("status", status);
       if (r.error) throw r.error;
       return r.count || 0;
+    },
+
+    async submitCommitteeReview(appId, payload) {
+      var me = await uid();
+      var role = await myRole();
+      if (!me) throw new Error("You must be signed in.");
+      var score = Math.max(0, Math.min(100, parseInt(payload.score, 10) || 0));
+      var recommendation = payload.recommendation || (score >= 70 ? "favorable" : "revise");
+      var row = {
+        application_id: appId,
+        kind: "committee",
+        reviewer_id: me,
+        recommendation: recommendation,
+        score: score,
+        comments: payload.comments || null,
+        submitted_at: new Date().toISOString(),
+      };
+      var existing = await sb.from("reviews").select("id")
+        .eq("application_id", appId).eq("kind", "committee").eq("reviewer_id", me).maybeSingle();
+      if (existing.error) throw existing.error;
+      var res = existing.data
+        ? await sb.from("reviews").update(row).eq("id", existing.data.id).select().single()
+        : await sb.from("reviews").insert(row).select().single();
+      if (res.error) throw res.error;
+      try {
+        await sb.from("application_events").insert({
+          application_id: appId, actor_id: me, actor_role: role || "committee",
+          action: "Faculty Committee review submitted",
+          from_status: "committee_review", to_status: "dean_sign",
+          note: "Score " + score + " / 100; recommendation: " + recommendation + ".",
+        });
+      } catch (e) {}
+      if (recommendation === "unfavorable") return await this.transition(appId, "committee_review", "reject");
+      if (recommendation === "revise") return await this.transition(appId, "committee_review", "return");
+      await this.transition(appId, "committee_review", "advance");
+      return res.data;
     },
 
     // advance / return / reject an application
@@ -312,7 +357,48 @@
       return res.data;
     },
 
+    async presidentDecision(appId, approved, conditions) {
+      var me = await uid();
+      if (!me) throw new Error("You must be signed in.");
+      if (!approved) return await this.transition(appId, "president_review", "reject");
+      var app = await this.transition(appId, "president_review", "advance");
+      try {
+        await sb.from("approvals").insert({
+          application_id: appId,
+          president_id: me,
+          approved: true,
+          approved_amount: app.approved_amount || app.requested_amount,
+          conditions: conditions || null,
+        });
+      } catch (e) {}
+      return app;
+    },
+
     // ---- Layer 4: contracts, payments (30/40/30), reports ----
+    async contractQueue() {
+      var res = await sb.from("applications")
+        .select("*, researcher:profiles(full_name), contracts(*)")
+        .in("status", ["approved", "active"]).order("decided_at", { ascending: false });
+      if (res.error) throw res.error;
+      return res.data || [];
+    },
+    async signContract(appId) {
+      var me = await uid();
+      var role = await myRole();
+      var cres = await sb.from("contracts").update({ status: "active" }).eq("application_id", appId).select();
+      if (cres.error) throw cres.error;
+      var upd = await sb.from("applications").update({ status: "active" }).eq("id", appId).eq("status", "approved").select();
+      if (upd.error) throw upd.error;
+      if (!upd.data || upd.data.length === 0) throw new Error("No approved application was updated. Refresh if it already moved.");
+      try {
+        await sb.from("application_events").insert({
+          application_id: appId, actor_id: me, actor_role: role,
+          action: "Contract signed and project activated",
+          from_status: "approved", to_status: "active",
+        });
+      } catch (e) {}
+      return upd.data[0];
+    },
     async ofmPayments() {
       var res = await sb.from("applications")
         .select("*, researcher:profiles(full_name), payments(*), reports(kind,status), contracts(contract_no,status)")
@@ -337,10 +423,10 @@
     },
     // can this instalment be paid yet? (report-gated)
     payable: function (app, inst) {
-      if (inst === 1) return true;
+      if (inst === 1) return app && (app.status === "active" || app.status === "completed");
       var reps = app.reports || [];
-      if (inst === 2) return reps.some(function (r) { return r.kind === "progress"; });
-      if (inst === 3) return reps.some(function (r) { return r.kind === "final"; });
+      if (inst === 2) return reps.some(function (r) { return r.kind === "progress" && r.status === "accepted"; });
+      if (inst === 3) return reps.some(function (r) { return r.kind === "final" && r.status === "accepted"; });
       return false;
     },
     async markPaid(paymentId, instalment, appId) {
@@ -357,6 +443,42 @@
       }).select().single();
       if (r.error) throw r.error;
       try { await sb.from("application_events").insert({ application_id: appId, actor_id: me, actor_role: "researcher", action: (kind === "progress" ? "Progress" : "Final") + " report submitted" }); } catch (e) {}
+      return r.data;
+    },
+    async myReports(kind) {
+      var apps = await this.myApplications();
+      var ids = (apps || []).map(function (a) { return a.id; });
+      if (!ids.length) return [];
+      var q = sb.from("reports")
+        .select("*, application:applications(code,title)")
+        .in("application_id", ids)
+        .order("submitted_at", { ascending: false });
+      if (kind) q = q.eq("kind", kind);
+      var res = await q;
+      if (res.error) throw res.error;
+      return res.data || [];
+    },
+    async reportQueue() {
+      var res = await sb.from("reports")
+        .select("*, application:applications(code,title,researcher:profiles(full_name))")
+        .eq("status", "submitted").order("submitted_at", { ascending: true });
+      if (res.error) throw res.error;
+      return res.data || [];
+    },
+    async acceptReport(reportId) {
+      var r = await sb.from("reports").update({ status: "accepted" }).eq("id", reportId).select("*, application:applications(id,code)").single();
+      if (r.error) throw r.error;
+      try {
+        var me = await uid();
+        var role = await myRole();
+        await sb.from("application_events").insert({
+          application_id: r.data.application_id,
+          actor_id: me,
+          actor_role: role,
+          action: (r.data.kind === "progress" ? "Progress" : "Final") + " report accepted",
+          note: "Payment gate opened for " + (r.data.kind === "progress" ? "second" : "final") + " tranche.",
+        });
+      } catch (e) {}
       return r.data;
     },
     async myGrant() {
@@ -405,6 +527,31 @@
         .eq("status", "paid").order("paid_at", { ascending: false });
       if (res.error) throw res.error;
       return res.data || [];
+    },
+    async allProfiles() {
+      var res = await sb.from("profiles").select("*").order("role", { ascending: true }).order("full_name", { ascending: true });
+      if (res.error) throw res.error;
+      return res.data || [];
+    },
+    async journalTiers() {
+      var res = await sb.from("journal_tiers").select("*").order("sort_order", { ascending: true });
+      if (res.error) throw res.error;
+      return res.data || [];
+    },
+    async auditEvents() {
+      var res = await sb.from("application_events")
+        .select("*, actor:profiles(full_name,email), application:applications(code,title)")
+        .order("created_at", { ascending: false }).limit(80);
+      if (res.error) throw res.error;
+      return res.data || [];
+    },
+    async saveSetting(key, value, label) {
+      var me = await uid();
+      var res = await sb.from("app_settings").upsert({
+        key: key, value: value, label: label || key, updated_by: me, updated_at: new Date().toISOString(),
+      }, { onConflict: "key" }).select().single();
+      if (res.error) throw res.error;
+      return res.data;
     },
   };
 })();

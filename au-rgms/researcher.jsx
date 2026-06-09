@@ -140,7 +140,7 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
     name: "", title2: "", email: "", phone: "",
     school: "Vincent Mary School of Engineering, Science and Technology",
     department: "Information Technology",
-    outcome: "A production-ready research grant management portal, two peer-reviewed conference papers, an open dataset of anonymised workflow durations, and training materials.",
+    outcome: "A clean live test run through submission, review, approval, contract, report, and payment gates.",
   });
   const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
 
@@ -171,7 +171,7 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
   async function save(submit) {
     setErr("");
     if (submit && !draft.title.trim()) { setErr("Research title is required."); return; }
-    if (submit && Number(reqTotal) > 100000) { setErr("Requested amount (" + Number(reqTotal).toLocaleString() + " THB) exceeds the 100,000 THB maximum (AU Announcement No.12/2024)."); return; }
+    if (submit && Number(reqTotal) > 100000) { setErr("Requested amount (" + Number(reqTotal).toLocaleString() + " THB) exceeds the 100,000 THB maximum for AU-R1 research grants."); return; }
     if (submit && Number(reqTotal) <= 0) { setErr("Enter the grant amount you are requesting."); return; }
     setBusy(true);
     try {
@@ -279,7 +279,7 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
 
         <div className="form-section">
           <h4><span className="num">4</span> Budget Information</h4>
-          <p className="section-sub">Enter any amount up to the 100,000 THB maximum (AU Announcement No.12/2024), then itemise it below. Caps: remuneration ≤30%, travel ≤40%, equipment ≤50%, misc ≤20%.</p>
+          <p className="section-sub">Enter any amount up to the 100,000 THB AU-R1 maximum, then itemise it below. Caps: remuneration ≤30%, travel ≤40%, equipment ≤50%, misc ≤20%.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field">
@@ -537,12 +537,12 @@ function ResearcherApplicationDetail({ navigate, onDownload, onView }) {
           <div className="card card-pad-0 mb-4">
             <div className="card-head"><h3>Submitted Documents</h3>
               <div className="grow"></div>
-              <button className="btn btn-secondary btn-sm" onClick={() => onDownload({ name: "RG-2025-001_all.zip" })}>
+              <button className="btn btn-secondary btn-sm" onClick={() => onDownload({ name: app.id + "_all.zip" })}>
                 <Icon name="Download" size={13} /> Download All
               </button>
             </div>
             <div>
-              {RA.MOCK_DOCS.map(d => <FileRow key={d.id} doc={d} onDownload={onDownload} onView={onView} />)}
+              {RA.REQUIRED_DOCS.map(d => <FileRow key={d.id} doc={d} onDownload={onDownload} onView={onView} />)}
             </div>
           </div>
 
@@ -552,28 +552,28 @@ function ResearcherApplicationDetail({ navigate, onDownload, onView }) {
             <div className="card-body">
               <div className="comment">
                 <div className="head">
-                  <div className="av">WS</div>
+                  <div className="av">CT</div>
                   <div>
-                    <div className="name">Assoc. Prof. Dr. Watcharee Suwannarat</div>
-                    <div className="role">Academic Committee Chair · Oct 24, 2025</div>
+                    <div className="name">Committee Test</div>
+                    <div className="role">Faculty Academic Committee</div>
                   </div>
-                  <div className="when">3 weeks ago</div>
+                  <div className="when">Test note</div>
                 </div>
                 <div className="body">
-                  The proposed methodology is rigorous and well-aligned with current literature. We recommend tightening the evaluation plan to include a second-semester replication and committing to publishing the anonymised dataset.
+                  Committee comments will appear here after a live committee reviewer submits a decision.
                 </div>
               </div>
               <div className="comment">
                 <div className="head">
-                  <div className="av" style={{background: "var(--au-gold)"}}>SK</div>
+                  <div className="av" style={{background: "var(--au-gold)"}}>RS</div>
                   <div>
-                    <div className="name">Prof. Dr. Sirilak Khempila</div>
-                    <div className="role">RASSC Director · Oct 30, 2025</div>
+                    <div className="name">RASSC Test</div>
+                    <div className="role">RASSC Office</div>
                   </div>
-                  <div className="when">2 weeks ago</div>
+                  <div className="when">Test note</div>
                 </div>
                 <div className="body">
-                  Three reviewers have been assigned (two external, one internal). Please address any clarification requests within five working days of receipt.
+                  RASSC notes and expert assignment updates will appear here after live actions are recorded.
                 </div>
               </div>
               <textarea className="comment-input mt-3" placeholder="Reply to reviewers…"></textarea>
@@ -604,12 +604,17 @@ function ResearcherApplicationDetail({ navigate, onDownload, onView }) {
 /* ---------- E. Progress Report ---------- */
 function ResearcherProgress({ onDownload, onView, toast }) {
   const [grant, setGrant] = useState(null);
+  const [reports, setReports] = useState(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { window.DB.myGrant().then(setGrant).catch(() => {}); }, []);
+  const reload = () => {
+    window.DB.myGrant().then(setGrant).catch(() => setGrant(false));
+    window.DB.myReports("progress").then(setReports).catch(() => setReports([]));
+  };
+  useEffect(() => { reload(); }, []);
   const submit = async () => {
-    if (!grant) { toast("No approved grant found — your application must be approved first."); return; }
+    if (!grant) { toast("No approved grant found - your application must be approved first."); return; }
     setBusy(true);
-    try { await window.DB.submitReport(grant.id, "progress"); toast("Progress report submitted — the 40% tranche is now eligible."); }
+    try { await window.DB.submitReport(grant.id, "progress"); toast("Progress report submitted. RASSC must accept it before the 40% tranche can be paid."); reload(); }
     catch (e) { toast("Error: " + (e.message || e)); }
     setBusy(false);
   };
@@ -632,16 +637,11 @@ function ResearcherProgress({ onDownload, onView, toast }) {
               </div>
               <div className="field">
                 <label>Summary of progress</label>
-                <textarea className="comment-input" style={{minHeight: 120}}
-                  defaultValue="During the first six months, we completed the needs assessment with twenty-four AU faculty members and delivered three iterative prototype releases. Pilot deployment with VMS-EST is scheduled for Month 7."></textarea>
+                <textarea className="comment-input" style={{minHeight: 120}} placeholder="Enter progress summary for this reporting period."></textarea>
               </div>
               <div className="field">
                 <label>Budget utilisation</label>
-                <div className="progress" style={{height: 10}}><div className="bar" style={{width: "52%"}}></div></div>
-                <div className="flex justify-between mt-2" style={{fontSize: 12, color: "var(--ink-3)"}}>
-                  <span>52% spent — 51,800 THB</span>
-                  <span>48% remaining — 48,200 THB</span>
-                </div>
+                <textarea className="comment-input" placeholder="Summarize spending and attach the official report file when available."></textarea>
               </div>
               <div className="field">
                 <label>Upload progress report (PDF)</label>
@@ -663,11 +663,19 @@ function ResearcherProgress({ onDownload, onView, toast }) {
 
         <div>
           <div className="card card-pad-0">
-            <div className="card-head"><h3>Previously Submitted Files</h3></div>
-            <div>
-              <FileRow doc={{ name: "Progress_Report_M3_Draft.pdf", size: "612 KB", uploadedAt: "Feb 12, 2026" }} onDownload={onDownload} onView={onView} />
-              <FileRow doc={{ name: "Budget_Utilisation_M3.pdf",    size: "184 KB", uploadedAt: "Feb 12, 2026" }} onDownload={onDownload} onView={onView} />
-              <FileRow doc={{ name: "Pilot_Photos_M3.zip",          size: "4.2 MB", uploadedAt: "Feb 12, 2026" }} onDownload={onDownload} onView={onView} />
+            <div className="card-head"><h3>Submitted Progress Reports</h3></div>
+            <div className="card-body">
+              {reports === null && <div className="text-sm text-muted">Loading reports...</div>}
+              {reports && reports.length === 0 && <div className="text-sm text-muted">No progress reports submitted yet.</div>}
+              {(reports || []).map(r => (
+                <div key={r.id} className="flex justify-between items-center" style={{padding: "10px 0", borderBottom: "1px solid var(--line-2)"}}>
+                  <div>
+                    <div style={{fontWeight: 600}}>{r.application ? r.application.code : "Application"} - Progress Report</div>
+                    <div className="text-sm text-muted">Status: {r.status}</div>
+                  </div>
+                  <Badge status={r.status === "accepted" ? RA.STATUS.completed : RA.STATUS.submitted} />
+                </div>
+              ))}
             </div>
           </div>
 
@@ -683,11 +691,11 @@ function ResearcherProgress({ onDownload, onView, toast }) {
                   { key: "f2", label: "Final Disbursement (30%)" },
                 ]}
                 app={{ timeline: {
-                  k1: { done: true, date: "Nov 04, 2025" },
-                  p1: { current: true, date: "Due: Apr 15, 2026" },
-                  p2: { date: "After M6 approval" },
-                  f1: { date: "Due: Oct 15, 2026" },
-                  f2: { date: "After Final approval" },
+                  k1: { done: !!grant, date: grant ? "Contract active" : "Pending approval" },
+                  p1: { current: !!grant, date: grant ? "Submit when due" : "Pending approval" },
+                  p2: { date: "After RASSC accepts progress report" },
+                  f1: { date: "At project completion" },
+                  f2: { date: "After RASSC accepts final report" },
                 }}}
               />
             </div>
@@ -701,12 +709,17 @@ function ResearcherProgress({ onDownload, onView, toast }) {
 /* ---------- F. Final Report ---------- */
 function ResearcherFinal({ onDownload, onView, toast }) {
   const [grant, setGrant] = useState(null);
+  const [reports, setReports] = useState(null);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { window.DB.myGrant().then(setGrant).catch(() => {}); }, []);
+  const reload = () => {
+    window.DB.myGrant().then(setGrant).catch(() => setGrant(false));
+    window.DB.myReports("final").then(setReports).catch(() => setReports([]));
+  };
+  useEffect(() => { reload(); }, []);
   const submit = async () => {
-    if (!grant) { toast("No approved grant found — your application must be approved first."); return; }
+    if (!grant) { toast("No approved grant found - your application must be approved first."); return; }
     setBusy(true);
-    try { await window.DB.submitReport(grant.id, "final"); toast("Final report submitted — the final 30% tranche is now eligible."); }
+    try { await window.DB.submitReport(grant.id, "final"); toast("Final report submitted. RASSC must accept it before the final 30% tranche can be paid."); reload(); }
     catch (e) { toast("Error: " + (e.message || e)); }
     setBusy(false);
   };
@@ -734,23 +747,23 @@ function ResearcherFinal({ onDownload, onView, toast }) {
               <div className="form-grid">
                 <div className="field">
                   <label>Total spent (THB)</label>
-                  <input defaultValue="99,420" />
+                  <input placeholder="Enter total spent" />
                 </div>
                 <div className="field">
                   <label>Project completion (%)</label>
-                  <input defaultValue="100" />
+                  <input placeholder="Enter completion percentage" />
                 </div>
                 <div className="field full">
                   <label>Outcomes delivered</label>
-                  <textarea className="comment-input" defaultValue="Production portal deployed to staging; two conference papers accepted; anonymised dataset published to AU Open Data."></textarea>
+                  <textarea className="comment-input" placeholder="List final outcomes delivered."></textarea>
                 </div>
                 <div className="field full">
                   <label>Lessons learned</label>
-                  <textarea className="comment-input" defaultValue="Document completeness checks reduced rework by 31%. Reviewer onboarding time was the largest bottleneck."></textarea>
+                  <textarea className="comment-input" placeholder="Summarize lessons learned, issues, and follow-up actions."></textarea>
                 </div>
               </div>
               <div className="flex justify-between items-center mt-4">
-                <span className="text-sm text-muted">Once submitted, the file will be routed to the Research Support Committee.</span>
+                <span className="text-sm text-muted">Once submitted, the file will be routed to RASSC.</span>
                 <button className="btn btn-primary" onClick={submit} disabled={busy}>
                   <Icon name="Send" size={13} /> {busy ? "Submitting…" : "Submit Final Report"}
                 </button>
@@ -761,11 +774,19 @@ function ResearcherFinal({ onDownload, onView, toast }) {
 
         <div>
           <div className="card card-pad-0">
-            <div className="card-head"><h3>Previously Submitted Files</h3></div>
-            <div>
-              <FileRow doc={{ name: "Progress_Report_M6_Final.pdf", size: "1.1 MB", uploadedAt: "Apr 14, 2026" }} onDownload={onDownload} onView={onView} />
-              <FileRow doc={{ name: "Conference_Paper_HCI.pdf",     size: "820 KB", uploadedAt: "Aug 02, 2026" }} onDownload={onDownload} onView={onView} />
-              <FileRow doc={{ name: "Dataset_Description.pdf",      size: "240 KB", uploadedAt: "Sep 18, 2026" }} onDownload={onDownload} onView={onView} />
+            <div className="card-head"><h3>Submitted Final Reports</h3></div>
+            <div className="card-body">
+              {reports === null && <div className="text-sm text-muted">Loading reports...</div>}
+              {reports && reports.length === 0 && <div className="text-sm text-muted">No final reports submitted yet.</div>}
+              {(reports || []).map(r => (
+                <div key={r.id} className="flex justify-between items-center" style={{padding: "10px 0", borderBottom: "1px solid var(--line-2)"}}>
+                  <div>
+                    <div style={{fontWeight: 600}}>{r.application ? r.application.code : "Application"} - Final Report</div>
+                    <div className="text-sm text-muted">Status: {r.status}</div>
+                  </div>
+                  <Badge status={r.status === "accepted" ? RA.STATUS.completed : RA.STATUS.submitted} />
+                </div>
+              ))}
             </div>
           </div>
 
@@ -784,16 +805,14 @@ function ResearcherFinal({ onDownload, onView, toast }) {
                 }}>
                   <span style={{
                     width: 18, height: 18, borderRadius: "50%",
-                    background: i < 1 ? "#DCFCE7" : "var(--line-2)",
-                    color: i < 1 ? "#166534" : "var(--ink-4)",
+                    background: "var(--line-2)",
+                    color: "var(--ink-4)",
                     display: "grid", placeItems: "center",
                   }}>
-                    <Icon name={i < 1 ? "Check" : "Clock"} size={11} />
+                    <Icon name="Clock" size={11} />
                   </span>
                   <span style={{fontSize: 13}}>{t}</span>
-                  <span className={`badge ${i < 1 ? "badge-check" : "badge-pending"}`} style={{marginLeft: "auto"}}>
-                    <span className="dot"></span>{i < 1 ? "Ready" : "Pending"}
-                  </span>
+                  <span className="badge badge-pending" style={{marginLeft: "auto"}}><span className="dot"></span>Pending</span>
                 </div>
               ))}
             </div>

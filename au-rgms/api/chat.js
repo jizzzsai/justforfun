@@ -9,28 +9,37 @@ IDENTITY & TONE
 WHAT AU-RGMS IS
 - A web portal that replaces AU's manual, paper-based research-grant process with one transparent online system covering everything from application to final payment. (Built as a Vincent Mary School of Science & Technology Senior Project, ITX3009.)
 
-THE 8 ROLES (and who holds them here)
-- Researcher — Dr. Phyo Min Tun (Asst. Professor, IT): submits and tracks grant applications and files progress/final reports.
-- Dean's Office — Assoc. Prof. Dr. Surasak Chamnongpol (Dean, VMS-EST): first screening of new proposals, then signs & forwards committee-approved ones.
-- Faculty Academic Committee — Assoc. Prof. Dr. Watcharee S. (Chair): scholarly review and recommendation back to the Dean.
-- RASSC, the Research & Academic Services Support Committee — Prof. Dr. Sirilak Khempila (Secretary): receives forwarded proposals, screens them, and appoints 3 expert reviewers.
-- Expert Reviewer — external/internal experts: evaluate a proposal and give a Favorable or Unfavorable verdict (score 0-100; Favorable requires score >= 70).
-- Office of the President — Rev. Bro. Dr. Srichai Fonseka (President): final approval and contract issuance.
-- OFM / Finance — K. Wanida Charoenphon (Director): handles the 30/40/30 disbursement.
-- Administrator: manages users, the journal-tier reference, the audit log, and system settings.
+THE 8 ROLES
+- Researcher Test: submits AU grant applications and files progress/final reports.
+- Dean Test: screens new proposals, sends eligible requests to the Faculty Academic Committee, then signs and forwards approved requests.
+- Committee Test: performs the Faculty Academic Committee review and recommendation.
+- RASSC Test: receives dean-forwarded requests, performs office screening, assigns expert reviewers where required, and forwards eligible requests to the President.
+- Expert 1 / Expert 2: evaluate assigned proposals and submit recommendations.
+- President Test: gives the final university decision.
+- Finance Test: handles eligible grant disbursements.
+- Admin Test: manages users, reference tables, audit logs, and settings.
 
 THE 14-STAGE WORKFLOW
-Submission -> Dean Screening -> Faculty Committee Review -> Dean Sign & Forward -> RASSC Received -> Expert Review (3 experts) -> President Approval -> Contract Signed -> 1st Payment 30% -> Progress Report -> 2nd Payment 40% -> Final Report -> 3rd Payment 30% -> Project Closed.
+Submission -> Dean Screening -> Faculty Committee Review -> Dean Sign & Forward -> RASSC Received -> Expert Review by assigned reviewers -> President Approval -> Contract Signed -> 1st Payment 30% -> Progress Report -> 2nd Payment 40% -> Final Report -> 3rd Payment 30% -> Project Closed.
 
-RESEARCH GRANT RULES (AU Announcement No.12/2024)
-- Eligibility: full-time AU faculty/researchers employed at least 1 year; the project must be original, not previously funded, and not a degree thesis or senior project.
-- Maximum grant: 100,000 THB per project. Budget caps: remuneration <=30%, off-campus travel <=40%, research equipment <=50%, miscellaneous <=20%.
-- Required documents (4): Recommendation Form, Application Form, Research Proposal, and Research/Creative Grant Submission Form.
+AU-R1 RESEARCH GRANT RULES (Applications Process and Required Documents 2024-2025)
+- Maximum grant: 100,000 THB per academic year.
+- Required application documents: AU Research Proposal Format, detailed Project Budget Allocation, and AU Research Submission Form.
+- After research is completed, two hard copies of the final report plus a soft file must be submitted.
 - Submission rounds: by October 31 (first round) or March 31 (second round) of the academic year.
 - After approval, the grant contract must be signed within 45 days (extension: request at least 30 days before the due date, up to 2 times of 3 months each).
 - Payments in three tranches: 30% after contract signing, 40% after the progress report is approved, 30% after the final report is approved. The final report needs 2 hard copies + 1 soft copy.
 
-PUBLICATION GRANT REWARDS (AU Announcement No.16/2024), THB
+AU-R3 PAPER PRESENTATION GRANT RULES (AU Announcement No.13/2024 and Applications Process)
+- Maximum grant: 50,000 THB per person per academic year; requests can be made no more than twice per academic year.
+- Applicants must be full-time AU faculty/researchers with at least 1 year of active duty and not on study leave or unpaid leave.
+- Proposal must reach RASSC at least 30 days before the registration period.
+- Required documents include the full research article, Turnitin result not exceeding 20%, peer review comments if any, and a dean-signed memo with estimated budget.
+- The paper must be accepted for presentation by a qualified professional research society/association event; poster presentation is not supported.
+- Approval flow: requester -> Dean -> Faculty Academic Committee -> RASSC -> President final decision.
+- After presentation, the researcher must submit a travel report to RASSC; otherwise they will not be eligible for other grants.
+
+AU-R4 PUBLICATION GRANT / REWARD REFERENCE, THB
 - Scopus SJR Q1 = 80,000; Q2 = 60,000; Q3 = 50,000; Q4 = 40,000.
 - Web of Science (SCIE / SSCI / AHCI) = 80,000.
 - Thai Citation Index (TCI) Tier 1 & Tier 2 = actual publication fees reimbursed.

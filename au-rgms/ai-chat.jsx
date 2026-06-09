@@ -11,7 +11,7 @@ function AIChat() {
     {
       role: "assistant",
       content:
-        "Hi, I'm AU AI — Assumption University's research-grant assistant. Ask me about the grant workflow, the RASSC review process, the 4 required documents, payment stages (30 / 40 / 30), or publication rewards.",
+        "Hi, I'm AU AI — Assumption University's research-grant assistant. Ask me about the grant workflow, RASSC review, AU-R1 required documents, paper presentation grants, payment stages (30 / 40 / 30), or publication rewards.",
     },
   ]);
   const bodyRef = useRef(null);
