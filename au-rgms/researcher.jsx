@@ -190,7 +190,7 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
     <>
       <PageHeader
         title="Submit Research Grant Application"
-        desc="Complete each section and upload the four required forms before submitting."
+        desc="Complete each section and upload the AU-R1 PDF documents before submitting."
         actions={
           <>
             <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
@@ -356,7 +356,7 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
 
         <div className="form-section">
           <h4><span className="num">6</span> Required Documents</h4>
-          <p className="section-sub">Upload all four forms. PDF only, maximum 10 MB each.</p>
+          <p className="section-sub">Upload AU-R1 PDF documents. You can add or delete files while the application is still waiting for Dean screening.</p>
           <div className="section-body">
             {files.length > 0 && (
               <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
@@ -379,7 +379,7 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
             <label className="upload-box mt-1" style={{ cursor: "pointer", display: "block" }}>
               <input type="file" accept="application/pdf,.pdf" multiple style={{ display: "none" }} onChange={onFiles} />
               <Icon name="Upload" size={26} className="icon" />
-              <div className="t">Click to upload the required forms</div>
+              <div className="t">Click to upload PDF documents</div>
               <div className="s">PDF · max 10 MB per file</div>
             </label>
           </div>
@@ -465,11 +465,11 @@ function ResearcherApplications({ navigate, onDownload, openDetail }) {
                 <td>{a.stage}</td>
                 <td><Badge status={a.status} /></td>
                 <td className="actions">
-                  <button className="btn btn-ghost btn-sm" onClick={() => openDetail(a.id)}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}>
                     <Icon name="Eye" size={13} /> View
                   </button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => onDownload({ name: a.id + "_files.zip" })}>
-                    <Icon name="Download" size={13} /> Files
+                  <button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}>
+                    <Icon name="FolderOpen" size={13} /> Files
                   </button>
                 </td>
               </tr>
@@ -482,119 +482,165 @@ function ResearcherApplications({ navigate, onDownload, openDetail }) {
 }
 
 /* ---------- D. Application Detail ---------- */
-function ResearcherApplicationDetail({ navigate, onDownload, onView }) {
-  const app = RA.PRIMARY_APP;
+function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
+  const [app, setApp] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
+  const canEditDocs = app && ["draft", "submitted", "returned"].includes(app.status);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      let id = applicationId;
+      if (!id) {
+        const apps = await window.DB.myApplications();
+        id = apps && apps[0] && apps[0].id;
+      }
+      if (!id) { setApp(null); return; }
+      setApp(await window.DB.applicationDetail(id));
+    } catch (e) {
+      setApp(null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, [applicationId]);
+
+  const uploadMore = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length || !app || busy) return;
+    setBusy(true);
+    try {
+      for (const f of files) await window.DB.uploadDocument(app.id, f, null);
+      toast(files.length + " file(s) uploaded.");
+      await load();
+    } catch (ex) {
+      toast("Upload error: " + ((ex && ex.message) || ex));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const deleteDoc = (doc) => {
+    if (!canEditDocs) return;
+    setConfirm({
+      kind: "danger",
+      title: "Delete uploaded file?",
+      message: doc.name + " will be removed from this application and from storage.",
+      confirmLabel: "Delete File",
+      onConfirm: async () => {
+        try { await window.DB.deleteDocument(doc); toast(doc.name + " deleted."); await load(); }
+        catch (ex) { toast("Delete error: " + ((ex && ex.message) || ex)); }
+      },
+    });
+  };
+
+  if (loading) {
+    return <><PageHeader title="Application Detail" desc="Loading submitted application." /><div className="card" style={{ padding: 44, textAlign: "center", color: "var(--ink-3)" }}>Loading...</div></>;
+  }
+  if (!app) {
+    return <><PageHeader title="Application Detail" desc="No application selected." /><div className="card"><Empty title="No application selected" desc="Open an application from My Applications." icon="Folder" /></div></>;
+  }
+
+  const docs = app.documents || [];
+  const budgetRows = Array.isArray(app.budget_breakdown) ? app.budget_breakdown : [];
+  const researcherName = app.researcher ? app.researcher.full_name : "Researcher";
+  const status = app.statusBadge || window.DB.statusBadge(app.status);
+  const timelineApp = {
+    timeline: {
+      submission: { done: true, current: app.status === "submitted", date: window.DB.fmtDate(app.submitted_at || app.created_at), who: researcherName },
+      deanScreen: { current: app.status === "submitted", done: !["draft", "submitted", "returned"].includes(app.status), date: app.status === "submitted" ? "Waiting Dean screening" : "Completed" },
+      committee: { current: app.status === "committee_review", done: ["dean_sign", "iras_review", "expert_review", "president_review", "approved", "active", "completed"].includes(app.status), date: app.status === "committee_review" ? "In committee review" : "Pending" },
+      deanSign: { current: app.status === "dean_sign", done: ["iras_review", "expert_review", "president_review", "approved", "active", "completed"].includes(app.status), date: app.status === "dean_sign" ? "Waiting Dean sign" : "Pending" },
+      iras: { current: app.status === "iras_review", done: ["expert_review", "president_review", "approved", "active", "completed"].includes(app.status), date: app.status === "iras_review" ? "RASSC screening" : "Pending" },
+      expert: { current: app.status === "expert_review", done: ["president_review", "approved", "active", "completed"].includes(app.status), date: app.status === "expert_review" ? "Expert review" : "Pending" },
+      president: { current: app.status === "president_review", done: ["approved", "active", "completed"].includes(app.status), date: app.status === "president_review" ? "President review" : "Pending" },
+      contract: { current: app.status === "approved", done: ["active", "completed"].includes(app.status), date: app.status === "approved" ? "Contract pending" : "Pending" },
+      pay1: { current: app.status === "active", done: app.status === "completed", date: app.status === "active" ? "Active grant" : "Pending" },
+    },
+  };
+
   return (
     <>
       <PageHeader
         title={app.title}
-        desc={`${app.id} · Submitted ${app.submittedAt}`}
-        actions={
-          <>
-            <Badge status={app.status} />
-            <button className="btn btn-secondary"><Icon name="Download" size={13} /> Download All</button>
-          </>
-        }
+        desc={(app.code || "Application") + " - Submitted " + window.DB.fmtDate(app.submitted_at || app.created_at)}
+        actions={<Badge status={status} />}
       />
 
       <div className="grid-2">
         <div>
-          {/* Summary */}
           <div className="card card-pad-0 mb-4">
-            <div className="card-head"><h3>Research Summary</h3></div>
+            <div className="card-head"><h3>Research Information</h3></div>
             <div className="card-body">
-              <div className="eyebrow mb-2">Abstract</div>
-              <p style={{ margin: "0 0 16px", lineHeight: 1.65, color: "var(--ink-2)" }}>{app.abstract}</p>
-
-              <div className="eyebrow mb-2">Objectives</div>
-              <ol style={{ margin: "0 0 16px 20px", padding: 0, color: "var(--ink-2)", lineHeight: 1.6 }}>
-                {app.objectives.map((o, i) => <li key={i} style={{marginBottom: 4}}>{o}</li>)}
-              </ol>
-
-              <div className="grid-2eq">
-                <div>
-                  <div className="eyebrow mb-2">Principal Researcher</div>
-                  <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                    <Avatar initials="PT" />
-                    <div>
-                      <div style={{ fontWeight: 600 }}>{app.researcher.name}</div>
-                      <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{app.researcher.title} · {app.department}</div>
-                    </div>
-                  </div>
-                </div>
-                <div>
-                  <div className="eyebrow mb-2">Total Grant</div>
-                  <div style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 500 }}>
-                    {fmtBaht(app.budgetTotal)}
-                  </div>
-                  <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{app.duration}</div>
-                </div>
-              </div>
+              <div className="meta-row"><span className="l">Research title</span><span className="r">{app.title}</span></div>
+              <div className="meta-row"><span className="l">Field / discipline</span><span className="r">{app.field || "-"}</span></div>
+              <div className="meta-row"><span className="l">Keywords</span><span className="r">{app.keywords || "-"}</span></div>
+              <div className="meta-row"><span className="l">Duration</span><span className="r">{app.duration_months || 12} months</span></div>
+              <div className="eyebrow mt-4 mb-2">Expected outcomes / summary</div>
+              <p style={{ margin: 0, lineHeight: 1.65, color: "var(--ink-2)" }}>{app.abstract || "No summary entered."}</p>
             </div>
           </div>
 
-          {/* Documents */}
           <div className="card card-pad-0 mb-4">
-            <div className="card-head"><h3>Submitted Documents</h3>
-              <div className="grow"></div>
-              <button className="btn btn-secondary btn-sm" onClick={() => onDownload({ name: app.id + "_all.zip" })}>
-                <Icon name="Download" size={13} /> Download All
-              </button>
+            <div className="card-head"><h3>Researcher & Routing</h3></div>
+            <div className="card-body">
+              <div className="meta-row"><span className="l">Principal researcher</span><span className="r">{researcherName}</span></div>
+              <div className="meta-row"><span className="l">Email</span><span className="r">{app.researcher ? app.researcher.email : "-"}</span></div>
+              <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{app.faculty || "-"}</span></div>
+              <div className="meta-row"><span className="l">Department</span><span className="r">{app.department || "-"}</span></div>
+              <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.requested_amount || 0))}</span></div>
             </div>
+          </div>
+
+          <div className="card card-pad-0 mb-4">
+            <div className="card-head"><h3>Budget Breakdown</h3></div>
+            <div className="card-body" style={{ padding: 0 }}>
+              {budgetRows.length === 0 && <div style={{ padding: 20, color: "var(--ink-3)" }}>No budget breakdown entered.</div>}
+              {budgetRows.length > 0 && (
+                <table className="tbl">
+                  <thead><tr><th>Item</th><th style={{ textAlign: "right" }}>Amount</th></tr></thead>
+                  <tbody>
+                    {budgetRows.map((b, i) => <tr key={i}><td>{b.item}</td><td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{fmtBaht(Number(b.amount || 0))}</td></tr>)}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+
+          <div className="card card-pad-0 mb-4">
+            <div className="card-head"><h3>Submitted Documents</h3><div className="grow"></div><span className="text-sm text-muted">{docs.length} uploaded</span></div>
             <div>
-              {RA.REQUIRED_DOCS.map(d => <FileRow key={d.id} doc={d} onDownload={onDownload} onView={onView} />)}
-            </div>
-          </div>
-
-          {/* Comments */}
-          <div className="card card-pad-0">
-            <div className="card-head"><h3>Reviewer Comments</h3></div>
-            <div className="card-body">
-              <div className="comment">
-                <div className="head">
-                  <div className="av">CT</div>
-                  <div>
-                    <div className="name">Committee Test</div>
-                    <div className="role">Faculty Academic Committee</div>
+              {docs.length === 0 && <Empty title="No uploaded documents" desc="Uploaded researcher files will appear here." icon="FileText" />}
+              {docs.map(d => (
+                <div className="file-row" key={d.id || d.name}>
+                  <div className="ficon"><Icon name="FileText" size={18} /></div>
+                  <div className="fmeta"><div className="fn">{d.name}</div><div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div></div>
+                  <div className="factions">
+                    <button className="btn btn-secondary btn-sm" onClick={() => onView(d)}><Icon name="Eye" size={13} /> View</button>
+                    <button className="btn btn-secondary btn-sm" onClick={() => onDownload(d)}><Icon name="Download" size={13} /> Download</button>
+                    {canEditDocs && <button className="btn btn-danger btn-sm" onClick={() => deleteDoc(d)}><Icon name="Trash2" size={13} /> Delete</button>}
                   </div>
-                  <div className="when">Test note</div>
                 </div>
-                <div className="body">
-                  Committee comments will appear here after a live committee reviewer submits a decision.
-                </div>
-              </div>
-              <div className="comment">
-                <div className="head">
-                  <div className="av" style={{background: "var(--au-gold)"}}>RS</div>
-                  <div>
-                    <div className="name">RASSC Test</div>
-                    <div className="role">RASSC Office</div>
-                  </div>
-                  <div className="when">Test note</div>
-                </div>
-                <div className="body">
-                  RASSC notes and expert assignment updates will appear here after live actions are recorded.
-                </div>
-              </div>
-              <textarea className="comment-input mt-3" placeholder="Reply to reviewers…"></textarea>
-              <div className="flex justify-between items-center mt-2">
-                <span className="text-sm text-muted">Comments are visible to Faculty, RASSC, and the President.</span>
-                <button className="btn btn-primary btn-sm"><Icon name="Send" size={12} /> Post Reply</button>
-              </div>
+              ))}
             </div>
+            {canEditDocs && (
+              <div className="card-body" style={{ borderTop: "1px solid var(--line-2)" }}>
+                <label className="btn btn-secondary" style={{ display: "inline-flex", cursor: "pointer" }}>
+                  <input type="file" accept="application/pdf,.pdf" multiple style={{ display: "none" }} onChange={uploadMore} disabled={busy} />
+                  <Icon name="Upload" size={13} /> {busy ? "Uploading..." : "Add / Replace Files"}
+                </label>
+                <span className="text-sm text-muted" style={{ marginLeft: 12 }}>You can add or delete files while this is waiting for Dean screening.</span>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Right: timeline */}
         <div className="card card-pad-0" style={{ alignSelf: "start", position: "sticky", top: 116 }}>
-          <div className="card-head">
-            <h3>Approval Timeline</h3>
-            <div className="grow"></div>
-            <Badge status={app.status} />
-          </div>
-          <div className="card-body">
-            <Timeline steps={RA.ALL_STAGES} app={app} />
-          </div>
+          <div className="card-head"><h3>Approval Timeline</h3><div className="grow"></div><Badge status={status} /></div>
+          <div className="card-body"><Timeline steps={RA.ALL_STAGES} app={timelineApp} /></div>
         </div>
       </div>
     </>

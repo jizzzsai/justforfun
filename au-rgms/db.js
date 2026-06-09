@@ -135,6 +135,16 @@
       return res.data.signedUrl;
     },
 
+    async deleteDocument(doc) {
+      if (!doc || !doc.id) throw new Error("No document selected.");
+      if (doc.storage_path) {
+        try { await sb.storage.from("documents").remove([doc.storage_path]); } catch (e) {}
+      }
+      var res = await sb.from("application_documents").delete().eq("id", doc.id);
+      if (res.error) throw res.error;
+      return true;
+    },
+
     async myApplications() {
       var me = await uid();
       var res = await sb.from("applications").select("*").eq("researcher_id", me).order("created_at", { ascending: false });
@@ -153,9 +163,10 @@
     async deanQueue() { return this.queue("submitted"); },
 
     async applicationDetail(appId) {
+      var isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appId || "");
       var res = await sb.from("applications")
         .select("*, researcher:profiles(full_name,email), documents:application_documents(*), reviews(*, reviewer:profiles(full_name,email,title,faculty,department))")
-        .eq("id", appId).single();
+        .eq(isUuid ? "id" : "code", appId).single();
       if (res.error) throw res.error;
       var a = res.data;
       a.statusBadge = badge(a.status);

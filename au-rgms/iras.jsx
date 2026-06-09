@@ -342,17 +342,7 @@ function RASSCExpert({ applicationId, navigate, onDownload, onView, toast, setCo
       <PageHeader
         title="Expert Review"
         desc={app.id + " · Submit your scholarly evaluation."}
-        actions={
-          <>
-            <Badge status={app.status} />
-            <button className="btn btn-secondary" onClick={() => onDownload({ name: app.id + "_proposal.pdf" })}>
-              <Icon name="Download" size={13} /> Proposal
-            </button>
-            <button className="btn btn-secondary" onClick={() => onDownload({ name: app.id + "_all_documents.zip" })}>
-              <Icon name="Download" size={13} /> All Documents
-            </button>
-          </>
-        }
+        actions={<Badge status={app.status} />}
       />
 
       <div className="grid-2">
@@ -391,6 +381,7 @@ function RASSCExpert({ applicationId, navigate, onDownload, onView, toast, setCo
           <div className="card card-pad-0">
             <div className="card-head"><h3>Reviewer Documents</h3></div>
             <div>
+              {app.documents.length === 0 && <Empty title="No uploaded documents" desc="The researcher did not upload PDF files for this application." icon="FileText" />}
               {app.documents.map(d => <FileRow key={d.id || d.name} doc={d} onDownload={onDownload} onView={onView} />)}
             </div>
           </div>
@@ -578,7 +569,7 @@ function RASSCContract({ onDownload, toast, setConfirm }) {
             <div className="meta-row"><span className="l">Signing deadline</span><span className="r">{deadline.toLocaleDateString()}</span></div>
             <div className="meta-row"><span className="l">Grant amount</span><span className="r">{fmtBaht(Number(app.approved_amount || app.requested_amount || 0))}</span></div>
             <div className="flex gap-2 mt-4">
-              <button className="btn btn-secondary" onClick={() => onDownload({ name: app.code + "_Contract_Template.pdf" })}><Icon name="Download" size={13} /> Contract Template</button>
+              <span className="text-sm text-muted">Contract record is issued after President approval; mark it signed when signatures are complete.</span>
               <div style={{flex: 1}}></div>
               <button className="btn btn-primary" disabled={app.status !== "approved"} onClick={sign}><Icon name="FileSignature" size={14} /> Mark Contract Signed</button>
             </div>
@@ -723,8 +714,7 @@ function RASSCReports({ onDownload, onView, toast, setConfirm }) {
             <span className="badge badge-pending"><span className="dot"></span>Submitted</span>
           </div>
           <div className="flex gap-2">
-            <button className="btn btn-secondary btn-sm" onClick={() => onView({ name: (r.application ? r.application.code : "Grant") + "_" + kind + "_Report.pdf" })}><Icon name="Eye" size={12} /> View</button>
-            <button className="btn btn-secondary btn-sm" onClick={() => onDownload({ name: (r.application ? r.application.code : "Grant") + "_" + kind + "_Report.pdf" })}><Icon name="Download" size={12} /> Download</button>
+            <span className="text-sm text-muted">Report submission record</span>
             <div style={{ flex: 1 }}></div>
             <button className="btn btn-success btn-sm" onClick={() => approve(r)}><Icon name="CheckCircle" size={12} /> Accept</button>
           </div>

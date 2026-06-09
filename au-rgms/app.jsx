@@ -365,16 +365,16 @@ function PageRouter({ pageKey, navigate, ctx }) {
     /* ---- Researcher ---- */
     case "r-dashboard":     return <ResearcherDashboard navigate={navigate} onDownload={c.onDownload} onView={c.onView} />;
     case "r-submit":        return <ResearcherSubmit navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
-    case "r-applications":  return <ResearcherApplications navigate={navigate} onDownload={c.onDownload} openDetail={() => navigate("r-detail")} />;
-    case "r-detail":        return <ResearcherApplicationDetail navigate={navigate} onDownload={c.onDownload} onView={c.onView} />;
+    case "r-applications":  return <ResearcherApplications navigate={navigate} onDownload={c.onDownload} openDetail={(id) => { c.setSelectedApplicationId(id); navigate("r-detail"); }} />;
+    case "r-detail":        return <ResearcherApplicationDetail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "r-progress":      return <ResearcherProgress onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
     case "r-final":         return <ResearcherFinal onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
     case "r-payments":      return <ResearcherPayments onDownload={c.onDownload} toast={c.toast} />;
 
     /* ---- Dean ---- */
     case "d-dashboard":      return <DeanDashboard navigate={navigate} />;
-    case "d-screen":         return <DeanScreenQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "d-screen-detail":  return <FacultyChecklist navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "d-screen":         return <DeanScreenQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} />;
+    case "d-screen-detail":  return <FacultyChecklist applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-sign":           return <DeanSignQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-sign-detail":    return <FacultyDean onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-history":        return <DeanHistory onDownload={c.onDownload} />;

@@ -664,6 +664,23 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .file-row .fmeta .fs { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
 .file-row .factions { display: flex; gap: 6px; }
 
+.meta-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 13px;
+  padding: 8px 0;
+  border-top: 1px solid var(--line-2);
+}
+.meta-row:first-child { border-top: 0; }
+.meta-row .l { color: var(--ink-3); }
+.meta-row .r {
+  color: var(--ink-1);
+  font-weight: 600;
+  text-align: right;
+  overflow-wrap: anywhere;
+}
+
 /* Upload */
 .upload-box {
   border: 2px dashed var(--line);

@@ -12,7 +12,7 @@ const D = window.AU;
 /* -----------------------------------------------------------
    Helper · small reusable queue table
    ----------------------------------------------------------- */
-function QueueTable({ rows, openLabel = "Review", onOpen, onDownload, columns = "full" }) {
+function QueueTable({ rows, openLabel = "Review", onOpen, columns = "full" }) {
   return (
     <table className="tbl">
       <thead>
@@ -41,9 +41,6 @@ function QueueTable({ rows, openLabel = "Review", onOpen, onDownload, columns = 
             <td><Badge status={a.status} /></td>
             <td className="actions">
               <button className="btn btn-secondary btn-sm" onClick={() => onOpen && onOpen(a)}>{openLabel}</button>
-              <button className="btn btn-ghost btn-sm" onClick={() => onDownload && onDownload({ name: `${a.id}_files.zip` })}>
-                <Icon name="Download" size={13} />
-              </button>
             </td>
           </tr>
         ))}
@@ -165,7 +162,14 @@ function DeanDashboard({ navigate }) {
 /* -----------------------------------------------------------
    DEAN — First Screening Queue
    ----------------------------------------------------------- */
-function DeanScreenQueue({ navigate, onDownload, toast, setConfirm }) {
+function DeanScreenQueue({ navigate, onDownload, toast, setConfirm, setSelectedApplicationId }) {
+  const [rows, setRows] = useState(null);
+  const load = () => window.DB.queue("submitted").then(setRows).catch(() => setRows([]));
+  useEffect(() => { load(); }, []);
+  const openDetail = (row) => {
+    if (setSelectedApplicationId) setSelectedApplicationId(row._uuid);
+    navigate("d-screen-detail");
+  };
   return (
     <>
       <PageHeader
@@ -176,16 +180,16 @@ function DeanScreenQueue({ navigate, onDownload, toast, setConfirm }) {
         <div className="toolbar">
           <div className="search">
             <Icon name="Search" size={14} className="icon" />
-            <input placeholder="Search by ID, researcher, department…" />
+            <input placeholder="Search by ID, researcher, department..." />
           </div>
           <button className="filter active"><Icon name="Filter" size={12} /> All</button>
           <button className="filter"><Icon name="Briefcase" size={12} /> Department</button>
           <div style={{ flex: 1 }}></div>
           <button className="btn btn-secondary btn-sm"><Icon name="Download" size={12} /> Export</button>
         </div>
-        <WiredQueue status="submitted" openLabel="Approve →"
-          confirmTitle="Approve & send to Faculty Committee?" confirmLabel="Approve"
-          onDownload={onDownload} setConfirm={setConfirm} toast={toast} />
+        {rows === null && <div style={{ padding: "36px", textAlign: "center", color: "var(--ink-3)" }}>Loading queue...</div>}
+        {rows && rows.length === 0 && <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>Nothing in this queue right now.</div>}
+        {rows && rows.length > 0 && <QueueTable rows={rows} openLabel="View" onOpen={openDetail} />}
       </div>
     </>
   );
@@ -493,11 +497,6 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
       },
     });
   };
-  const required = [
-    "AU Research Proposal Format",
-    "Project Budget Allocation",
-    "AU Research Submission Form",
-  ];
   const docs = (app && app.documents) || [];
 
   if (loading) {
@@ -529,9 +528,7 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
           <div className="card card-pad-0 mb-4">
             <div className="card-head"><h3>Forwarded Documents</h3></div>
             <div>
-              {docs.length === 0 && required.map((name, i) => (
-                <FileRow key={i} doc={{ name: name + ".pdf" }} missing={true} onDownload={onDownload} onView={onView} />
-              ))}
+              {docs.length === 0 && <Empty title="No uploaded documents" desc="No PDF documents were forwarded with this application." icon="FileText" />}
               {docs.map(d => <FileRow key={d.id || d.name} doc={d} onDownload={onDownload} onView={onView} />)}
             </div>
           </div>
@@ -550,24 +547,25 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
             <div className="card-head"><h3>Screening Checklist</h3></div>
             <div className="card-body">
               {[
-                "Required application forms present",
-                "Budget total is within the 100,000 THB AU ceiling",
-                "Project budget allocation is attached",
-                "Proposal is ready for expert review",
-              ].map((t, i) => (
-                <label key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < 3 ? "1px solid var(--line-2)" : "none", cursor: "pointer" }}>
-                  <input type="checkbox" defaultChecked={true} style={{ accentColor: "var(--au-crimson)" }} />
-                  <span style={{ flex: 1, fontSize: 13 }}>{t}</span>
+                { label: docs.length + " forwarded PDF document(s)", checked: docs.length > 0 },
+                { label: "Budget total is within the 100,000 THB AU ceiling", checked: Number(app.requested_amount || 0) > 0 && Number(app.requested_amount || 0) <= 100000 },
+                { label: "Researcher, faculty, and department are recorded", checked: !!(app.researcher && app.faculty && app.department) },
+                { label: "Proposal is ready for expert assignment", checked: docs.length > 0 },
+              ].map((item, i, arr) => (
+                <label key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < arr.length - 1 ? "1px solid var(--line-2)" : "none", cursor: "pointer" }}>
+                  <input type="checkbox" defaultChecked={item.checked} style={{ accentColor: "var(--au-crimson)" }} />
+                  <span style={{ flex: 1, fontSize: 13 }}>{item.label}</span>
                 </label>
               ))}
               <div className="flex flex-col gap-2 mt-4">
-                <button className="btn btn-primary btn-block" onClick={moveToAssignment}>
+                <button className="btn btn-primary btn-block" disabled={docs.length === 0} onClick={moveToAssignment}>
                   <Icon name="CheckCircle" size={14} /> Approve &amp; Move to Assignment
                 </button>
                 <button className="btn btn-secondary btn-block" onClick={returnToDean}>
                   <Icon name="ArrowLeft" size={14} /> Return to Dean
                 </button>
               </div>
+              {docs.length === 0 && <div className="text-sm text-muted mt-3">Upload at least one PDF before moving this application to expert assignment.</div>}
             </div>
           </div>
         </div>
@@ -778,9 +776,7 @@ function ExpertHistory({ onDownload }) {
                   <span className="dot"></span>{h.verdict}
                 </span></td>
                 <td className="actions">
-                  <button className="btn btn-ghost btn-sm" onClick={() => onDownload({ name: `${h.id}_my_review.pdf` })}>
-                    <Icon name="Download" size={13} /> Review
-                  </button>
+                  <span className="text-sm text-muted">Saved in review history</span>
                 </td>
               </tr>
             ))}
@@ -1097,11 +1093,7 @@ function OFMHistory({ onDownload }) {
                 <td style={{fontSize: 12}}>{r.stage}</td>
                 <td style={{textAlign: "right", fontWeight: 600}}>{r.amount.toLocaleString()} THB</td>
                 <td><span className="id" style={{fontSize: 11}}>{r.ref}</span></td>
-                <td className="actions">
-                  <button className="btn btn-ghost btn-sm" onClick={() => onDownload({ name: `${r.ref}_receipt.pdf` })}>
-                    <Icon name="Download" size={13} /> Receipt
-                  </button>
-                </td>
+                <td className="actions"><span className="text-sm text-muted">Recorded</span></td>
               </tr>
             ))}
           </tbody>

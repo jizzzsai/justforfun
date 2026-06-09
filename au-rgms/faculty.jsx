@@ -158,9 +158,6 @@ function FacultyIncoming({ navigate, onDownload }) {
                   <button className="btn btn-secondary btn-sm" onClick={() => navigate("f-checklist")}>
                     Review
                   </button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => onDownload({ name: a.id + "_files.zip" })}>
-                    <Icon name="Download" size={13} />
-                  </button>
                 </td>
               </tr>
             ))}
@@ -174,14 +171,15 @@ function FacultyIncoming({ navigate, onDownload }) {
 /* ---------- C. Document Checklist ---------- */
 /* ---------- D. Academic Committee Review ---------- */
 /* ---------- E. Dean Approval ---------- */
-function LiveAppLoader({ status, title, desc, render }) {
+function LiveAppLoader({ status, applicationId, title, desc, render }) {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
   const load = () => {
     setLoading(true);
-    window.DB.firstApplicationForStatus(status).then(setApp).catch(() => setApp(null)).finally(() => setLoading(false));
+    const req = applicationId ? window.DB.applicationDetail(applicationId) : window.DB.firstApplicationForStatus(status);
+    req.then(setApp).catch(() => setApp(null)).finally(() => setLoading(false));
   };
-  useEffect(() => { load(); }, [status]);
+  useEffect(() => { load(); }, [status, applicationId]);
   if (loading) {
     return <><PageHeader title={title} desc={desc} /><div className="card" style={{ padding: 44, textAlign: "center", color: "var(--ink-3)" }}>Loading...</div></>;
   }
@@ -191,15 +189,18 @@ function LiveAppLoader({ status, title, desc, render }) {
   return render(app, load);
 }
 
-function FacultyChecklist({ navigate, onDownload, onView, toast, setConfirm }) {
-  const required = ["AU Research Proposal Format", "Project Budget Allocation", "AU Research Submission Form"];
+function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
   return (
     <LiveAppLoader
       status="submitted"
-      title="Document Checklist"
-      desc="Review submitted documents before forwarding to the Faculty Committee."
+      applicationId={applicationId}
+      title="First Screening"
+      desc="Review the live application and uploaded PDF documents before forwarding to the Faculty Committee."
       render={(app, load) => {
         const docs = app.documents || [];
+        const budgetRows = Array.isArray(app.budget_breakdown) ? app.budget_breakdown : [];
+        const requested = Number(app.requested_amount || 0);
+        const withinCap = requested > 0 && requested <= 100000;
         const forward = () => setConfirm({
           kind: "success",
           title: "Forward to Faculty Committee?",
@@ -223,32 +224,83 @@ function FacultyChecklist({ navigate, onDownload, onView, toast, setConfirm }) {
         return (
           <>
             <PageHeader
-              title={"Document Checklist - " + app.code}
+              title={"First Screening - " + app.code}
               desc={(app.researcher ? app.researcher.full_name : "Researcher") + " - " + (app.department || "Department")}
               actions={<Badge status={window.DB.statusBadge(app.status)} />}
             />
             <div className="grid-2">
-              <div className="card card-pad-0">
-                <div className="card-head"><h3>Submitted Documents</h3></div>
-                <div>
-                  {docs.length === 0 && required.map((name, i) => <FileRow key={i} doc={{ name: name + ".pdf" }} missing={true} onDownload={onDownload} onView={onView} />)}
-                  {docs.map(d => <FileRow key={d.id || d.name} doc={d} onDownload={onDownload} onView={onView} />)}
+              <div>
+                <div className="card card-pad-0 mb-4">
+                  <div className="card-head"><h3>Application Summary</h3></div>
+                  <div className="card-body">
+                    <div className="meta-row"><span className="l">Research title</span><span className="r">{app.title}</span></div>
+                    <div className="meta-row"><span className="l">Field / discipline</span><span className="r">{app.field || "-"}</span></div>
+                    <div className="meta-row"><span className="l">Keywords</span><span className="r">{app.keywords || "-"}</span></div>
+                    <div className="meta-row"><span className="l">Duration</span><span className="r">{app.duration_months || 12} months</span></div>
+                    <div className="meta-row"><span className="l">Researcher</span><span className="r">{app.researcher ? app.researcher.full_name : "-"}</span></div>
+                    <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{app.faculty || "-"}</span></div>
+                    <div className="meta-row"><span className="l">Department</span><span className="r">{app.department || "-"}</span></div>
+                    <div className="eyebrow mt-4 mb-2">Expected outcomes / summary</div>
+                    <p style={{ margin: 0, lineHeight: 1.65, color: "var(--ink-2)" }}>{app.abstract || "No summary entered."}</p>
+                  </div>
+                </div>
+
+                <div className="card card-pad-0 mb-4">
+                  <div className="card-head"><h3>Budget Review</h3></div>
+                  <div className="card-body" style={{ padding: 0 }}>
+                    <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line-2)" }}>
+                      <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(requested)}</span></div>
+                      <div className="meta-row"><span className="l">AU-R1 ceiling</span><span className="r">100,000 THB</span></div>
+                    </div>
+                    {budgetRows.length === 0 && <div style={{ padding: 20, color: "var(--ink-3)" }}>No budget breakdown entered.</div>}
+                    {budgetRows.length > 0 && (
+                      <table className="tbl">
+                        <thead><tr><th>Budget Item</th><th style={{ textAlign: "right" }}>Amount</th></tr></thead>
+                        <tbody>
+                          {budgetRows.map((b, i) => (
+                            <tr key={i}>
+                              <td>{b.item}</td>
+                              <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{fmtBaht(Number(b.amount || 0))}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+
+                <div className="card card-pad-0">
+                  <div className="card-head">
+                    <h3>Submitted Documents</h3>
+                    <div className="grow"></div>
+                    <span className="text-sm text-muted">{docs.length} uploaded</span>
+                  </div>
+                  <div>
+                    {docs.length === 0 && <Empty title="No uploaded documents" desc="The researcher has not uploaded any PDF documents for this application." icon="FileText" />}
+                    {docs.map(d => <FileRow key={d.id || d.name} doc={d} onDownload={onDownload} onView={onView} />)}
+                  </div>
                 </div>
               </div>
               <div className="card card-pad-0">
                 <div className="card-head"><h3>Checklist Decision</h3></div>
                 <div className="card-body">
-                  {required.map((name, i) => (
-                    <label key={name} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < required.length - 1 ? "1px solid var(--line-2)" : "none" }}>
-                      <input type="checkbox" defaultChecked={true} style={{ accentColor: "var(--au-crimson)" }} />
-                      <span style={{ flex: 1, fontSize: 13 }}>{name}</span>
-                      <Icon name="CheckCircle" size={16} style={{ color: "var(--status-approved)" }} />
+                  {[
+                    { label: docs.length + " uploaded PDF document(s)", checked: docs.length > 0 },
+                    { label: "Budget total within 100,000 THB AU-R1 ceiling", checked: withinCap },
+                    { label: "Research title, researcher, faculty and department entered", checked: !!(app.title && app.researcher && app.faculty && app.department) },
+                    { label: "Expected outcomes / proposal summary entered", checked: !!app.abstract },
+                  ].map((item, i, arr) => (
+                    <label key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < arr.length - 1 ? "1px solid var(--line-2)" : "none" }}>
+                      <input type="checkbox" defaultChecked={item.checked} style={{ accentColor: "var(--au-crimson)" }} />
+                      <span style={{ flex: 1, fontSize: 13 }}>{item.label}</span>
+                      <Icon name={item.checked ? "CheckCircle" : "AlertCircle"} size={16} style={{ color: item.checked ? "var(--status-approved)" : "var(--au-gold)" }} />
                     </label>
                   ))}
                   <div className="flex flex-col gap-2 mt-4">
-                    <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Forward to Faculty Committee</button>
+                    <button className="btn btn-primary btn-block" disabled={docs.length === 0} onClick={forward}><Icon name="Send" size={14} /> Forward to Faculty Committee</button>
                     <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
                   </div>
+                  {docs.length === 0 && <div className="text-sm text-muted mt-3">Upload at least one PDF before forwarding.</div>}
                 </div>
               </div>
             </div>
