@@ -9,6 +9,13 @@
 
 const D = window.AU;
 
+function initialsFromName(name, fallback = "U") {
+  const text = (name || fallback || "U").trim();
+  const parts = text.split(/\s+/).filter(Boolean);
+  if (parts.length === 2 && /^\d+$/.test(parts[1])) return (parts[0][0] + parts[1]).toUpperCase();
+  return (parts.length ? parts : [fallback]).map(p => p[0]).join("").slice(0, 2).toUpperCase();
+}
+
 /* -----------------------------------------------------------
    Helper · small reusable queue table
    ----------------------------------------------------------- */
@@ -439,7 +446,7 @@ function RASSCDashboardV2({ navigate }) {
             {experts && experts.length === 0 && <Empty title="No expert accounts" desc="Expert test accounts will appear here." icon="Users" />}
             {(experts || []).map((e, i) => (
               <div key={e.id} style={{display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", borderBottom: i < experts.length - 1 ? "1px solid var(--line-2)" : "none"}}>
-                <Avatar initials={e.full_name === "Expert 2" ? "E2" : "E1"} color="var(--au-navy)" />
+                <Avatar initials={initialsFromName(e.full_name, "E")} color="var(--au-navy)" />
                 <div style={{flex: 1}}>
                   <div style={{fontSize: 13, fontWeight: 600}}>{e.full_name}</div>
                   <div style={{fontSize: 11, color: "var(--ink-3)"}}>{e.email}</div>
@@ -622,7 +629,7 @@ function RASSCReviewerPool({ toast }) {
               <tr key={r.id}>
                 <td>
                   <div style={{display: "flex", alignItems: "center", gap: 8}}>
-                    <Avatar initials={r.full_name === "Expert 2" ? "E2" : "E1"} size={28} color="var(--au-navy)" />
+                    <Avatar initials={initialsFromName(r.full_name, "E")} size={28} color="var(--au-navy)" />
                     <span style={{fontSize: 13, fontWeight: 600}}>{r.full_name}</span>
                   </div>
                 </td>
@@ -646,19 +653,17 @@ function RASSCReviewerPool({ toast }) {
 /* -----------------------------------------------------------
    EXPERT REVIEWER — Dashboard
    ----------------------------------------------------------- */
-function ExpertDashboard({ navigate, setSelectedApplicationId }) {
+function ExpertDashboard({ navigate, setSelectedApplicationId, profile }) {
   const [c, setC] = useState(null);
   const [rows, setRows] = useState(null);
-  const [experts, setExperts] = useState(null);
   useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
-  useEffect(() => { window.DB.myExpertAssignments().then(setRows).catch(() => setRows([])); }, []);
-  useEffect(() => { window.DB.profilesByRole("expert").then(setExperts).catch(() => setExperts([])); }, []);
+  useEffect(() => { window.DB.myExpertAssignments().then(setRows).catch(() => setRows([])); }, [profile && profile.id]);
   const n = (k) => (c ? (c[k] || 0) : "...");
   const openEvaluation = (row) => {
     if (setSelectedApplicationId) setSelectedApplicationId(row._uuid);
     navigate("e-evaluate");
   };
-  const firstExpert = experts && experts[0];
+  const reviewer = profile || { full_name: "Expert Reviewer", email: "" };
   return (
     <>
       <PageHeader
@@ -709,10 +714,10 @@ function ExpertDashboard({ navigate, setSelectedApplicationId }) {
           <div className="card-head"><h3>Reviewer Profile</h3></div>
           <div className="card-body">
             <div className="flex items-center gap-3 mb-4">
-              <Avatar initials={firstExpert && firstExpert.full_name === "Expert 2" ? "E2" : "E1"} size={48} color="var(--au-crimson)" />
+              <Avatar initials={initialsFromName(reviewer.full_name, "E")} size={48} color="var(--au-crimson)" />
               <div>
-                <div style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontSize: 18 }}>{firstExpert ? firstExpert.full_name : "Expert 1"}</div>
-                <div className="text-sm text-muted">Expert reviewer test account</div>
+                <div style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontSize: 18 }}>{reviewer.full_name}</div>
+                <div className="text-sm text-muted">{reviewer.email || "Expert reviewer test account"}</div>
               </div>
             </div>
             <div style={{ padding: 14, background: "var(--paper-warm)", borderRadius: "var(--r-md)" }}>
@@ -728,11 +733,11 @@ function ExpertDashboard({ navigate, setSelectedApplicationId }) {
 }
 
 /* EXPERT — Assignments list */
-function ExpertAssignments({ navigate, onDownload, setSelectedApplicationId }) {
+function ExpertAssignments({ navigate, onDownload, setSelectedApplicationId, profile }) {
   const [rows, setRows] = useState(null);
   useEffect(() => {
     window.DB.myExpertAssignments().then(setRows).catch(() => setRows([]));
-  }, []);
+  }, [profile && profile.id]);
   const openEvaluation = (row) => {
     setSelectedApplicationId(row._uuid);
     navigate("e-evaluate");
@@ -750,7 +755,7 @@ function ExpertAssignments({ navigate, onDownload, setSelectedApplicationId }) {
 }
 
 /* EXPERT — Submitted reviews history */
-function ExpertHistory({ onDownload }) {
+function ExpertHistory({ onDownload, profile }) {
   const [history, setHistory] = useState(null);
   useEffect(() => {
     window.DB.myReviews().then(rs => setHistory(rs.map(r => ({
@@ -760,7 +765,7 @@ function ExpertHistory({ onDownload }) {
       score: r.score == null ? "—" : r.score,
       verdict: r.recommendation === "favorable" ? "Favorable" : r.recommendation === "revise" ? "Revise" : "Unfavorable",
     })))).catch(() => setHistory([]));
-  }, []);
+  }, [profile && profile.id]);
   return (
     <>
       <PageHeader title="Submitted Reviews" desc="Reviews you have previously submitted." />

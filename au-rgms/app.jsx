@@ -15,6 +15,11 @@ const TEST_EMAIL_FOR = {
   ofm: "finance@au.edu",
   admin: "admin@au.edu",
 };
+const TEST_EXPERT_ACCOUNTS = [
+  { label: "Expert 1", email: "expert.ml@au.edu" },
+  { label: "Expert 2", email: "expert.bio@au.edu" },
+  { label: "Expert 3", email: "expert.ds@au.edu" },
+];
 
 /* ============= LOGIN PAGE ============= */
 function LoginPage({ onLogin }) {
@@ -104,6 +109,31 @@ function LoginPage({ onLogin }) {
                 ))}
               </div>
             </div>
+
+            {role === "expert" && (
+              <div className="field">
+                <label>Expert account</label>
+                <div className="role-radio" style={{gridTemplateColumns: "1fr", display: "grid", gap: 8}}>
+                  {TEST_EXPERT_ACCOUNTS.map(a => (
+                    <label key={a.email} className={email === a.email ? "active" : ""} style={{padding: "9px 12px"}}>
+                      <input
+                        type="radio"
+                        name="expertAccount"
+                        value={a.email}
+                        checked={email === a.email}
+                        onChange={() => setEmail(a.email)}
+                        style={{display: "none"}}
+                      />
+                      <Icon name="FileSearch" size={15} style={{color: email === a.email ? "var(--au-crimson)" : "var(--ink-3)"}} />
+                      <div style={{flex: 1, minWidth: 0}}>
+                        <div className="role-title" style={{fontSize: 12}}>{a.label}</div>
+                        <div className="role-desc" style={{whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}>{a.email}</div>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {err && <div style={{color: "var(--au-crimson)", fontSize: 12, marginTop: 8}}>{err}</div>}
             <button className="btn btn-primary btn-block mt-4" type="submit" disabled={busy}>
@@ -275,6 +305,22 @@ function AppHeader({ role, profile, onSwitchRole, onLogout }) {
                 </div>
               ))}
               <div className="dropdown-divider"></div>
+              <div className="dropdown-section">Expert reviewer accounts</div>
+              {TEST_EXPERT_ACCOUNTS.map(a => (
+                <div
+                  key={a.email}
+                  className={`dropdown-item ${role === "expert" && profile && profile.email === a.email ? "active" : ""}`}
+                  onClick={() => { onSwitchRole("expert", a.email); setRoleOpen(false); }}
+                >
+                  <div className="role-icon"><Icon name="FileSearch" size={14} /></div>
+                  <div className="meta">
+                    <div className="t">{a.label}</div>
+                    <div className="s">{a.email}</div>
+                  </div>
+                  {role === "expert" && profile && profile.email === a.email && <Icon name="Check" size={14} />}
+                </div>
+              ))}
+              <div className="dropdown-divider"></div>
               <div className="dropdown-section">Account</div>
               <div className="dropdown-item">
                 <div className="role-icon" style={{background: "var(--paper-warm)", color: "var(--ink-2)"}}>
@@ -394,10 +440,10 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "i-reviewers":      return <RASSCReviewerPool toast={c.toast} />;
 
     /* ---- Expert Reviewer ---- */
-    case "e-dashboard":      return <ExpertDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
-    case "e-assignments":    return <ExpertAssignments navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} />;
+    case "e-dashboard":      return <ExpertDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} profile={c.profile} />;
+    case "e-assignments":    return <ExpertAssignments navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} profile={c.profile} />;
     case "e-evaluate":       return <RASSCExpert applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "e-history":        return <ExpertHistory onDownload={c.onDownload} />;
+    case "e-history":        return <ExpertHistory onDownload={c.onDownload} profile={c.profile} />;
 
     /* ---- President ---- */
     case "p-dashboard":      return <PresidentDashboard navigate={navigate} />;
@@ -481,7 +527,7 @@ function App() {
 
   const switchToTestRole = async (newRole, opts = {}) => {
     if (!ROLE_CONFIG[newRole]) return null;
-    const email = TEST_EMAIL_FOR[newRole];
+    const email = opts.email || TEST_EMAIL_FOR[newRole];
     if (!email) return null;
     try {
       const prof = await window.AUTH.signIn(email, TEST_PASSWORD);
@@ -506,9 +552,9 @@ function App() {
     setLoggedIn(true);
   };
 
-  const onSwitchRole = (newRole) => {
+  const onSwitchRole = (newRole, email) => {
     if (!ROLE_CONFIG[newRole]) return;
-    switchToTestRole(newRole);
+    switchToTestRole(newRole, { email });
   };
 
   const onLogout = async () => {
@@ -580,7 +626,7 @@ function App() {
         <PageRouter
           pageKey={page}
           navigate={setPage}
-          ctx={{ onDownload, onView, toast, setConfirm, selectedApplicationId, setSelectedApplicationId }}
+          ctx={{ onDownload, onView, toast, setConfirm, profile, selectedApplicationId, setSelectedApplicationId }}
         />
       </main>
       <footer className="app-footer">

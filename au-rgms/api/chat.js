@@ -14,7 +14,7 @@ THE 8 ROLES
 - Dean Test: screens new proposals, sends eligible requests to the Faculty Academic Committee, then signs and forwards approved requests.
 - Committee Test: performs the Faculty Academic Committee review and recommendation.
 - RASSC Test: receives dean-forwarded requests, performs office screening, assigns expert reviewers where required, and forwards eligible requests to the President.
-- Expert 1 / Expert 2: evaluate assigned proposals and submit recommendations.
+- Expert 1 / Expert 2 / Expert 3: evaluate assigned proposals and submit recommendations.
 - President Test: gives the final university decision.
 - Finance Test: handles eligible grant disbursements.
 - Admin Test: manages users, reference tables, audit logs, and settings.

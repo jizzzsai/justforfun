@@ -43,6 +43,7 @@ function RASSCReceived({ navigate, onDownload, setSelectedApplicationId }) {
 
 /* ---------- C. Assign Expert Reviewers ---------- */
 function RASSCAssign({ applicationId, setSelectedApplicationId, toast, setConfirm }) {
+  const requiredExperts = 3;
   const [apps, setApps] = useState(null);
   const [experts, setExperts] = useState(null);
   const [selectedId, setSelectedId] = useState(applicationId || "");
@@ -73,7 +74,7 @@ function RASSCAssign({ applicationId, setSelectedApplicationId, toast, setConfir
   }, [apps, applicationId]);
   useEffect(() => {
     if (!experts || selectedExpertIds.length) return;
-    setSelectedExpertIds(experts.slice(0, 2).map(e => e.id));
+    setSelectedExpertIds(experts.slice(0, requiredExperts).map(e => e.id));
   }, [experts]);
 
   const selectedApp = (apps || []).find(a => a._uuid === selectedId);
@@ -92,17 +93,17 @@ function RASSCAssign({ applicationId, setSelectedApplicationId, toast, setConfir
   const sendAssignments = () => {
     const ids = Array.from(new Set(selectedExpertIds.filter(Boolean)));
     if (!selectedId) { toast("Select an application first."); return; }
-    if (ids.length === 0) { toast("Select at least one expert."); return; }
+    if (ids.length < Math.min(requiredExperts, (experts || []).length)) { toast("Select three expert reviewers."); return; }
     setConfirm({
       kind: "success",
       title: "Send to expert dashboard?",
-      message: (selectedApp ? selectedApp.id : "This application") + " will appear in the selected expert account dashboard.",
+      message: (selectedApp ? selectedApp.id : "This application") + " will appear in the selected expert account dashboards.",
       confirmLabel: "Send to Experts",
       onConfirm: async () => {
         try {
           await window.DB.assignExperts(selectedId, ids, dueDate);
           if (setSelectedApplicationId) setSelectedApplicationId(selectedId);
-          toast((selectedApp ? selectedApp.id : "Application") + " sent to expert dashboard.");
+          toast((selectedApp ? selectedApp.id : "Application") + " sent to expert dashboards.");
           load();
         } catch (e) {
           toast("Error: " + ((e && e.message) || e));
@@ -115,7 +116,7 @@ function RASSCAssign({ applicationId, setSelectedApplicationId, toast, setConfir
     <>
       <PageHeader
         title="Assign Expert Reviewers"
-        desc="Choose the test expert accounts that should receive this application."
+        desc="Choose the three test expert accounts that should receive this application."
       />
 
       {apps === null && <div className="card" style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>Loading assignment form...</div>}
@@ -135,7 +136,7 @@ function RASSCAssign({ applicationId, setSelectedApplicationId, toast, setConfir
                   </select>
                 </div>
 
-                {[0, 1].map(i => {
+                {Array.from({ length: requiredExperts }, (_, i) => i).map(i => {
                   const expert = (experts || []).find(e => e.id === selectedExpertIds[i]);
                   return (
                     <div key={i} style={{ padding: 14, border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
@@ -181,9 +182,9 @@ function RASSCAssign({ applicationId, setSelectedApplicationId, toast, setConfir
                 </div>
 
                 <div className="flex justify-between items-center mt-2">
-                  <span className="text-sm text-muted">If one expert is selected, that review opens President review. If two are selected, both must submit first.</span>
-                  <button className="btn btn-primary" onClick={sendAssignments}>
-                    <Icon name="Send" size={14} /> Send to Expert Dashboard
+                    <span className="text-sm text-muted">President review opens only after every selected expert account submits.</span>
+                    <button className="btn btn-primary" onClick={sendAssignments}>
+                    <Icon name="Send" size={14} /> Send to Expert Dashboards
                   </button>
                 </div>
               </div>

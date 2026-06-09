@@ -143,7 +143,7 @@ const ROLES = [
   { key: "dean", name: "Dean", full: "Dean Test", subtitle: "Dean - Test Account", initials: "DT", iconName: "Building2" },
   { key: "committee", name: "Faculty Committee", full: "Committee Test", subtitle: "Committee - Test Account", initials: "CT", iconName: "Users" },
   { key: "iras", name: "RASSC", full: "RASSC Test", subtitle: "RASSC - Test Account", initials: "RS", iconName: "Landmark" },
-  { key: "expert", name: "Expert Reviewer", full: "Expert 1", subtitle: "Expert - Test Account", initials: "E1", iconName: "FileSearch" },
+  { key: "expert", name: "Expert Reviewer", full: "Expert 1", subtitle: "Expert 1/2/3 - Test Accounts", initials: "E1", iconName: "FileSearch" },
   { key: "president", name: "President", full: "President Test", subtitle: "President - Test Account", initials: "PT", iconName: "Award" },
   { key: "ofm", name: "OFM / Finance", full: "Finance Test", subtitle: "Finance - Test Account", initials: "FT", iconName: "Coins" },
   { key: "admin", name: "Administrator", full: "Admin Test", subtitle: "Admin - Test Account", initials: "AT", iconName: "Settings" },
@@ -238,9 +238,10 @@ const SYSTEM_USERS = [
   { id: "U004", name: "RASSC Test", email: "iras.office@au.edu", role: "RASSC", dept: "RASSC", status: "Active", lastLogin: "Test account" },
   { id: "U005", name: "Expert 1", email: "expert.ml@au.edu", role: "Expert Reviewer", dept: "External reviewer", status: "Active", lastLogin: "Test account" },
   { id: "U006", name: "Expert 2", email: "expert.bio@au.edu", role: "Expert Reviewer", dept: "External reviewer", status: "Active", lastLogin: "Test account" },
-  { id: "U007", name: "President Test", email: "president@au.edu", role: "President", dept: "Office of the President", status: "Active", lastLogin: "Test account" },
-  { id: "U008", name: "Finance Test", email: "finance@au.edu", role: "OFM / Finance", dept: "Office of Financial Management", status: "Active", lastLogin: "Test account" },
-  { id: "U009", name: "Admin Test", email: "admin@au.edu", role: "Administrator", dept: "IT Services", status: "Active", lastLogin: "Test account" },
+  { id: "U007", name: "Expert 3", email: "expert.ds@au.edu", role: "Expert Reviewer", dept: "External reviewer", status: "Active", lastLogin: "Test account" },
+  { id: "U008", name: "President Test", email: "president@au.edu", role: "President", dept: "Office of the President", status: "Active", lastLogin: "Test account" },
+  { id: "U009", name: "Finance Test", email: "finance@au.edu", role: "OFM / Finance", dept: "Office of Financial Management", status: "Active", lastLogin: "Test account" },
+  { id: "U010", name: "Admin Test", email: "admin@au.edu", role: "Administrator", dept: "IT Services", status: "Active", lastLogin: "Test account" },
 ];
 
 const JOURNAL_TIERS = [
