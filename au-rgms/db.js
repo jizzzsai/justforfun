@@ -85,12 +85,21 @@
     mapRow: mapRow,
     nextStep: function (status) { return NEXT[status] || null; },
 
-    async createApplication(payload, submit) {
+    async createApplication(payload, submit, appId) {
       var me = await uid();
       if (!me) throw new Error("You must be signed in.");
-      var code = await genCode();
+      var existing = null;
+      if (appId) {
+        var ex = await sb.from("applications").select("id,code,status,submitted_at")
+          .eq("id", appId).eq("researcher_id", me).single();
+        if (ex.error) throw ex.error;
+        existing = ex.data;
+        if (["draft", "returned"].indexOf(existing.status) === -1) {
+          throw new Error("Only draft or returned applications can be edited from this form.");
+        }
+      }
+      var code = existing ? existing.code : await genCode();
       var row = {
-        code: code, researcher_id: me,
         title: payload.title || "Untitled application",
         abstract: payload.abstract || null, faculty: payload.faculty || null,
         department: payload.department || null, field: payload.field || null,
@@ -99,15 +108,23 @@
         duration_months: parseInt(payload.duration_months, 10) || 12,
         budget_breakdown: payload.budget_breakdown || null,
         status: submit ? "submitted" : "draft",
-        submitted_at: submit ? new Date().toISOString() : null,
+        submitted_at: submit ? new Date().toISOString() : (existing ? existing.submitted_at : null),
       };
-      var res = await sb.from("applications").insert(row).select().single();
+      if (!existing) {
+        row.code = code;
+        row.researcher_id = me;
+      }
+      var res = existing
+        ? await sb.from("applications").update(row).eq("id", appId).eq("researcher_id", me).select().single()
+        : await sb.from("applications").insert(row).select().single();
       if (res.error) throw res.error;
       try {
         await sb.from("application_events").insert({
           application_id: res.data.id, actor_id: me, actor_role: "researcher",
           action: submit ? "Submitted application" : "Saved draft",
-          to_status: res.data.status, note: submit ? "Initial submission." : null,
+          from_status: existing ? existing.status : null,
+          to_status: res.data.status,
+          note: submit ? (existing ? "Submitted from saved draft." : "Initial submission.") : "Draft saved.",
         });
       } catch (e) {}
       return res.data;
@@ -336,15 +353,10 @@
         await sb.from("expert_assignments").update({ status: "completed" })
           .eq("application_id", appId).eq("expert_id", me);
       } catch (e) {}
-      var remaining = [];
-      try {
-        var rem = await sb.from("expert_assignments")
-          .select("id").eq("application_id", appId).neq("status", "completed");
-        if (rem.error) throw rem.error;
-        remaining = rem.data || [];
-      } catch (e) {
-        remaining = [];
-      }
+      var rem = await sb.from("expert_assignments")
+        .select("id").eq("application_id", appId).neq("status", "completed");
+      if (rem.error) throw rem.error;
+      var remaining = rem.data || [];
       if (remaining.length === 0) {
         try {
           await sb.from("application_events").insert({

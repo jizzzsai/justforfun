@@ -363,9 +363,9 @@ function PageRouter({ pageKey, navigate, ctx }) {
   const c = ctx;
   switch (pageKey) {
     /* ---- Researcher ---- */
-    case "r-dashboard":     return <ResearcherDashboard navigate={navigate} onDownload={c.onDownload} onView={c.onView} />;
-    case "r-submit":        return <ResearcherSubmit navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
-    case "r-applications":  return <ResearcherApplications navigate={navigate} onDownload={c.onDownload} openDetail={(id) => { c.setSelectedApplicationId(id); navigate("r-detail"); }} />;
+    case "r-dashboard":     return <ResearcherDashboard navigate={navigate} onDownload={c.onDownload} onView={c.onView} setSelectedApplicationId={c.setSelectedApplicationId} />;
+    case "r-submit":        return <ResearcherSubmit applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} />;
+    case "r-applications":  return <ResearcherApplications navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} openDraft={(id) => { c.setSelectedApplicationId(id); navigate("r-submit"); }} openDetail={(id) => { c.setSelectedApplicationId(id); navigate("r-detail"); }} />;
     case "r-detail":        return <ResearcherApplicationDetail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "r-progress":      return <ResearcherProgress onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
     case "r-final":         return <ResearcherFinal onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
@@ -570,7 +570,10 @@ function App() {
       <Sidebar
         nav={cfg.nav}
         current={page}
-        onNavigate={setPage}
+        onNavigate={(key) => {
+          if (key === "r-submit") setSelectedApplicationId(null);
+          setPage(key);
+        }}
         footer={cfg.sidebarFooter}
       />
       <main className="main">

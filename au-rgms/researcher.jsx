@@ -5,7 +5,7 @@
 const RA = window.AU;
 
 /* ---------- A. Dashboard Overview ---------- */
-function ResearcherDashboard({ navigate, onDownload, onView }) {
+function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicationId }) {
   const app = RA.PRIMARY_APP;
   const [c, setC] = useState(null);
   const [me, setMe] = useState(null);
@@ -22,7 +22,7 @@ function ResearcherDashboard({ navigate, onDownload, onView }) {
         actions={
           <>
             <button className="btn btn-secondary"><Icon name="Calendar" size={14} /> AY 2025–2026</button>
-            <button className="btn btn-primary" onClick={() => navigate("r-submit")}>
+            <button className="btn btn-primary" onClick={() => { if (setSelectedApplicationId) setSelectedApplicationId(null); navigate("r-submit"); }}>
               <Icon name="Plus" size={14} /> New Application
             </button>
           </>
@@ -129,33 +129,39 @@ function ResearcherDashboard({ navigate, onDownload, onView }) {
   );
 }
 
+const RESEARCHER_DEFAULT_DRAFT = {
+  title: "AI-Based Research Grant Tracking System for Assumption University",
+  field: "Information Technology / Educational Technology",
+  type: "Individual Research",
+  duration: "12",
+  keywords: "research management, workflow, machine learning, higher education",
+  name: "", title2: "", email: "", phone: "",
+  school: "Vincent Mary School of Engineering, Science and Technology",
+  department: "Information Technology",
+  outcome: "A clean live test run through submission, review, approval, contract, report, and payment gates.",
+};
+const RESEARCHER_DEFAULT_BUDGET_ROWS = [
+  { item: "Remuneration (research assistant)", amount: 30000 },
+  { item: "Research equipment", amount: 40000 },
+  { item: "Travel for off-campus data collection", amount: 18000 },
+  { item: "Miscellaneous (postage, photocopying, binding)", amount: 12000 },
+];
+
 /* ---------- B. Submit Application ---------- */
-function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
-  const [draft, setDraft] = useState({
-    title: "AI-Based Research Grant Tracking System for Assumption University",
-    field: "Information Technology / Educational Technology",
-    type: "Individual Research",
-    duration: "12",
-    keywords: "research management, workflow, machine learning, higher education",
-    name: "", title2: "", email: "", phone: "",
-    school: "Vincent Mary School of Engineering, Science and Technology",
-    department: "Information Technology",
-    outcome: "A clean live test run through submission, review, approval, contract, report, and payment gates.",
-  });
+function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
+  const [draft, setDraft] = useState({ ...RESEARCHER_DEFAULT_DRAFT });
   const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
 
-  const [budgetRows, setBudgetRows] = useState([
-    { item: "Remuneration (research assistant)", amount: 30000 },
-    { item: "Research equipment", amount: 40000 },
-    { item: "Travel for off-campus data collection", amount: 18000 },
-    { item: "Miscellaneous (postage, photocopying, binding)", amount: 12000 },
-  ]);
+  const [budgetRows, setBudgetRows] = useState(RESEARCHER_DEFAULT_BUDGET_ROWS.map(r => ({ ...r })));
   const total = budgetRows.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const [reqTotal, setReqTotal] = useState("100000");
   const setAmt = (i, v) => setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, amount: (v + "").replace(/[^0-9]/g, "") } : r));
 
   const [files, setFiles] = useState([]);
   const onFiles = (e) => { const fs = Array.from(e.target.files || []); setFiles(prev => prev.concat(fs)); e.target.value = ""; };
+  const [editingId, setEditingId] = useState(applicationId || null);
+  const [existingDocs, setExistingDocs] = useState([]);
+  const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -163,10 +169,91 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
     (async () => {
       try {
         const p = await window.AUTH.profile();
-        if (p) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.title || d.title2, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone }));
+        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.title || d.title2, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone }));
       } catch (e) {}
     })();
-  }, []);
+  }, [applicationId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function loadDraft() {
+      if (!applicationId) {
+        setEditingId(null);
+        setExistingDocs([]);
+        setFiles([]);
+        setReqTotal("100000");
+        setBudgetRows(RESEARCHER_DEFAULT_BUDGET_ROWS.map(r => ({ ...r })));
+        setDraft(d => ({
+          ...RESEARCHER_DEFAULT_DRAFT,
+          name: d.name,
+          title2: d.title2,
+          email: d.email,
+          phone: d.phone,
+        }));
+        setLoadingDraft(false);
+        return;
+      }
+      setLoadingDraft(true);
+      setErr("");
+      try {
+        const app = await window.DB.applicationDetail(applicationId);
+        if (!app || ["draft", "returned"].indexOf(app.status) === -1) {
+          if (!cancelled) {
+            setEditingId(null);
+            setExistingDocs([]);
+            setErr("Only draft or returned applications can be edited here.");
+          }
+          return;
+        }
+        if (cancelled) return;
+        setEditingId(app.id);
+        setExistingDocs(app.documents || []);
+        setDraft(d => ({
+          ...d,
+          title: app.title || "",
+          field: app.field || "",
+          keywords: app.keywords || "",
+          duration: String(app.duration_months || 12),
+          school: app.faculty || "",
+          department: app.department || "",
+          outcome: app.abstract || "",
+          name: app.researcher ? (app.researcher.full_name || d.name) : d.name,
+          email: app.researcher ? (app.researcher.email || d.email) : d.email,
+        }));
+        setReqTotal(String(Number(app.requested_amount || 0)));
+        setBudgetRows(Array.isArray(app.budget_breakdown) && app.budget_breakdown.length ? app.budget_breakdown : RESEARCHER_DEFAULT_BUDGET_ROWS.map(r => ({ ...r })));
+      } catch (e) {
+        if (!cancelled) setErr((e && e.message) || "Could not load this draft.");
+      } finally {
+        if (!cancelled) setLoadingDraft(false);
+      }
+    }
+    loadDraft();
+    return () => { cancelled = true; };
+  }, [applicationId]);
+
+  const deleteExistingDoc = (doc) => {
+    const runDelete = async () => {
+      try {
+        await window.DB.deleteDocument(doc);
+        setExistingDocs(ds => ds.filter(d => d.id !== doc.id));
+        toast(doc.name + " deleted.");
+      } catch (ex) {
+        toast("Delete error: " + ((ex && ex.message) || ex));
+      }
+    };
+    if (setConfirm) {
+      setConfirm({
+        kind: "danger",
+        title: "Delete uploaded file?",
+        message: doc.name + " will be removed from this draft and from storage.",
+        confirmLabel: "Delete File",
+        onConfirm: runDelete,
+      });
+    } else {
+      runDelete();
+    }
+  };
 
   async function save(submit) {
     setErr("");
@@ -179,18 +266,28 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
         title: draft.title, abstract: draft.outcome, field: draft.field,
         faculty: draft.school, department: draft.department, keywords: draft.keywords,
         requested_amount: Number(reqTotal), duration_months: draft.duration, budget_breakdown: budgetRows,
-      }, submit);
+      }, submit, editingId);
       for (const f of files) { try { await window.DB.uploadDocument(app.id, f, null); } catch (e) {} }
+      if (!submit) {
+        setEditingId(app.id);
+        if (setSelectedApplicationId) setSelectedApplicationId(app.id);
+      } else if (setSelectedApplicationId) {
+        setSelectedApplicationId(null);
+      }
       toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
       navigate("r-applications");
     } catch (ex) { setErr((ex && ex.message) || "Could not save the application."); setBusy(false); }
   }
 
+  if (loadingDraft) {
+    return <><PageHeader title="Edit Draft" desc="Loading saved draft." /><div className="card" style={{ padding: 44, textAlign: "center", color: "var(--ink-3)" }}>Loading draft...</div></>;
+  }
+
   return (
     <>
       <PageHeader
-        title="Submit Research Grant Application"
-        desc="Complete each section and upload the AU-R1 PDF documents before submitting."
+        title={editingId ? "Edit Application" : "Submit Research Grant Application"}
+        desc={editingId ? "Update this saved or returned application, add files, or submit it to Dean screening." : "Complete each section and upload the AU-R1 PDF documents before submitting."}
         actions={
           <>
             <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
@@ -358,6 +455,24 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
           <h4><span className="num">6</span> Required Documents</h4>
           <p className="section-sub">Upload AU-R1 PDF documents. You can add or delete files while the application is still waiting for Dean screening.</p>
           <div className="section-body">
+            {existingDocs.length > 0 && (
+              <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
+                {existingDocs.map(d => (
+                  <div className="file-row" key={d.id || d.name}>
+                    <div className="ficon"><Icon name="FileText" size={18} /></div>
+                    <div className="fmeta">
+                      <div className="fn">{d.name}</div>
+                      <div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div>
+                    </div>
+                    <div className="factions">
+                      <button className="btn btn-secondary btn-sm" onClick={() => onView(d)}><Icon name="Eye" size={13} /> View</button>
+                      <button className="btn btn-secondary btn-sm" onClick={() => onDownload(d)}><Icon name="Download" size={13} /> Download</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => deleteExistingDoc(d)}><Icon name="Trash2" size={13} /> Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
             {files.length > 0 && (
               <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
                 {files.map((f, i) => (
@@ -402,7 +517,7 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
 }
 
 /* ---------- C. My Applications ---------- */
-function ResearcherApplications({ navigate, onDownload, openDetail }) {
+function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, setSelectedApplicationId }) {
   const [myApps, setMyApps] = useState(null);
   useEffect(() => {
     (async () => {
@@ -411,7 +526,7 @@ function ResearcherApplications({ navigate, onDownload, openDetail }) {
         setMyApps(apps.map(a => ({
           id: a.code, _uuid: a.id, title: a.title, faculty: a.faculty, department: a.department,
           submittedAt: a.submitted_at ? window.DB.fmtDate(a.submitted_at) : "—",
-          stage: window.DB.statusBadge(a.status).label, status: window.DB.statusBadge(a.status),
+          stage: window.DB.statusBadge(a.status).label, status: window.DB.statusBadge(a.status), statusKey: a.status,
         })));
       } catch (e) { setMyApps([]); }
     })();
@@ -423,7 +538,7 @@ function ResearcherApplications({ navigate, onDownload, openDetail }) {
         title="My Applications"
         desc="All research grant submissions across academic years."
         actions={
-          <button className="btn btn-primary" onClick={() => navigate("r-submit")}>
+          <button className="btn btn-primary" onClick={() => { if (setSelectedApplicationId) setSelectedApplicationId(null); navigate("r-submit"); }}>
             <Icon name="Plus" size={14} /> New Application
           </button>
         }
@@ -465,8 +580,8 @@ function ResearcherApplications({ navigate, onDownload, openDetail }) {
                 <td>{a.stage}</td>
                 <td><Badge status={a.status} /></td>
                 <td className="actions">
-                  <button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}>
-                    <Icon name="Eye" size={13} /> View
+                  <button className="btn btn-ghost btn-sm" onClick={() => (a.statusKey === "draft" || a.statusKey === "returned") ? (openDraft && openDraft(a._uuid)) : (openDetail && openDetail(a._uuid))}>
+                    <Icon name={(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit3" : "Eye"} size={13} /> {(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit" : "View"}
                   </button>
                   <button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}>
                     <Icon name="FolderOpen" size={13} /> Files
@@ -567,7 +682,12 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
       <PageHeader
         title={app.title}
         desc={(app.code || "Application") + " - Submitted " + window.DB.fmtDate(app.submitted_at || app.created_at)}
-        actions={<Badge status={status} />}
+        actions={
+          <>
+            <Badge status={status} />
+            {app.status === "draft" && <button className="btn btn-secondary" onClick={() => navigate("r-submit")}><Icon name="Edit3" size={13} /> Edit Draft</button>}
+          </>
+        }
       />
 
       <div className="grid-2">
