@@ -58,6 +58,29 @@ STRICT SCOPE (very important)
 - You ONLY answer questions about Assumption University's research and publication grants, the RASSC process, and how to use the AU-RGMS system.
 - Politely REFUSE anything outside this scope — general knowledge, other universities, current events, math, coding, personal advice, casual chit-chat, etc. When refusing, reply briefly that you are AU AI and can only help with AU research-grant matters, then offer one example of a question you can answer. Never answer the off-topic question itself.`;
 
+// Per-request role scoping: keeps each role's AI inside what that role may see.
+function buildRoleNote(ctx) {
+  if (!ctx || !ctx.role) return "";
+  const scope = {
+    researcher: "This user is a RESEARCHER. Only discuss THEIR OWN applications, reports, and payments (see DATA) plus general AU grant rules. Never reveal other researchers' or other faculties' data, and never give university-wide analytics.",
+    dean: "This user is a DEAN who can only see their OWN faculty. Only discuss their faculty's applications/queues (see DATA) and general rules. Never reveal other faculties' data.",
+    committee: "This user is a FACULTY COMMITTEE member who can only see their OWN faculty. Only discuss their faculty's reviews (see DATA) and general rules. Never reveal other faculties' data.",
+    iras: "This user is RASSC with UNIVERSITY-WIDE visibility. They may ask cross-faculty analytics (which faculty applies most, approval rates, totals). Answer with specific numbers from DATA.",
+    president: "This user is the PRESIDENT with UNIVERSITY-WIDE visibility. They may ask cross-faculty analytics, approvals, and totals. Answer with specific numbers from DATA.",
+    ofm: "This user is FINANCE/OFM. Discuss disbursements, the 30/40/30 payment gates, and totals from DATA.",
+    expert: "This user is an EXPERT reviewer. Only discuss THEIR assigned applications (see DATA) and evaluation guidance. Never reveal other faculties' or system-wide data.",
+    admin: "This user is ADMIN with university-wide visibility for users and analytics. Answer with numbers from DATA.",
+  };
+  const data = {};
+  ["myApplications", "myGrant", "myAssignments", "facultyStats", "statusCounts", "totalPaid", "paidCount"].forEach(function (k) { if (ctx[k] !== undefined) data[k] = ctx[k]; });
+  return "\n\n=== CURRENT SIGNED-IN USER (scope EVERY answer to this) ===\n"
+    + "- Role: " + ctx.role + (ctx.faculty ? " | Faculty: " + ctx.faculty : "") + (ctx.name ? " | Name: " + ctx.name : "") + "\n"
+    + (scope[ctx.role] || "Scope answers to this user's role and permissions.") + "\n"
+    + "DATA (already filtered to what this user is allowed to see — never invent or expose anything beyond it):\n"
+    + JSON.stringify(data) + "\n"
+    + "For analytics like 'which faculty applies most', compute from DATA.facultyStats (each entry has faculty, total, approved, requested_sum, approved_sum). If the relevant DATA is empty, say there is no data yet rather than guessing.";
+}
+
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
     res.status(405).json({ reply: "Method not allowed." });
@@ -76,6 +99,7 @@ module.exports = async (req, res) => {
       try { body = JSON.parse(body); } catch (e) { body = {}; }
     }
     const messages = (body && body.messages) || [];
+    const ctx = (body && body.context) || {};
     const contents = messages.slice(-14).map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: String(m.content || "").slice(0, 4000) }],
@@ -90,7 +114,7 @@ module.exports = async (req, res) => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        systemInstruction: { parts: [{ text: SYSTEM }] },
+        systemInstruction: { parts: [{ text: SYSTEM + buildRoleNote(ctx) }] },
         contents,
         generationConfig: { temperature: 0.4, topP: 0.9, maxOutputTokens: 2000 },
       }),

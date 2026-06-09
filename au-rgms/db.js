@@ -526,6 +526,24 @@
       c._approved = (c.approved || 0) + (c.active || 0) + (c.completed || 0);
       return c;
     },
+    // per-faculty application stats (RLS-scoped: staff with full access see all faculties,
+    // a dean/committee see only their own faculty, a researcher sees only their own apps).
+    async facultyStats() {
+      var r = await sb.from("applications").select("faculty,status,requested_amount,approved_amount");
+      if (r.error) throw r.error;
+      var map = {};
+      (r.data || []).forEach(function (a) {
+        var f = a.faculty || "Unspecified";
+        if (!map[f]) map[f] = { faculty: f, total: 0, approved: 0, active: 0, completed: 0, requested_sum: 0, approved_sum: 0 };
+        map[f].total++;
+        if (["approved", "active", "completed"].indexOf(a.status) >= 0) map[f].approved++;
+        if (a.status === "active") map[f].active++;
+        if (a.status === "completed") map[f].completed++;
+        map[f].requested_sum += Number(a.requested_amount || 0);
+        map[f].approved_sum += Number(a.approved_amount || 0);
+      });
+      return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.total - a.total; });
+    },
     async profileCount() {
       var r = await sb.from("profiles").select("id", { count: "exact", head: true });
       if (r.error) throw r.error;
