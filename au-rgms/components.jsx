@@ -320,7 +320,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
 }
 
 /* ---------- Notification panel ---------- */
-function NotifPanel({ items, onClose }) {
+function NotifPanel({ items, onClose, onOpen }) {
   const unread = items.filter(n => n.unread).length;
   return (
     <div className="notif-panel" onClick={e => e.stopPropagation()}>
@@ -331,10 +331,10 @@ function NotifPanel({ items, onClose }) {
       </div>
       <div className="notif-list">
         {items.map(n => (
-          <div key={n.id} className={`notif-item ${n.unread ? "unread" : ""}`}>
-            <div className="ni"><Icon name={n.icon} size={16} /></div>
+          <div key={n.id} className={`notif-item ${n.unread ? "unread" : ""}`} onClick={() => onOpen && onOpen(n)} style={{ cursor: n.page ? "pointer" : "default" }}>
+            <div className="ni"><Icon name={n.icon || "Bell"} size={16} /></div>
             <div className="nm">
-              <div className="nt" dangerouslySetInnerHTML={{ __html: `<b>${n.who}:</b> ${n.text}` }}></div>
+              <div className="nt"><b>{n.who}:</b> {n.text}</div>
               <div className="nd">{n.when}</div>
             </div>
           </div>

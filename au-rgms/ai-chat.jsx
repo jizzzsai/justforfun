@@ -5,23 +5,23 @@
 const { useState, useRef, useEffect } = React;
 
 const ROLE_INTRO = {
-  researcher: "Hi, I'm AU AI. I can help with YOUR applications, the AU-R1 documents you need, your 30/40/30 payment stages, and the grant workflow.",
+  researcher: "Hi, I'm AU AI. I can help with YOUR applications, publication grant rewards, the AU-R1 documents you need, your 30/40/30 payment stages, and the grant workflow.",
   dean: "Hi, I'm AU AI. I can help with your faculty's screening queue, the review workflow, and AU grant rules.",
   committee: "Hi, I'm AU AI. I can help with your faculty's committee reviews, scoring, and AU grant rules.",
-  iras: "Hi, I'm AU AI for RASSC. Ask me about any faculty's activity — e.g. which faculty applies most, approval rates, what's under review, or grant rules.",
-  president: "Hi, I'm AU AI. Ask me university-wide questions — which faculty applies most, what's awaiting your approval, approved budget so far, or grant rules.",
-  ofm: "Hi, I'm AU AI. I can help with disbursements, the 30/40/30 payment gates, and totals.",
+  iras: "Hi, I'm AU AI for RASSC. Ask me about any faculty's activity, publication grants, approval rates, what's under review, or grant rules.",
+  president: "Hi, I'm AU AI. Ask me university-wide questions, publication grant totals, what's awaiting your approval, approved budget so far, or grant rules.",
+  ofm: "Hi, I'm AU AI. I can help with disbursements, publication reward payments, the 30/40/30 payment gates, and totals.",
   expert: "Hi, I'm AU AI. I can help with your assigned reviews and AU evaluation criteria.",
   admin: "Hi, I'm AU AI. Ask me about users, the system, any faculty's activity, or grant rules.",
   _default: "Hi, I'm AU AI — Assumption University's research-grant assistant. Ask me about the workflow, AU-R1 documents, payment stages (30/40/30), or publication rewards.",
 };
 const ROLE_SUGGEST = {
-  researcher: ["What's the status of my application?", "What documents do I need to apply?", "When do I get my next payment?"],
+  researcher: ["What's the status of my application?", "What publication reward can I request?", "When do I get my next payment?"],
   dean: ["What's in my screening queue?", "What are the 14 workflow stages?", "What's the budget cap per category?"],
   committee: ["What's awaiting my committee review?", "How is a proposal scored?", "What are the AU grant rules?"],
-  iras: ["Which faculty applies the most?", "How many applications are under review?", "What's the approval rate?"],
-  president: ["Which faculty applies the most?", "What's awaiting my approval?", "How much budget is approved so far?"],
-  ofm: ["Which payments are due?", "What unlocks the 40% tranche?", "How much is disbursed so far?"],
+  iras: ["Which faculty applies the most?", "How many publication grants are pending?", "What's the approval rate?"],
+  president: ["Which faculty applies the most?", "What publication rewards were approved?", "How much budget is approved so far?"],
+  ofm: ["Which payments are due?", "Which publication rewards are ready to pay?", "How much is disbursed so far?"],
   expert: ["What are my assigned reviews?", "How do I score a proposal?", "What makes a favorable recommendation?"],
   admin: ["How many users are in the system?", "Which faculty applies the most?", "What are the 14 workflow stages?"],
   _default: ["What are the 14 workflow stages?", "What documents do I need to apply?", "Reward for a Scopus Q1 paper?"],
@@ -42,6 +42,10 @@ async function buildAIContext() {
       const apps = await window.DB.myApplications();
       ctx.myApplications = (apps || []).map(a => ({ code: a.code, title: a.title, status: a.status, faculty: a.faculty, requested: a.requested_amount }));
       try {
+        const pgs = await window.DB.myPublicationGrants();
+        ctx.myPublicationGrants = (pgs || []).map(g => ({ code: g.id, title: g.title, status: g.status.label, statusKey: g.statusKey, amount: g.budgetTotal, indexing: g.indexing, quartile: g.quartile }));
+      } catch (e) {}
+      try {
         const g = await window.DB.myGrant();
         if (g) ctx.myGrant = { code: g.code, approved_amount: g.approved_amount, payments: (g.payments || []).map(p => ({ instalment: p.instalment, pct: p.pct, status: p.status })) };
       } catch (e) {}
@@ -51,10 +55,14 @@ async function buildAIContext() {
     } else if (role === "ofm") {
       ctx.statusCounts = await window.DB.statusCounts();
       try { const paid = await window.DB.paidPayments(); ctx.totalPaid = paid.reduce((s, p) => s + Number(p.amount || 0), 0); ctx.paidCount = paid.length; } catch (e) {}
+      try { ctx.publicationGrantStats = await window.DB.publicationGrantStats(); } catch (e) {}
     } else if (role) {
       // dean / committee (RLS-scoped to their own faculty) or iras / president / admin (all faculties)
       ctx.facultyStats = await window.DB.facultyStats();
       ctx.statusCounts = await window.DB.statusCounts();
+      if (["iras", "president", "admin"].includes(role)) {
+        try { ctx.publicationGrantStats = await window.DB.publicationGrantStats(); } catch (e) {}
+      }
     }
   } catch (e) {}
   return ctx;

@@ -740,7 +740,126 @@ function RASSCReports({ onDownload, onView, toast, setConfirm }) {
   );
 }
 
+function RASSCPublicationGrants({ toast }) {
+  const [rows, setRows] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [note, setNote] = useState("");
+  const [amount, setAmount] = useState("");
+  const load = () => window.DB.publicationGrantQueue(["submitted"]).then(rs => {
+    setRows(rs);
+    if (!selected && rs.length) {
+      setSelected(rs[0]);
+      setAmount(String(rs[0].budgetTotal || 0));
+    }
+  }).catch(() => setRows([]));
+  useEffect(() => { load(); }, []);
+  useEffect(() => { if (selected) setAmount(String(selected.budgetTotal || 0)); }, [selected && selected._uuid]);
+  const openEvidence = async (g, download) => {
+    try { window.open(await window.DB.publicationEvidenceUrl(g, download), "_blank", "noopener,noreferrer"); }
+    catch (e) { toast("No evidence PDF is attached."); }
+  };
+  const review = async (decision) => {
+    if (!selected) return;
+    try {
+      await window.DB.reviewPublicationGrant(selected._uuid, decision, note, amount);
+      toast(selected.id + (decision === "approve" ? " approved for OFM payment." : decision === "return" ? " returned to researcher." : " rejected."));
+      setSelected(null);
+      setNote("");
+      load();
+    } catch (e) { toast("Error: " + ((e && e.message) || e)); }
+  };
+  return (
+    <>
+      <PageHeader title="Publication Grant Review" desc="RASSC verifies publication reward eligibility before OFM payment." />
+      <div className="grid-2">
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Submitted Publication Grants</h3></div>
+          <div>
+            {rows === null && <div style={{ padding: 32, textAlign: "center", color: "var(--ink-3)" }}>Loading publication grants...</div>}
+            {rows && rows.length === 0 && <Empty title="No publication grants awaiting review" desc="Researcher submissions will appear here." icon="FileText" />}
+            {(rows || []).map(g => (
+              <div key={g._uuid} onClick={() => setSelected(g)} style={{ padding: "15px 20px", borderBottom: "1px solid var(--line-2)", cursor: "pointer", background: selected && selected._uuid === g._uuid ? "var(--au-crimson-soft)" : "transparent" }}>
+                <div className="flex items-center gap-2 mb-2"><span className="id">{g.id}</span><Badge status={g.status} /></div>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{g.title}</div>
+                <div className="text-sm text-muted">{g.researcher.name} - {g.indexing}{g.quartile ? " - " + g.quartile : ""} - {fmtBaht(g.budgetTotal)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Eligibility Decision</h3></div>
+          {!selected && <Empty title="Select a publication grant" desc="Choose a submitted reward application to review." icon="FileSearch" />}
+          {selected && (
+            <div className="card-body">
+              <div className="meta-row"><span className="l">Researcher</span><span className="r">{selected.researcher.name}</span></div>
+              <div className="meta-row"><span className="l">Faculty</span><span className="r">{selected.faculty || "-"}</span></div>
+              <div className="meta-row"><span className="l">Indexing</span><span className="r">{selected.indexing}{selected.quartile ? " - " + selected.quartile : ""}</span></div>
+              <div className="meta-row"><span className="l">Estimated amount</span><span className="r">{fmtBaht(selected.budgetTotal)}</span></div>
+              <div className="field"><label>Approved amount (THB)</label><input value={amount} onChange={e => setAmount(e.target.value.replace(/[^0-9]/g, ""))} /></div>
+              <div className="field"><label>RASSC note</label><textarea className="comment-input" value={note} onChange={e => setNote(e.target.value)} /></div>
+              <div className="flex gap-2 mb-3">
+                <button className="btn btn-secondary" onClick={() => openEvidence(selected, false)}><Icon name="Eye" size={13} /> View Evidence</button>
+                <button className="btn btn-secondary" onClick={() => openEvidence(selected, true)}><Icon name="Download" size={13} /> Download</button>
+              </div>
+              <div className="flex flex-col gap-2">
+                <button className="btn btn-primary btn-block" onClick={() => review("approve")}><Icon name="CheckCircle" size={14} /> Approve for OFM Payment</button>
+                <button className="btn btn-secondary btn-block" onClick={() => review("return")}><Icon name="Repeat" size={14} /> Return to Researcher</button>
+                <button className="btn btn-danger btn-block" onClick={() => review("reject")}><Icon name="X" size={14} /> Reject</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function OFMPublicationPayments({ toast }) {
+  const [rows, setRows] = useState(null);
+  const [note, setNote] = useState("");
+  const load = () => window.DB.publicationGrantQueue(["payment_pending"]).then(setRows).catch(() => setRows([]));
+  useEffect(() => { load(); }, []);
+  const pay = async (g) => {
+    try {
+      await window.DB.payPublicationGrant(g._uuid, note);
+      toast(g.id + " publication reward marked paid.");
+      setNote("");
+      load();
+    } catch (e) { toast("Error: " + ((e && e.message) || e)); }
+  };
+  return (
+    <>
+      <PageHeader title="Publication Reward Payments" desc="OFM payment queue for approved paper publication grants." />
+      <div className="card card-pad-0">
+        <div className="toolbar">
+          <div className="search"><Icon name="Search" size={14} className="icon" /><input placeholder="Search publication grants..." /></div>
+          <div style={{ flex: 1 }}></div>
+          <button className="btn btn-secondary btn-sm"><Icon name="Download" size={12} /> Export</button>
+        </div>
+        <table className="tbl">
+          <thead><tr><th>ID</th><th>Publication</th><th>Researcher</th><th>Indexing</th><th style={{ textAlign: "right" }}>Amount</th><th style={{ textAlign: "right" }}>Action</th></tr></thead>
+          <tbody>
+            {rows === null && <tr><td colSpan="6" style={{ textAlign: "center", padding: 32, color: "var(--ink-3)" }}>Loading publication payments...</td></tr>}
+            {rows && rows.length === 0 && <tr><td colSpan="6"><Empty title="No publication rewards ready to pay" desc="RASSC-approved publication grants will appear here." icon="Coins" /></td></tr>}
+            {(rows || []).map(g => (
+              <tr key={g._uuid}>
+                <td><span className="id">{g.id}</span></td>
+                <td className="title-cell"><div className="t" style={{ maxWidth: 300 }}>{g.title}</div></td>
+                <td style={{ fontSize: 12 }}>{g.researcher.name}</td>
+                <td style={{ fontSize: 12 }}>{g.indexing}{g.quartile ? " - " + g.quartile : ""}</td>
+                <td style={{ textAlign: "right", fontWeight: 700 }}>{fmtBaht(g.budgetTotal)}</td>
+                <td className="actions"><button className="btn btn-primary btn-sm" onClick={() => pay(g)}><Icon name="Coins" size={12} /> Mark Paid</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows && rows.length > 0 && <div className="card-body"><div className="field"><label>Payment note</label><input value={note} onChange={e => setNote(e.target.value)} placeholder="Optional receipt or batch reference" /></div></div>}
+      </div>
+    </>
+  );
+}
+
 /* ---------- J. Full Application Timeline ---------- */
 Object.assign(window, { RASSCReceived, RASSCAssign, RASSCExpert, RASSCPresident, RASSCContract, RASSCPayment,
-  RASSCReports,
+  RASSCReports, RASSCPublicationGrants, OFMPublicationPayments,
 });

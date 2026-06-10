@@ -154,6 +154,7 @@ const NAV_RESEARCHER = [
   { key: "r-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { key: "r-submit", label: "Submit Application", icon: "FilePlus" },
   { key: "r-applications", label: "My Applications", icon: "Folder" },
+  { key: "r-publications", label: "Publication Grant", icon: "FileText" },
   { section: "REPORTING" },
   { key: "r-progress", label: "Progress Report", icon: "FileText" },
   { key: "r-final", label: "Final Report", icon: "FileCheck" },
@@ -189,6 +190,8 @@ const NAV_RASSC = [
   { key: "i-screen", label: "Office Screening", icon: "ClipboardCheck" },
   { key: "i-assign", label: "Assign Experts", icon: "UserPlus" },
   { key: "i-reports", label: "Report Review", icon: "FileCheck" },
+  { key: "i-publications", label: "Publication Grants", icon: "FileText" },
+  { key: "i-analytics", label: "AI Analytics", icon: "TrendingUp" },
   { section: "TRACKING" },
   { key: "i-reviewers", label: "Reviewer Pool", icon: "Users" },
 ];
@@ -209,6 +212,7 @@ const NAV_PRESIDENT = [
   { section: "DECISION" },
   { key: "p-approve", label: "Active Approval", icon: "ShieldCheck" },
   { key: "p-contracts", label: "Contract Tracking", icon: "FileSignature" },
+  { key: "p-analytics", label: "AI Analytics", icon: "TrendingUp" },
 ];
 
 const NAV_OFM = [
@@ -217,6 +221,7 @@ const NAV_OFM = [
   { section: "DISBURSEMENT" },
   { key: "o-payments", label: "Payment Queue", icon: "Coins" },
   { key: "o-detail", label: "Grant Detail", icon: "FileText" },
+  { key: "o-publications", label: "Publication Payments", icon: "Award" },
   { section: "TRACKING" },
   { key: "o-history", label: "Payment History", icon: "Clock" },
 ];
@@ -226,6 +231,7 @@ const NAV_ADMIN = [
   { key: "a-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { key: "a-users", label: "User Management", icon: "Users" },
   { key: "a-journals", label: "Journal Tier Reference", icon: "FileText" },
+  { key: "a-analytics", label: "AI Analytics", icon: "TrendingUp" },
   { section: "SYSTEM" },
   { key: "a-audit", label: "Audit Log", icon: "Clock" },
   { key: "a-settings", label: "System Settings", icon: "Settings" },

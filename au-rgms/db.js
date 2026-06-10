@@ -46,7 +46,40 @@
     var r = await sb.from("applications").select("id", { count: "exact", head: true });
     return "RG-" + year + "-" + String((r.count || 0) + 1).padStart(3, "0");
   }
+  async function genPublicationCode() {
+    var year = new Date().getFullYear();
+    var r = await sb.from("publication_grants").select("id", { count: "exact", head: true });
+    return "PG-" + year + "-" + String((r.count || 0) + 1).padStart(3, "0");
+  }
   function badge(s) { return STATUS_MAP[s] || { label: s || "—", cls: "badge-draft" }; }
+  function publicationBadge(s) {
+    var m = {
+      draft: { label: "Draft", cls: "badge-draft" },
+      submitted: { label: "Submitted to RASSC", cls: "badge-submitted" },
+      returned: { label: "Returned", cls: "badge-revision" },
+      rejected: { label: "Rejected", cls: "badge-rejected" },
+      payment_pending: { label: "OFM Payment Pending", cls: "badge-pending" },
+      paid: { label: "Paid", cls: "badge-paid" },
+    };
+    return m[s] || { label: s || "Publication Grant", cls: "badge-draft" };
+  }
+  function publicationAmount(indexing, quartile, type, requested) {
+    var idx = (indexing || "").toLowerCase();
+    var q = (quartile || "").toUpperCase();
+    var t = (type || "").toLowerCase();
+    if (t === "creative") return 25000;
+    if (t === "patent") return 10000;
+    if (t === "petty") return 3000;
+    if (idx === "scopus") {
+      if (q === "Q1") return 80000;
+      if (q === "Q2") return 60000;
+      if (q === "Q3") return 50000;
+      if (q === "Q4") return 40000;
+    }
+    if (idx === "wos") return 80000;
+    if (idx === "tci") return Math.max(0, Number(requested || 0));
+    return Math.max(0, Number(requested || 0));
+  }
   function fmtDate(iso) {
     if (!iso) return "—";
     try { return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" }); }
@@ -79,8 +112,26 @@
     };
   }
 
+  function mapPublicationGrant(g) {
+    return {
+      id: g.code, _uuid: g.id, title: g.article_title,
+      researcher: { name: g.researcher ? g.researcher.full_name : "-" },
+      faculty: g.faculty, department: g.department,
+      submittedAt: g.submitted_at ? fmtDate(g.submitted_at) : fmtDate(g.created_at),
+      budgetTotal: Number(g.approved_amount || g.requested_amount || 0),
+      requested_amount: Number(g.requested_amount || 0),
+      status: publicationBadge(g.status), statusKey: g.status,
+      indexing: g.indexing, quartile: g.quartile, publication_type: g.publication_type,
+      journal_name: g.journal_name, doi: g.doi, evidence_name: g.evidence_name,
+      evidence_path: g.evidence_path, review_note: g.review_note, payment_note: g.payment_note,
+      paid_at: g.paid_at, raw: g,
+    };
+  }
+
   window.DB = {
     statusBadge: badge,
+    publicationStatusBadge: publicationBadge,
+    publicationAwardAmount: publicationAmount,
     fmtDate: fmtDate,
     mapRow: mapRow,
     nextStep: function (status) { return NEXT[status] || null; },
@@ -517,6 +568,164 @@
     },
 
     // dashboard counts (RLS-scoped: staff see all, researcher sees own)
+    async createPublicationGrant(payload, submit, grantId) {
+      var me = await uid();
+      if (!me) throw new Error("You must be signed in.");
+      var prof = await sb.from("profiles").select("faculty,department").eq("id", me).single();
+      var existing = null;
+      if (grantId) {
+        var ex = await sb.from("publication_grants").select("*").eq("id", grantId).eq("researcher_id", me).single();
+        if (ex.error) throw ex.error;
+        existing = ex.data;
+        if (["draft", "returned"].indexOf(existing.status) === -1) throw new Error("Only draft or returned publication grants can be edited.");
+      }
+      var estimate = publicationAmount(payload.indexing, payload.quartile, payload.publication_type, payload.requested_amount);
+      var row = {
+        article_title: payload.article_title || "Untitled publication",
+        journal_name: payload.journal_name || null,
+        indexing: payload.indexing || "scopus",
+        quartile: payload.quartile || null,
+        publication_type: payload.publication_type || "journal",
+        doi: payload.doi || null,
+        published_on: payload.published_on || null,
+        requested_amount: Number(payload.requested_amount || estimate || 0),
+        faculty: payload.faculty || (prof.data && prof.data.faculty) || null,
+        department: payload.department || (prof.data && prof.data.department) || null,
+        status: submit ? "submitted" : "draft",
+        submitted_at: submit ? new Date().toISOString() : (existing ? existing.submitted_at : null),
+        updated_at: new Date().toISOString(),
+      };
+      if (!existing) {
+        row.code = await genPublicationCode();
+        row.researcher_id = me;
+      }
+      var res = existing
+        ? await sb.from("publication_grants").update(row).eq("id", grantId).eq("researcher_id", me).select().single()
+        : await sb.from("publication_grants").insert(row).select().single();
+      if (res.error) throw res.error;
+      return res.data;
+    },
+
+    async uploadPublicationEvidence(grantId, file) {
+      var safe = (file.name || "publication_evidence.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
+      var key = "publication_grants/" + grantId + "/" + Date.now() + "_" + safe;
+      var up = await sb.storage.from("documents").upload(key, file, { contentType: file.type || "application/pdf", upsert: false });
+      if (up.error) throw up.error;
+      var r = await sb.from("publication_grants").update({
+        evidence_name: file.name, evidence_path: key, updated_at: new Date().toISOString(),
+      }).eq("id", grantId).select().single();
+      if (r.error) throw r.error;
+      return r.data;
+    },
+
+    async publicationEvidenceUrl(grant, download) {
+      if (!grant || !grant.evidence_path) throw new Error("No uploaded publication evidence file is attached.");
+      var res = await sb.storage.from("documents").createSignedUrl(grant.evidence_path, 60 * 5, {
+        download: download ? (grant.evidence_name || true) : false,
+      });
+      if (res.error) throw res.error;
+      return res.data.signedUrl;
+    },
+
+    async myPublicationGrants() {
+      var me = await uid();
+      var res = await sb.from("publication_grants").select("*, researcher:profiles(full_name)")
+        .eq("researcher_id", me).order("created_at", { ascending: false });
+      if (res.error) throw res.error;
+      return (res.data || []).map(mapPublicationGrant);
+    },
+
+    async publicationGrantQueue(statuses) {
+      var q = sb.from("publication_grants").select("*, researcher:profiles(full_name)")
+        .order("submitted_at", { ascending: true, nullsFirst: false });
+      if (statuses && statuses.length) q = q.in("status", statuses);
+      var res = await q;
+      if (res.error) throw res.error;
+      return (res.data || []).map(mapPublicationGrant);
+    },
+
+    async reviewPublicationGrant(grantId, decision, note, amount) {
+      var status = decision === "return" ? "returned" : decision === "reject" ? "rejected" : "payment_pending";
+      var row = {
+        status: status,
+        review_note: note || null,
+        decided_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      if (status === "payment_pending") row.approved_amount = Number(amount || 0);
+      var res = await sb.from("publication_grants").update(row).eq("id", grantId).select().single();
+      if (res.error) throw res.error;
+      return res.data;
+    },
+
+    async payPublicationGrant(grantId, note) {
+      var res = await sb.from("publication_grants").update({
+        status: "paid", paid_at: new Date().toISOString(), payment_note: note || null, updated_at: new Date().toISOString(),
+      }).eq("id", grantId).select().single();
+      if (res.error) throw res.error;
+      return res.data;
+    },
+
+    async publicationGrantStats() {
+      var res = await sb.from("publication_grants").select("faculty,status,requested_amount,approved_amount,indexing,publication_type");
+      if (res.error) throw res.error;
+      var out = { total: 0, submitted: 0, payment_pending: 0, paid: 0, rejected: 0, requested_sum: 0, approved_sum: 0, byFaculty: {}, byIndex: {} };
+      (res.data || []).forEach(function (g) {
+        out.total++;
+        out[g.status] = (out[g.status] || 0) + 1;
+        out.requested_sum += Number(g.requested_amount || 0);
+        out.approved_sum += Number(g.approved_amount || 0);
+        var f = g.faculty || "Unspecified";
+        if (!out.byFaculty[f]) out.byFaculty[f] = { faculty: f, total: 0, paid: 0, approved_sum: 0 };
+        out.byFaculty[f].total++;
+        if (g.status === "paid") out.byFaculty[f].paid++;
+        out.byFaculty[f].approved_sum += Number(g.approved_amount || 0);
+        var idx = g.indexing || g.publication_type || "Other";
+        out.byIndex[idx] = (out.byIndex[idx] || 0) + 1;
+      });
+      out.byFaculty = Object.keys(out.byFaculty).map(function (k) { return out.byFaculty[k]; }).sort(function (a, b) { return b.total - a.total; });
+      return out;
+    },
+
+    async notifications() {
+      var prof = null;
+      try { prof = await window.AUTH.profile(); } catch (e) {}
+      var role = prof && prof.role;
+      var items = [];
+      function push(id, icon, who, text, page, unread) {
+        items.push({ id: id, icon: icon, who: who, text: text, page: page, unread: unread !== false, when: "Now" });
+      }
+      try {
+        if (role === "researcher") {
+          var apps = await this.myApplications();
+          apps.slice(0, 4).forEach(function (a) { push("app-" + a.id, "Folder", a.code, badge(a.status).label, "r-applications", a.status !== "completed"); });
+          var pgs = await this.myPublicationGrants();
+          pgs.slice(0, 3).forEach(function (g) { push("pg-" + g._uuid, "FileText", g.id, g.status.label, "r-publications", g.statusKey !== "paid"); });
+        } else if (role === "dean") {
+          var s = await this.queue("submitted"); if (s.length) push("dean-screen", "ClipboardCheck", "Dean queue", s.length + " proposal(s) awaiting first screening.", "d-screen", true);
+          var ds = await this.queue("dean_sign"); if (ds.length) push("dean-sign", "FileSignature", "Dean sign", ds.length + " proposal(s) awaiting sign and forward.", "d-sign", true);
+        } else if (role === "committee") {
+          var cq = await this.queue("committee_review"); if (cq.length) push("committee", "Users", "Committee", cq.length + " proposal(s) awaiting review.", "c-queue", true);
+        } else if (role === "iras") {
+          var iq = await this.queue("iras_review"); if (iq.length) push("iras-screen", "Inbox", "RASSC", iq.length + " research proposal(s) awaiting screening.", "i-received", true);
+          var reports = await this.reportQueue(); if (reports.length) push("reports", "FileCheck", "Reports", reports.length + " report(s) awaiting RASSC acceptance.", "i-reports", true);
+          var pgq = await this.publicationGrantQueue(["submitted"]); if (pgq.length) push("pub-review", "FileText", "Publication grants", pgq.length + " publication grant(s) awaiting RASSC review.", "i-publications", true);
+        } else if (role === "expert") {
+          var ex = await this.myExpertAssignments(); if (ex.length) push("expert", "FileSearch", "Expert review", ex.length + " proposal(s) assigned to you.", "e-assignments", true);
+        } else if (role === "president") {
+          var pq = await this.queue("president_review"); if (pq.length) push("president", "Award", "President", pq.length + " proposal(s) awaiting final approval.", "p-queue", true);
+        } else if (role === "ofm") {
+          var pay = await this.ofmPayments(); var due = (pay || []).filter(function (a) { return (a.payments || []).some(function (p) { return p.status !== "paid"; }); });
+          if (due.length) push("ofm", "Coins", "OFM", due.length + " research grant(s) with pending payment tranches.", "o-payments", true);
+          var pgp = await this.publicationGrantQueue(["payment_pending"]); if (pgp.length) push("pub-pay", "Coins", "Publication payments", pgp.length + " publication reward(s) ready to pay.", "o-publications", true);
+        } else if (role === "admin") {
+          var ev = await this.auditEvents(); ev.slice(0, 5).forEach(function (e) { push("audit-" + e.id, "Clock", e.application ? e.application.code : "System", e.action, "a-audit", false); });
+        }
+      } catch (e) {}
+      if (!items.length) push("quiet", "CheckCircle", "AU-RGMS", "No urgent items for your role right now.", null, false);
+      return items.slice(0, 8);
+    },
+
     async statusCounts() {
       var r = await sb.from("applications").select("status");
       if (r.error) throw r.error;

@@ -228,9 +228,10 @@ const ROLE_CONFIG = {
 };
 
 /* ============= APP HEADER ============= */
-function AppHeader({ role, profile, onSwitchRole, onLogout }) {
+function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate }) {
   const [roleOpen, setRoleOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [notifItems, setNotifItems] = useState(APP.NOTIFS || []);
   const current = APP.ROLES.find(r => r.key === role);
   const displayName = (profile && profile.full_name) || current.full;
   const displayInitials = (profile && profile.full_name)
@@ -248,6 +249,14 @@ function AppHeader({ role, profile, onSwitchRole, onLogout }) {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  useEffect(() => {
+    let alive = true;
+    if (window.DB && window.DB.notifications) {
+      window.DB.notifications().then(items => { if (alive) setNotifItems(items || []); }).catch(() => { if (alive) setNotifItems([]); });
+    }
+    return () => { alive = false; };
+  }, [role, profile && profile.id]);
 
   return (
     <header className="app-header">
@@ -272,9 +281,9 @@ function AppHeader({ role, profile, onSwitchRole, onLogout }) {
         <div style={{position: "relative"}}>
           <button className="header-icon-btn" title="Notifications" onClick={() => { setNotifOpen(v => !v); setRoleOpen(false); }}>
             <Icon name="Bell" size={18} />
-            <span className="dot"></span>
+            {notifItems.some(n => n.unread) && <span className="dot"></span>}
           </button>
-          {notifOpen && <NotifPanel items={APP.NOTIFS} onClose={() => setNotifOpen(false)} />}
+          {notifOpen && <NotifPanel items={notifItems} onClose={() => setNotifOpen(false)} onOpen={(n) => { if (n.page && onNavigate) onNavigate(n.page); setNotifOpen(false); }} />}
         </div>
         <button className="header-icon-btn" title="Settings"><Icon name="Settings" size={18} /></button>
 
@@ -416,6 +425,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "r-progress":      return <ResearcherProgress onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
     case "r-final":         return <ResearcherFinal onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
     case "r-payments":      return <ResearcherPayments onDownload={c.onDownload} toast={c.toast} />;
+    case "r-publications":  return <ResearcherPublicationGrants toast={c.toast} />;
 
     /* ---- Dean ---- */
     case "d-dashboard":      return <DeanDashboard navigate={navigate} />;
@@ -437,6 +447,8 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "i-screen":         return <RASSCScreen applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-assign":         return <RASSCAssign applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-reports":        return <RASSCReports onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "i-publications":   return <RASSCPublicationGrants toast={c.toast} />;
+    case "i-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
     case "i-reviewers":      return <RASSCReviewerPool toast={c.toast} />;
 
     /* ---- Expert Reviewer ---- */
@@ -450,17 +462,20 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "p-queue":          return <PresidentQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "p-approve":        return <RASSCPresident onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "p-contracts":      return <RASSCContract onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "p-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
 
     /* ---- OFM / Finance ---- */
     case "o-dashboard":      return <OFMDashboard navigate={navigate} />;
     case "o-payments":       return <RASSCPayment onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-detail":         return <OFMDetail onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "o-publications":   return <OFMPublicationPayments toast={c.toast} />;
     case "o-history":        return <OFMHistory onDownload={c.onDownload} />;
 
     /* ---- Administrator ---- */
     case "a-dashboard":      return <AdminDashboard navigate={navigate} />;
     case "a-users":          return <AdminUsers toast={c.toast} />;
     case "a-journals":       return <AdminJournals toast={c.toast} />;
+    case "a-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
     case "a-audit":          return <AdminAudit />;
     case "a-settings":       return <AdminSettings toast={c.toast} />;
 
@@ -607,7 +622,7 @@ function App() {
 
   return (
     <div className="app">
-      <AppHeader role={role} profile={profile} onSwitchRole={onSwitchRole} onLogout={onLogout} />
+      <AppHeader role={role} profile={profile} onSwitchRole={onSwitchRole} onLogout={onLogout} onNavigate={setPage} />
       <SubBar
         crumbs={crumbs}
         onHome={() => setPage(cfg.homeKey)}

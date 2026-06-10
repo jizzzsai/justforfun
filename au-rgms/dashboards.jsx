@@ -1346,6 +1346,159 @@ function AdminSettings({ toast }) {
   );
 }
 
+function compactNumber(n) {
+  const v = Number(n || 0);
+  if (v >= 1000000) return (v / 1000000).toFixed(1) + "M";
+  if (v >= 1000) return (v / 1000).toFixed(v >= 10000 ? 0 : 1) + "k";
+  return String(v);
+}
+
+function AnalyticsBars({ rows, labelKey = "label", valueKey = "value", renderValue, emptyTitle, emptyDesc }) {
+  const list = (rows || []).filter(r => Number(r[valueKey] || 0) > 0);
+  const max = Math.max(1, ...list.map(r => Number(r[valueKey] || 0)));
+  if (!list.length) {
+    return <Empty title={emptyTitle || "No analytics data yet"} desc={emptyDesc || "Live records will appear here after users submit data."} icon="BarChart3" />;
+  }
+  return (
+    <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+      {list.map((r, i) => {
+        const value = Number(r[valueKey] || 0);
+        const pct = Math.max(4, Math.round((value / max) * 100));
+        return (
+          <div key={(r[labelKey] || "row") + i}>
+            <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 6 }}>
+              <div style={{ flex: 1, fontSize: 12, fontWeight: 650, minWidth: 0, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r[labelKey]}</div>
+              <div style={{ fontSize: 12, color: "var(--ink-3)", fontFamily: "ui-monospace, monospace" }}>{renderValue ? renderValue(r) : compactNumber(value)}</div>
+            </div>
+            <div style={{ height: 9, borderRadius: 999, background: "var(--line-2)", overflow: "hidden" }}>
+              <div style={{ width: pct + "%", height: "100%", borderRadius: 999, background: "var(--au-crimson)" }}></div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function AnalyticsDashboard({ role }) {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    let alive = true;
+    Promise.all([
+      window.DB.statusCounts().catch(() => ({})),
+      window.DB.facultyStats().catch(() => []),
+      window.DB.publicationGrantStats().catch(() => ({ total: 0, byFaculty: [], byIndex: {} })),
+      window.DB.paidPayments().catch(() => []),
+    ]).then(([counts, faculties, publications, paid]) => {
+      if (!alive) return;
+      setData({ counts, faculties, publications, paid });
+    });
+    return () => { alive = false; };
+  }, [role]);
+  const c = data ? data.counts : {};
+  const faculties = data ? data.faculties : [];
+  const pub = data ? data.publications : { total: 0, byFaculty: [], byIndex: {} };
+  const paid = data ? data.paid : [];
+  const totalPaid = paid.reduce((s, p) => s + Number(p.amount || 0), 0);
+  const statusRows = Object.keys(c || {})
+    .filter(k => k.charAt(0) !== "_")
+    .map(k => ({ label: window.DB.statusBadge(k).label, value: c[k] }))
+    .sort((a, b) => Number(b.value || 0) - Number(a.value || 0));
+  const budgetRows = faculties.map(f => ({
+    faculty: f.faculty,
+    requested_sum: Number(f.requested_sum || 0),
+    approved_sum: Number(f.approved_sum || 0),
+  })).sort((a, b) => b.requested_sum - a.requested_sum);
+  const pubIndexRows = Object.keys(pub.byIndex || {}).map(k => ({
+    label: k,
+    value: pub.byIndex[k],
+  })).sort((a, b) => b.value - a.value);
+
+  return (
+    <>
+      <PageHeader
+        title="AI Analytics"
+        desc="Live Supabase analytics for research grants, payments, and publication rewards."
+        actions={<Badge status={{ label: role === "dean" || role === "committee" ? "Faculty scoped" : "Live data", cls: "badge-academic" }} />}
+      />
+      <div className="stats">
+        <Stat label="Applications" value={data ? c._total || 0 : "..."} icon="Folder" />
+        <Stat label="Under Review" value={data ? c._underReview || 0 : "..."} icon="FileSearch" tone="gold" />
+        <Stat label="Approved / Active" value={data ? c._approved || 0 : "..."} icon="CheckCircle" tone="green" />
+        <Stat label="Publication Grants" value={data ? pub.total || 0 : "..."} icon="Award" tone="navy" />
+      </div>
+
+      <div className="grid-2">
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Applications by Faculty</h3></div>
+          <AnalyticsBars
+            rows={faculties.slice(0, 8)}
+            labelKey="faculty"
+            valueKey="total"
+            renderValue={r => r.total + " apps"}
+            emptyTitle="No application analytics yet"
+          />
+        </div>
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Workflow Status</h3></div>
+          <AnalyticsBars
+            rows={statusRows}
+            valueKey="value"
+            renderValue={r => r.value + " apps"}
+            emptyTitle="No workflow data yet"
+          />
+        </div>
+      </div>
+
+      <div className="grid-2 mt-4">
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Requested Budget by Faculty</h3></div>
+          <AnalyticsBars
+            rows={budgetRows.slice(0, 8)}
+            labelKey="faculty"
+            valueKey="requested_sum"
+            renderValue={r => fmtBaht(r.requested_sum)}
+            emptyTitle="No budget data yet"
+          />
+        </div>
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Publication Rewards</h3></div>
+          <AnalyticsBars
+            rows={pubIndexRows}
+            valueKey="value"
+            renderValue={r => r.value + " grants"}
+            emptyTitle="No publication grants yet"
+            emptyDesc="Researcher publication reward submissions will appear after RASSC receives them."
+          />
+        </div>
+      </div>
+
+      <div className="grid-2 mt-4">
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Publication Rewards by Faculty</h3></div>
+          <AnalyticsBars
+            rows={(pub.byFaculty || []).slice(0, 8)}
+            labelKey="faculty"
+            valueKey="total"
+            renderValue={r => r.total + " grants"}
+            emptyTitle="No publication faculty data yet"
+          />
+        </div>
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Finance Snapshot</h3></div>
+          <div className="card-body">
+            <div className="meta-row"><span className="l">Paid research grant tranches</span><span className="r">{paid.length}</span></div>
+            <div className="meta-row"><span className="l">Research grant disbursed</span><span className="r">{fmtBaht(totalPaid)}</span></div>
+            <div className="meta-row"><span className="l">Publication rewards pending OFM</span><span className="r">{pub.payment_pending || 0}</span></div>
+            <div className="meta-row"><span className="l">Publication rewards paid</span><span className="r">{pub.paid || 0}</span></div>
+            <div className="meta-row"><span className="l">Publication reward amount approved</span><span className="r">{fmtBaht(pub.approved_sum || 0)}</span></div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* Tiny toggle */
 function Toggle({ defaultOn = false }) {
   const [on, setOn] = useState(defaultOn);
@@ -1378,4 +1531,5 @@ Object.assign(window, {
   PresidentDashboard, PresidentQueue,
   OFMDashboard, OFMDetail, OFMHistory,
   AdminDashboard, AdminUsers, AdminJournals, AdminAudit, AdminSettings,
+  AnalyticsDashboard,
 });

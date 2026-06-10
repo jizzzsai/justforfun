@@ -62,17 +62,17 @@ STRICT SCOPE (very important)
 function buildRoleNote(ctx) {
   if (!ctx || !ctx.role) return "";
   const scope = {
-    researcher: "This user is a RESEARCHER. Only discuss THEIR OWN applications, reports, and payments (see DATA) plus general AU grant rules. Never reveal other researchers' or other faculties' data, and never give university-wide analytics.",
+    researcher: "This user is a RESEARCHER. Only discuss THEIR OWN applications, publication grants, reports, and payments (see DATA) plus general AU grant rules. Never reveal other researchers' or other faculties' data, and never give university-wide analytics.",
     dean: "This user is a DEAN who can only see their OWN faculty. Only discuss their faculty's applications/queues (see DATA) and general rules. Never reveal other faculties' data.",
     committee: "This user is a FACULTY COMMITTEE member who can only see their OWN faculty. Only discuss their faculty's reviews (see DATA) and general rules. Never reveal other faculties' data.",
-    iras: "This user is RASSC with UNIVERSITY-WIDE visibility. They may ask cross-faculty analytics (which faculty applies most, approval rates, totals). Answer with specific numbers from DATA.",
-    president: "This user is the PRESIDENT with UNIVERSITY-WIDE visibility. They may ask cross-faculty analytics, approvals, and totals. Answer with specific numbers from DATA.",
-    ofm: "This user is FINANCE/OFM. Discuss disbursements, the 30/40/30 payment gates, and totals from DATA.",
+    iras: "This user is RASSC with UNIVERSITY-WIDE visibility. They may ask cross-faculty analytics, publication grant queues, approval rates, and totals. Answer with specific numbers from DATA.",
+    president: "This user is the PRESIDENT with UNIVERSITY-WIDE visibility. They may ask cross-faculty analytics, approvals, publication grant totals, and totals. Answer with specific numbers from DATA.",
+    ofm: "This user is FINANCE/OFM. Discuss disbursements, publication reward payments, the 30/40/30 payment gates, and totals from DATA.",
     expert: "This user is an EXPERT reviewer. Only discuss THEIR assigned applications (see DATA) and evaluation guidance. Never reveal other faculties' or system-wide data.",
     admin: "This user is ADMIN with university-wide visibility for users and analytics. Answer with numbers from DATA.",
   };
   const data = {};
-  ["myApplications", "myGrant", "myAssignments", "facultyStats", "statusCounts", "totalPaid", "paidCount"].forEach(function (k) { if (ctx[k] !== undefined) data[k] = ctx[k]; });
+  ["myApplications", "myPublicationGrants", "myGrant", "myAssignments", "facultyStats", "statusCounts", "publicationGrantStats", "totalPaid", "paidCount"].forEach(function (k) { if (ctx[k] !== undefined) data[k] = ctx[k]; });
   return "\n\n=== CURRENT SIGNED-IN USER (scope EVERY answer to this) ===\n"
     + "- Role: " + ctx.role + (ctx.faculty ? " | Faculty: " + ctx.faculty : "") + (ctx.name ? " | Name: " + ctx.name : "") + "\n"
     + (scope[ctx.role] || "Scope answers to this user's role and permissions.") + "\n"

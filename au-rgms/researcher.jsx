@@ -1080,8 +1080,125 @@ function ResearcherPayments({ onDownload, toast }) {
   );
 }
 
+function ResearcherPublicationGrants({ toast }) {
+  const [me, setMe] = useState(null);
+  const [rows, setRows] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [file, setFile] = useState(null);
+  const [form, setForm] = useState({
+    article_title: "",
+    journal_name: "",
+    indexing: "scopus",
+    quartile: "Q1",
+    publication_type: "journal",
+    doi: "",
+    published_on: "",
+    requested_amount: 0,
+  });
+  const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const load = () => {
+    window.AUTH.profile().then(setMe).catch(() => {});
+    window.DB.myPublicationGrants().then(setRows).catch(() => setRows([]));
+  };
+  useEffect(() => { load(); }, []);
+  const estimate = window.DB.publicationAwardAmount(form.indexing, form.quartile, form.publication_type, form.requested_amount);
+  const needsActual = form.indexing === "tci" || form.indexing === "other" || ["other"].includes(form.publication_type);
+  const submit = async (saveDraft) => {
+    setErr("");
+    if (!form.article_title.trim()) { setErr("Publication title is required."); return; }
+    if (!form.journal_name.trim() && form.publication_type === "journal") { setErr("Journal name is required."); return; }
+    if (!saveDraft && !file) { setErr("Attach a PDF evidence file before submitting."); return; }
+    if (needsActual && !Number(form.requested_amount || 0)) { setErr("Enter the actual fee amount for this publication type."); return; }
+    setBusy(true);
+    try {
+      const g = await window.DB.createPublicationGrant({
+        ...form,
+        faculty: me && me.faculty,
+        department: me && me.department,
+        requested_amount: estimate,
+      }, !saveDraft);
+      if (file) await window.DB.uploadPublicationEvidence(g.id, file);
+      toast(saveDraft ? "Publication grant draft saved." : g.code + " submitted to RASSC.");
+      setForm({ article_title: "", journal_name: "", indexing: "scopus", quartile: "Q1", publication_type: "journal", doi: "", published_on: "", requested_amount: 0 });
+      setFile(null);
+      load();
+    } catch (e) {
+      setErr((e && e.message) || "Could not save publication grant.");
+    } finally {
+      setBusy(false);
+    }
+  };
+  const openEvidence = async (g, download) => {
+    try {
+      const url = await window.DB.publicationEvidenceUrl(g, download);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch (e) {
+      toast("No evidence PDF is attached to this publication grant.");
+    }
+  };
+  return (
+    <>
+      <PageHeader
+        title="Paper Publication Grant"
+        desc="Apply for AU publication rewards under Announcement No.16/2024."
+        actions={<Badge status={{ label: "Scopus Q1 80k · Q2 60k · Q3 50k · Q4 40k", cls: "badge-academic" }} />}
+      />
+      <div className="grid-2">
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Publication Grant Application</h3></div>
+          <div className="card-body">
+            <div className="field"><label>Publication title</label><input value={form.article_title} onChange={e => setField("article_title", e.target.value)} /></div>
+            <div className="form-grid">
+              <div className="field"><label>Journal / venue</label><input value={form.journal_name} onChange={e => setField("journal_name", e.target.value)} /></div>
+              <div className="field"><label>DOI / reference</label><input value={form.doi} onChange={e => setField("doi", e.target.value)} /></div>
+            </div>
+            <div className="form-grid">
+              <div className="field"><label>Publication type</label><select value={form.publication_type} onChange={e => setField("publication_type", e.target.value)}><option value="journal">Journal article</option><option value="creative">Creative work</option><option value="patent">Patent</option><option value="petty">Petty patent</option><option value="other">Other reimbursable fee</option></select></div>
+              <div className="field"><label>Indexing</label><select value={form.indexing} onChange={e => setField("indexing", e.target.value)}><option value="scopus">Scopus</option><option value="wos">Web of Science</option><option value="tci">TCI</option><option value="other">Other</option></select></div>
+            </div>
+            <div className="form-grid">
+              <div className="field"><label>Quartile / tier</label><select value={form.quartile} onChange={e => setField("quartile", e.target.value)} disabled={form.indexing !== "scopus"}><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
+              <div className="field"><label>Published date</label><input type="date" value={form.published_on} onChange={e => setField("published_on", e.target.value)} /></div>
+            </div>
+            {needsActual && <div className="field"><label>Actual fee amount (THB)</label><input value={form.requested_amount} onChange={e => setField("requested_amount", e.target.value.replace(/[^0-9]/g, ""))} /></div>}
+            <div className="field"><label>Evidence PDF</label><input type="file" accept="application/pdf,.pdf" onChange={e => setFile((e.target.files || [])[0] || null)} /></div>
+            <div style={{ padding: 14, border: "1px solid var(--line)", borderRadius: "var(--r-md)", background: "var(--paper-warm)", marginBottom: 12 }}>
+              <div className="text-sm text-muted">Estimated AU reward</div>
+              <div style={{ fontFamily: "var(--font-serif)", fontSize: 28 }}>{fmtBaht(estimate)}</div>
+            </div>
+            {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, marginBottom: 10 }}>{err}</div>}
+            <div className="flex gap-2 justify-end">
+              <button className="btn btn-secondary" disabled={busy} onClick={() => submit(true)}>Save Draft</button>
+              <button className="btn btn-primary" disabled={busy} onClick={() => submit(false)}><Icon name="Send" size={14} /> Submit to RASSC</button>
+            </div>
+          </div>
+        </div>
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>My Publication Grants</h3></div>
+          <div>
+            {rows === null && <div style={{ padding: 32, textAlign: "center", color: "var(--ink-3)" }}>Loading publication grants...</div>}
+            {rows && rows.length === 0 && <Empty title="No publication grants yet" desc="Submitted publication rewards will appear here." icon="FileText" />}
+            {(rows || []).map(g => (
+              <div key={g._uuid} style={{ padding: "16px 20px", borderBottom: "1px solid var(--line-2)" }}>
+                <div className="flex items-center gap-2 mb-2"><span className="id">{g.id}</span><Badge status={g.status} /></div>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{g.title}</div>
+                <div className="text-sm text-muted">{g.indexing}{g.quartile ? " · " + g.quartile : ""} · {fmtBaht(g.budgetTotal)}</div>
+                <div className="flex gap-2 mt-3">
+                  <button className="btn btn-secondary btn-sm" onClick={() => openEvidence(g, false)}><Icon name="Eye" size={12} /> Evidence</button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => openEvidence(g, true)}><Icon name="Download" size={12} /> Download</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 Object.assign(window, {
   ResearcherDashboard, ResearcherSubmit, ResearcherApplications,
   ResearcherApplicationDetail, ResearcherProgress, ResearcherFinal,
-  ResearcherPayments,
+  ResearcherPayments, ResearcherPublicationGrants,
 });
