@@ -898,14 +898,137 @@ function PresidentDashboard({ navigate }) {
 }
 
 /* PRESIDENT — Approval queue */
-function PresidentQueue({ navigate, onDownload, toast, setConfirm }) {
+/* President opens a proposal to read the file + expert scores before deciding. */
+function PresidentReviewDetail({ app, onBack, onDownload, onView, toast, setConfirm, afterDecision }) {
+  const [conditions, setConditions] = useState("Approved subject to the standard AU progress and final reporting requirements.");
+  const expertReviews = (app.reviews || []).filter(r => r.kind === "expert");
+  const avg = expertReviews.length ? Math.round(expertReviews.reduce((s, r) => s + Number(r.score || 0), 0) / expertReviews.length) : 0;
+  const docs = app.documents || [];
+
+  const decide = (approved) => setConfirm({
+    kind: approved ? "success" : "danger",
+    title: approved ? "Approve and issue contract?" : "Reject this application?",
+    message: approved
+      ? app.code + " will be approved and a contract record created."
+      : "Rejection by the President is final.",
+    confirmLabel: approved ? "Approve" : "Reject",
+    onConfirm: async () => {
+      try {
+        await window.DB.presidentDecision(app.id, approved, conditions);
+        toast(app.code + (approved ? " approved. Contract is ready." : " rejected."));
+        afterDecision();
+      } catch (e) { toast("Error: " + ((e && e.message) || e)); }
+    },
+  });
+
   return (
     <>
-      <PageHeader title="Final Approval Queue" desc="Proposals awaiting your decision." />
+      <PageHeader
+        title={"Final Approval - " + app.code}
+        desc={app.title}
+        actions={
+          <>
+            <button className="btn btn-secondary" onClick={onBack}><Icon name="ArrowLeft" size={13} /> Back to Queue</button>
+            <Badge status={window.DB.statusBadge(app.status)} />
+          </>
+        }
+      />
+      <div className="grid-2">
+        <div>
+          <div className="card card-pad-0 mb-4">
+            <div className="card-head"><h3>Application Summary</h3></div>
+            <div className="card-body">
+              <div className="meta-row"><span className="l">Researcher</span><span className="r">{app.researcher ? app.researcher.full_name : "—"}</span></div>
+              <div className="meta-row"><span className="l">Faculty</span><span className="r">{app.faculty || "—"}</span></div>
+              <div className="meta-row"><span className="l">Department</span><span className="r">{app.department || "—"}</span></div>
+              <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.requested_amount || 0))}</span></div>
+              <div className="meta-row"><span className="l">Duration</span><span className="r">{(app.duration_months || 12) + " months"}</span></div>
+              <div className="meta-row"><span className="l">Expert reviews</span><span className="r">{expertReviews.length + " submitted"}</span></div>
+              <div className="meta-row"><span className="l">Average score</span><span className="r">{expertReviews.length ? avg + " / 100" : "—"}</span></div>
+            </div>
+          </div>
+
+          <div className="card card-pad-0 mb-4">
+            <div className="card-head"><h3>Application File</h3></div>
+            <div>
+              {docs.length === 0 && <Empty title="No uploaded documents" desc="The researcher did not upload PDF files for this application." icon="FileText" />}
+              {docs.map(d => <FileRow key={d.id || d.name} doc={d} onDownload={onDownload} onView={onView} />)}
+            </div>
+          </div>
+
+          <div className="card card-pad-0">
+            <div className="card-head"><h3>Expert Reviews &amp; Recommendations</h3></div>
+            <div className="card-body">
+              {expertReviews.length === 0 && <div className="text-sm text-muted">No expert review records were saved yet.</div>}
+              {expertReviews.map(r => (
+                <div key={r.id} className="comment">
+                  <div className="head">
+                    <div className="av">{initialsFromName(r.reviewer ? r.reviewer.full_name : "Expert")}</div>
+                    <div>
+                      <div className="name">{r.reviewer ? r.reviewer.full_name : "Expert reviewer"}</div>
+                      <div className="role">Score {r.score != null ? r.score + " / 100" : "—"} · Recommendation: {r.recommendation || "—"}</div>
+                    </div>
+                  </div>
+                  <div className="body">
+                    {r.strengths && <div style={{ marginBottom: 6 }}><b>Strengths:</b> {r.strengths}</div>}
+                    {r.weaknesses && <div style={{ marginBottom: 6 }}><b>Weaknesses:</b> {r.weaknesses}</div>}
+                    {r.comments && <div><b>Comments:</b> {r.comments}</div>}
+                    {!r.strengths && !r.weaknesses && !r.comments && "No written comment entered."}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="card card-pad-0" style={{ alignSelf: "start" }}>
+          <div className="card-head"><h3>President Decision</h3></div>
+          <div className="card-body">
+            <div className="field">
+              <label>Approval conditions</label>
+              <textarea className="comment-input" value={conditions} onChange={e => setConditions(e.target.value)} />
+            </div>
+            <div className="flex flex-col gap-2">
+              <button className="btn btn-primary btn-block" onClick={() => decide(true)}><Icon name="Award" size={14} /> Approve and Issue Contract</button>
+              <button className="btn btn-danger btn-block" onClick={() => decide(false)}><Icon name="X" size={14} /> Reject</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function PresidentQueue({ navigate, onDownload, onView, toast, setConfirm }) {
+  const [rows, setRows] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [loadingDetail, setLoadingDetail] = useState(false);
+  const load = () => window.DB.queue("president_review").then(setRows).catch(() => setRows([]));
+  useEffect(() => { load(); }, []);
+
+  const open = (row) => {
+    setLoadingDetail(true);
+    window.DB.applicationDetail(row._uuid)
+      .then(setSelected)
+      .catch(e => toast("Error: " + ((e && e.message) || e)))
+      .finally(() => setLoadingDetail(false));
+  };
+
+  if (selected) {
+    return <PresidentReviewDetail
+      app={selected}
+      onBack={() => setSelected(null)}
+      onDownload={onDownload} onView={onView} toast={toast} setConfirm={setConfirm}
+      afterDecision={() => { setSelected(null); load(); }} />;
+  }
+
+  return (
+    <>
+      <PageHeader title="Final Approval Queue" desc="Open a proposal to review the file and expert scores before approving." />
       <div className="card card-pad-0">
-        <WiredQueue status="president_review" openLabel="Approve →"
-          confirmTitle="Approve this application?" confirmLabel="Approve"
-          onDownload={onDownload} setConfirm={setConfirm} toast={toast} />
+        {(rows === null || loadingDetail) && <div style={{ padding: "36px", textAlign: "center", color: "var(--ink-3)" }}>Loading…</div>}
+        {rows !== null && !loadingDetail && rows.length === 0 && <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>Nothing in this queue right now.</div>}
+        {rows !== null && !loadingDetail && rows.length > 0 && <QueueTable rows={rows} openLabel="Review →" onOpen={open} onDownload={onDownload} />}
       </div>
     </>
   );

@@ -459,7 +459,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
 
     /* ---- President ---- */
     case "p-dashboard":      return <PresidentDashboard navigate={navigate} />;
-    case "p-queue":          return <PresidentQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "p-queue":          return <PresidentQueue navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "p-approve":        return <RASSCPresident onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "p-contracts":      return <RASSCContract onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "p-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
