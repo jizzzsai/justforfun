@@ -434,12 +434,14 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "d-sign":           return <DeanSignQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-sign-detail":    return <FacultyDean onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-history":        return <DeanHistory onDownload={c.onDownload} />;
+    case "d-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
 
     /* ---- Committee ---- */
     case "c-dashboard":      return <CommitteeDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "c-queue":          return <CommitteeQueue navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "c-review":         return <FacultyAcademic applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "c-history":        return <CommitteeHistory onDownload={c.onDownload} />;
+    case "c-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
 
     /* ---- RASSC ---- */
     case "i-dashboard":      return <RASSCDashboardV2 navigate={navigate} />;

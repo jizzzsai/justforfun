@@ -1518,6 +1518,7 @@ function AnalyticsDashboard({ role }) {
     });
     return () => { alive = false; };
   }, [role]);
+  const isFaculty = role === "dean" || role === "committee";
   const c = data ? data.counts : {};
   const faculties = data ? data.faculties : [];
   const pub = data ? data.publications : { total: 0, byFaculty: [], byIndex: {} };
@@ -1607,6 +1608,7 @@ function AnalyticsDashboard({ role }) {
             emptyTitle="No publication faculty data yet"
           />
         </div>
+        {!isFaculty && (
         <div className="card card-pad-0">
           <div className="card-head"><h3>Finance Snapshot</h3></div>
           <div className="card-body">
@@ -1617,6 +1619,7 @@ function AnalyticsDashboard({ role }) {
             <div className="meta-row"><span className="l">Publication reward amount approved</span><span className="r">{fmtBaht(pub.approved_sum || 0)}</span></div>
           </div>
         </div>
+        )}
       </div>
     </>
   );

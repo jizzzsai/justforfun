@@ -170,6 +170,7 @@ const NAV_DEAN = [
   { key: "d-sign", label: "Sign & Forward Queue", icon: "FileSignature" },
   { section: "TRACKING" },
   { key: "d-history", label: "Decision History", icon: "Clock" },
+  { key: "d-analytics", label: "AI Analytics", icon: "TrendingUp" },
 ];
 
 const NAV_COMMITTEE = [
@@ -180,6 +181,7 @@ const NAV_COMMITTEE = [
   { key: "c-review", label: "Active Review", icon: "FileSearch" },
   { section: "TRACKING" },
   { key: "c-history", label: "Past Reviews", icon: "Clock" },
+  { key: "c-analytics", label: "AI Analytics", icon: "TrendingUp" },
 ];
 
 const NAV_RASSC = [
