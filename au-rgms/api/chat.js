@@ -86,6 +86,16 @@ module.exports = async (req, res) => {
     res.status(405).json({ reply: "Method not allowed." });
     return;
   }
+  // Same-origin pinning: only the AU-RGMS app may call this endpoint, so it
+  // cannot be abused as a free Gemini proxy from other sites. A browser sends
+  // Origin on cross-origin POSTs; if present, its host must match this host.
+  const host = req.headers.host || "";
+  const origin = req.headers.origin || "";
+  if (origin) {
+    let ok = false;
+    try { ok = new URL(origin).host === host; } catch (e) { ok = false; }
+    if (!ok) { res.status(403).json({ reply: "Forbidden." }); return; }
+  }
   const key = process.env.GEMINI_API_KEY;
   if (!key) {
     res.status(200).json({
