@@ -186,7 +186,13 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   const total = budgetRows.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const [reqTotal, setReqTotal] = useState("100000");
   const setAmt = (i, v) => setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, amount: (v + "").replace(/[^0-9]/g, "") } : r));
-  const setPurpose = (i, v) => setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, purpose: v } : r));
+
+  // Separate itemized budget breakdown — free-form Purpose + Amount lines.
+  const [items, setItems] = useState([{ purpose: "", amount: "" }]);
+  const itemsTotal = items.reduce((s, it) => s + (Number(it.amount) || 0), 0);
+  const setItem = (i, k, v) => setItems(rows => rows.map((r, j) => j === i ? { ...r, [k]: k === "amount" ? (v + "").replace(/[^0-9]/g, "") : v } : r));
+  const addItem = () => setItems(rows => rows.concat([{ purpose: "", amount: "" }]));
+  const removeItem = (i) => setItems(rows => rows.length > 1 ? rows.filter((_, j) => j !== i) : rows);
 
   const [files, setFiles] = useState([]);
   const onFiles = (e) => { const fs = Array.from(e.target.files || []); setFiles(prev => prev.concat(fs)); e.target.value = ""; };
@@ -220,6 +226,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         setFiles([]);
         setReqTotal("100000");
         setBudgetRows(RESEARCHER_DEFAULT_BUDGET_ROWS.map(r => ({ ...r })));
+        setItems([{ purpose: "", amount: "" }]);
         setDraft(d => ({
           ...RESEARCHER_DEFAULT_DRAFT,
           name: d.name,
@@ -261,6 +268,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         }));
         setReqTotal(String(Number(app.requested_amount || 0)));
         setBudgetRows(Array.isArray(app.budget_breakdown) && app.budget_breakdown.length ? app.budget_breakdown : RESEARCHER_DEFAULT_BUDGET_ROWS.map(r => ({ ...r })));
+        setItems(Array.isArray(app.budget_items) && app.budget_items.length ? app.budget_items : [{ purpose: "", amount: "" }]);
       } catch (e) {
         if (!cancelled) setErr((e && e.message) || "Could not load this draft.");
       } finally {
@@ -318,6 +326,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         requested_amount: Number(reqTotal), duration_months: autoDuration || draft.duration,
         start_date: draft.startDate || null, end_date: draft.endDate || null,
         budget_breakdown: budgetRows,
+        budget_items: items.filter(it => (it.purpose || "").trim() || Number(it.amount) > 0),
       }, submit, editingId);
       for (const f of files) { try { await window.DB.uploadDocument(app.id, f, docType || null); } catch (e) {} }
       if (!submit) {
@@ -385,7 +394,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                   onChange={e => upd("endDate", e.target.value)} />
               </div>
               <div className="field">
-                <label>Duration (auto-calculated)</label>
+                <label>Duration</label>
                 <input readOnly value={autoDuration ? autoDuration + (autoDuration === 1 ? " month" : " months") : "—"}
                   style={{ background: "var(--paper-warm)", color: "var(--ink-2)", cursor: "not-allowed" }}
                   title="Calculated automatically from the start and expected end dates" />
@@ -477,7 +486,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                 <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
                   <table className="tbl">
                     <thead>
-                      <tr><th>Budget Item</th><th>Purpose / note</th><th style={{ textAlign: "center" }}>% of total</th><th style={{ textAlign: "center" }}>AU cap</th><th style={{ width: 150, textAlign: "right" }}>Amount (THB)</th></tr>
+                      <tr><th>Budget Item</th><th style={{ textAlign: "center" }}>% of total</th><th style={{ textAlign: "center" }}>AU cap</th><th style={{ width: 150, textAlign: "right" }}>Amount (THB)</th></tr>
                     </thead>
                     <tbody>
                       {budgetRows.map((b, i) => {
@@ -486,11 +495,6 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                         return (
                           <tr key={i}>
                             <td>{b.item}</td>
-                            <td>
-                              <input value={b.purpose || ""} onChange={e => setPurpose(i, e.target.value)}
-                                placeholder="e.g. 5,000 for transport to data site"
-                                style={{ width: "100%", minWidth: 160, fontSize: 12 }} />
-                            </td>
                             <td style={{ textAlign: "center", color: over ? "var(--au-crimson)" : "var(--ink-3)", fontWeight: over ? 600 : 400 }}>{pct}%</td>
                             <td style={{ textAlign: "center", fontSize: 12, color: "var(--ink-3)" }}>≤ {capArr[i]}%</td>
                             <td style={{ textAlign: "right" }}>
@@ -501,13 +505,38 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                         );
                       })}
                       <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}>
-                        <td>Total of breakdown</td><td></td><td></td><td></td>
+                        <td>Total of breakdown</td><td></td><td></td>
                         <td style={{ textAlign: "right", color: total !== Number(reqTotal) ? "var(--au-crimson)" : "inherit" }}>{fmtBaht(total)}</td>
                       </tr>
                     </tbody>
                   </table>
                 </div>
                 {total !== Number(reqTotal) && <div style={{ fontSize: 12, color: "var(--au-crimson)", marginTop: 6 }}>Breakdown ({fmtBaht(total)}) doesn't match your requested total ({fmtBaht(Number(reqTotal))}) — adjust the amounts.</div>}
+              </div>
+              <div className="field full">
+                <label>Itemized Budget Breakdown — list what each amount is for (e.g. transport, materials, software)</label>
+                <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
+                  <table className="tbl">
+                    <thead>
+                      <tr><th>Purpose / Note</th><th style={{ width: 160, textAlign: "right" }}>Amount (THB)</th><th style={{ width: 56 }}></th></tr>
+                    </thead>
+                    <tbody>
+                      {items.map((it, i) => (
+                        <tr key={i}>
+                          <td><input value={it.purpose} onChange={e => setItem(i, "purpose", e.target.value)} placeholder="e.g. Transport to off-campus data collection site" style={{ width: "100%", minWidth: 200 }} /></td>
+                          <td style={{ textAlign: "right" }}><input value={(Number(it.amount) || 0).toLocaleString()} onChange={e => setItem(i, "amount", e.target.value)} style={{ width: 120, textAlign: "right", fontFamily: "ui-monospace, monospace" }} /></td>
+                          <td style={{ textAlign: "center" }}><button type="button" className="btn btn-ghost btn-sm" onClick={() => removeItem(i)} title="Remove item"><Icon name="Trash2" size={13} /></button></td>
+                        </tr>
+                      ))}
+                      <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}>
+                        <td>Itemized total</td>
+                        <td style={{ textAlign: "right" }}>{fmtBaht(itemsTotal)}</td>
+                        <td></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+                <button type="button" className="btn btn-secondary btn-sm mt-1" onClick={addItem}><Icon name="Plus" size={13} /> Add item</button>
               </div>
             </div>
           </div>

@@ -160,6 +160,7 @@
         start_date: payload.start_date || null,
         end_date: payload.end_date || null,
         budget_breakdown: payload.budget_breakdown || null,
+        budget_items: payload.budget_items || null,
         status: submit ? "submitted" : "draft",
         submitted_at: submit ? new Date().toISOString() : (existing ? existing.submitted_at : null),
       };
