@@ -1367,14 +1367,75 @@ function AdminJournals({ toast }) {
 
 /* ADMIN — Audit log */
 /* ADMIN — System settings */
+const ADMIN_ROLE_OPTIONS = [
+  { key: "researcher", label: "Researcher" }, { key: "dean", label: "Dean" },
+  { key: "committee", label: "Faculty Committee" }, { key: "iras", label: "RASSC" },
+  { key: "expert", label: "Expert Reviewer" }, { key: "president", label: "Vice President" },
+  { key: "ofm", label: "OFM / Finance" }, { key: "admin", label: "Administrator" },
+];
+
+function AdminAddUserForm({ onCreated, onClose, toast }) {
+  const blank = { name_title: "", full_name: "", email: "", au_id: "", role: "dean", faculty: "", department: "", password: "AuResearch#2026" };
+  const [f, setF] = useState(blank);
+  const [busy, setBusy] = useState(false);
+  const set = (k, v) => setF(s => Object.assign({}, s, k === "faculty" ? { faculty: v, department: "" } : { [k]: v }));
+  const needsFaculty = f.role === "dean" || f.role === "committee";
+  const depts = (D.FACULTIES.find(x => x.name === f.faculty) || { departments: [] }).departments;
+  const submit = async () => {
+    if (!f.full_name.trim()) return toast("Enter the full name.");
+    if (!/^[^@\s]+@au\.edu$/i.test(f.email.trim())) return toast("Email must end in @au.edu.");
+    if (needsFaculty && !f.faculty) return toast("Pick a faculty for a Dean/Committee account.");
+    if ((f.password || "").length < 8) return toast("Temp password must be at least 8 characters.");
+    setBusy(true);
+    try {
+      await window.DB.adminCreateUser(f);
+      toast(f.full_name + " created as " + f.role + (f.faculty ? " (" + f.faculty + ")" : "") + ".");
+      onCreated();
+    } catch (e) { toast("Error: " + ((e && e.message) || e)); }
+    finally { setBusy(false); }
+  };
+  return (
+    <div className="card card-pad-0 mb-4" style={{ border: "1px solid var(--au-crimson-soft)" }}>
+      <div className="card-head"><h3>Add User</h3><div className="grow"></div><button className="btn btn-ghost btn-sm" onClick={onClose}><Icon name="X" size={14} /></button></div>
+      <div className="card-body">
+        <div className="form-grid">
+          <div className="field"><label>Title</label>
+            <select value={f.name_title} onChange={e => set("name_title", e.target.value)}><option value="">—</option>{D.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}</select>
+          </div>
+          <div className="field"><label>Full Name</label><input value={f.full_name} onChange={e => set("full_name", e.target.value)} placeholder="e.g. Tanachai Suksawat" /></div>
+          <div className="field"><label>AU ID</label><input value={f.au_id} onChange={e => set("au_id", e.target.value)} placeholder="e.g. 5012345" /></div>
+          <div className="field"><label>Email (AU only)</label><input type="email" value={f.email} onChange={e => set("email", e.target.value)} placeholder="name@au.edu" /></div>
+          <div className="field"><label>Role</label>
+            <select value={f.role} onChange={e => set("role", e.target.value)}>{ADMIN_ROLE_OPTIONS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}</select>
+          </div>
+          <div className="field"><label>Faculty {needsFaculty ? "(required)" : "(optional)"}</label>
+            <select value={f.faculty} onChange={e => set("faculty", e.target.value)}><option value="">Select faculty…</option>{D.FACULTIES.map(x => <option key={x.code} value={x.name}>{x.name}</option>)}</select>
+          </div>
+          <div className="field"><label>Department</label>
+            <select value={f.department} onChange={e => set("department", e.target.value)} disabled={!f.faculty}><option value="">{f.faculty ? "Select department…" : "Pick a faculty first"}</option>{depts.map(d => <option key={d} value={d}>{d}</option>)}</select>
+          </div>
+          <div className="field"><label>Temporary password</label><input value={f.password} onChange={e => set("password", e.target.value)} /></div>
+        </div>
+        <div className="flex justify-end gap-2 mt-2">
+          <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
+          <button className="btn btn-primary" disabled={busy} onClick={submit}><Icon name="UserPlus" size={14} /> {busy ? "Creating…" : "Create Account"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AdminUsers({ toast }) {
   const [search, setSearch] = useState("");
   const [users, setUsers] = useState(null);
-  useEffect(() => { window.DB.allProfiles().then(setUsers).catch(() => setUsers([])); }, []);
+  const [adding, setAdding] = useState(false);
+  const load = () => window.DB.allProfiles().then(setUsers).catch(() => setUsers([]));
+  useEffect(() => { load(); }, []);
   const filtered = (users || []).filter(u => !search || (u.full_name + u.email + u.role + (u.department || "")).toLowerCase().includes(search.toLowerCase()));
   return (
     <>
-      <PageHeader title="User Management" desc="Live Supabase user profiles for AU-RGMS." actions={<button className="btn btn-primary" onClick={() => toast("Create users from Supabase Auth, then profiles appear here.")}><Icon name="Plus" size={14} /> Add User</button>} />
+      <PageHeader title="User Management" desc="Create and scope AU-RGMS accounts (role + faculty)." actions={<button className="btn btn-primary" onClick={() => setAdding(a => !a)}><Icon name="Plus" size={14} /> Add User</button>} />
+      {adding && <AdminAddUserForm toast={toast} onClose={() => setAdding(false)} onCreated={() => { setAdding(false); load(); }} />}
       <div className="card card-pad-0">
         <div className="toolbar">
           <div className="search"><Icon name="Search" size={14} className="icon" /><input placeholder="Search by name, email, role..." value={search} onChange={e => setSearch(e.target.value)} /></div>

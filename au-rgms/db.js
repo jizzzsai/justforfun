@@ -817,6 +817,20 @@
       var v = await this.getSetting("budget_caps", def);
       return Object.assign({}, def, v || {});
     },
+    // Admin-only: create a login + scoped profile via the secure serverless fn.
+    async adminCreateUser(payload) {
+      var s = await sb.auth.getSession();
+      var token = s && s.data && s.data.session && s.data.session.access_token;
+      if (!token) throw new Error("You must be signed in as an administrator.");
+      var res = await fetch("/api/admin-user", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify(payload),
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok || !data.ok) throw new Error(data.error || "Could not create the account.");
+      return data;
+    },
     // Save the signed-in user's own applicant details to their profile.
     // (role/faculty/email are locked server-side by the profiles_guard trigger.)
     async updateMyProfile(fields) {
