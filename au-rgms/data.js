@@ -144,7 +144,7 @@ const ROLES = [
   { key: "committee", name: "Faculty Committee", full: "Committee Test", subtitle: "Committee - Test Account", initials: "CT", iconName: "Users" },
   { key: "iras", name: "RASSC", full: "RASSC Test", subtitle: "RASSC - Test Account", initials: "RS", iconName: "Landmark" },
   { key: "expert", name: "Expert Reviewer", full: "Expert 1", subtitle: "Expert 1/2/3 - Test Accounts", initials: "E1", iconName: "FileSearch" },
-  { key: "president", name: "President", full: "President Test", subtitle: "President - Test Account", initials: "PT", iconName: "Award" },
+  { key: "president", name: "Vice President", full: "Vice President Test", subtitle: "Vice President - Test Account", initials: "VP", iconName: "Award" },
   { key: "ofm", name: "OFM / Finance", full: "Finance Test", subtitle: "Finance - Test Account", initials: "FT", iconName: "Coins" },
   { key: "admin", name: "Administrator", full: "Admin Test", subtitle: "Admin - Test Account", initials: "AT", iconName: "Settings" },
 ];
@@ -210,9 +210,9 @@ const NAV_EXPERT = [
 const NAV_PRESIDENT = [
   { section: "WORKSPACE" },
   { key: "p-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
-  { key: "p-queue", label: "Final Approval Queue", icon: "Award" },
-  { section: "DECISION" },
-  { key: "p-approve", label: "Active Approval", icon: "ShieldCheck" },
+  { key: "p-queue", label: "Contract Queue", icon: "FileSignature" },
+  { section: "CONTRACTS" },
+  { key: "p-approve", label: "Issue Contract", icon: "ShieldCheck" },
   { key: "p-contracts", label: "Contract Tracking", icon: "FileSignature" },
   { key: "p-analytics", label: "AI Analytics", icon: "TrendingUp" },
 ];

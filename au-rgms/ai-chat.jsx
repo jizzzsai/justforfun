@@ -9,7 +9,7 @@ const ROLE_INTRO = {
   dean: "Hi, I'm AU AI. I can help with your faculty's screening queue, the review workflow, and AU grant rules.",
   committee: "Hi, I'm AU AI. I can help with your faculty's committee reviews, scoring, and AU grant rules.",
   iras: "Hi, I'm AU AI for RASSC. Ask me about any faculty's activity, publication grants, approval rates, what's under review, or grant rules.",
-  president: "Hi, I'm AU AI. Ask me university-wide questions, publication grant totals, what's awaiting your approval, approved budget so far, or grant rules.",
+  president: "Hi, I'm AU AI. Ask me university-wide questions, publication grant totals, what's awaiting a contract, approved budget so far, or grant rules.",
   ofm: "Hi, I'm AU AI. I can help with disbursements, publication reward payments, the 30/40/30 payment gates, and totals.",
   expert: "Hi, I'm AU AI. I can help with your assigned reviews and AU evaluation criteria.",
   admin: "Hi, I'm AU AI. Ask me about users, the system, any faculty's activity, or grant rules.",
@@ -28,7 +28,7 @@ const ROLE_SUGGEST = {
 };
 const ROLE_LABEL = {
   researcher: "Researcher assistant", dean: "Dean assistant", committee: "Committee assistant",
-  iras: "RASSC assistant", president: "President assistant", ofm: "Finance assistant",
+  iras: "RASSC assistant", president: "Vice President assistant", ofm: "Finance assistant",
   expert: "Expert reviewer assistant", admin: "Admin assistant",
 };
 

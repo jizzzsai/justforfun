@@ -812,17 +812,17 @@ function PresidentDashboard({ navigate }) {
   return (
     <>
       <PageHeader
-        title="President's Dashboard"
-        desc="Final approval queue. Approve, reject, or mark contracts as signed."
+        title="Vice President's Dashboard"
+        desc="Review proposals and issue grant contracts."
         actions={
           <button className="btn btn-primary" onClick={() => navigate("p-queue")}>
-            <Icon name="Award" size={14} /> Open Approval Queue
+            <Icon name="FileSignature" size={14} /> Open Contract Queue
           </button>
         }
       />
 
       <div className="stats">
-        <Stat label="Awaiting My Approval"     value={n("president_review")} icon="Award" tone="gold" />
+        <Stat label="Awaiting Contract"        value={n("president_review")} icon="FileSignature" tone="gold" />
         <Stat label="Active Grants"            value={n("active")} icon="FileSignature" tone="navy" />
         <Stat label="Approved (system)"        value={n("_approved")} icon="CheckCircle" tone="green" />
         <Stat label="Completed"                value={n("completed")} icon="Coins" />
@@ -830,7 +830,7 @@ function PresidentDashboard({ navigate }) {
 
       <div className="grid-2">
         <div className="card card-pad-0">
-          <div className="card-head"><h3>Approval Queue</h3>
+          <div className="card-head"><h3>Contract Queue</h3>
             <div className="grow"></div>
             <button className="btn btn-ghost btn-sm" onClick={() => navigate("p-queue")}>
               Open queue <Icon name="ArrowRight" size={12} />
@@ -840,7 +840,7 @@ function PresidentDashboard({ navigate }) {
             <thead><tr><th>ID</th><th>Title</th><th style={{textAlign: "right"}}>Budget</th><th>Status</th></tr></thead>
             <tbody>
               {queueRows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
-              {queueRows && queueRows.length === 0 && <tr><td colSpan="4"><Empty title="No applications awaiting President approval" desc="Completed expert reviews will appear here." icon="Award" /></td></tr>}
+              {queueRows && queueRows.length === 0 && <tr><td colSpan="4"><Empty title="No applications awaiting a contract" desc="Completed expert reviews will appear here." icon="FileSignature" /></td></tr>}
               {(queueRows || []).map(a => (
                 <tr key={a.id} style={{cursor: "pointer"}} onClick={() => navigate("p-approve")}>
                   <td><span className="id">{a.id}</span></td>
@@ -877,7 +877,7 @@ function PresidentDashboard({ navigate }) {
             <div className="card-head"><h3>Recent Approvals</h3></div>
             <div style={{padding: "8px 0"}}>
               {approvedRows === null && <div style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>Loading approvals...</div>}
-              {approvedRows && approvedRows.length === 0 && <Empty title="No recent approvals" desc="President-approved grants will appear here." icon="Award" />}
+              {approvedRows && approvedRows.length === 0 && <Empty title="No recent contracts" desc="Grants with issued contracts will appear here." icon="FileSignature" />}
               {(approvedRows || []).slice(0, 3).map((a, i) => (
                 <div key={i} style={{display: "flex", alignItems: "center", gap: 10, padding: "10px 20px", borderBottom: i < 2 ? "1px solid var(--line-2)" : "none"}}>
                   <div style={{width: 30, height: 30, borderRadius: "50%", background: "var(--au-cream)", color: "var(--au-crimson)", display: "grid", placeItems: "center"}}>
@@ -907,15 +907,15 @@ function PresidentReviewDetail({ app, onBack, onDownload, onView, toast, setConf
 
   const decide = (approved) => setConfirm({
     kind: approved ? "success" : "danger",
-    title: approved ? "Approve and issue contract?" : "Reject this application?",
+    title: approved ? "Issue and sign contract?" : "Reject this application?",
     message: approved
-      ? app.code + " will be approved and a contract record created."
-      : "Rejection by the President is final.",
-    confirmLabel: approved ? "Approve" : "Reject",
+      ? app.code + " will have a grant contract issued and move to contract tracking."
+      : "Rejection by the Vice President is final.",
+    confirmLabel: approved ? "Issue Contract" : "Reject",
     onConfirm: async () => {
       try {
         await window.DB.presidentDecision(app.id, approved, conditions);
-        toast(app.code + (approved ? " approved. Contract is ready." : " rejected."));
+        toast(app.code + (approved ? " contract issued. Ready for signing." : " rejected."));
         afterDecision();
       } catch (e) { toast("Error: " + ((e && e.message) || e)); }
     },
@@ -924,7 +924,7 @@ function PresidentReviewDetail({ app, onBack, onDownload, onView, toast, setConf
   return (
     <>
       <PageHeader
-        title={"Final Approval - " + app.code}
+        title={"Issue Contract - " + app.code}
         desc={app.title}
         actions={
           <>
@@ -982,14 +982,14 @@ function PresidentReviewDetail({ app, onBack, onDownload, onView, toast, setConf
         </div>
 
         <div className="card card-pad-0" style={{ alignSelf: "start" }}>
-          <div className="card-head"><h3>President Decision</h3></div>
+          <div className="card-head"><h3>Vice President Decision</h3></div>
           <div className="card-body">
             <div className="field">
-              <label>Approval conditions</label>
+              <label>Contract conditions</label>
               <textarea className="comment-input" value={conditions} onChange={e => setConditions(e.target.value)} />
             </div>
             <div className="flex flex-col gap-2">
-              <button className="btn btn-primary btn-block" onClick={() => decide(true)}><Icon name="Award" size={14} /> Approve and Issue Contract</button>
+              <button className="btn btn-primary btn-block" onClick={() => decide(true)}><Icon name="FileSignature" size={14} /> Issue Contract &amp; Sign</button>
               <button className="btn btn-danger btn-block" onClick={() => decide(false)}><Icon name="X" size={14} /> Reject</button>
             </div>
           </div>
@@ -1024,7 +1024,7 @@ function PresidentQueue({ navigate, onDownload, onView, toast, setConfirm }) {
 
   return (
     <>
-      <PageHeader title="Final Approval Queue" desc="Open a proposal to review the file and expert scores before approving." />
+      <PageHeader title="Contract Queue" desc="Open a proposal to check the file and expert scores, then issue the grant contract." />
       <div className="card card-pad-0">
         {(rows === null || loadingDetail) && <div style={{ padding: "36px", textAlign: "center", color: "var(--ink-3)" }}>Loading…</div>}
         {rows !== null && !loadingDetail && rows.length === 0 && <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>Nothing in this queue right now.</div>}

@@ -201,10 +201,10 @@ const ROLE_CONFIG = {
   president: {
     nav: APP.NAV_PRESIDENT,
     homeKey: "p-dashboard",
-    crumbRoot: "Office of the President",
+    crumbRoot: "Office of the Vice President",
     sidebarFooter: {
-      title: "President's Office",
-      body: "Final approval rests with the President. The grant contract must be signed within 45 days.",
+      title: "Vice President's Office",
+      body: "The Vice President issues and signs the grant contract within 45 days.",
     },
   },
   ofm: {

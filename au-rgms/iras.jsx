@@ -470,9 +470,9 @@ function RASSCPresident({ onDownload, toast, setConfirm }) {
 
   const decide = (approved) => setConfirm({
     kind: approved ? "success" : "danger",
-    title: approved ? "Approve and issue contract?" : "Reject this application?",
-    message: approved ? "A contract record will be created and the application will move to contract tracking." : "Rejection by the President is final.",
-    confirmLabel: approved ? "Approve" : "Reject",
+    title: approved ? "Issue and sign contract?" : "Reject this application?",
+    message: approved ? "A contract record will be created and the application will move to contract tracking." : "Rejection by the Vice President is final.",
+    confirmLabel: approved ? "Issue Contract" : "Reject",
     onConfirm: async () => {
       if (!app) return;
       try {
@@ -485,14 +485,14 @@ function RASSCPresident({ onDownload, toast, setConfirm }) {
     },
   });
 
-  if (loading) return <><PageHeader title="President Approval" desc="Final university-level decision before contract issuance." /><div className="card" style={{ padding: 44, textAlign: "center", color: "var(--ink-3)" }}>Loading...</div></>;
-  if (!app) return <><PageHeader title="President Approval" desc="Final university-level decision before contract issuance." /><div className="card"><Empty title="No applications awaiting President approval" desc="Completed expert reviews will appear here." icon="Award" /></div></>;
+  if (loading) return <><PageHeader title="Issue Contract" desc="Check the proposal and expert reviews, then issue the grant contract." /><div className="card" style={{ padding: 44, textAlign: "center", color: "var(--ink-3)" }}>Loading...</div></>;
+  if (!app) return <><PageHeader title="Issue Contract" desc="Check the proposal and expert reviews, then issue the grant contract." /><div className="card"><Empty title="No applications awaiting a contract" desc="Completed expert reviews will appear here." icon="FileSignature" /></div></>;
 
   const expertReviews = (app.reviews || []).filter(r => r.kind === "expert");
   const avg = expertReviews.length ? Math.round(expertReviews.reduce((s, r) => s + Number(r.score || 0), 0) / expertReviews.length) : 0;
   return (
     <>
-      <PageHeader title={"President Approval - " + app.code} desc={app.title} actions={<Badge status={window.DB.statusBadge(app.status)} />} />
+      <PageHeader title={"Issue Contract - " + app.code} desc={app.title} actions={<Badge status={window.DB.statusBadge(app.status)} />} />
       <div className="grid-2">
         <div>
           <div className="card card-pad-0 mb-4">
@@ -518,14 +518,14 @@ function RASSCPresident({ onDownload, toast, setConfirm }) {
           </div>
         </div>
         <div className="card card-pad-0">
-          <div className="card-head"><h3>President Decision</h3></div>
+          <div className="card-head"><h3>Vice President Decision</h3></div>
           <div className="card-body">
             <div className="field">
-              <label>Approval conditions</label>
+              <label>Contract conditions</label>
               <textarea className="comment-input" value={conditions} onChange={e => setConditions(e.target.value)} />
             </div>
             <div className="flex flex-col gap-2">
-              <button className="btn btn-primary btn-block" onClick={() => decide(true)}><Icon name="Award" size={14} /> Approve and Issue Contract</button>
+              <button className="btn btn-primary btn-block" onClick={() => decide(true)}><Icon name="FileSignature" size={14} /> Issue Contract &amp; Sign</button>
               <button className="btn btn-danger btn-block" onClick={() => decide(false)}><Icon name="X" size={14} /> Reject</button>
             </div>
           </div>

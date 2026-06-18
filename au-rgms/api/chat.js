@@ -13,14 +13,14 @@ THE 8 ROLES
 - Researcher Test: submits AU grant applications and files progress/final reports.
 - Dean Test: screens new proposals, sends eligible requests to the Faculty Academic Committee, then signs and forwards approved requests.
 - Committee Test: performs the Faculty Academic Committee review and recommendation.
-- RASSC Test: receives dean-forwarded requests, performs office screening, assigns expert reviewers where required, and forwards eligible requests to the President.
+- RASSC Test: receives dean-forwarded requests, performs office screening, assigns expert reviewers where required, and forwards eligible requests to the Vice President.
 - Expert 1 / Expert 2 / Expert 3: evaluate assigned proposals and submit recommendations.
-- President Test: gives the final university decision.
+- Vice President Test: issues and signs the grant contract after expert review (the final step before disbursement).
 - Finance Test: handles eligible grant disbursements.
 - Admin Test: manages users, reference tables, audit logs, and settings.
 
 THE 14-STAGE WORKFLOW
-Submission -> Dean Screening -> Faculty Committee Review -> Dean Sign & Forward -> RASSC Received -> Expert Review by assigned reviewers -> President Approval -> Contract Signed -> 1st Payment 30% -> Progress Report -> 2nd Payment 40% -> Final Report -> 3rd Payment 30% -> Project Closed.
+Submission -> Dean Screening -> Faculty Committee Review -> Dean Sign & Forward -> RASSC Received -> Expert Review by assigned reviewers -> Vice President issues Contract -> Contract Signed -> 1st Payment 30% -> Progress Report -> 2nd Payment 40% -> Final Report -> 3rd Payment 30% -> Project Closed.
 
 AU-R1 RESEARCH GRANT RULES (Applications Process and Required Documents 2024-2025)
 - Maximum grant: 100,000 THB per academic year.
@@ -36,7 +36,7 @@ AU-R3 PAPER PRESENTATION GRANT RULES (AU Announcement No.13/2024 and Application
 - Proposal must reach RASSC at least 30 days before the registration period.
 - Required documents include the full research article, Turnitin result not exceeding 20%, peer review comments if any, and a dean-signed memo with estimated budget.
 - The paper must be accepted for presentation by a qualified professional research society/association event; poster presentation is not supported.
-- Approval flow: requester -> Dean -> Faculty Academic Committee -> RASSC -> President final decision.
+- Approval flow: requester -> Dean -> Faculty Academic Committee -> RASSC -> Vice President final decision.
 - After presentation, the researcher must submit a travel report to RASSC; otherwise they will not be eligible for other grants.
 
 AU-R4 PUBLICATION GRANT / REWARD REFERENCE, THB
@@ -66,7 +66,7 @@ function buildRoleNote(ctx) {
     dean: "This user is a DEAN who can only see their OWN faculty. Only discuss their faculty's applications/queues (see DATA) and general rules. Never reveal other faculties' data.",
     committee: "This user is a FACULTY COMMITTEE member who can only see their OWN faculty. Only discuss their faculty's reviews (see DATA) and general rules. Never reveal other faculties' data.",
     iras: "This user is RASSC with UNIVERSITY-WIDE visibility. They may ask cross-faculty analytics, publication grant queues, approval rates, and totals. Answer with specific numbers from DATA.",
-    president: "This user is the PRESIDENT with UNIVERSITY-WIDE visibility. They may ask cross-faculty analytics, approvals, publication grant totals, and totals. Answer with specific numbers from DATA.",
+    president: "This user is the VICE PRESIDENT with UNIVERSITY-WIDE visibility. They issue grant contracts after expert review and may ask cross-faculty analytics, contracts issued, publication grant totals, and budget totals. Answer with specific numbers from DATA.",
     ofm: "This user is FINANCE/OFM. Discuss disbursements, publication reward payments, the 30/40/30 payment gates, and totals from DATA.",
     expert: "This user is an EXPERT reviewer. Only discuss THEIR assigned applications (see DATA) and evaluation guidance. Never reveal other faculties' or system-wide data.",
     admin: "This user is ADMIN with university-wide visibility for users and analytics. Answer with numbers from DATA.",
