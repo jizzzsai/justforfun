@@ -1440,17 +1440,46 @@ function AdminSettings({ toast }) {
     { key: "tranche_2", label: "Second tranche", value: 40, unit: "%" },
     { key: "tranche_3", label: "Final tranche", value: 30, unit: "%" },
   ];
+  const CAP_FIELDS = [
+    { key: "remuneration", label: "Remuneration (research assistant)" },
+    { key: "equipment", label: "Research equipment" },
+    { key: "travel", label: "Travel / data collection" },
+    { key: "misc", label: "Miscellaneous" },
+  ];
+  const [caps, setCaps] = useState(D.DEFAULT_BUDGET_CAPS || { remuneration: 30, equipment: 50, travel: 40, misc: 20 });
+  const [busy, setBusy] = useState(false);
+  useEffect(() => { window.DB.budgetCaps().then(setCaps).catch(() => {}); }, []);
+  const setCap = (k, v) => setCaps(c => ({ ...c, [k]: Math.max(0, Math.min(100, parseInt((v + "").replace(/[^0-9]/g, ""), 10) || 0)) }));
   const save = async () => {
+    setBusy(true);
     try {
+      await window.DB.saveSetting("budget_caps", caps, "Budget category caps (% of total grant)");
       await window.DB.saveSetting("workflow_policy", { settings: settings }, "Workflow policy");
-      toast("Settings saved to Supabase.");
+      toast("Settings saved. Researcher budget caps now use these values.");
     } catch (e) {
       toast("Error: " + ((e && e.message) || e));
-    }
+    } finally { setBusy(false); }
   };
   return (
     <>
-      <PageHeader title="System Settings" desc="Workflow rules, payment splits, and policy values." actions={<button className="btn btn-primary" onClick={save}>Save Changes</button>} />
+      <PageHeader title="System Settings" desc="Workflow rules, payment splits, and policy values." actions={<button className="btn btn-primary" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save Changes"}</button>} />
+      <div className="card card-pad-0 mb-4">
+        <div className="card-head"><h3>Budget Category Caps</h3></div>
+        <div className="card-body" style={{ paddingBottom: 4 }}>
+          <p className="text-sm text-muted" style={{ marginTop: 0 }}>Maximum each category may take as a % of the total grant. The researcher submit form enforces these live — adjust them here to allow the exceptions the policy permits.</p>
+        </div>
+        <div>
+          {CAP_FIELDS.map((f, i) => (
+            <div key={f.key} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderTop: "1px solid var(--line-2)" }}>
+              <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{f.label}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <input value={caps[f.key]} onChange={e => setCap(f.key, e.target.value)} style={{ width: 80, padding: "6px 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", textAlign: "right", fontWeight: 600 }} />
+                <span className="text-sm text-muted">% max</span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
       <div className="card card-pad-0">
         <div className="card-head"><h3>Workflow Policy</h3></div>
         <div>

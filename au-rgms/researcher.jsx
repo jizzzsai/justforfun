@@ -150,22 +150,32 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
 }
 
 const RESEARCHER_DEFAULT_DRAFT = {
-  title: "AI-Based Research Grant Tracking System for Assumption University",
-  field: "Information Technology / Educational Technology",
+  title: "",
+  field: "",
   type: "Individual Research",
-  duration: "12",
-  keywords: "research management, workflow, machine learning, higher education",
-  name: "", title2: "", email: "", phone: "",
-  school: "Vincent Mary School of Engineering, Science and Technology",
-  department: "Information Technology",
-  outcome: "A clean live test run through submission, review, approval, contract, report, and payment gates.",
+  startDate: "", endDate: "", duration: "12",
+  keywords: "",
+  name: "", title2: "", auId: "", email: "", phone: "",
+  school: "",
+  department: "",
+  outcome: "",
 };
 const RESEARCHER_DEFAULT_BUDGET_ROWS = [
-  { item: "Remuneration (research assistant)", amount: 30000 },
-  { item: "Research equipment", amount: 40000 },
-  { item: "Travel for off-campus data collection", amount: 18000 },
-  { item: "Miscellaneous (postage, photocopying, binding)", amount: 12000 },
+  { item: "Remuneration (research assistant)", amount: 30000, purpose: "" },
+  { item: "Research equipment", amount: 40000, purpose: "" },
+  { item: "Travel for off-campus data collection", amount: 18000, purpose: "" },
+  { item: "Miscellaneous (postage, photocopying, binding)", amount: 12000, purpose: "" },
 ];
+
+// Whole months between two ISO dates (min 1). Used to auto-derive duration.
+function monthsBetween(startISO, endISO) {
+  if (!startISO || !endISO) return 0;
+  var s = new Date(startISO), e = new Date(endISO);
+  if (isNaN(s) || isNaN(e) || e < s) return 0;
+  var m = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
+  if (e.getDate() >= s.getDate()) m += 1; // count the final partial month
+  return Math.max(1, m);
+}
 
 /* ---------- B. Submit Application ---------- */
 function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
@@ -176,6 +186,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   const total = budgetRows.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const [reqTotal, setReqTotal] = useState("100000");
   const setAmt = (i, v) => setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, amount: (v + "").replace(/[^0-9]/g, "") } : r));
+  const setPurpose = (i, v) => setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, purpose: v } : r));
 
   const [files, setFiles] = useState([]);
   const onFiles = (e) => { const fs = Array.from(e.target.files || []); setFiles(prev => prev.concat(fs)); e.target.value = ""; };
@@ -184,12 +195,18 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [docType, setDocType] = useState("Research Proposal");
+  const [caps, setCaps] = useState(RA.DEFAULT_BUDGET_CAPS || { remuneration: 30, equipment: 50, travel: 40, misc: 20 });
+  const capArr = [caps.remuneration, caps.equipment, caps.travel, caps.misc];
+  const autoDuration = monthsBetween(draft.startDate, draft.endDate);
+
+  useEffect(() => { window.DB.budgetCaps().then(setCaps).catch(() => {}); }, []);
 
   useEffect(() => {
     (async () => {
       try {
         const p = await window.AUTH.profile();
-        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.title || d.title2, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone }));
+        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone }));
       } catch (e) {}
     })();
   }, [applicationId]);
@@ -234,6 +251,8 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
           field: app.field || "",
           keywords: app.keywords || "",
           duration: String(app.duration_months || 12),
+          startDate: app.start_date || "",
+          endDate: app.end_date || "",
           school: app.faculty || "",
           department: app.department || "",
           outcome: app.abstract || "",
@@ -279,22 +298,28 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
     setErr("");
     if (submit && !draft.title.trim()) { setErr("Research title is required."); return; }
     if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
+    if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
+    if (submit && (!draft.startDate || !draft.endDate)) { setErr("Select the project start and expected end dates."); return; }
+    if (submit && autoDuration <= 0) { setErr("The expected end date must be after the start date."); return; }
     if (submit && Number(reqTotal) > 100000) { setErr("Requested amount (" + Number(reqTotal).toLocaleString() + " THB) exceeds the 100,000 THB maximum for AU-R1 research grants."); return; }
     if (submit && Number(reqTotal) <= 0) { setErr("Enter the grant amount you are requesting."); return; }
     if (submit && total !== Number(reqTotal)) { setErr("Budget breakdown (" + total.toLocaleString() + " THB) must equal the requested total (" + Number(reqTotal).toLocaleString() + " THB)."); return; }
     if (submit) {
-      const caps = [30, 50, 40, 20];
-      const overIdx = budgetRows.findIndex((b, i) => total > 0 && Math.round((Number(b.amount) || 0) / total * 100) > caps[i]);
-      if (overIdx !== -1) { setErr(budgetRows[overIdx].item + " exceeds its AU cap of " + caps[overIdx] + "% of the total budget."); return; }
+      const overIdx = budgetRows.findIndex((b, i) => total > 0 && Math.round((Number(b.amount) || 0) / total * 100) > capArr[i]);
+      if (overIdx !== -1) { setErr(budgetRows[overIdx].item + " exceeds its AU cap of " + capArr[overIdx] + "% of the total budget."); return; }
     }
     setBusy(true);
     try {
+      // Persist the applicant's own details to their profile (enter once, reused).
+      try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department }); } catch (e) {}
       const app = await window.DB.createApplication({
         title: draft.title, abstract: draft.outcome, field: draft.field,
         faculty: draft.school, department: draft.department, keywords: draft.keywords,
-        requested_amount: Number(reqTotal), duration_months: draft.duration, budget_breakdown: budgetRows,
+        requested_amount: Number(reqTotal), duration_months: autoDuration || draft.duration,
+        start_date: draft.startDate || null, end_date: draft.endDate || null,
+        budget_breakdown: budgetRows,
       }, submit, editingId);
-      for (const f of files) { try { await window.DB.uploadDocument(app.id, f, null); } catch (e) {} }
+      for (const f of files) { try { await window.DB.uploadDocument(app.id, f, docType || null); } catch (e) {} }
       if (!submit) {
         setEditingId(app.id);
         if (setSelectedApplicationId) setSelectedApplicationId(app.id);
@@ -340,20 +365,30 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                 <input value={draft.field} onChange={e => upd("field", e.target.value)} />
               </div>
               <div className="field">
-                <label>Research Type</label>
+                <label>Work Type</label>
                 <select value={draft.type} onChange={e => upd("type", e.target.value)}>
-                  <option>Individual Research</option>
-                  <option>Collaborative Research</option>
-                  <option>Creative Work</option>
+                  {RA.WORK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
-              </div>
-              <div className="field">
-                <label>Duration (months)</label>
-                <input value={draft.duration} onChange={e => upd("duration", e.target.value)} />
               </div>
               <div className="field">
                 <label>Keywords</label>
                 <input value={draft.keywords} onChange={e => upd("keywords", e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Start Date</label>
+                <input type="date" value={draft.startDate} max={draft.endDate || undefined}
+                  onChange={e => upd("startDate", e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Expected End Date</label>
+                <input type="date" value={draft.endDate} min={draft.startDate || undefined}
+                  onChange={e => upd("endDate", e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Duration (auto-calculated)</label>
+                <input readOnly value={autoDuration ? autoDuration + (autoDuration === 1 ? " month" : " months") : "—"}
+                  style={{ background: "var(--paper-warm)", color: "var(--ink-2)", cursor: "not-allowed" }}
+                  title="Calculated automatically from the start and expected end dates" />
               </div>
             </div>
           </div>
@@ -365,16 +400,25 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
           <div className="section-body">
             <div className="form-grid">
               <div className="field">
+                <label>Title</label>
+                <select value={draft.title2} onChange={e => upd("title2", e.target.value)}>
+                  <option value="">Select title…</option>
+                  {RA.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="field">
                 <label>Full Name</label>
                 <input value={draft.name} onChange={e => upd("name", e.target.value)} />
               </div>
               <div className="field">
-                <label>Academic Title</label>
-                <input value={draft.title2} onChange={e => upd("title2", e.target.value)} />
+                <label>AU ID</label>
+                <input value={draft.auId} onChange={e => upd("auId", e.target.value)} placeholder="e.g. 5012345" />
               </div>
               <div className="field">
-                <label>Email</label>
-                <input value={draft.email} onChange={e => upd("email", e.target.value)} />
+                <label>Email (AU only)</label>
+                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} placeholder="name@au.edu"
+                  style={draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim()) ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : {}} />
+                {draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim()) && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}
               </div>
               <div className="field">
                 <label>Phone</label>
@@ -409,7 +453,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
 
         <div className="form-section">
           <h4><span className="num">4</span> Budget Information</h4>
-          <p className="section-sub">Enter any amount up to the 100,000 THB AU-R1 maximum, then itemise it below. Caps: remuneration ≤30%, travel ≤40%, equipment ≤50%, misc ≤20%.</p>
+          <p className="section-sub">Enter any amount up to the 100,000 THB AU-R1 maximum, then itemise it below. Caps: remuneration ≤{caps.remuneration}%, equipment ≤{caps.equipment}%, travel ≤{caps.travel}%, misc ≤{caps.misc}%.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field">
@@ -418,12 +462,8 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                   onChange={e => {
                     const v = (e.target.value + "").replace(/[^0-9]/g, ""); setReqTotal(v);
                     const t = Number(v) || 0, a = Math.round(t * 0.30), b = Math.round(t * 0.40), c = Math.round(t * 0.18);
-                    setBudgetRows([
-                      { item: "Remuneration (research assistant)", amount: a },
-                      { item: "Research equipment", amount: b },
-                      { item: "Travel for off-campus data collection", amount: c },
-                      { item: "Miscellaneous (postage, photocopying, binding)", amount: t - a - b - c },
-                    ]);
+                    const amts = [a, b, c, t - a - b - c];
+                    setBudgetRows(rows => rows.map((r, i) => ({ ...r, amount: amts[i] })));
                   }}
                   title="Enter any amount up to 100,000 THB — the breakdown below divides automatically"
                   style={Number(reqTotal) > 100000 ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)", fontWeight: 600 } : {}} />
@@ -437,18 +477,22 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                 <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
                   <table className="tbl">
                     <thead>
-                      <tr><th>Budget Item</th><th style={{ textAlign: "center" }}>% of total</th><th style={{ textAlign: "center" }}>AU cap</th><th style={{ width: 150, textAlign: "right" }}>Amount (THB)</th></tr>
+                      <tr><th>Budget Item</th><th>Purpose / note</th><th style={{ textAlign: "center" }}>% of total</th><th style={{ textAlign: "center" }}>AU cap</th><th style={{ width: 150, textAlign: "right" }}>Amount (THB)</th></tr>
                     </thead>
                     <tbody>
                       {budgetRows.map((b, i) => {
-                        const caps = [30, 50, 40, 20];
                         const pct = total > 0 ? Math.round((Number(b.amount) || 0) / total * 100) : 0;
-                        const over = pct > caps[i];
+                        const over = pct > capArr[i];
                         return (
                           <tr key={i}>
                             <td>{b.item}</td>
+                            <td>
+                              <input value={b.purpose || ""} onChange={e => setPurpose(i, e.target.value)}
+                                placeholder="e.g. 5,000 for transport to data site"
+                                style={{ width: "100%", minWidth: 160, fontSize: 12 }} />
+                            </td>
                             <td style={{ textAlign: "center", color: over ? "var(--au-crimson)" : "var(--ink-3)", fontWeight: over ? 600 : 400 }}>{pct}%</td>
-                            <td style={{ textAlign: "center", fontSize: 12, color: "var(--ink-3)" }}>≤ {caps[i]}%</td>
+                            <td style={{ textAlign: "center", fontSize: 12, color: "var(--ink-3)" }}>≤ {capArr[i]}%</td>
                             <td style={{ textAlign: "right" }}>
                               <input value={(Number(b.amount) || 0).toLocaleString()} onChange={e => setAmt(i, e.target.value)}
                                 style={{ width: 120, textAlign: "right", fontFamily: "ui-monospace, monospace" }} />
@@ -457,7 +501,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                         );
                       })}
                       <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}>
-                        <td>Total of breakdown</td><td></td><td></td>
+                        <td>Total of breakdown</td><td></td><td></td><td></td>
                         <td style={{ textAlign: "right", color: total !== Number(reqTotal) ? "var(--au-crimson)" : "inherit" }}>{fmtBaht(total)}</td>
                       </tr>
                     </tbody>
@@ -488,6 +532,16 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
           <h4><span className="num">6</span> Required Documents</h4>
           <p className="section-sub">Upload AU-R1 PDF documents. You can add or delete files while the application is still waiting for Dean screening.</p>
           <div className="section-body">
+            <div style={{ background: "var(--paper-warm)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "12px 14px", marginBottom: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--ink-2)" }}>Download the blank AU forms you need (opens in a new tab):</div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {RA.NECESSARY_DOCS.map(d => (
+                  <a key={d.file} href={d.file} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
+                    <Icon name="Download" size={13} /> {d.name}
+                  </a>
+                ))}
+              </div>
+            </div>
             {existingDocs.length > 0 && (
               <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
                 {existingDocs.map(d => (
@@ -524,10 +578,16 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                 ))}
               </div>
             )}
+            <div className="field" style={{ maxWidth: 360, marginBottom: 10 }}>
+              <label>Document type for the next upload</label>
+              <select value={docType} onChange={e => setDocType(e.target.value)}>
+                {RA.DOC_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
             <label className="upload-box mt-1" style={{ cursor: "pointer", display: "block" }}>
               <input type="file" accept="application/pdf,.pdf" multiple style={{ display: "none" }} onChange={onFiles} />
               <Icon name="Upload" size={26} className="icon" />
-              <div className="t">Click to upload PDF documents</div>
+              <div className="t">Click to upload your <b>{docType}</b></div>
               <div className="s">PDF · max 10 MB per file</div>
             </label>
           </div>

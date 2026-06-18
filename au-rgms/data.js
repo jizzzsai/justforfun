@@ -287,8 +287,45 @@ const FACULTIES = [
   { code: "MUSIC", name: "School of Music", departments: ["Music Performance", "Music Business"] },
 ];
 
+// Academic / personal title prefixes used at Assumption University (Brothers of
+// St. Gabriel + Thai academic ranks). Used by the applicant title dropdown.
+const AU_TITLES = [
+  "Mr.", "Mrs.", "Ms.",
+  "Dr.",
+  "Lecturer",
+  "Asst. Prof.", "Asst. Prof. Dr.",
+  "Assoc. Prof.", "Assoc. Prof. Dr.",
+  "Prof.", "Prof. Dr.",
+  "Rev. Bro.", "Rev. Bro. Dr.",
+];
+
+// Work type of the proposed grant (was "Research Type").
+const WORK_TYPES = ["Individual Research", "Collaborative Research", "Creative Work"];
+
+// Default budget category caps (% of total). Admin can override these in
+// Settings (stored in app_settings.budget_caps); the form falls back to these.
+const DEFAULT_BUDGET_CAPS = { remuneration: 30, equipment: 50, travel: 40, misc: 20 };
+
+// Blank AU-R1 forms a researcher may need to download (open in a new tab).
+const NECESSARY_DOCS = [
+  { name: "AU-R1-4 Research/Creative Grant Submission Form", file: "forms/AU-R1-4-Research-Creative-Grant-Submission-Form-1.pdf" },
+  { name: "AU-R1-3 Contract for Research Grant", file: "forms/AU-R1-3-Contract-for-Research-Grant.pdf" },
+  { name: "AU-R1-5 Progress Report Format", file: "forms/AU-R1-5-Progress-Report-Format.pdf" },
+  { name: "AU-R1-6 Final Report Format", file: "forms/AU-R1-6-Final-Report-Format.pdf" },
+];
+
+// Document types selectable when uploading a file.
+const DOC_TYPES = [
+  "Research Proposal",
+  "Project Budget Allocation",
+  "AU Research Submission Form (AU-R1-4)",
+  "Ethics / Consent document",
+  "Other supporting document",
+];
+
 window.AU = {
   ALL_STAGES, STATUS, FACULTIES, REQUIRED_DOCS, PAPER_PRESENTATION_DOCS,
+  AU_TITLES, WORK_TYPES, DEFAULT_BUDGET_CAPS, NECESSARY_DOCS, DOC_TYPES,
   PRIMARY_APP, APPLICATIONS,
   NOTIFS, PAYMENTS, ACTIVITY,
   ROLES,

@@ -157,6 +157,8 @@
         keywords: payload.keywords || null,
         requested_amount: Number(payload.requested_amount) || 0,
         duration_months: parseInt(payload.duration_months, 10) || 12,
+        start_date: payload.start_date || null,
+        end_date: payload.end_date || null,
         budget_breakdown: payload.budget_breakdown || null,
         status: submit ? "submitted" : "draft",
         submitted_at: submit ? new Date().toISOString() : (existing ? existing.submitted_at : null),
@@ -800,6 +802,31 @@
       var res = await sb.from("app_settings").upsert({
         key: key, value: value, label: label || key, updated_by: me, updated_at: new Date().toISOString(),
       }, { onConflict: "key" }).select().single();
+      if (res.error) throw res.error;
+      return res.data;
+    },
+    async getSetting(key, fallback) {
+      var res = await sb.from("app_settings").select("value").eq("key", key).maybeSingle();
+      if (res.error || !res.data) return fallback;
+      return res.data.value;
+    },
+    // Budget category caps (% of total). Admin-configurable; defaults from data.js.
+    async budgetCaps() {
+      var def = (window.AU && window.AU.DEFAULT_BUDGET_CAPS) || { remuneration: 30, equipment: 50, travel: 40, misc: 20 };
+      var v = await this.getSetting("budget_caps", def);
+      return Object.assign({}, def, v || {});
+    },
+    // Save the signed-in user's own applicant details to their profile.
+    // (role/faculty/email are locked server-side by the profiles_guard trigger.)
+    async updateMyProfile(fields) {
+      var me = await uid();
+      if (!me) throw new Error("You must be signed in.");
+      var patch = {};
+      ["full_name", "name_title", "au_id", "phone", "title", "department"].forEach(function (k) {
+        if (fields[k] !== undefined && fields[k] !== null) patch[k] = fields[k];
+      });
+      if (!Object.keys(patch).length) return null;
+      var res = await sb.from("profiles").update(patch).eq("id", me).select().single();
       if (res.error) throw res.error;
       return res.data;
     },

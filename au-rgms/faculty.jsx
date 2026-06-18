@@ -221,6 +221,16 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
+        const rej = () => setConfirm({
+          kind: "danger",
+          title: "Reject this application?",
+          message: app.code + " will be rejected at Dean screening. This ends the application.",
+          confirmLabel: "Reject",
+          onConfirm: async () => {
+            try { await window.DB.transition(app.id, "submitted", "reject"); toast(app.code + " rejected."); navigate("d-screen"); }
+            catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
+          },
+        });
         return (
           <>
             <PageHeader
@@ -299,6 +309,7 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
                   <div className="flex flex-col gap-2 mt-4">
                     <button className="btn btn-primary btn-block" disabled={docs.length === 0} onClick={forward}><Icon name="Send" size={14} /> Forward to Faculty Committee</button>
                     <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
+                    <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
                   </div>
                   {docs.length === 0 && <div className="text-sm text-muted mt-3">Upload at least one PDF before forwarding.</div>}
                 </div>
