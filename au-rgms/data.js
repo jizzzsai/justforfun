@@ -155,6 +155,7 @@ const NAV_RESEARCHER = [
   { key: "r-submit", label: "Submit Application", icon: "FilePlus" },
   { key: "r-applications", label: "My Applications", icon: "Folder" },
   { key: "r-publications", label: "Publication Grant", icon: "FileText" },
+  { key: "r-reimburse", label: "Reimbursement Claim", icon: "Receipt" },
   { section: "REPORTING" },
   { key: "r-progress", label: "Progress Report", icon: "FileText" },
   { key: "r-final", label: "Final Report", icon: "FileCheck" },
@@ -168,6 +169,7 @@ const NAV_DEAN = [
   { section: "QUEUES" },
   { key: "d-screen", label: "First Screening Queue", icon: "ClipboardCheck" },
   { key: "d-sign", label: "Sign & Forward Queue", icon: "FileSignature" },
+  { key: "d-reimburse", label: "Reimbursement Claims", icon: "Receipt" },
   { section: "TRACKING" },
   { key: "d-history", label: "Decision History", icon: "Clock" },
   { key: "d-analytics", label: "AI Analytics", icon: "TrendingUp" },
@@ -193,6 +195,7 @@ const NAV_RASSC = [
   { key: "i-assign", label: "Assign Experts", icon: "UserPlus" },
   { key: "i-reports", label: "Report Review", icon: "FileCheck" },
   { key: "i-publications", label: "Publication Grants", icon: "FileText" },
+  { key: "i-reimburse", label: "Reimbursements", icon: "Receipt" },
   { key: "i-analytics", label: "AI Analytics", icon: "TrendingUp" },
   { section: "TRACKING" },
   { key: "i-reviewers", label: "Reviewer Pool", icon: "Users" },
@@ -224,6 +227,7 @@ const NAV_OFM = [
   { key: "o-payments", label: "Payment Queue", icon: "Coins" },
   { key: "o-detail", label: "Grant Detail", icon: "FileText" },
   { key: "o-publications", label: "Publication Payments", icon: "Award" },
+  { key: "o-reimburse", label: "Reimbursement Payments", icon: "Receipt" },
   { section: "TRACKING" },
   { key: "o-history", label: "Payment History", icon: "Clock" },
 ];
@@ -314,6 +318,12 @@ const NECESSARY_DOCS = [
   { name: "AU-R1-6 Final Report Format", file: "forms/AU-R1-6-Final-Report-Format.pdf" },
 ];
 
+// Reimbursement claim categories (spend-first, claim-back).
+const REIMBURSE_CATEGORIES = [
+  "Travel & transport", "Materials & supplies", "Equipment", "Software & subscriptions",
+  "Publication / page fees", "Participant / data-collection costs", "Other",
+];
+
 // Document types selectable when uploading a file.
 const DOC_TYPES = [
   "Research Proposal",
@@ -325,7 +335,7 @@ const DOC_TYPES = [
 
 window.AU = {
   ALL_STAGES, STATUS, FACULTIES, REQUIRED_DOCS, PAPER_PRESENTATION_DOCS,
-  AU_TITLES, WORK_TYPES, DEFAULT_BUDGET_CAPS, NECESSARY_DOCS, DOC_TYPES,
+  AU_TITLES, WORK_TYPES, DEFAULT_BUDGET_CAPS, NECESSARY_DOCS, DOC_TYPES, REIMBURSE_CATEGORIES,
   PRIMARY_APP, APPLICATIONS,
   NOTIFS, PAYMENTS, ACTIVITY,
   ROLES,

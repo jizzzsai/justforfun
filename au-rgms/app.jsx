@@ -426,6 +426,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "r-final":         return <ResearcherFinal onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
     case "r-payments":      return <ResearcherPayments onDownload={c.onDownload} toast={c.toast} />;
     case "r-publications":  return <ResearcherPublicationGrants toast={c.toast} />;
+    case "r-reimburse":     return <ResearcherReimbursements toast={c.toast} />;
 
     /* ---- Dean ---- */
     case "d-dashboard":      return <DeanDashboard navigate={navigate} />;
@@ -435,6 +436,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "d-sign-detail":    return <FacultyDean onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-history":        return <DeanHistory onDownload={c.onDownload} />;
     case "d-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
+    case "d-reimburse":      return <DeanReimbursements toast={c.toast} />;
 
     /* ---- Committee ---- */
     case "c-dashboard":      return <CommitteeDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
@@ -450,6 +452,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "i-assign":         return <RASSCAssign applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-reports":        return <RASSCReports onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-publications":   return <RASSCPublicationGrants toast={c.toast} />;
+    case "i-reimburse":      return <RASSCReimbursements toast={c.toast} />;
     case "i-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
     case "i-reviewers":      return <RASSCReviewerPool toast={c.toast} />;
 
@@ -471,6 +474,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "o-payments":       return <RASSCPayment onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-detail":         return <OFMDetail onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-publications":   return <OFMPublicationPayments toast={c.toast} />;
+    case "o-reimburse":      return <OFMReimbursements toast={c.toast} />;
     case "o-history":        return <OFMHistory onDownload={c.onDownload} />;
 
     /* ---- Administrator ---- */

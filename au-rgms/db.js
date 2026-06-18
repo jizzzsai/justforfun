@@ -51,6 +51,23 @@
     var r = await sb.from("publication_grants").select("id", { count: "exact", head: true });
     return "PG-" + year + "-" + String((r.count || 0) + 1).padStart(3, "0");
   }
+  async function genReimbursementCode() {
+    var year = new Date().getFullYear();
+    var r = await sb.from("reimbursements").select("id", { count: "exact", head: true });
+    return "RB-" + year + "-" + String((r.count || 0) + 1).padStart(3, "0");
+  }
+  function reimbursementBadge(s) {
+    var m = {
+      draft: { label: "Draft", cls: "badge-draft" },
+      submitted: { label: "Submitted to Dean", cls: "badge-submitted" },
+      rassc_review: { label: "RASSC Review", cls: "badge-iras" },
+      payment_pending: { label: "OFM Payment Pending", cls: "badge-pending" },
+      paid: { label: "Paid", cls: "badge-paid" },
+      returned: { label: "Returned", cls: "badge-revision" },
+      rejected: { label: "Rejected", cls: "badge-rejected" },
+    };
+    return m[s] || { label: s || "Reimbursement", cls: "badge-draft" };
+  }
   function badge(s) { return STATUS_MAP[s] || { label: s || "—", cls: "badge-draft" }; }
   function publicationBadge(s) {
     var m = {
@@ -128,9 +145,27 @@
     };
   }
 
+  function mapReimbursement(r) {
+    return {
+      id: r.code, _uuid: r.id, title: r.title,
+      researcher: { name: r.researcher ? r.researcher.full_name : "-" },
+      faculty: r.faculty, department: r.department,
+      submittedAt: r.submitted_at ? fmtDate(r.submitted_at) : fmtDate(r.created_at),
+      budgetTotal: Number(r.approved_amount || r.requested_amount || 0),
+      requested_amount: Number(r.requested_amount || 0),
+      approved_amount: r.approved_amount != null ? Number(r.approved_amount) : null,
+      status: reimbursementBadge(r.status), statusKey: r.status,
+      category: r.category, description: r.description,
+      evidence_name: r.evidence_name, evidence_path: r.evidence_path,
+      dean_note: r.dean_note, review_note: r.review_note, payment_note: r.payment_note,
+      paid_at: r.paid_at, raw: r,
+    };
+  }
+
   window.DB = {
     statusBadge: badge,
     publicationStatusBadge: publicationBadge,
+    reimbursementStatusBadge: reimbursementBadge,
     publicationAwardAmount: publicationAmount,
     fmtDate: fmtDate,
     mapRow: mapRow,
@@ -687,6 +722,94 @@
         out.byIndex[idx] = (out.byIndex[idx] || 0) + 1;
       });
       out.byFaculty = Object.keys(out.byFaculty).map(function (k) { return out.byFaculty[k]; }).sort(function (a, b) { return b.total - a.total; });
+      return out;
+    },
+
+    // ---- Reimbursement claims (spend-first, claim-back): Dean -> RASSC -> OFM ----
+    async createReimbursement(payload, submit, id) {
+      var me = await uid();
+      if (!me) throw new Error("You must be signed in.");
+      var prof = await sb.from("profiles").select("faculty,department").eq("id", me).single();
+      var existing = null;
+      if (id) {
+        var ex = await sb.from("reimbursements").select("*").eq("id", id).eq("researcher_id", me).single();
+        if (ex.error) throw ex.error;
+        existing = ex.data;
+        if (["draft", "returned"].indexOf(existing.status) === -1) throw new Error("Only draft or returned claims can be edited.");
+      }
+      var row = {
+        title: payload.title || "Untitled claim",
+        description: payload.description || null,
+        category: payload.category || null,
+        requested_amount: Number(payload.requested_amount || 0),
+        faculty: payload.faculty || (prof.data && prof.data.faculty) || null,
+        department: payload.department || (prof.data && prof.data.department) || null,
+        status: submit ? "submitted" : "draft",
+        submitted_at: submit ? new Date().toISOString() : (existing ? existing.submitted_at : null),
+        updated_at: new Date().toISOString(),
+      };
+      if (!existing) { row.code = await genReimbursementCode(); row.researcher_id = me; }
+      var res = existing
+        ? await sb.from("reimbursements").update(row).eq("id", id).eq("researcher_id", me).select().single()
+        : await sb.from("reimbursements").insert(row).select().single();
+      if (res.error) throw res.error;
+      return res.data;
+    },
+    async uploadReimbursementEvidence(id, file) {
+      var safe = (file.name || "receipt.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
+      var key = "reimbursements/" + id + "/" + Date.now() + "_" + safe;
+      var up = await sb.storage.from("documents").upload(key, file, { contentType: file.type || "application/pdf", upsert: false });
+      if (up.error) throw up.error;
+      var r = await sb.from("reimbursements").update({ evidence_name: file.name, evidence_path: key, updated_at: new Date().toISOString() }).eq("id", id).select().single();
+      if (r.error) throw r.error;
+      return r.data;
+    },
+    async reimbursementEvidenceUrl(claim, download) {
+      var path = claim && (claim.evidence_path || (claim.raw && claim.raw.evidence_path));
+      if (!path) throw new Error("No receipt file is attached.");
+      var res = await sb.storage.from("documents").createSignedUrl(path, 60 * 5, { download: download ? (claim.evidence_name || true) : false });
+      if (res.error) throw res.error;
+      return res.data.signedUrl;
+    },
+    async myReimbursements() {
+      var me = await uid();
+      var res = await sb.from("reimbursements").select("*, researcher:profiles(full_name)").eq("researcher_id", me).order("created_at", { ascending: false });
+      if (res.error) throw res.error;
+      return (res.data || []).map(mapReimbursement);
+    },
+    async reimbursementQueue(statuses) {
+      var q = sb.from("reimbursements").select("*, researcher:profiles(full_name)").order("submitted_at", { ascending: true, nullsFirst: false });
+      if (statuses && statuses.length) q = q.in("status", statuses);
+      var res = await q;
+      if (res.error) throw res.error;
+      return (res.data || []).map(mapReimbursement);
+    },
+    // stage: "dean" (submitted -> rassc_review) or "rassc" (rassc_review -> payment_pending)
+    async reviewReimbursement(id, stage, decision, note, amount) {
+      var row = { updated_at: new Date().toISOString() };
+      if (decision === "return") row.status = "returned";
+      else if (decision === "reject") row.status = "rejected";
+      else if (stage === "dean") { row.status = "rassc_review"; row.dean_at = new Date().toISOString(); }
+      else { row.status = "payment_pending"; row.decided_at = new Date().toISOString(); row.approved_amount = Number(amount || 0); }
+      if (stage === "dean") row.dean_note = note || null; else row.review_note = note || null;
+      var res = await sb.from("reimbursements").update(row).eq("id", id).select().single();
+      if (res.error) throw res.error;
+      return res.data;
+    },
+    async payReimbursement(id, note) {
+      var res = await sb.from("reimbursements").update({ status: "paid", paid_at: new Date().toISOString(), payment_note: note || null, updated_at: new Date().toISOString() }).eq("id", id).select().single();
+      if (res.error) throw res.error;
+      return res.data;
+    },
+    async reimbursementStats() {
+      var res = await sb.from("reimbursements").select("faculty,status,requested_amount,approved_amount");
+      if (res.error) throw res.error;
+      var out = { total: 0, submitted: 0, rassc_review: 0, payment_pending: 0, paid: 0, requested_sum: 0, approved_sum: 0 };
+      (res.data || []).forEach(function (r) {
+        out.total++; out[r.status] = (out[r.status] || 0) + 1;
+        out.requested_sum += Number(r.requested_amount || 0);
+        out.approved_sum += Number(r.approved_amount || 0);
+      });
       return out;
     },
 

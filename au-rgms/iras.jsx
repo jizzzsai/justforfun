@@ -859,7 +859,119 @@ function OFMPublicationPayments({ toast }) {
   );
 }
 
+/* ---------- Reimbursement claims: Dean -> RASSC -> OFM ---------- */
+function ReimbursementReview({ title, desc, statuses, stage, toast }) {
+  const [rows, setRows] = useState(null);
+  const [selected, setSelected] = useState(null);
+  const [note, setNote] = useState("");
+  const [amount, setAmount] = useState("");
+  const load = () => window.DB.reimbursementQueue(statuses).then(rs => { setRows(rs); setSelected(s => s ? rs.find(x => x._uuid === s._uuid) || null : null); }).catch(() => setRows([]));
+  useEffect(() => { load(); }, []);
+  useEffect(() => { if (selected) setAmount(String(selected.approved_amount != null ? selected.approved_amount : selected.requested_amount || 0)); }, [selected && selected._uuid]);
+  const openEvidence = async (r, dl) => { try { window.open(await window.DB.reimbursementEvidenceUrl(r, dl), "_blank", "noopener,noreferrer"); } catch (e) { toast("No receipt PDF is attached."); } };
+  const review = async (decision) => {
+    if (!selected) return;
+    try {
+      await window.DB.reviewReimbursement(selected._uuid, stage, decision, note, amount);
+      const fwd = stage === "dean" ? "forwarded to RASSC" : "approved for OFM payment";
+      toast(selected.id + (decision === "approve" ? (" " + fwd + ".") : decision === "return" ? " returned to researcher." : " rejected."));
+      setSelected(null); setNote(""); load();
+    } catch (e) { toast("Error: " + ((e && e.message) || e)); }
+  };
+  return (
+    <>
+      <PageHeader title={title} desc={desc} />
+      <div className="grid-2">
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Claims to Review</h3></div>
+          <div>
+            {rows === null && <div style={{ padding: 32, textAlign: "center", color: "var(--ink-3)" }}>Loading claims…</div>}
+            {rows && rows.length === 0 && <Empty title="No claims awaiting you" desc="Reimbursement claims will appear here." icon="Receipt" />}
+            {(rows || []).map(r => (
+              <div key={r._uuid} onClick={() => setSelected(r)} style={{ padding: "15px 20px", borderBottom: "1px solid var(--line-2)", cursor: "pointer", background: selected && selected._uuid === r._uuid ? "var(--au-crimson-soft)" : "transparent" }}>
+                <div className="flex items-center gap-2 mb-2"><span className="id">{r.id}</span><Badge status={r.status} /></div>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{r.title}</div>
+                <div className="text-sm text-muted">{r.researcher.name} · {r.category || "—"} · {fmtBaht(r.requested_amount)}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Decision</h3></div>
+          {!selected && <Empty title="Select a claim" desc="Choose a claim to review." icon="FileSearch" />}
+          {selected && (
+            <div className="card-body">
+              <div className="meta-row"><span className="l">Researcher</span><span className="r">{selected.researcher.name}</span></div>
+              <div className="meta-row"><span className="l">Faculty</span><span className="r">{selected.faculty || "-"}</span></div>
+              <div className="meta-row"><span className="l">Category</span><span className="r">{selected.category || "-"}</span></div>
+              <div className="meta-row"><span className="l">Amount claimed</span><span className="r">{fmtBaht(selected.requested_amount)}</span></div>
+              {selected.description && <><div className="eyebrow mt-3 mb-2">Description</div><p style={{ margin: "0 0 12px", lineHeight: 1.6, color: "var(--ink-2)", fontSize: 13 }}>{selected.description}</p></>}
+              {selected.dean_note && stage === "rassc" && <div className="text-sm" style={{ color: "var(--ink-2)", marginBottom: 10 }}><b>Dean note:</b> {selected.dean_note}</div>}
+              {stage === "rassc" && <div className="field"><label>Approved amount (THB)</label><input value={amount} onChange={e => setAmount(e.target.value.replace(/[^0-9]/g, ""))} /></div>}
+              <div className="field"><label>{stage === "dean" ? "Dean note" : "RASSC note"}</label><textarea className="comment-input" value={note} onChange={e => setNote(e.target.value)} /></div>
+              <div className="flex gap-2 mb-3">
+                <button className="btn btn-secondary" onClick={() => openEvidence(selected, false)}><Icon name="Eye" size={13} /> View Receipts</button>
+                <button className="btn btn-secondary" onClick={() => openEvidence(selected, true)}><Icon name="Download" size={13} /> Download</button>
+              </div>
+              <div className="flex flex-col gap-2">
+                <button className="btn btn-primary btn-block" onClick={() => review("approve")}><Icon name="CheckCircle" size={14} /> {stage === "dean" ? "Approve & Forward to RASSC" : "Approve for OFM Payment"}</button>
+                <button className="btn btn-secondary btn-block" onClick={() => review("return")}><Icon name="Repeat" size={14} /> Return to Researcher</button>
+                <button className="btn btn-danger btn-block" onClick={() => review("reject")}><Icon name="X" size={14} /> Reject</button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function DeanReimbursements({ toast }) {
+  return <ReimbursementReview toast={toast} stage="dean" statuses={["submitted"]} title="Reimbursement Claims — Dean Review" desc="First review of expense claims from your faculty before forwarding to RASSC." />;
+}
+function RASSCReimbursements({ toast }) {
+  return <ReimbursementReview toast={toast} stage="rassc" statuses={["rassc_review"]} title="Reimbursement Claims — RASSC Review" desc="Verify dean-approved claims and set the approved amount for OFM payment." />;
+}
+
+function OFMReimbursements({ toast }) {
+  const [rows, setRows] = useState(null);
+  const [note, setNote] = useState("");
+  const load = () => window.DB.reimbursementQueue(["payment_pending"]).then(setRows).catch(() => setRows([]));
+  useEffect(() => { load(); }, []);
+  const openEvidence = async (r, dl) => { try { window.open(await window.DB.reimbursementEvidenceUrl(r, dl), "_blank", "noopener,noreferrer"); } catch (e) { toast("No receipt PDF is attached."); } };
+  const pay = async (r) => { try { await window.DB.payReimbursement(r._uuid, note); toast(r.id + " reimbursement marked paid."); setNote(""); load(); } catch (e) { toast("Error: " + ((e && e.message) || e)); } };
+  return (
+    <>
+      <PageHeader title="Reimbursement Payments" desc="OFM payment queue for RASSC-approved expense claims." />
+      <div className="card card-pad-0">
+        <table className="tbl">
+          <thead><tr><th>ID</th><th>Claim</th><th>Researcher</th><th>Category</th><th style={{ textAlign: "right" }}>Approved</th><th style={{ textAlign: "right" }}>Action</th></tr></thead>
+          <tbody>
+            {rows === null && <tr><td colSpan="6" style={{ textAlign: "center", padding: 32, color: "var(--ink-3)" }}>Loading…</td></tr>}
+            {rows && rows.length === 0 && <tr><td colSpan="6"><Empty title="No reimbursements ready to pay" desc="RASSC-approved claims will appear here." icon="Coins" /></td></tr>}
+            {(rows || []).map(r => (
+              <tr key={r._uuid}>
+                <td><span className="id">{r.id}</span></td>
+                <td className="title-cell"><div className="t" style={{ maxWidth: 280 }}>{r.title}</div></td>
+                <td style={{ fontSize: 12 }}>{r.researcher.name}</td>
+                <td style={{ fontSize: 12 }}>{r.category || "—"}</td>
+                <td style={{ textAlign: "right", fontWeight: 700 }}>{fmtBaht(r.approved_amount != null ? r.approved_amount : r.requested_amount)}</td>
+                <td className="actions">
+                  <button className="btn btn-secondary btn-sm" onClick={() => openEvidence(r, false)}><Icon name="Eye" size={12} /></button>
+                  <button className="btn btn-primary btn-sm" onClick={() => pay(r)}><Icon name="Coins" size={12} /> Mark Paid</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {rows && rows.length > 0 && <div className="card-body"><div className="field"><label>Payment note</label><input value={note} onChange={e => setNote(e.target.value)} placeholder="Optional receipt or batch reference" /></div></div>}
+      </div>
+    </>
+  );
+}
+
 /* ---------- J. Full Application Timeline ---------- */
 Object.assign(window, { RASSCReceived, RASSCAssign, RASSCExpert, RASSCPresident, RASSCContract, RASSCPayment,
   RASSCReports, RASSCPublicationGrants, OFMPublicationPayments,
+  DeanReimbursements, RASSCReimbursements, OFMReimbursements,
 });

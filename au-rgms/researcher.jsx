@@ -1286,8 +1286,89 @@ function ResearcherPublicationGrants({ toast }) {
   );
 }
 
+function ResearcherReimbursements({ toast }) {
+  const [me, setMe] = useState(null);
+  const [rows, setRows] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const [file, setFile] = useState(null);
+  const [form, setForm] = useState({ title: "", category: RA.REIMBURSE_CATEGORIES[0], description: "", requested_amount: "" });
+  const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
+  const load = () => {
+    window.AUTH.profile().then(setMe).catch(() => {});
+    window.DB.myReimbursements().then(setRows).catch(() => setRows([]));
+  };
+  useEffect(() => { load(); }, []);
+  const submit = async (saveDraft) => {
+    setErr("");
+    if (!form.title.trim()) { setErr("A short title for the claim is required."); return; }
+    if (!Number(form.requested_amount || 0)) { setErr("Enter the amount you are claiming back."); return; }
+    if (!saveDraft && !file) { setErr("Attach a PDF of your receipts before submitting."); return; }
+    setBusy(true);
+    try {
+      const r = await window.DB.createReimbursement({
+        title: form.title, category: form.category, description: form.description,
+        requested_amount: Number(form.requested_amount), faculty: me && me.faculty, department: me && me.department,
+      }, !saveDraft);
+      if (file) await window.DB.uploadReimbursementEvidence(r.id, file);
+      toast(saveDraft ? "Reimbursement draft saved." : r.code + " submitted to your Dean.");
+      setForm({ title: "", category: RA.REIMBURSE_CATEGORIES[0], description: "", requested_amount: "" });
+      setFile(null); load();
+    } catch (e) { setErr((e && e.message) || "Could not save the claim."); }
+    finally { setBusy(false); }
+  };
+  const openEvidence = async (r, download) => {
+    try { window.open(await window.DB.reimbursementEvidenceUrl(r, download), "_blank", "noopener,noreferrer"); }
+    catch (e) { toast("No receipt PDF is attached to this claim."); }
+  };
+  return (
+    <>
+      <PageHeader title="Reimbursement Claim" desc="Claim research expenses back after spending, with receipts. Routed: Dean → RASSC → OFM." actions={<Badge status={{ label: "Spend first · claim back", cls: "badge-academic" }} />} />
+      <div className="grid-2">
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>New Claim</h3></div>
+          <div className="card-body">
+            <div className="field"><label>Claim title</label><input value={form.title} onChange={e => setField("title", e.target.value)} placeholder="e.g. Conference travel reimbursement" /></div>
+            <div className="form-grid">
+              <div className="field"><label>Category</label><select value={form.category} onChange={e => setField("category", e.target.value)}>{RA.REIMBURSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+              <div className="field"><label>Amount claimed (THB)</label><input value={form.requested_amount} onChange={e => setField("requested_amount", e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 8500" /></div>
+            </div>
+            <div className="field"><label>Description / what you spent on</label><textarea className="comment-input" value={form.description} onChange={e => setField("description", e.target.value)} placeholder="Briefly itemise the expenses you are claiming." /></div>
+            <div className="field"><label>Receipts (PDF)</label><input type="file" accept="application/pdf,.pdf" onChange={e => setFile((e.target.files || [])[0] || null)} /></div>
+            {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, marginBottom: 10 }}>{err}</div>}
+            <div className="flex gap-2 justify-end">
+              <button className="btn btn-secondary" disabled={busy} onClick={() => submit(true)}>Save Draft</button>
+              <button className="btn btn-primary" disabled={busy} onClick={() => submit(false)}><Icon name="Send" size={14} /> Submit to Dean</button>
+            </div>
+          </div>
+        </div>
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>My Claims</h3></div>
+          <div>
+            {rows === null && <div style={{ padding: 32, textAlign: "center", color: "var(--ink-3)" }}>Loading claims…</div>}
+            {rows && rows.length === 0 && <Empty title="No reimbursement claims yet" desc="Your submitted claims will appear here." icon="Receipt" />}
+            {(rows || []).map(r => (
+              <div key={r._uuid} style={{ padding: "16px 20px", borderBottom: "1px solid var(--line-2)" }}>
+                <div className="flex items-center gap-2 mb-2"><span className="id">{r.id}</span><Badge status={r.status} /></div>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{r.title}</div>
+                <div className="text-sm text-muted">{r.category || "—"} · claimed {fmtBaht(r.requested_amount)}{r.approved_amount != null ? " · approved " + fmtBaht(r.approved_amount) : ""}</div>
+                {(r.dean_note || r.review_note) && <div className="text-sm" style={{ color: "var(--ink-2)", marginTop: 4 }}>{r.review_note || r.dean_note}</div>}
+                {r.evidence_name && <div className="flex gap-2 mt-3">
+                  <button className="btn btn-secondary btn-sm" onClick={() => openEvidence(r, false)}><Icon name="Eye" size={12} /> Receipts</button>
+                  <button className="btn btn-secondary btn-sm" onClick={() => openEvidence(r, true)}><Icon name="Download" size={12} /> Download</button>
+                </div>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 Object.assign(window, {
   ResearcherDashboard, ResearcherSubmit, ResearcherApplications,
   ResearcherApplicationDetail, ResearcherProgress, ResearcherFinal,
+  ResearcherReimbursements,
   ResearcherPayments, ResearcherPublicationGrants,
 });
