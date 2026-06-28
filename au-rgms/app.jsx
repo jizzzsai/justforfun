@@ -87,8 +87,12 @@ function LoginPage({ onLogin }) {
               <input value={pass} onChange={e => setPass(e.target.value)} type="password" autoComplete="current-password" />
             </div>
 
+            <div style={{ fontSize: 11, color: "var(--ink-3)", margin: "-6px 0 10px", lineHeight: 1.5 }}>
+              Signing in to an account <b>you created</b> (e.g. a new Dean)? Type its email + password above and press <b>Sign In</b> — don't click the demo buttons below, they replace the email with a built-in test account.
+            </div>
+
             <div className="field">
-              <label>Sign in as</label>
+              <label>Quick demo login (built-in test accounts)</label>
               <div className="role-radio" style={{gridTemplateColumns: "1fr 1fr", display: "grid", gap: 8}}>
                 {APP.ROLES.map(r => (
                   <label key={r.key} className={role === r.key ? "active" : ""} style={{padding: "10px 12px"}}>
@@ -97,7 +101,7 @@ function LoginPage({ onLogin }) {
                       name="role"
                       value={r.key}
                       checked={role === r.key}
-                      onChange={() => { setRole(r.key); setEmail(TEST_EMAIL_FOR[r.key] || email); }}
+                      onChange={() => { setRole(r.key); setEmail(TEST_EMAIL_FOR[r.key] || email); setPass(TEST_PASSWORD); }}
                       style={{display: "none"}}
                     />
                     <Icon name={r.iconName} size={16} style={{color: role === r.key ? "var(--au-crimson)" : "var(--ink-3)"}} />
