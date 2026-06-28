@@ -154,7 +154,7 @@ function FileRow({ doc, onDownload, onView, missing = false, compact = false }) 
         <Icon name="FileText" size={18} />
       </div>
       <div className="fmeta">
-        <div className="fn">{doc.name}</div>
+        <div className="fn">{doc.name}{doc.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{doc.doc_type}</span>}</div>
         <div className="fs">
           {missing
             ? <span style={{color: "#991B1B"}}>Missing — researcher to upload</span>

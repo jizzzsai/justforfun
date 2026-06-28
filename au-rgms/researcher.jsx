@@ -195,7 +195,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   const removeItem = (i) => setItems(rows => rows.length > 1 ? rows.filter((_, j) => j !== i) : rows);
 
   const [files, setFiles] = useState([]);
-  const onFiles = (e) => { const fs = Array.from(e.target.files || []); setFiles(prev => prev.concat(fs)); e.target.value = ""; };
+  const onFiles = (e) => { const fs = Array.from(e.target.files || []); setFiles(prev => prev.concat(fs.map(f => ({ file: f, docType })))); e.target.value = ""; };
   const [editingId, setEditingId] = useState(applicationId || null);
   const [existingDocs, setExistingDocs] = useState([]);
   const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
@@ -330,7 +330,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         budget_breakdown: budgetRows,
         budget_items: items.filter(it => (it.purpose || "").trim() || Number(it.amount) > 0),
       }, submit, editingId);
-      for (const f of files) { try { await window.DB.uploadDocument(app.id, f, docType || null); } catch (e) {} }
+      for (const it of files) { try { await window.DB.uploadDocument(app.id, it.file, it.docType || null); } catch (e) {} }
       if (!submit) {
         setEditingId(app.id);
         if (setSelectedApplicationId) setSelectedApplicationId(app.id);
@@ -580,7 +580,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                   <div className="file-row" key={d.id || d.name}>
                     <div className="ficon"><Icon name="FileText" size={18} /></div>
                     <div className="fmeta">
-                      <div className="fn">{d.name}</div>
+                      <div className="fn">{d.name}{d.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{d.doc_type}</span>}</div>
                       <div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div>
                     </div>
                     <div className="factions">
@@ -594,12 +594,12 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
             )}
             {files.length > 0 && (
               <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
-                {files.map((f, i) => (
+                {files.map((it, i) => (
                   <div className="file-row" key={i}>
                     <div className="ficon"><Icon name="FileText" size={18} /></div>
                     <div className="fmeta">
-                      <div className="fn">{f.name}</div>
-                      <div className="fs">{(f.size / 1024).toFixed(0)} KB · ready to upload</div>
+                      <div className="fn">{it.file.name}{it.docType && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{it.docType}</span>}</div>
+                      <div className="fs">{(it.file.size / 1024).toFixed(0)} KB · ready to upload</div>
                     </div>
                     <div className="factions">
                       <button className="btn btn-secondary btn-sm" onClick={() => setFiles(fs => fs.filter((_, j) => j !== i))}>
