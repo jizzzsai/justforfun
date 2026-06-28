@@ -318,6 +318,9 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   min-width: 280px; padding: 8px;
   z-index: 50;
   color: var(--ink-1);
+  max-height: calc(100vh - 80px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 .dropdown-section {
   padding: 8px 12px 4px;
