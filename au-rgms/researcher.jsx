@@ -203,6 +203,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   const [err, setErr] = useState("");
   const [docType, setDocType] = useState("Research Proposal");
   const [caps, setCaps] = useState(RA.DEFAULT_BUDGET_CAPS || { remuneration: 30, equipment: 50, travel: 40, misc: 20 });
+  const [split, setSplit] = useState({ remuneration: 30, equipment: 40, travel: 18, misc: 12 });
   const capArr = [caps.remuneration, caps.equipment, caps.travel, caps.misc];
   const autoDuration = monthsBetween(draft.startDate, draft.endDate);
 
@@ -212,6 +213,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
     (async () => {
       try {
         const p = await window.AUTH.profile();
+        if (p && p.budget_split) setSplit(s => ({ ...s, ...p.budget_split }));
         if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone }));
       } catch (e) {}
     })();
@@ -470,7 +472,8 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                 <input value={Number(reqTotal || 0).toLocaleString()}
                   onChange={e => {
                     const v = (e.target.value + "").replace(/[^0-9]/g, ""); setReqTotal(v);
-                    const t = Number(v) || 0, a = Math.round(t * 0.30), b = Math.round(t * 0.40), c = Math.round(t * 0.18);
+                    const t = Number(v) || 0;
+                    const a = Math.round(t * (split.remuneration || 0) / 100), b = Math.round(t * (split.equipment || 0) / 100), c = Math.round(t * (split.travel || 0) / 100);
                     const amts = [a, b, c, t - a - b - c];
                     setBudgetRows(rows => rows.map((r, i) => ({ ...r, amount: amts[i] })));
                   }}

@@ -1500,19 +1500,43 @@ function AdminAudit() {
 
 // Universal account/profile settings — available to every role via the header gear.
 function AccountSettings({ toast }) {
+  const SPLIT_DEFAULT = { remuneration: 30, equipment: 40, travel: 18, misc: 12 };
+  const SPLIT_FIELDS = [
+    { key: "remuneration", label: "Remuneration (research assistant)" },
+    { key: "equipment", label: "Research equipment" },
+    { key: "travel", label: "Travel / data collection" },
+    { key: "misc", label: "Miscellaneous" },
+  ];
   const [p, setP] = useState(null);
   const [f, setF] = useState({ name_title: "", full_name: "", au_id: "", phone: "" });
+  const [split, setSplit] = useState(SPLIT_DEFAULT);
+  const [caps, setCaps] = useState(D.DEFAULT_BUDGET_CAPS || { remuneration: 30, equipment: 50, travel: 40, misc: 20 });
   const [busy, setBusy] = useState(false);
   useEffect(() => {
+    window.DB.budgetCaps().then(setCaps).catch(() => {});
     window.AUTH.profile().then(pr => {
       setP(pr);
-      if (pr) setF({ name_title: pr.name_title || "", full_name: pr.full_name || "", au_id: pr.au_id || "", phone: pr.phone || "" });
+      if (pr) {
+        setF({ name_title: pr.name_title || "", full_name: pr.full_name || "", au_id: pr.au_id || "", phone: pr.phone || "" });
+        if (pr.budget_split) setSplit(Object.assign({}, SPLIT_DEFAULT, pr.budget_split));
+      }
     }).catch(() => {});
   }, []);
   const set = (k, v) => setF(s => Object.assign({}, s, { [k]: v }));
+  const setSplitVal = (k, v) => setSplit(s => ({ ...s, [k]: Math.max(0, Math.min(100, parseInt((v + "").replace(/[^0-9]/g, ""), 10) || 0)) }));
+  const isResearcher = p && p.role === "researcher";
+  const splitSum = split.remuneration + split.equipment + split.travel + split.misc;
+  const overCap = SPLIT_FIELDS.find(fd => split[fd.key] > caps[fd.key]);
   const save = async () => {
+    if (isResearcher && splitSum !== 100) { toast("Your budget split must total 100% (currently " + splitSum + "%)."); return; }
+    if (isResearcher && overCap) { toast(overCap.label + " exceeds the AU cap of " + caps[overCap.key] + "%."); return; }
     setBusy(true);
-    try { await window.DB.updateMyProfile(f); toast("Your profile has been updated."); }
+    try {
+      const patch = Object.assign({}, f);
+      if (isResearcher) patch.budget_split = split;
+      await window.DB.updateMyProfile(patch);
+      toast("Your profile has been updated.");
+    }
     catch (e) { toast("Error: " + ((e && e.message) || e)); }
     finally { setBusy(false); }
   };
@@ -1546,6 +1570,28 @@ function AccountSettings({ toast }) {
           </div>
         </div>
       </div>
+      {isResearcher && (
+        <div className="card card-pad-0 mt-4">
+          <div className="card-head"><h3>My Default Budget Split</h3>
+            <div className="grow"></div>
+            <span className="text-sm" style={{ color: splitSum === 100 ? "var(--ink-3)" : "var(--au-crimson)" }}>Total {splitSum}%{splitSum !== 100 ? " (must be 100%)" : ""}</span>
+          </div>
+          <div className="card-body" style={{ paddingBottom: 4 }}>
+            <p className="text-sm text-muted" style={{ marginTop: 0 }}>These percentages pre-fill the budget breakdown on your submit form when you enter a total. They must add up to 100% and stay within each AU cap.</p>
+          </div>
+          <div>
+            {SPLIT_FIELDS.map((fd, i) => (
+              <div key={fd.key} style={{ display: "flex", alignItems: "center", padding: "14px 20px", borderTop: "1px solid var(--line-2)" }}>
+                <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{fd.label}</div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <input value={split[fd.key]} onChange={e => setSplitVal(fd.key, e.target.value)} style={{ width: 74, padding: "6px 10px", border: "1px solid " + (split[fd.key] > caps[fd.key] ? "var(--au-crimson)" : "var(--line)"), borderRadius: "var(--r-sm)", textAlign: "right", fontWeight: 600, color: split[fd.key] > caps[fd.key] ? "var(--au-crimson)" : "inherit" }} />
+                  <span className="text-sm text-muted">% &nbsp;(cap ≤ {caps[fd.key]}%)</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </>
   );
 }
