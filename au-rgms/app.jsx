@@ -23,20 +23,21 @@ const TEST_EXPERT_ACCOUNTS = [
 
 /* ============= LOGIN PAGE ============= */
 function LoginPage({ onLogin }) {
-  const [role, setRole] = useState("researcher");
-  const [email, setEmail] = useState(TEST_EMAIL_FOR.researcher);
-  const [pass, setPass] = useState(TEST_PASSWORD);
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  async function doLogin(e) {
-    e.preventDefault(); setErr(""); setBusy(true);
+  async function signInWith(em, pw) {
+    setErr(""); setBusy(true);
     try {
-      const prof = await window.AUTH.signIn(email, pass);
+      const prof = await window.AUTH.signIn(em, pw);
       if (!prof) throw new Error("No profile found for this account.");
-      onLogin(prof);
+      onLogin(prof); // routes by the account's real role
     } catch (ex) { setErr((ex && ex.message) || "Sign-in failed."); setBusy(false); }
   }
+  function doLogin(e) { e.preventDefault(); signInWith(email.trim(), pass); }
+  function demoLogin(testEmail) { signInWith(testEmail, TEST_PASSWORD); }
 
   return (
     <div className="login-shell">
@@ -87,63 +88,32 @@ function LoginPage({ onLogin }) {
               <input value={pass} onChange={e => setPass(e.target.value)} type="password" autoComplete="current-password" />
             </div>
 
-            <div style={{ fontSize: 11, color: "var(--ink-3)", margin: "-6px 0 10px", lineHeight: 1.5 }}>
-              Signing in to an account <b>you created</b> (e.g. a new Dean)? Type its email + password above and press <b>Sign In</b> — don't click the demo buttons below, they replace the email with a built-in test account.
+            <div style={{ fontSize: 11, color: "var(--ink-3)", margin: "-6px 0 4px", lineHeight: 1.5 }}>
+              Your dashboard is decided by your account's role — sign in with your own AU email and password.
             </div>
-
-            <div className="field">
-              <label>Quick demo login (built-in test accounts)</label>
-              <div className="role-radio" style={{gridTemplateColumns: "1fr 1fr", display: "grid", gap: 8}}>
-                {APP.ROLES.map(r => (
-                  <label key={r.key} className={role === r.key ? "active" : ""} style={{padding: "10px 12px"}}>
-                    <input
-                      type="radio"
-                      name="role"
-                      value={r.key}
-                      checked={role === r.key}
-                      onChange={() => { setRole(r.key); setEmail(TEST_EMAIL_FOR[r.key] || email); setPass(TEST_PASSWORD); }}
-                      style={{display: "none"}}
-                    />
-                    <Icon name={r.iconName} size={16} style={{color: role === r.key ? "var(--au-crimson)" : "var(--ink-3)"}} />
-                    <div style={{flex: 1, minWidth: 0}}>
-                      <div className="role-title" style={{fontSize: 12}}>{r.name}</div>
-                      <div className="role-desc" style={{whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}>{r.subtitle}</div>
-                    </div>
-                  </label>
-                ))}
-              </div>
-            </div>
-
-            {role === "expert" && (
-              <div className="field">
-                <label>Expert account</label>
-                <div className="role-radio" style={{gridTemplateColumns: "1fr", display: "grid", gap: 8}}>
-                  {TEST_EXPERT_ACCOUNTS.map(a => (
-                    <label key={a.email} className={email === a.email ? "active" : ""} style={{padding: "9px 12px"}}>
-                      <input
-                        type="radio"
-                        name="expertAccount"
-                        value={a.email}
-                        checked={email === a.email}
-                        onChange={() => setEmail(a.email)}
-                        style={{display: "none"}}
-                      />
-                      <Icon name="FileSearch" size={15} style={{color: email === a.email ? "var(--au-crimson)" : "var(--ink-3)"}} />
-                      <div style={{flex: 1, minWidth: 0}}>
-                        <div className="role-title" style={{fontSize: 12}}>{a.label}</div>
-                        <div className="role-desc" style={{whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis"}}>{a.email}</div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
 
             {err && <div style={{color: "var(--au-crimson)", fontSize: 12, marginTop: 8}}>{err}</div>}
             <button className="btn btn-primary btn-block mt-4" type="submit" disabled={busy}>
               {busy ? "Signing in…" : <>Sign In <Icon name="ArrowRight" size={14} /></>}
             </button>
           </form>
+
+          <div style={{ borderTop: "1px solid var(--line-2)", margin: "18px 0 12px" }}></div>
+          <div className="eyebrow" style={{ marginBottom: 4 }}>Quick demo login</div>
+          <div className="text-sm text-muted" style={{ fontSize: 11, marginBottom: 10 }}>One click signs you in as a built-in test account for that role.</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
+            {APP.ROLES.map(r => (
+              <button key={r.key} type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => demoLogin(TEST_EMAIL_FOR[r.key])} style={{ justifyContent: "flex-start", gap: 8 }}>
+                <Icon name={r.iconName} size={14} /> {r.name}
+              </button>
+            ))}
+          </div>
+          <div className="text-sm text-muted" style={{ fontSize: 11, margin: "12px 0 6px" }}>Expert reviewers:</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
+            {TEST_EXPERT_ACCOUNTS.map(a => (
+              <button key={a.email} type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => demoLogin(a.email)}>{a.label}</button>
+            ))}
+          </div>
 
           <div className="flex justify-between items-center mt-4" style={{fontSize: 12}}>
             <a href="#" style={{color: "var(--au-crimson)", fontWeight: 600, textDecoration: "none"}}>Forgot password?</a>
