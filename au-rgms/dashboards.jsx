@@ -1242,65 +1242,70 @@ function OFMHistory({ onDownload }) {
    ----------------------------------------------------------- */
 function AdminDashboard({ navigate }) {
   const [c, setC] = useState(null);
-  const [users, setUsers] = useState("…");
+  const [profiles, setProfiles] = useState(null);
+  const [events, setEvents] = useState(null);
   useEffect(() => {
     window.DB.statusCounts().then(setC).catch(() => setC({}));
-    window.DB.profileCount().then(setUsers).catch(() => {});
+    window.DB.allProfiles().then(setProfiles).catch(() => setProfiles([]));
+    window.DB.auditEvents().then(setEvents).catch(() => setEvents([]));
   }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
+  const totalUsers = profiles ? profiles.length : 0;
+  const roleRows = profiles === null ? null : D.ROLES.map(r => ({ key: r.key, name: r.name, count: profiles.filter(p => p.role === r.key).length })).filter(r => r.count > 0);
   return (
     <>
       <PageHeader
         title="Administrator Dashboard"
-        desc="System health, user roster, and reference data for the AU-RGMS portal."
+        desc="Users, activity, and reference data for the AU-RGMS portal."
         actions={
           <button className="btn btn-primary" onClick={() => navigate("a-users")}>
-            <Icon name="Users" size={14} /> Manage Users
+            <Icon name="UserPlus" size={14} /> Manage Users
           </button>
         }
       />
 
       <div className="stats">
-        <Stat label="Total Users"          value={users} icon="Users" tone="gold" />
+        <Stat label="Total Users"          value={profiles ? totalUsers : "…"} icon="Users" tone="gold" />
         <Stat label="Applications"         value={n("_total")} icon="Folder" tone="navy" />
         <Stat label="Approved Grants"      value={n("_approved")} icon="CheckCircle" tone="green" />
-        <Stat label="System Uptime"        value="99.98%" icon="TrendingUp" />
+        <Stat label="Active Grants"        value={n("active")} icon="TrendingUp" tone="green" />
       </div>
 
       <div className="grid-2">
         <div className="card card-pad-0">
-          <div className="card-head"><h3>Users by Role</h3></div>
+          <div className="card-head"><h3>Users by Role</h3>
+            <div className="grow"></div>
+            <button className="btn btn-ghost btn-sm" onClick={() => navigate("a-users")}>Manage <Icon name="ArrowRight" size={12} /></button>
+          </div>
           <div className="card-body">
-            {D.ROLES.map(r => {
-              const count = D.SYSTEM_USERS.filter(u => u.role.startsWith(r.name.split(" ")[0])).length;
-              const pct = (count / D.SYSTEM_USERS.length) * 100;
-              return (
-                <div key={r.key} style={{marginBottom: 10}}>
-                  <div className="flex justify-between mb-2" style={{fontSize: 12}}>
-                    <span style={{fontWeight: 600}}>{r.name}</span>
-                    <span className="text-muted">{count} user{count !== 1 ? "s" : ""}</span>
-                  </div>
-                  <div className="progress" style={{height: 5}}><div className="bar" style={{width: `${pct}%`}}></div></div>
+            {roleRows === null && <div className="text-sm text-muted">Loading…</div>}
+            {roleRows && roleRows.length === 0 && <Empty title="No users yet" desc="Create accounts in User Management." icon="Users" />}
+            {(roleRows || []).map(r => (
+              <div key={r.key} style={{ marginBottom: 12 }}>
+                <div className="flex justify-between mb-2" style={{ fontSize: 12 }}>
+                  <span style={{ fontWeight: 600 }}>{r.name}</span>
+                  <span className="text-muted">{r.count} user{r.count !== 1 ? "s" : ""}</span>
                 </div>
-              );
-            })}
+                <div className="progress" style={{ height: 5 }}><div className="bar" style={{ width: (totalUsers ? Math.round(r.count / totalUsers * 100) : 0) + "%" }}></div></div>
+              </div>
+            ))}
           </div>
         </div>
 
         <div className="card card-pad-0">
-          <div className="card-head"><h3>Recent Audit Events</h3>
+          <div className="card-head"><h3>Recent Activity</h3>
             <div className="grow"></div>
             <button className="btn btn-ghost btn-sm" onClick={() => navigate("a-audit")}>See all <Icon name="ArrowRight" size={12} /></button>
           </div>
-          <div style={{padding: "8px 0"}}>
-            {D.AUDIT_LOG.slice(0, 5).map((e, i) => (
-              <div key={i} style={{padding: "10px 20px", borderBottom: i < 4 ? "1px solid var(--line-2)" : "none", display: "flex", gap: 10}}>
-                <div style={{width: 28, height: 28, borderRadius: "50%", background: "var(--paper-warm)", color: "var(--ink-2)", display: "grid", placeItems: "center", flexShrink: 0}}>
-                  <Icon name="Clock" size={12} />
-                </div>
-                <div style={{flex: 1}}>
-                  <div style={{fontSize: 12, color: "var(--ink-1)"}}>{e.act}</div>
-                  <div style={{fontSize: 11, color: "var(--ink-3)"}}>{e.who} · {e.t} · {e.ip}</div>
+          <div style={{ padding: "8px 0" }}>
+            {events === null && <div style={{ padding: 20, color: "var(--ink-3)", fontSize: 13 }}>Loading activity…</div>}
+            {events && events.length === 0 && <Empty title="No activity yet" desc="Workflow actions will appear here." icon="Clock" />}
+            {(events || []).slice(0, 6).map((e, i, arr) => (
+              <div key={e.id || i} style={{ padding: "10px 20px", borderBottom: i < arr.length - 1 ? "1px solid var(--line-2)" : "none", display: "flex", gap: 10 }}>
+                <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--paper-warm)", color: "var(--ink-2)", display: "grid", placeItems: "center", flexShrink: 0 }}><Icon name="Clock" size={12} /></div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontSize: 12, color: "var(--ink-1)" }}>{e.action}</div>
+                  <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{(e.actor ? e.actor.full_name : (e.actor_role || "System"))}{e.application ? " · " + e.application.code : ""} · {window.DB.fmtDate(e.created_at)}</div>
                 </div>
               </div>
             ))}
@@ -1493,14 +1498,67 @@ function AdminAudit() {
   );
 }
 
+// Universal account/profile settings — available to every role via the header gear.
+function AccountSettings({ toast }) {
+  const [p, setP] = useState(null);
+  const [f, setF] = useState({ name_title: "", full_name: "", au_id: "", phone: "" });
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    window.AUTH.profile().then(pr => {
+      setP(pr);
+      if (pr) setF({ name_title: pr.name_title || "", full_name: pr.full_name || "", au_id: pr.au_id || "", phone: pr.phone || "" });
+    }).catch(() => {});
+  }, []);
+  const set = (k, v) => setF(s => Object.assign({}, s, { [k]: v }));
+  const save = async () => {
+    setBusy(true);
+    try { await window.DB.updateMyProfile(f); toast("Your profile has been updated."); }
+    catch (e) { toast("Error: " + ((e && e.message) || e)); }
+    finally { setBusy(false); }
+  };
+  const roleLabel = (D.ROLES.find(r => r.key === (p && p.role)) || {}).name || (p && p.role) || "—";
+  return (
+    <>
+      <PageHeader title="Account Settings" desc="Update your personal details. Email, role and faculty are managed by the administrator." actions={<button className="btn btn-primary" disabled={busy || !p} onClick={save}>{busy ? "Saving…" : "Save Changes"}</button>} />
+      <div className="grid-2">
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>My Details</h3></div>
+          <div className="card-body">
+            {!p && <div className="text-sm text-muted">Loading…</div>}
+            {p && <>
+              <div className="form-grid">
+                <div className="field"><label>Title</label><select value={f.name_title} onChange={e => set("name_title", e.target.value)}><option value="">—</option>{D.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+                <div className="field"><label>Full Name</label><input value={f.full_name} onChange={e => set("full_name", e.target.value)} /></div>
+                <div className="field"><label>AU ID</label><input value={f.au_id} onChange={e => set("au_id", e.target.value)} placeholder="e.g. 5012345" /></div>
+                <div className="field"><label>Phone</label><input value={f.phone} onChange={e => set("phone", e.target.value)} /></div>
+              </div>
+            </>}
+          </div>
+        </div>
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Account</h3></div>
+          <div className="card-body">
+            <div className="meta-row"><span className="l">Email</span><span className="r">{p ? p.email : "—"}</span></div>
+            <div className="meta-row"><span className="l">Role</span><span className="r">{roleLabel}</span></div>
+            <div className="meta-row"><span className="l">Faculty</span><span className="r">{(p && p.faculty) || "—"}</span></div>
+            <div className="meta-row"><span className="l">Department</span><span className="r">{(p && p.department) || "—"}</span></div>
+            <div className="text-sm text-muted" style={{ marginTop: 12 }}>To change your email, role, or faculty, contact the RASSC administrator.</div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function AdminSettings({ toast }) {
-  const settings = [
-    { key: "grant_limit", label: "Maximum internal grant amount", value: 100000, unit: "THB" },
-    { key: "contract_days", label: "Days to sign contract after approval", value: 45, unit: "days" },
-    { key: "tranche_1", label: "First tranche", value: 30, unit: "%" },
-    { key: "tranche_2", label: "Second tranche", value: 40, unit: "%" },
-    { key: "tranche_3", label: "Final tranche", value: 30, unit: "%" },
+  const POLICY_FIELDS = [
+    { key: "grant_limit", label: "Maximum internal grant amount", unit: "THB" },
+    { key: "contract_days", label: "Days to sign contract after approval", unit: "days" },
+    { key: "tranche_1", label: "First tranche", unit: "%" },
+    { key: "tranche_2", label: "Second tranche", unit: "%" },
+    { key: "tranche_3", label: "Final tranche", unit: "%" },
   ];
+  const POLICY_DEFAULT = { grant_limit: 100000, contract_days: 45, tranche_1: 30, tranche_2: 40, tranche_3: 30 };
   const CAP_FIELDS = [
     { key: "remuneration", label: "Remuneration (research assistant)" },
     { key: "equipment", label: "Research equipment" },
@@ -1508,15 +1566,22 @@ function AdminSettings({ toast }) {
     { key: "misc", label: "Miscellaneous" },
   ];
   const [caps, setCaps] = useState(D.DEFAULT_BUDGET_CAPS || { remuneration: 30, equipment: 50, travel: 40, misc: 20 });
+  const [policy, setPolicy] = useState(POLICY_DEFAULT);
   const [busy, setBusy] = useState(false);
-  useEffect(() => { window.DB.budgetCaps().then(setCaps).catch(() => {}); }, []);
+  useEffect(() => {
+    window.DB.budgetCaps().then(setCaps).catch(() => {});
+    window.DB.getSetting("workflow_policy", POLICY_DEFAULT).then(v => setPolicy(Object.assign({}, POLICY_DEFAULT, v && v.values ? v.values : v))).catch(() => {});
+  }, []);
   const setCap = (k, v) => setCaps(c => ({ ...c, [k]: Math.max(0, Math.min(100, parseInt((v + "").replace(/[^0-9]/g, ""), 10) || 0)) }));
+  const setPol = (k, v) => setPolicy(p => ({ ...p, [k]: parseInt((v + "").replace(/[^0-9]/g, ""), 10) || 0 }));
+  const trancheSum = Number(policy.tranche_1) + Number(policy.tranche_2) + Number(policy.tranche_3);
   const save = async () => {
+    if (trancheSum !== 100) { toast("The three payment tranches must add up to 100% (currently " + trancheSum + "%)."); return; }
     setBusy(true);
     try {
       await window.DB.saveSetting("budget_caps", caps, "Budget category caps (% of total grant)");
-      await window.DB.saveSetting("workflow_policy", { settings: settings }, "Workflow policy");
-      toast("Settings saved. Researcher budget caps now use these values.");
+      await window.DB.saveSetting("workflow_policy", { values: policy }, "Workflow policy");
+      toast("Settings saved.");
     } catch (e) {
       toast("Error: " + ((e && e.message) || e));
     } finally { setBusy(false); }
@@ -1542,13 +1607,13 @@ function AdminSettings({ toast }) {
         </div>
       </div>
       <div className="card card-pad-0">
-        <div className="card-head"><h3>Workflow Policy</h3></div>
+        <div className="card-head"><h3>Workflow Policy</h3>{trancheSum !== 100 && <span className="text-sm" style={{ color: "var(--au-crimson)", marginLeft: 10 }}>Tranches = {trancheSum}% (must be 100%)</span>}</div>
         <div>
-          {settings.map((it, i) => (
-            <div key={it.key} style={{ display: "flex", alignItems: "center", padding: "16px 20px", borderBottom: i < settings.length - 1 ? "1px solid var(--line-2)" : "none" }}>
+          {POLICY_FIELDS.map((it, i) => (
+            <div key={it.key} style={{ display: "flex", alignItems: "center", padding: "16px 20px", borderBottom: i < POLICY_FIELDS.length - 1 ? "1px solid var(--line-2)" : "none" }}>
               <div style={{ flex: 1, fontSize: 13, fontWeight: 600 }}>{it.label}</div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <input defaultValue={it.value} style={{ width: 90, padding: "6px 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", textAlign: "right", fontWeight: 600 }} />
+                <input value={policy[it.key]} onChange={e => setPol(it.key, e.target.value)} style={{ width: 90, padding: "6px 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", textAlign: "right", fontWeight: 600 }} />
                 <span className="text-sm text-muted">{it.unit}</span>
               </div>
             </div>
@@ -1747,5 +1812,5 @@ Object.assign(window, {
   PresidentDashboard, PresidentQueue,
   OFMDashboard, OFMDetail, OFMHistory,
   AdminDashboard, AdminUsers, AdminJournals, AdminAudit, AdminSettings,
-  AnalyticsDashboard,
+  AnalyticsDashboard, AccountSettings,
 });

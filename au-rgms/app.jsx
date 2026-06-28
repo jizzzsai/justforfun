@@ -285,7 +285,7 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate }) {
           </button>
           {notifOpen && <NotifPanel items={notifItems} onClose={() => setNotifOpen(false)} onOpen={(n) => { if (n.page && onNavigate) onNavigate(n.page); setNotifOpen(false); }} />}
         </div>
-        <button className="header-icon-btn" title="Settings"><Icon name="Settings" size={18} /></button>
+        <button className="header-icon-btn" title="Account settings" onClick={() => onNavigate && onNavigate("account")}><Icon name="Settings" size={18} /></button>
 
         <div style={{position: "relative", marginLeft: 8}}>
           <button className="role-switch" onClick={() => { setRoleOpen(v => !v); setNotifOpen(false); }}>
@@ -487,6 +487,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
 
     /* ---- Shared ---- */
     case "forms":            return <FormsLibrary />;
+    case "account":          return <AccountSettings toast={c.toast} />;
 
     default:                 return <Empty title="Page not found" desc="Use the sidebar to navigate." icon="Folder" />;
   }
