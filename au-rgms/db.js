@@ -21,13 +21,11 @@
   };
 
   // forward workflow: current status -> { to, verb }
+  // AU-R1 chain: Researcher -> Dean -> Faculty Committee -> RASSC -> Finance.
   var NEXT = {
     submitted:        { to: "committee_review", verb: "Dean approved — sent to Faculty Committee" },
-    committee_review: { to: "dean_sign",        verb: "Committee recommended — returned to Dean to sign & forward" },
-    dean_sign:        { to: "iras_review",      verb: "Dean signed & forwarded to RASSC" },
-    iras_review:      { to: "expert_review",    verb: "RASSC assigned experts — sent for expert review" },
-    expert_review:    { to: "president_review", verb: "Expert review complete — sent to the President" },
-    president_review: { to: "approved",         verb: "Approved by the President — contract to be issued" },
+    committee_review: { to: "iras_review",      verb: "Committee recommended — forwarded to RASSC" },
+    iras_review:      { to: "approved",          verb: "RASSC approved — contract issued, sent to Finance Office" },
     approved:         { to: "active",           verb: "Contract signed — project active" },
   };
 
@@ -366,7 +364,7 @@
         await sb.from("application_events").insert({
           application_id: appId, actor_id: me, actor_role: role || "committee",
           action: "Faculty Committee review submitted",
-          from_status: "committee_review", to_status: "dean_sign",
+          from_status: "committee_review", to_status: "iras_review",
           note: "Score " + score + " / 100; recommendation: " + recommendation + ".",
         });
       } catch (e) {}

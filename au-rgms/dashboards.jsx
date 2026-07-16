@@ -82,85 +82,51 @@ function WiredQueue({ status, openLabel, confirmTitle, confirmLabel, onDownload,
 function DeanDashboard({ navigate }) {
   const [c, setC] = useState(null);
   const [screenRows, setScreenRows] = useState(null);
-  const [signRows, setSignRows] = useState(null);
   useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
   useEffect(() => { window.DB.queue("submitted").then(setScreenRows).catch(() => setScreenRows([])); }, []);
-  useEffect(() => { window.DB.queue("dean_sign").then(setSignRows).catch(() => setSignRows([])); }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
       <PageHeader
         title="Dean's Dashboard"
-        desc="First-screen new proposals before committee, and sign-and-forward proposals returning from committee."
+        desc="Screen new proposals from your faculty, then forward them to the Faculty Committee."
         actions={
-          <>
-            <button className="btn btn-secondary"><Icon name="Calendar" size={14} /> AY 2025–2026</button>
-            <button className="btn btn-primary" onClick={() => navigate("d-screen")}>
-              <Icon name="Inbox" size={14} /> Open Screening Queue
-            </button>
-          </>
+          <button className="btn btn-primary" onClick={() => navigate("d-screen")}>
+            <Icon name="Inbox" size={14} /> Open Screening Queue
+          </button>
         }
       />
 
       <div className="stats">
-        <Stat label="Pending First Screening"  value={n("submitted")} icon="ClipboardCheck" tone="gold" />
-        <Stat label="Awaiting My Signature"    value={n("dean_sign")} icon="FileSignature" tone="navy" />
-        <Stat label="At Faculty Committee"     value={n("committee_review")} icon="Users" />
-        <Stat label="Approved (system)"        value={n("_approved")} icon="CheckCircle" tone="green" />
+        <Stat label="Pending Screening"      value={n("submitted")} icon="ClipboardCheck" tone="gold" />
+        <Stat label="At Faculty Committee"   value={n("committee_review")} icon="Users" tone="navy" />
+        <Stat label="At RASSC"               value={n("iras_review")} icon="Landmark" />
+        <Stat label="Approved (system)"      value={n("_approved")} icon="CheckCircle" tone="green" />
       </div>
 
-      <div className="grid-2">
-        <div className="card card-pad-0">
-          <div className="card-head">
-            <h3>First Screening Queue</h3>
-            <div className="grow"></div>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate("d-screen")}>
-              Open queue <Icon name="ArrowRight" size={12} />
-            </button>
-          </div>
-          <table className="tbl">
-            <thead><tr><th>ID</th><th>Title</th><th>Researcher</th><th>Status</th></tr></thead>
-            <tbody>
-              {screenRows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
-              {screenRows && screenRows.length === 0 && <tr><td colSpan="4"><Empty title="Nothing to screen" desc="New submissions will appear here." icon="ClipboardCheck" /></td></tr>}
-              {(screenRows || []).slice(0, 4).map(a => (
-                <tr key={a.id} style={{ cursor: "pointer" }} onClick={() => navigate("d-screen-detail")}>
-                  <td><span className="id">{a.id}</span></td>
-                  <td className="title-cell"><div className="t" style={{ maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div></td>
-                  <td style={{ fontSize: 12 }}>{a.researcher?.name}</td>
-                  <td><Badge status={a.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="card card-pad-0">
+        <div className="card-head">
+          <h3>Screening Queue</h3>
+          <div className="grow"></div>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate("d-screen")}>
+            Open queue <Icon name="ArrowRight" size={12} />
+          </button>
         </div>
-
-        <div className="card card-pad-0">
-          <div className="card-head">
-            <h3>Sign &amp; Forward Queue</h3>
-            <div className="grow"></div>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate("d-sign")}>
-              Open queue <Icon name="ArrowRight" size={12} />
-            </button>
-          </div>
-          <table className="tbl">
-            <thead><tr><th>ID</th><th>Title</th><th>Committee Rec.</th><th>Status</th></tr></thead>
-            <tbody>
-              {signRows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
-              {(signRows || []).map(a => (
-                <tr key={a.id} style={{ cursor: "pointer" }} onClick={() => navigate("d-sign-detail")}>
-                  <td><span className="id">{a.id}</span></td>
-                  <td className="title-cell"><div className="t" style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div></td>
-                  <td><span className="badge badge-approved"><span className="dot"></span>Recommend</span></td>
-                  <td><Badge status={a.status} /></td>
-                </tr>
-              ))}
-              {signRows && signRows.length === 0 && (
-                <tr><td colSpan={4}><Empty title="Nothing to sign" desc="Proposals will appear here after committee review." icon="FileSignature" /></td></tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+        <table className="tbl">
+          <thead><tr><th>ID</th><th>Title</th><th>Researcher</th><th>Status</th></tr></thead>
+          <tbody>
+            {screenRows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
+            {screenRows && screenRows.length === 0 && <tr><td colSpan="4"><Empty title="Nothing to screen" desc="New submissions will appear here." icon="ClipboardCheck" /></td></tr>}
+            {(screenRows || []).slice(0, 8).map(a => (
+              <tr key={a.id} style={{ cursor: "pointer" }} onClick={() => navigate("d-screen-detail")}>
+                <td><span className="id">{a.id}</span></td>
+                <td className="title-cell"><div className="t" style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div></td>
+                <td style={{ fontSize: 12 }}>{a.researcher?.name}</td>
+                <td><Badge status={a.status} /></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
     </>
   );
@@ -478,35 +444,45 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
   };
   useEffect(() => { load(); }, [applicationId]);
 
-  const moveToAssignment = () => {
+  const approve = () => {
     if (!app) return;
     setConfirm({
       kind: "success",
-      title: "Approve RASSC screening?",
-      message: app.code + " will move to the expert assignment form.",
-      confirmLabel: "Approve Screening",
-      onConfirm: () => {
-        if (setSelectedApplicationId) setSelectedApplicationId(app.id);
-        toast("RASSC screening approved. Select experts next.");
-        navigate("i-assign");
+      title: "Approve and send to Finance?",
+      message: app.code + " will be approved, a grant contract issued, and it will move to the Finance Office for disbursement.",
+      confirmLabel: "Approve",
+      onConfirm: async () => {
+        try {
+          await window.DB.transition(app.id, "iras_review", "advance");
+          toast(app.code + " approved — sent to Finance Office.");
+          navigate("i-received");
+        } catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
       },
     });
   };
-  const returnToDean = () => {
+  const returnToResearcher = () => {
     if (!app) return;
     setConfirm({
       kind: "danger",
-      title: "Return to Dean?",
-      message: app.code + " will leave the RASSC queue and be marked returned.",
+      title: "Return to researcher for revision?",
+      message: app.code + " will be sent back to the researcher for revision.",
       confirmLabel: "Return",
       onConfirm: async () => {
-        try {
-          await window.DB.transition(app.id, "iras_review", "return");
-          toast(app.code + " returned.");
-          load();
-        } catch (e) {
-          toast("Error: " + ((e && e.message) || e));
-        }
+        try { await window.DB.transition(app.id, "iras_review", "return"); toast(app.code + " returned for revision."); navigate("i-received"); }
+        catch (e) { toast("Error: " + ((e && e.message) || e)); }
+      },
+    });
+  };
+  const reject = () => {
+    if (!app) return;
+    setConfirm({
+      kind: "danger",
+      title: "Reject this application?",
+      message: app.code + " will be rejected. This ends the application.",
+      confirmLabel: "Reject",
+      onConfirm: async () => {
+        try { await window.DB.transition(app.id, "iras_review", "reject"); toast(app.code + " rejected."); navigate("i-received"); }
+        catch (e) { toast("Error: " + ((e && e.message) || e)); }
       },
     });
   };
@@ -515,7 +491,7 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
   if (loading) {
     return (
       <>
-        <PageHeader title="Office Screening" desc="Verify proposal completeness before assigning expert reviewers." />
+        <PageHeader title="Office Screening" desc="Verify proposal completeness before approving the grant." />
         <div className="card" style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>Loading application...</div>
       </>
     );
@@ -523,8 +499,8 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
   if (!app) {
     return (
       <>
-        <PageHeader title="Office Screening" desc="Verify proposal completeness before assigning expert reviewers." />
-        <div className="card"><Empty title="No RASSC screening item" desc="Applications appear here after Dean sign and forward." icon="ClipboardCheck" /></div>
+        <PageHeader title="Office Screening" desc="Verify proposal completeness before approving the grant." />
+        <div className="card"><Empty title="No RASSC screening item" desc="Applications appear here after the Faculty Committee recommends them." icon="ClipboardCheck" /></div>
       </>
     );
   }
@@ -533,7 +509,7 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
     <>
       <PageHeader
         title={"Office Screening - " + app.code}
-        desc="Verify proposal completeness before assigning expert reviewers."
+        desc="Verify proposal completeness before approving the grant."
         actions={<Badge status={window.DB.statusBadge(app.status)} />}
       />
       <div className="grid-2">
@@ -563,7 +539,7 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
                 { label: docs.length + " forwarded PDF document(s)", checked: docs.length > 0 },
                 { label: "Budget total is within the 100,000 THB AU ceiling", checked: Number(app.requested_amount || 0) > 0 && Number(app.requested_amount || 0) <= 100000 },
                 { label: "Researcher, faculty, and department are recorded", checked: !!(app.researcher && app.faculty && app.department) },
-                { label: "Proposal is ready for expert assignment", checked: docs.length > 0 },
+                { label: "Proposal is complete and ready for approval", checked: docs.length > 0 },
               ].map((item, i, arr) => (
                 <label key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < arr.length - 1 ? "1px solid var(--line-2)" : "none", cursor: "pointer" }}>
                   <input type="checkbox" defaultChecked={item.checked} style={{ accentColor: "var(--au-crimson)" }} />
@@ -571,14 +547,17 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
                 </label>
               ))}
               <div className="flex flex-col gap-2 mt-4">
-                <button className="btn btn-primary btn-block" disabled={docs.length === 0} onClick={moveToAssignment}>
-                  <Icon name="CheckCircle" size={14} /> Approve &amp; Move to Assignment
+                <button className="btn btn-primary btn-block" disabled={docs.length === 0} onClick={approve}>
+                  <Icon name="CheckCircle" size={14} /> Approve &amp; Send to Finance
                 </button>
-                <button className="btn btn-secondary btn-block" onClick={returnToDean}>
-                  <Icon name="ArrowLeft" size={14} /> Return to Dean
+                <button className="btn btn-secondary btn-block" onClick={returnToResearcher}>
+                  <Icon name="Repeat" size={14} /> Return for Revision
+                </button>
+                <button className="btn btn-danger btn-block" onClick={reject}>
+                  <Icon name="X" size={14} /> Reject Application
                 </button>
               </div>
-              {docs.length === 0 && <div className="text-sm text-muted mt-3">Upload at least one PDF before moving this application to expert assignment.</div>}
+              {docs.length === 0 && <div className="text-sm text-muted mt-3">Upload at least one PDF before approving this application.</div>}
             </div>
           </div>
         </div>

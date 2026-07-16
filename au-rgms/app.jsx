@@ -108,12 +108,6 @@ function LoginPage({ onLogin }) {
               </button>
             ))}
           </div>
-          <div className="text-sm text-muted" style={{ fontSize: 11, margin: "12px 0 6px" }}>Expert reviewers:</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8 }}>
-            {TEST_EXPERT_ACCOUNTS.map(a => (
-              <button key={a.email} type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => demoLogin(a.email)}>{a.label}</button>
-            ))}
-          </div>
 
           <div className="flex justify-between items-center mt-4" style={{fontSize: 12}}>
             <a href="#" style={{color: "var(--au-crimson)", fontWeight: 600, textDecoration: "none"}}>Forgot password?</a>
@@ -161,24 +155,6 @@ const ROLE_CONFIG = {
     sidebarFooter: {
       title: "RASSC",
       body: "Assign the available expert reviewers required for the proposal; the President queue opens after all assigned reviews are complete.",
-    },
-  },
-  expert: {
-    nav: APP.NAV_EXPERT,
-    homeKey: "e-dashboard",
-    crumbRoot: "Expert Reviewer",
-    sidebarFooter: {
-      title: "Reviewer Tips",
-      body: "Score 0–100. Provide strengths and weaknesses. A favorable verdict requires score ≥ 70.",
-    },
-  },
-  president: {
-    nav: APP.NAV_PRESIDENT,
-    homeKey: "p-dashboard",
-    crumbRoot: "Office of the Vice President",
-    sidebarFooter: {
-      title: "Vice President's Office",
-      body: "The Vice President issues and signs the grant contract within 45 days.",
     },
   },
   ofm: {
@@ -288,22 +264,6 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate }) {
                 </div>
               ))}
               <div className="dropdown-divider"></div>
-              <div className="dropdown-section">Expert reviewer accounts</div>
-              {TEST_EXPERT_ACCOUNTS.map(a => (
-                <div
-                  key={a.email}
-                  className={`dropdown-item ${role === "expert" && profile && profile.email === a.email ? "active" : ""}`}
-                  onClick={() => { onSwitchRole("expert", a.email); setRoleOpen(false); }}
-                >
-                  <div className="role-icon"><Icon name="FileSearch" size={14} /></div>
-                  <div className="meta">
-                    <div className="t">{a.label}</div>
-                    <div className="s">{a.email}</div>
-                  </div>
-                  {role === "expert" && profile && profile.email === a.email && <Icon name="Check" size={14} />}
-                </div>
-              ))}
-              <div className="dropdown-divider"></div>
               <div className="dropdown-section">Account</div>
               <div className="dropdown-item">
                 <div className="role-icon" style={{background: "var(--paper-warm)", color: "var(--ink-2)"}}>
@@ -406,8 +366,6 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "d-dashboard":      return <DeanDashboard navigate={navigate} />;
     case "d-screen":         return <DeanScreenQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "d-screen-detail":  return <FacultyChecklist applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "d-sign":           return <DeanSignQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "d-sign-detail":    return <FacultyDean onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-history":        return <DeanHistory onDownload={c.onDownload} />;
     case "d-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
     case "d-reimburse":      return <DeanReimbursements toast={c.toast} />;
@@ -423,25 +381,11 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "i-dashboard":      return <RASSCDashboardV2 navigate={navigate} />;
     case "i-received":       return <RASSCReceived navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "i-screen":         return <RASSCScreen applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "i-assign":         return <RASSCAssign applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-reports":        return <RASSCReports onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-publications":   return <RASSCPublicationGrants toast={c.toast} />;
     case "i-reimburse":      return <RASSCReimbursements toast={c.toast} />;
     case "i-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
     case "i-reviewers":      return <RASSCReviewerPool toast={c.toast} />;
-
-    /* ---- Expert Reviewer ---- */
-    case "e-dashboard":      return <ExpertDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} profile={c.profile} />;
-    case "e-assignments":    return <ExpertAssignments navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} profile={c.profile} />;
-    case "e-evaluate":       return <RASSCExpert applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "e-history":        return <ExpertHistory onDownload={c.onDownload} profile={c.profile} />;
-
-    /* ---- President ---- */
-    case "p-dashboard":      return <PresidentDashboard navigate={navigate} />;
-    case "p-queue":          return <PresidentQueue navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "p-approve":        return <RASSCPresident onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "p-contracts":      return <RASSCContract onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "p-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
 
     /* ---- OFM / Finance ---- */
     case "o-dashboard":      return <OFMDashboard navigate={navigate} />;
