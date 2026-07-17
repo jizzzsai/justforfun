@@ -39,11 +39,6 @@
     var r = await sb.from("profiles").select("role").eq("id", id).single();
     return r.data ? r.data.role : null;
   }
-  async function genCode() {
-    var year = new Date().getFullYear();
-    var r = await sb.from("applications").select("id", { count: "exact", head: true });
-    return "RG-" + year + "-" + String((r.count || 0) + 1).padStart(3, "0");
-  }
   async function genPublicationCode() {
     var year = new Date().getFullYear();
     var r = await sb.from("publication_grants").select("id", { count: "exact", head: true });
@@ -182,7 +177,6 @@
           throw new Error("Only draft or returned applications can be edited from this form.");
         }
       }
-      var code = existing ? existing.code : await genCode();
       var row = {
         title: payload.title || "Untitled application",
         abstract: payload.abstract || null, faculty: payload.faculty || null,
@@ -198,7 +192,8 @@
         submitted_at: submit ? new Date().toISOString() : (existing ? existing.submitted_at : null),
       };
       if (!existing) {
-        row.code = code;
+        // code is assigned server-side by the set_application_code trigger,
+        // which sees every row (RLS-exempt) so it can't collide across researchers.
         row.researcher_id = me;
       }
       var res = existing
