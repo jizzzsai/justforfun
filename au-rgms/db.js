@@ -823,8 +823,26 @@
         } else if (role === "dean") {
           var s = await this.queue("submitted"); if (s.length) push("dean-screen", "ClipboardCheck", "Dean queue", s.length + " proposal(s) awaiting first screening.", "d-screen", true);
           var ds = await this.queue("dean_sign"); if (ds.length) push("dean-sign", "FileSignature", "Dean sign", ds.length + " proposal(s) awaiting sign and forward.", "d-sign", true);
+          // Downstream progress on this faculty's proposals (counts are RLS-scoped to the dean's faculty).
+          var dsc = await this.statusCounts();
+          var atRassc = dsc.iras_review || 0;
+          if (atRassc) push("dean-rassc", "Send", "Now at RASSC", atRassc + " proposal(s) from your faculty passed committee and are with RASSC.", "d-analytics", true);
+          var deanApproved = (dsc.approved || 0) + (dsc.active || 0) + (dsc.completed || 0);
+          if (deanApproved) push("dean-approved", "Award", "Approved", deanApproved + " proposal(s) from your faculty have been approved.", "d-analytics", true);
+          var deanRejected = dsc.rejected || 0;
+          if (deanRejected) push("dean-rejected", "AlertCircle", "Rejected", deanRejected + " proposal(s) from your faculty were rejected.", "d-analytics", false);
         } else if (role === "committee") {
           var cq = await this.queue("committee_review"); if (cq.length) push("committee", "Users", "Committee", cq.length + " proposal(s) awaiting review.", "c-queue", true);
+          // RASSC outcomes on proposals this member recommended to RASSC.
+          var mine = await this.myReviews();
+          var cseen = {}, cdecided = 0;
+          (mine || []).forEach(function (r) {
+            if (r.recommendation === "favorable" && r.application && r.application_id && !cseen[r.application_id]
+                && ["approved", "active", "completed", "rejected", "returned"].indexOf(r.application.status) >= 0) {
+              cseen[r.application_id] = true; cdecided++;
+            }
+          });
+          if (cdecided) push("committee-decided", "Bell", "RASSC outcome", cdecided + " proposal(s) you recommended now have a RASSC decision.", "c-history", true);
         } else if (role === "iras") {
           var iq = await this.queue("iras_review"); if (iq.length) push("iras-screen", "Inbox", "RASSC", iq.length + " research proposal(s) awaiting screening.", "i-received", true);
           var reports = await this.reportQueue(); if (reports.length) push("reports", "FileCheck", "Reports", reports.length + " report(s) awaiting RASSC acceptance.", "i-reports", true);
@@ -886,7 +904,7 @@
     },
     async myReviews() {
       var me = await uid();
-      var res = await sb.from("reviews").select("*, application:applications(code,title)")
+      var res = await sb.from("reviews").select("*, application:applications(code,title,status)")
         .eq("reviewer_id", me).order("submitted_at", { ascending: false });
       if (res.error) throw res.error;
       return res.data || [];
