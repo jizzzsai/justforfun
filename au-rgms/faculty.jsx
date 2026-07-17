@@ -205,9 +205,9 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
           kind: "success",
           title: "Forward to Faculty Committee?",
           message: app.code + " will move to committee review.",
-          confirmLabel: "Forward",
-          onConfirm: async () => {
-            try { await window.DB.transition(app.id, "submitted", "advance"); toast(app.code + " forwarded to Faculty Committee."); navigate("d-screen"); }
+          confirmLabel: "Forward", withReason: true,
+          onConfirm: async (reason) => {
+            try { await window.DB.transition(app.id, "submitted", "advance", reason); toast(app.code + " forwarded to Faculty Committee."); navigate("d-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
@@ -215,9 +215,9 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
           kind: "danger",
           title: "Return to researcher?",
           message: app.code + " will be marked returned for revision.",
-          confirmLabel: "Return",
-          onConfirm: async () => {
-            try { await window.DB.transition(app.id, "submitted", "return"); toast(app.code + " returned for revision."); navigate("d-screen"); }
+          confirmLabel: "Return", withReason: true, reasonRequired: true,
+          onConfirm: async (reason) => {
+            try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
@@ -225,9 +225,9 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
           kind: "danger",
           title: "Reject this application?",
           message: app.code + " will be rejected at Dean screening. This ends the application.",
-          confirmLabel: "Reject",
-          onConfirm: async () => {
-            try { await window.DB.transition(app.id, "submitted", "reject"); toast(app.code + " rejected."); navigate("d-screen"); }
+          confirmLabel: "Reject", withReason: true, reasonRequired: true,
+          onConfirm: async (reason) => {
+            try { await window.DB.transition(app.id, "submitted", "reject", reason); toast(app.code + " rejected."); navigate("d-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
@@ -332,14 +332,16 @@ function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, s
       title="Academic Committee Review"
       desc="Submit committee evaluation and recommendation."
       render={(app, load) => {
+        const recLabel = { favorable: "forwarded to RASSC", revise: "returned to the researcher for revision", unfavorable: "rejected" };
         const submit = () => setConfirm({
-          kind: "success",
+          kind: form.recommendation === "favorable" ? "success" : "danger",
           title: "Submit Committee Decision?",
-          message: app.code + " will move according to the selected recommendation.",
-          confirmLabel: "Submit Decision",
-          onConfirm: async () => {
+          message: app.code + " will be " + (recLabel[form.recommendation] || "moved") + ".",
+          confirmLabel: "Submit Decision", withReason: true, reasonRequired: form.recommendation !== "favorable",
+          onConfirm: async (reason) => {
             try {
-              await window.DB.submitCommitteeReview(app.id, form);
+              const merged = Object.assign({}, form, { comments: [form.comments, reason].filter(function (x) { return x && x.trim(); }).join(" — ") });
+              await window.DB.submitCommitteeReview(app.id, merged);
               toast(app.code + " committee decision submitted.");
               if (navigate) navigate("c-queue"); else load();
             }

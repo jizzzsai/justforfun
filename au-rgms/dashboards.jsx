@@ -450,10 +450,10 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
       kind: "success",
       title: "Approve and send to Finance?",
       message: app.code + " will be approved, a grant contract issued, and it will move to the Finance Office for disbursement.",
-      confirmLabel: "Approve",
-      onConfirm: async () => {
+      confirmLabel: "Approve", withReason: true,
+      onConfirm: async (reason) => {
         try {
-          await window.DB.transition(app.id, "iras_review", "advance");
+          await window.DB.transition(app.id, "iras_review", "advance", reason);
           toast(app.code + " approved — sent to Finance Office.");
           navigate("i-received");
         } catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -466,9 +466,9 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
       kind: "danger",
       title: "Return to researcher for revision?",
       message: app.code + " will be sent back to the researcher for revision.",
-      confirmLabel: "Return",
-      onConfirm: async () => {
-        try { await window.DB.transition(app.id, "iras_review", "return"); toast(app.code + " returned for revision."); navigate("i-received"); }
+      confirmLabel: "Return", withReason: true, reasonRequired: true,
+      onConfirm: async (reason) => {
+        try { await window.DB.transition(app.id, "iras_review", "return", reason); toast(app.code + " returned for revision."); navigate("i-received"); }
         catch (e) { toast("Error: " + ((e && e.message) || e)); }
       },
     });
@@ -479,9 +479,9 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
       kind: "danger",
       title: "Reject this application?",
       message: app.code + " will be rejected. This ends the application.",
-      confirmLabel: "Reject",
-      onConfirm: async () => {
-        try { await window.DB.transition(app.id, "iras_review", "reject"); toast(app.code + " rejected."); navigate("i-received"); }
+      confirmLabel: "Reject", withReason: true, reasonRequired: true,
+      onConfirm: async (reason) => {
+        try { await window.DB.transition(app.id, "iras_review", "reject", reason); toast(app.code + " rejected."); navigate("i-received"); }
         catch (e) { toast("Error: " + ((e && e.message) || e)); }
       },
     });

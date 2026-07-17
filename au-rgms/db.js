@@ -375,7 +375,7 @@
     },
 
     // advance / return / reject an application
-    async transition(appId, fromStatus, kind) {
+    async transition(appId, fromStatus, kind, note) {
       var me = await uid();
       var role = await myRole();
       var to;
@@ -399,7 +399,7 @@
       try {
         await sb.from("application_events").insert({
           application_id: appId, actor_id: me, actor_role: role,
-          action: label, from_status: fromStatus, to_status: to,
+          action: label, from_status: fromStatus, to_status: to, note: note || null,
         });
       } catch (e) {}
       if (to === "approved") {

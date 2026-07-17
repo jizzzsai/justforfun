@@ -299,11 +299,14 @@ function FilePreviewModal({ doc, onClose, onDownload }) {
 }
 
 /* ---------- Confirm Modal ---------- */
-function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primary", confirmLabel = "Confirm" }) {
+function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primary", confirmLabel = "Confirm", withReason = false, reasonLabel = "Reason / note", reasonRequired = false }) {
+  const [reason, setReason] = useState("");
+  useEffect(() => { if (open) setReason(""); }, [open]);
   if (!open) return null;
   const icons = { primary: "Info", success: "CheckCircle", danger: "AlertCircle" };
   const iconCls = { primary: "", success: "green", danger: "red" }[kind];
   const btnCls = { primary: "btn-primary", success: "btn-success", danger: "btn-primary" }[kind];
+  const blocked = withReason && reasonRequired && !reason.trim();
   return (
     <Modal open={true} onClose={onClose} size="sm">
       <div className={`conf-icon ${iconCls}`}>
@@ -311,9 +314,15 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
       </div>
       <h3>{title}</h3>
       <p>{message}</p>
+      {withReason && (
+        <div className="field" style={{ textAlign: "left", marginTop: 6 }}>
+          <label>{reasonLabel}{reasonRequired ? " (required)" : " (optional)"}</label>
+          <textarea className="comment-input" value={reason} onChange={e => setReason(e.target.value)} placeholder="Add a note for the record — the researcher and next reviewers can see this." style={{ minHeight: 70 }} />
+        </div>
+      )}
       <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8 }}>
         <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-        <button className={`btn ${btnCls}`} onClick={onConfirm}>{confirmLabel}</button>
+        <button className={`btn ${btnCls}`} disabled={blocked} onClick={() => onConfirm(reason)}>{confirmLabel}</button>
       </div>
     </Modal>
   );

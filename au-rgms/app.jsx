@@ -598,11 +598,14 @@ function App() {
         <ConfirmModal
           open={true}
           onClose={() => setConfirm(null)}
-          onConfirm={() => { confirm.onConfirm(); setConfirm(null); }}
+          onConfirm={(reason) => { confirm.onConfirm(reason); setConfirm(null); }}
           title={confirm.title}
           message={confirm.message}
           kind={confirm.kind}
           confirmLabel={confirm.confirmLabel}
+          withReason={confirm.withReason}
+          reasonLabel={confirm.reasonLabel}
+          reasonRequired={confirm.reasonRequired}
         />
       )}
 
