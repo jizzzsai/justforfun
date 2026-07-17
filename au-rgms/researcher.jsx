@@ -155,7 +155,7 @@ const RESEARCHER_DEFAULT_DRAFT = {
   type: "Individual Research",
   startDate: "", endDate: "", duration: "12",
   keywords: "",
-  name: "", title2: "", auId: "", email: "", phone: "",
+  name: "", title2: "", auId: "", email: "", phone: "", office: "",
   school: "",
   department: "",
   outcome: "",
@@ -166,6 +166,14 @@ const RESEARCHER_DEFAULT_BUDGET_ROWS = [
   { item: "Travel for off-campus data collection", amount: 18000, purpose: "" },
   { item: "Miscellaneous (postage, photocopying, binding)", amount: 12000, purpose: "" },
 ];
+
+// Human-friendly date label, e.g. "Sat, 18 Sep 2026", from an ISO yyyy-mm-dd.
+function fmtNiceDate(iso) {
+  if (!iso) return "";
+  var d = new Date(iso + "T00:00:00");
+  if (isNaN(d)) return "";
+  return d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+}
 
 // Whole months between two ISO dates (min 1). Used to auto-derive duration.
 function monthsBetween(startISO, endISO) {
@@ -186,6 +194,12 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   const total = budgetRows.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const [reqTotal, setReqTotal] = useState("100000");
   const setAmt = (i, v) => setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, amount: (v + "").replace(/[^0-9]/g, "") } : r));
+  // Editable "% of total" — type a percentage and derive the amount from the requested total.
+  const setPct = (i, v) => {
+    const pct = Math.max(0, Math.min(100, Number((v + "").replace(/[^0-9.]/g, "")) || 0));
+    const t = Number(reqTotal) || 0;
+    setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, amount: Math.round(t * pct / 100) } : r));
+  };
 
   // Separate itemized budget breakdown — free-form Purpose + Amount lines.
   const [items, setItems] = useState([{ purpose: "", amount: "" }]);
@@ -214,7 +228,8 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
       try {
         const p = await window.AUTH.profile();
         if (p && p.budget_split) setSplit(s => ({ ...s, ...p.budget_split }));
-        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone }));
+        if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
+        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone, office: p.office_room || d.office }));
       } catch (e) {}
     })();
   }, [applicationId]);
@@ -235,6 +250,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
           title2: d.title2,
           email: d.email,
           phone: d.phone,
+          office: d.office,
         }));
         setLoadingDraft(false);
         return;
@@ -315,13 +331,13 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
     if (submit && Number(reqTotal) <= 0) { setErr("Enter the grant amount you are requesting."); return; }
     if (submit && total !== Number(reqTotal)) { setErr("Budget breakdown (" + total.toLocaleString() + " THB) must equal the requested total (" + Number(reqTotal).toLocaleString() + " THB)."); return; }
     if (submit) {
-      const overIdx = budgetRows.findIndex((b, i) => total > 0 && Math.round((Number(b.amount) || 0) / total * 100) > capArr[i]);
+      const overIdx = budgetRows.findIndex((b, i) => Number(reqTotal) > 0 && Math.round((Number(b.amount) || 0) / Number(reqTotal) * 100) > capArr[i]);
       if (overIdx !== -1) { setErr(budgetRows[overIdx].item + " exceeds its AU cap of " + capArr[overIdx] + "% of the total budget."); return; }
     }
     setBusy(true);
     try {
       // Persist the applicant's own details to their profile (enter once, reused).
-      try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department }); } catch (e) {}
+      try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
       const app = await window.DB.createApplication({
         title: draft.title, abstract: draft.outcome, field: draft.field,
         faculty: draft.school, department: draft.department, keywords: draft.keywords,
@@ -389,11 +405,13 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                 <label>Start Date</label>
                 <input type="date" value={draft.startDate} max={draft.endDate || undefined}
                   onChange={e => upd("startDate", e.target.value)} />
+                {draft.startDate && <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>{fmtNiceDate(draft.startDate)}</div>}
               </div>
               <div className="field">
                 <label>Expected End Date</label>
                 <input type="date" value={draft.endDate} min={draft.startDate || undefined}
                   onChange={e => upd("endDate", e.target.value)} />
+                {draft.endDate && <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>{fmtNiceDate(draft.endDate)}</div>}
               </div>
               <div className="field">
                 <label>Duration</label>
@@ -407,7 +425,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
 
         <div className="form-section">
           <h4><span className="num">2</span> Researcher Information</h4>
-          <p className="section-sub">Principal investigator contact details.</p>
+          <p className="section-sub">Principal investigator contact details and the faculty used to route the application.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field">
@@ -435,15 +453,10 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                 <label>Phone</label>
                 <input value={draft.phone} onChange={e => upd("phone", e.target.value)} />
               </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="form-section">
-          <h4><span className="num">3</span> Faculty / Department</h4>
-          <p className="section-sub">Affiliation used for routing the application.</p>
-          <div className="section-body">
-            <div className="form-grid">
+              <div className="field">
+                <label>Office / Room</label>
+                <input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" />
+              </div>
               <div className="field">
                 <label>School / Faculty</label>
                 <select value={draft.school} onChange={e => { upd("school", e.target.value); upd("department", ""); }}>
@@ -463,7 +476,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         </div>
 
         <div className="form-section">
-          <h4><span className="num">4</span> Budget Information</h4>
+          <h4><span className="num">3</span> Budget Information</h4>
           <p className="section-sub">Enter any amount up to the 100,000 THB AU-R1 maximum, then itemise it below. Caps: remuneration ≤{caps.remuneration}%, equipment ≤{caps.equipment}%, travel ≤{caps.travel}%, misc ≤{caps.misc}%.</p>
           <div className="section-body">
             <div className="form-grid">
@@ -493,12 +506,17 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                     </thead>
                     <tbody>
                       {budgetRows.map((b, i) => {
-                        const pct = total > 0 ? Math.round((Number(b.amount) || 0) / total * 100) : 0;
+                        const reqNum = Number(reqTotal) || 0;
+                        const pct = reqNum > 0 ? Math.round((Number(b.amount) || 0) / reqNum * 100) : 0;
                         const over = pct > capArr[i];
                         return (
                           <tr key={i}>
                             <td>{b.item}</td>
-                            <td style={{ textAlign: "center", color: over ? "var(--au-crimson)" : "var(--ink-3)", fontWeight: over ? 600 : 400 }}>{pct}%</td>
+                            <td style={{ textAlign: "center" }}>
+                              <input value={pct} onChange={e => setPct(i, e.target.value)}
+                                style={{ width: 48, textAlign: "center", fontFamily: "ui-monospace, monospace", color: over ? "var(--au-crimson)" : "inherit", fontWeight: over ? 600 : 400 }} />
+                              <span style={{ color: over ? "var(--au-crimson)" : "var(--ink-3)" }}>%</span>
+                            </td>
                             <td style={{ textAlign: "center", fontSize: 12, color: "var(--ink-3)" }}>≤ {capArr[i]}%</td>
                             <td style={{ textAlign: "right" }}>
                               <input value={(Number(b.amount) || 0).toLocaleString()} onChange={e => setAmt(i, e.target.value)}
@@ -546,7 +564,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         </div>
 
         <div className="form-section">
-          <h4><span className="num">5</span> Expected Outcomes</h4>
+          <h4><span className="num">4</span> Expected Outcomes</h4>
           <p className="section-sub">Deliverables, publications, and downstream artefacts.</p>
           <div className="section-body">
             <div className="field">
@@ -561,7 +579,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         </div>
 
         <div className="form-section">
-          <h4><span className="num">6</span> Required Documents</h4>
+          <h4><span className="num">5</span> Required Documents</h4>
           <p className="section-sub">Upload AU-R1 PDF documents. You can add or delete files while the application is still waiting for Dean screening.</p>
           <div className="section-body">
             <div style={{ background: "var(--paper-warm)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "12px 14px", marginBottom: 14 }}>

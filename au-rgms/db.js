@@ -958,7 +958,7 @@
       var me = await uid();
       if (!me) throw new Error("You must be signed in.");
       var patch = {};
-      ["full_name", "name_title", "au_id", "phone", "title", "department", "budget_split"].forEach(function (k) {
+      ["full_name", "name_title", "au_id", "phone", "title", "department", "budget_split", "office_room"].forEach(function (k) {
         if (fields[k] !== undefined && fields[k] !== null) patch[k] = fields[k];
       });
       if (!Object.keys(patch).length) return null;
