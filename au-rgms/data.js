@@ -345,27 +345,72 @@ const GRANT_SYSTEMS = [
     name: "Internal Research / Creative Grant",
     tagline: "Research, creative or academic works produced within AU.",
     maxAmount: 100000, maxLabel: "฿100,000 / academic year",
-    icon: "FileText",
+    icon: "FileText", accent: "#9E1B1B", accentSoft: "#F8E8E8",
+    highlights: ["Full research or creative projects", "30 / 40 / 30 milestone payments", "Proposal, budget & final report"],
   },
   {
     id: "au_r3", code: "AU-R3", enabled: true, collaborative: true,
     name: "Paper Presentation Grant",
-    tagline: "Present a paper at a domestic or international conference — apply together with other researchers and students.",
+    tagline: "Present a paper at a domestic or international conference.",
     maxAmount: 50000, maxLabel: "฿50,000 / academic year",
-    icon: "Users",
+    icon: "Users", accent: "#C9A227", accentSoft: "#FAF1D6",
+    highlights: ["Co-apply with researchers & students", "Conference travel & registration", "Full article + Turnitin ≤ 20%"],
   },
   {
-    id: "au_r4", code: "AU-R4", enabled: false, collaborative: false,
+    id: "au_r4", code: "AU-R4", enabled: true, collaborative: false,
     name: "Publication Fees & Reward",
-    tagline: "Reimburse publication fees and claim the reward for a published article.",
+    tagline: "Claim the reward for an article already published in a journal.",
     maxAmount: 80000, maxLabel: "฿80,000 / article",
-    icon: "Award",
+    icon: "Award", accent: "#2D2A4A", accentSoft: "#EAE8F0",
+    highlights: ["Reward by journal quartile / index", "Publication fees reimbursed", "Scopus, WoS, TCI & more"],
   },
+];
+
+// AU-R4 publication reward — indexing types and their reward (THB).
+// "quartiles" → reward depends on the Scopus SJR quartile; "actual" → the reward
+// equals the actual publication fee the researcher paid (enter the receipt amount).
+const R4_INDEX_TYPES = [
+  { key: "scopus", label: "Scopus (SJR quartile)", quartiles: true },
+  { key: "wos", label: "Web of Science (SCIE / SSCI / AHCI)", reward: 80000 },
+  { key: "intl_db", label: "Intl. database (ERIC, MathSciNet, PubMed, JSTOR, Project Muse)", reward: 25000 },
+  { key: "tci1", label: "Thai Citation Index — Tier 1 (actual fee)", actual: true },
+  { key: "tci2", label: "Thai Citation Index — Tier 2 (actual fee)", actual: true },
+  { key: "creative", label: "Creative work (ASEAN / international)", reward: 25000 },
+  { key: "patent", label: "Patent / registered new plant or animal", reward: 10000 },
+  { key: "petty", label: "Petty patent", reward: 3000 },
+];
+const R4_SCOPUS_QUARTILE_REWARD = { Q1: 80000, Q2: 60000, Q3: 50000, Q4: 40000 };
+
+// Estimated AU-R4 reward for a chosen index type + quartile + entered fee.
+function r4EstimateReward(indexKey, quartile, feeAmount) {
+  const t = R4_INDEX_TYPES.find(x => x.key === indexKey);
+  if (!t) return 0;
+  if (t.quartiles) return R4_SCOPUS_QUARTILE_REWARD[quartile] || 0;
+  if (t.actual) return Math.max(0, Number(feeAmount) || 0);
+  return t.reward || 0;
+}
+
+// Document types for an AU-R4 Publication Fees & Reward upload.
+const R4_DOC_TYPES = [
+  "Full Research Article",
+  "Turnitin Result (≤ 20%)",
+  "Receipt of Publication Fee",
+  "Dean-signed Memo",
+  "Other supporting document",
+];
+
+// What an AU-R4 applicant must attach (shown as a checklist).
+const R4_REQUIRED_DOCS = [
+  { id: "r4-article", name: "Full Research Article", role: "the full published article (not just the abstract)" },
+  { id: "r4-turnitin", name: "Turnitin Result", role: "similarity must not exceed 20%" },
+  { id: "r4-receipt", name: "Receipt of Publication Fee", role: "the original receipt of the fee you paid" },
+  { id: "r4-memo", name: "Dean-signed Memo", role: "a memo signed by your Dean" },
 ];
 
 window.AU = {
   ALL_STAGES, STATUS, FACULTIES, REQUIRED_DOCS, PAPER_PRESENTATION_DOCS,
   AU_TITLES, WORK_TYPES, DEFAULT_BUDGET_CAPS, NECESSARY_DOCS, DOC_TYPES, R3_DOC_TYPES, GRANT_SYSTEMS, REIMBURSE_CATEGORIES,
+  R4_INDEX_TYPES, R4_SCOPUS_QUARTILE_REWARD, r4EstimateReward, R4_DOC_TYPES, R4_REQUIRED_DOCS,
   PRIMARY_APP, APPLICATIONS,
   NOTIFS, PAYMENTS, ACTIVITY,
   ROLES,

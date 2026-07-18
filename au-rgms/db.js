@@ -190,6 +190,7 @@
         budget_items: payload.budget_items || null,
         grant_type: payload.grant_type || "au_r1",
         co_members: payload.co_members || null,
+        pub_info: payload.pub_info || null,
         status: submit ? "submitted" : "draft",
         submitted_at: submit ? new Date().toISOString() : (existing ? existing.submitted_at : null),
       };

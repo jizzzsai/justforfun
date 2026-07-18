@@ -738,6 +738,308 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   );
 }
 
+/* ---------- B2. Submit AU-R4 Publication Fees & Reward ---------- */
+const R4_DEFAULT_DRAFT = {
+  title: "", journal: "", indexType: "scopus", quartile: "Q1", doi: "", pubDate: "", feeAmount: "",
+  name: "", title2: "", auId: "", email: "", phone: "", office: "", school: "", department: "",
+};
+function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
+  const sys = grantSystemFor("au_r4");
+  const [draft, setDraft] = useState({ ...R4_DEFAULT_DRAFT });
+  const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
+
+  const [files, setFiles] = useState([]);
+  const [docType, setDocType] = useState("Full Research Article");
+  const onFiles = (e) => { const fs = Array.from(e.target.files || []); setFiles(prev => prev.concat(fs.map(f => ({ file: f, docType })))); e.target.value = ""; };
+  const [editingId, setEditingId] = useState(applicationId || null);
+  const [existingDocs, setExistingDocs] = useState([]);
+  const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+
+  const idxType = (RA.R4_INDEX_TYPES || []).find(t => t.key === draft.indexType) || {};
+  const reward = RA.r4EstimateReward ? RA.r4EstimateReward(draft.indexType, draft.quartile, draft.feeAmount) : 0;
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const p = await window.AUTH.profile();
+        if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
+        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone, office: p.office_room || d.office }));
+      } catch (e) {}
+    })();
+  }, [applicationId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      if (!applicationId) { setEditingId(null); setExistingDocs([]); setFiles([]); setLoadingDraft(false); return; }
+      setLoadingDraft(true); setErr("");
+      try {
+        const app = await window.DB.applicationDetail(applicationId);
+        if (!app || ["draft", "returned"].indexOf(app.status) === -1) {
+          if (!cancelled) { setEditingId(null); setExistingDocs([]); setErr("Only draft or returned applications can be edited here."); }
+          return;
+        }
+        if (cancelled) return;
+        const pi = app.pub_info || {};
+        setEditingId(app.id);
+        setExistingDocs(app.documents || []);
+        setDraft(d => ({
+          ...d,
+          title: app.title || "",
+          journal: pi.journal || "",
+          indexType: pi.indexType || "scopus",
+          quartile: pi.quartile || "Q1",
+          doi: pi.doi || "",
+          pubDate: pi.pubDate || "",
+          feeAmount: pi.feeAmount != null ? String(pi.feeAmount) : "",
+          school: app.faculty || d.school,
+          department: app.department || d.department,
+          name: app.researcher ? (app.researcher.full_name || d.name) : d.name,
+          email: app.researcher ? (app.researcher.email || d.email) : d.email,
+        }));
+      } catch (e) { if (!cancelled) setErr((e && e.message) || "Could not load this draft."); }
+      finally { if (!cancelled) setLoadingDraft(false); }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [applicationId]);
+
+  const deleteExistingDoc = (doc) => {
+    const runDelete = async () => {
+      try { await window.DB.deleteDocument(doc); setExistingDocs(ds => ds.filter(d => d.id !== doc.id)); toast(doc.name + " deleted."); }
+      catch (ex) { toast("Delete error: " + ((ex && ex.message) || ex)); }
+    };
+    if (setConfirm) setConfirm({ kind: "danger", title: "Delete uploaded file?", message: doc.name + " will be removed from this draft and from storage.", confirmLabel: "Delete File", onConfirm: runDelete });
+    else runDelete();
+  };
+
+  async function save(submit) {
+    setErr("");
+    if (submit && !draft.title.trim()) { setErr("Enter the title of your published article."); return; }
+    if (submit && !draft.journal.trim()) { setErr("Enter the journal / publication name."); return; }
+    if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
+    if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
+    if (submit && idxType.actual && Number(draft.feeAmount) <= 0) { setErr("Enter the publication fee you paid (the reward for this type equals the actual fee)."); return; }
+    if (submit && reward <= 0) { setErr("Choose the indexing / type (and Scopus quartile) so the reward can be estimated."); return; }
+    setBusy(true);
+    try {
+      try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
+      const pubInfo = {
+        journal: draft.journal, indexType: draft.indexType, indexLabel: idxType.label || draft.indexType,
+        quartile: idxType.quartiles ? draft.quartile : null, doi: draft.doi, pubDate: draft.pubDate || null,
+        feeAmount: Number(draft.feeAmount) || 0, reward: reward,
+      };
+      const app = await window.DB.createApplication({
+        title: draft.title, abstract: "Publication reward claim — " + draft.journal + (idxType.label ? " (" + idxType.label + ")" : ""),
+        faculty: draft.school, department: draft.department,
+        requested_amount: reward, duration_months: 12,
+        grant_type: "au_r4", pub_info: pubInfo,
+      }, submit, editingId);
+      for (const it of files) { try { await window.DB.uploadDocument(app.id, it.file, it.docType || null); } catch (e) {} }
+      if (!submit) { setEditingId(app.id); if (setSelectedApplicationId) setSelectedApplicationId(app.id); }
+      else if (setSelectedApplicationId) setSelectedApplicationId(null);
+      toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
+      navigate("r-applications");
+    } catch (ex) { setErr((ex && ex.message) || "Could not save the application."); setBusy(false); }
+  }
+
+  if (loadingDraft) {
+    return <><PageHeader title="Edit AU-R4 Application" desc="Loading saved draft." /><div className="card" style={{ padding: 44, textAlign: "center", color: "var(--ink-3)" }}>Loading draft...</div></>;
+  }
+
+  const emailBad = draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim());
+  return (
+    <>
+      <PageHeader
+        title={(editingId ? "Edit " : "Submit ") + "AU-R4 Application"}
+        desc={sys.name + " — claim the reward for an article already published in a journal. Complete each section and upload the required documents before submitting."}
+        actions={
+          <>
+            <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
+            <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
+              <Icon name="Send" size={13} /> {busy ? "Saving…" : "Submit Application"}
+            </button>
+          </>
+        }
+      />
+
+      <div className="card card-pad-0">
+        <div className="form-section">
+          <h4><span className="num">1</span> Publication Details</h4>
+          <p className="section-sub">The article you already published and where it appeared.</p>
+          <div className="section-body">
+            <div className="form-grid">
+              <div className="field full">
+                <label>Article / Paper Title</label>
+                <input value={draft.title} onChange={e => upd("title", e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Journal / Publication Name</label>
+                <input value={draft.journal} onChange={e => upd("journal", e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Indexing / Type</label>
+                <select value={draft.indexType} onChange={e => upd("indexType", e.target.value)}>
+                  {(RA.R4_INDEX_TYPES || []).map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
+                </select>
+              </div>
+              {idxType.quartiles && (
+                <div className="field">
+                  <label>Scopus SJR Quartile</label>
+                  <select value={draft.quartile} onChange={e => upd("quartile", e.target.value)}>
+                    {["Q1", "Q2", "Q3", "Q4"].map(q => <option key={q} value={q}>{q}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className="field">
+                <label>DOI / Article URL</label>
+                <input value={draft.doi} onChange={e => upd("doi", e.target.value)} placeholder="https://doi.org/…" />
+              </div>
+              <div className="field">
+                <label>Publication Date</label>
+                <input type="date" value={draft.pubDate} onChange={e => upd("pubDate", e.target.value)} />
+                {draft.pubDate && <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>{fmtNiceDate(draft.pubDate)}</div>}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h4><span className="num">2</span> Researcher Information</h4>
+          <p className="section-sub">Principal author contact details and the faculty used to route the application.</p>
+          <div className="section-body">
+            <div className="form-grid">
+              <div className="field">
+                <label>Title</label>
+                <select value={draft.title2} onChange={e => upd("title2", e.target.value)}>
+                  <option value="">Select title…</option>
+                  {RA.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="field"><label>Full Name</label><input value={draft.name} onChange={e => upd("name", e.target.value)} /></div>
+              <div className="field"><label>AU ID</label><input value={draft.auId} onChange={e => upd("auId", e.target.value)} placeholder="e.g. 5012345" /></div>
+              <div className="field">
+                <label>Email (AU only)</label>
+                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} placeholder="name@au.edu"
+                  style={emailBad ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : {}} />
+                {emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}
+              </div>
+              <div className="field"><label>Phone</label><input value={draft.phone} onChange={e => upd("phone", e.target.value)} /></div>
+              <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
+              <div className="field">
+                <label>School / Faculty</label>
+                <select value={draft.school} onChange={e => { upd("school", e.target.value); upd("department", ""); }}>
+                  <option value="">Select your faculty…</option>
+                  {RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>Department</label>
+                <select value={draft.department} onChange={e => upd("department", e.target.value)} disabled={!draft.school}>
+                  <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
+                  {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h4><span className="num">3</span> Reward &amp; Fee</h4>
+          <p className="section-sub">The reward is set by the indexing you chose; RASSC confirms it against the journal database. {idxType.actual ? "For this type the reward equals the actual publication fee you paid." : ""}</p>
+          <div className="section-body">
+            <div className="form-grid">
+              <div className="field">
+                <label>Publication Fee Paid (THB){idxType.actual ? "" : " — for the receipt"}</label>
+                <input value={draft.feeAmount === "" ? "" : Number(draft.feeAmount || 0).toLocaleString()}
+                  onChange={e => upd("feeAmount", (e.target.value + "").replace(/[^0-9]/g, ""))}
+                  placeholder="0" />
+              </div>
+              <div className="field">
+                <label>Estimated Reward</label>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", border: "1px solid var(--line)", borderRadius: "var(--r-md)", background: "var(--au-gold-soft)" }}>
+                  <Icon name="Award" size={18} style={{ color: "var(--au-gold-deep)" }} />
+                  <span style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 500 }}>{fmtBaht(reward)}</span>
+                </div>
+                <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>{idxType.label || ""}{idxType.quartiles ? " · " + draft.quartile : ""}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h4><span className="num">4</span> Required Documents</h4>
+          <p className="section-sub">Upload the AU-R4 PDF documents. You can add or delete files while the application is still waiting for Dean screening.</p>
+          <div className="section-body">
+            <div style={{ background: "var(--paper-warm)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "12px 14px", marginBottom: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--ink-2)" }}>Documents required for an AU-R4 Publication Fees &amp; Reward claim:</div>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink-2)", lineHeight: 1.7 }}>
+                {(RA.R4_REQUIRED_DOCS || []).map(d => <li key={d.id}><b>{d.name}</b> — {d.role}</li>)}
+              </ul>
+            </div>
+            {existingDocs.length > 0 && (
+              <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
+                {existingDocs.map(d => (
+                  <div className="file-row" key={d.id || d.name}>
+                    <div className="ficon"><Icon name="FileText" size={18} /></div>
+                    <div className="fmeta">
+                      <div className="fn">{d.name}{d.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{d.doc_type}</span>}</div>
+                      <div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div>
+                    </div>
+                    <div className="factions">
+                      <button className="btn btn-secondary btn-sm" onClick={() => onView(d)}><Icon name="Eye" size={13} /> View</button>
+                      <button className="btn btn-secondary btn-sm" onClick={() => onDownload(d)}><Icon name="Download" size={13} /> Download</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => deleteExistingDoc(d)}><Icon name="Trash2" size={13} /> Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {files.length > 0 && (
+              <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
+                {files.map((it, i) => (
+                  <div className="file-row" key={i}>
+                    <div className="ficon"><Icon name="FileText" size={18} /></div>
+                    <div className="fmeta">
+                      <div className="fn">{it.file.name}{it.docType && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{it.docType}</span>}</div>
+                      <div className="fs">{(it.file.size / 1024).toFixed(0)} KB · ready to upload</div>
+                    </div>
+                    <div className="factions">
+                      <button className="btn btn-secondary btn-sm" onClick={() => setFiles(fs => fs.filter((_, j) => j !== i))}><Icon name="X" size={13} /> Remove</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="field" style={{ maxWidth: 360, marginBottom: 10 }}>
+              <label>Document type for the next upload</label>
+              <select value={docType} onChange={e => setDocType(e.target.value)}>
+                {(RA.R4_DOC_TYPES || RA.DOC_TYPES).map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <label className="upload-box mt-1" style={{ cursor: "pointer", display: "block" }}>
+              <input type="file" accept="application/pdf,.pdf" multiple style={{ display: "none" }} onChange={onFiles} />
+              <Icon name="Upload" size={26} className="icon" />
+              <div className="t">Click to upload your <b>{docType}</b></div>
+              <div className="s">PDF · max 10 MB per file</div>
+            </label>
+          </div>
+        </div>
+
+        <div style={{ padding: "16px 24px", borderTop: "1px solid var(--line)", background: "var(--paper-warm)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, alignSelf: "center", marginRight: "auto" }}>{err}</div>}
+          <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
+          <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
+            <Icon name="Send" size={13} /> {busy ? "Saving…" : "Submit Application"}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ---------- C. My Applications ---------- */
 function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, setSelectedApplicationId, grantType }) {
   const sys = grantSystemFor(grantType || "au_r1");
@@ -944,6 +1246,16 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
                       <span className="r">{m.name}{m.email ? " · " + m.email : ""}</span>
                     </div>
                   ))}
+                </div>
+              )}
+              {app.pub_info && (
+                <div style={{ marginTop: 8, borderTop: "1px solid var(--line-2)", paddingTop: 8 }}>
+                  <div className="eyebrow" style={{ marginBottom: 6 }}>Publication (AU-R4)</div>
+                  <div className="meta-row"><span className="l">Journal</span><span className="r">{app.pub_info.journal || "-"}</span></div>
+                  <div className="meta-row"><span className="l">Indexing</span><span className="r">{app.pub_info.indexLabel || app.pub_info.indexType || "-"}{app.pub_info.quartile ? " · " + app.pub_info.quartile : ""}</span></div>
+                  {app.pub_info.doi && <div className="meta-row"><span className="l">DOI / URL</span><span className="r">{app.pub_info.doi}</span></div>}
+                  {app.pub_info.feeAmount ? <div className="meta-row"><span className="l">Publication fee</span><span className="r">{fmtBaht(Number(app.pub_info.feeAmount || 0))}</span></div> : null}
+                  <div className="meta-row"><span className="l">Estimated reward</span><span className="r">{fmtBaht(Number(app.pub_info.reward || app.requested_amount || 0))}</span></div>
                 </div>
               )}
             </div>

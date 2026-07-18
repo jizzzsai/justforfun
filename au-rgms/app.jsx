@@ -119,12 +119,90 @@ function LoginPage({ onLogin }) {
   );
 }
 
+/* ============= EMBEDDED AU AI HELPER (grant chooser) ============= */
+const CHOOSER_INTRO = "Hi, I'm AU AI. Not sure which grant fits you? Ask me what each one is for, how they differ, the amounts, or what documents you'll need — I'll help you pick.";
+const CHOOSER_CHIPS = [
+  "What's the difference between AU-R1, AU-R3 and AU-R4?",
+  "Which grant is for presenting a paper at a conference?",
+  "How is my AU-R4 publication reward calculated?",
+  "Can students apply together with me?",
+];
+function GrantHelperChat({ profile }) {
+  const [msgs, setMsgs] = useState([{ role: "assistant", content: CHOOSER_INTRO }]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const bodyRef = useRef(null);
+  const ctx = { role: "researcher", name: profile && profile.full_name, faculty: profile && profile.faculty };
+
+  useEffect(() => { const el = bodyRef.current; if (el) el.scrollTop = el.scrollHeight; }, [msgs, busy]);
+
+  async function ask(text) {
+    const q = (text || input).trim();
+    if (!q || busy) return;
+    const next = [...msgs, { role: "user", content: q }];
+    setMsgs(next); setInput(""); setBusy(true);
+    try {
+      const r = await fetch("/api/chat", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: next, context: ctx }),
+      });
+      const data = await r.json();
+      setMsgs(m => [...m, { role: "assistant", content: data.reply || "Sorry, no response." }]);
+    } catch (e) {
+      setMsgs(m => [...m, { role: "assistant", content: "Sorry, I couldn't reach AU AI right now." }]);
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <div style={{ background: "var(--paper)", border: "1px solid var(--line)", borderRadius: "var(--r-xl, 16px)", overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", borderBottom: "1px solid var(--line-2)", background: "linear-gradient(90deg, var(--au-crimson) 0%, var(--au-crimson-deep, #7a1414) 100%)" }}>
+        <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(255,255,255,0.18)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <Icon name="GraduationCap" size={18} />
+        </div>
+        <div style={{ lineHeight: 1.25, color: "#fff" }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Ask AU AI</div>
+          <div style={{ fontSize: 11, opacity: 0.85 }}>Not sure which grant to choose? I can help.</div>
+        </div>
+      </div>
+
+      <div ref={bodyRef} style={{ maxHeight: 260, overflowY: "auto", padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10, background: "var(--paper-warm)" }}>
+        {msgs.map((m, i) => (
+          <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%",
+            background: m.role === "user" ? "var(--au-crimson)" : "var(--paper)",
+            color: m.role === "user" ? "#fff" : "var(--ink-1)",
+            border: m.role === "user" ? "none" : "1px solid var(--line)",
+            borderRadius: 12, padding: "9px 13px", fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+            {m.content}
+          </div>
+        ))}
+        {busy && <div style={{ alignSelf: "flex-start", fontSize: 13, color: "var(--ink-3)", fontStyle: "italic" }}>AU AI is thinking…</div>}
+        {msgs.length <= 1 && !busy && (
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
+            {CHOOSER_CHIPS.map((s, i) => (
+              <button key={i} type="button" onClick={() => ask(s)}
+                style={{ fontSize: 12, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", border: "1px solid transparent", borderRadius: 999, padding: "6px 12px", cursor: "pointer" }}>
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <form onSubmit={e => { e.preventDefault(); ask(); }} style={{ display: "flex", gap: 8, padding: "12px 14px", borderTop: "1px solid var(--line-2)", background: "var(--paper)" }}>
+        <input value={input} onChange={e => setInput(e.target.value)} placeholder="Ask about the grants…"
+          style={{ flex: 1, border: "1px solid var(--line)", borderRadius: 10, padding: "9px 12px", fontSize: 13 }} />
+        <button type="submit" className="btn btn-primary" disabled={busy || !input.trim()} aria-label="Send"><Icon name="Send" size={15} /></button>
+      </form>
+    </div>
+  );
+}
+
 /* ============= GRANT SYSTEM CHOOSER (researcher landing) ============= */
 function GrantSystemChooser({ profile, onPick, onLogout }) {
   const systems = APP.GRANT_SYSTEMS || [];
   const firstName = profile && profile.full_name ? profile.full_name.split(" ")[0] : "";
   return (
-    <div className="chooser-shell" style={{ minHeight: "100vh", background: "var(--paper-warm)", display: "flex", flexDirection: "column" }}>
+    <div className="chooser-shell" style={{ minHeight: "100vh", background: "radial-gradient(1200px 480px at 50% -8%, var(--au-crimson-soft) 0%, rgba(0,0,0,0) 60%), var(--paper-warm)", display: "flex", flexDirection: "column" }}>
       <header style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 28px", borderBottom: "1px solid var(--line)", background: "var(--paper)" }}>
         <AULogo size={34} />
         <div style={{ lineHeight: 1.2 }}>
@@ -136,20 +214,27 @@ function GrantSystemChooser({ profile, onPick, onLogout }) {
         <button className="btn btn-secondary btn-sm" onClick={onLogout}><Icon name="LogOut" size={13} /> Sign out</button>
       </header>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
-        <div style={{ textAlign: "center", marginBottom: 30, maxWidth: 640 }}>
-          <div className="eyebrow" style={{ color: "var(--au-crimson)", marginBottom: 8 }}>Choose a grant to apply for</div>
-          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 30, fontWeight: 500, margin: "0 0 8px" }}>
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 20px 56px" }}>
+        <div style={{ textAlign: "center", marginBottom: 34, maxWidth: 660 }}>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
+            <span style={{ height: 1, width: 30, background: "var(--au-gold)" }}></span>
+            <span className="eyebrow" style={{ color: "var(--au-crimson)" }}>Choose a grant to apply for</span>
+            <span style={{ height: 1, width: 30, background: "var(--au-gold)" }}></span>
+          </div>
+          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 34, fontWeight: 500, margin: "0 0 10px", letterSpacing: "-0.01em" }}>
             Welcome{firstName ? ", " + firstName : ""}
           </h1>
-          <p style={{ color: "var(--ink-2)", margin: 0, lineHeight: 1.6 }}>
-            Select which AU research grant system you want to work in. You can switch systems at any time.
+          <p style={{ color: "var(--ink-2)", margin: 0, lineHeight: 1.65, fontSize: 15 }}>
+            Pick the AU research grant you want to work in. Each has its own form and documents —
+            the review workflow and payments are handled the same way. You can switch anytime.
           </p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 300px))", gap: 20, width: "100%", maxWidth: 980, justifyContent: "center" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(272px, 300px))", gap: 22, width: "100%", maxWidth: 980, justifyContent: "center" }}>
           {systems.map(sys => {
             const disabled = !sys.enabled;
+            const accent = sys.accent || "#9E1B1B";
+            const accentSoft = sys.accentSoft || "var(--au-crimson-soft)";
             return (
               <button
                 key={sys.id}
@@ -159,29 +244,44 @@ function GrantSystemChooser({ profile, onPick, onLogout }) {
                 style={{
                   textAlign: "left", cursor: disabled ? "not-allowed" : "pointer",
                   background: "var(--paper)", border: "1px solid var(--line)",
-                  borderRadius: "var(--r-lg, 14px)", padding: "24px 22px",
-                  opacity: disabled ? 0.62 : 1, position: "relative",
+                  borderRadius: "var(--r-xl, 16px)", padding: 0, position: "relative", overflow: "hidden",
+                  opacity: disabled ? 0.66 : 1,
                   boxShadow: "0 1px 2px rgba(0,0,0,0.04)", transition: "border-color .15s, box-shadow .15s, transform .15s",
                 }}
-                onMouseEnter={e => { if (!disabled) { e.currentTarget.style.borderColor = "var(--au-crimson)"; e.currentTarget.style.boxShadow = "0 6px 22px rgba(158,27,27,0.12)"; e.currentTarget.style.transform = "translateY(-2px)"; } }}
+                onMouseEnter={e => { if (!disabled) { e.currentTarget.style.borderColor = accent; e.currentTarget.style.boxShadow = "0 10px 30px " + accentSoft; e.currentTarget.style.transform = "translateY(-3px)"; } }}
                 onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "none"; }}
               >
-                {disabled && (
-                  <span style={{ position: "absolute", top: 14, right: 14, fontSize: 10, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--ink-3)", background: "var(--paper-warm)", border: "1px solid var(--line)", padding: "3px 8px", borderRadius: 999 }}>Coming soon</span>
-                )}
-                <div style={{ width: 46, height: 46, borderRadius: 12, background: "var(--au-crimson-soft, #f7e9e9)", color: "var(--au-crimson)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
-                  <Icon name={sys.icon} size={24} />
-                </div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--au-crimson)", letterSpacing: 0.4 }}>{sys.code}</div>
-                <div style={{ fontFamily: "var(--font-serif)", fontSize: 19, fontWeight: 500, margin: "2px 0 8px" }}>{sys.name}</div>
-                <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.55, margin: "0 0 16px", minHeight: 58 }}>{sys.tagline}</p>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--line-2)", paddingTop: 12 }}>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-1)" }}>{sys.maxLabel}</span>
-                  {!disabled && <span style={{ fontSize: 13, fontWeight: 600, color: "var(--au-crimson)", display: "inline-flex", alignItems: "center", gap: 4 }}>Apply <Icon name="ArrowRight" size={13} /></span>}
+                <div style={{ height: 5, background: accent }}></div>
+                <div style={{ padding: "22px 22px 20px" }}>
+                  {disabled && (
+                    <span style={{ position: "absolute", top: 18, right: 16, fontSize: 10, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--ink-3)", background: "var(--paper-warm)", border: "1px solid var(--line)", padding: "3px 8px", borderRadius: 999 }}>Coming soon</span>
+                  )}
+                  <div style={{ width: 48, height: 48, borderRadius: 13, background: accentSoft, color: accent, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                    <Icon name={sys.icon} size={24} />
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: accent, letterSpacing: 0.6 }}>{sys.code}</div>
+                  <div style={{ fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 500, margin: "2px 0 8px", lineHeight: 1.2 }}>{sys.name}</div>
+                  <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.55, margin: "0 0 14px" }}>{sys.tagline}</p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 16 }}>
+                    {(sys.highlights || []).map((h, i) => (
+                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12.5, color: "var(--ink-2)" }}>
+                        <span style={{ color: accent, marginTop: 1, flexShrink: 0, display: "inline-flex" }}><Icon name="Check" size={14} /></span>
+                        <span>{h}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--line-2)", paddingTop: 13 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-1)" }}>{sys.maxLabel}</span>
+                    {!disabled && <span style={{ fontSize: 13, fontWeight: 600, color: accent, display: "inline-flex", alignItems: "center", gap: 4 }}>Apply <Icon name="ArrowRight" size={13} /></span>}
+                  </div>
                 </div>
               </button>
             );
           })}
+        </div>
+
+        <div style={{ width: "100%", maxWidth: 720, marginTop: 40 }}>
+          <GrantHelperChat profile={profile} />
         </div>
       </div>
     </div>
@@ -422,7 +522,9 @@ function PageRouter({ pageKey, navigate, ctx }) {
   switch (pageKey) {
     /* ---- Researcher ---- */
     case "r-dashboard":     return <ResearcherDashboard navigate={navigate} onDownload={c.onDownload} onView={c.onView} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} />;
-    case "r-submit":        return <ResearcherSubmit applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} />;
+    case "r-submit":        return c.grantType === "au_r4"
+                              ? <ResearcherSubmitR4 applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} />
+                              : <ResearcherSubmit applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} />;
     case "r-applications":  return <ResearcherApplications navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} openDraft={(id) => { c.setSelectedApplicationId(id); navigate("r-submit"); }} openDetail={(id) => { c.setSelectedApplicationId(id); navigate("r-detail"); }} />;
     case "r-detail":        return <ResearcherApplicationDetail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "r-progress":      return <ResearcherProgress onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
