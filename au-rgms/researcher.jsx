@@ -437,15 +437,13 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
               </div>
               <div className="field">
                 <label>Start Date</label>
-                <input type="date" value={draft.startDate} max={draft.endDate || undefined}
-                  onChange={e => upd("startDate", e.target.value)} />
-                {draft.startDate && <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>{fmtNiceDate(draft.startDate)}</div>}
+                <AUDatePicker value={draft.startDate} max={draft.endDate || undefined}
+                  onChange={v => upd("startDate", v)} placeholder="Select start date…" />
               </div>
               <div className="field">
                 <label>Expected End Date</label>
-                <input type="date" value={draft.endDate} min={draft.startDate || undefined}
-                  onChange={e => upd("endDate", e.target.value)} />
-                {draft.endDate && <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>{fmtNiceDate(draft.endDate)}</div>}
+                <AUDatePicker value={draft.endDate} min={draft.startDate || undefined}
+                  onChange={v => upd("endDate", v)} placeholder="Select end date…" />
               </div>
               <div className="field">
                 <label>Duration</label>
@@ -899,8 +897,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
               </div>
               <div className="field">
                 <label>Publication Date</label>
-                <input type="date" value={draft.pubDate} onChange={e => upd("pubDate", e.target.value)} />
-                {draft.pubDate && <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>{fmtNiceDate(draft.pubDate)}</div>}
+                <AUDatePicker value={draft.pubDate} onChange={v => upd("pubDate", v)} placeholder="Select publication date…" />
               </div>
             </div>
           </div>
@@ -1672,7 +1669,7 @@ function ResearcherPublicationGrants({ toast }) {
             </div>
             <div className="form-grid">
               <div className="field"><label>Quartile / tier</label><select value={form.quartile} onChange={e => setField("quartile", e.target.value)} disabled={form.indexing !== "scopus"}><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
-              <div className="field"><label>Published date</label><input type="date" value={form.published_on} onChange={e => setField("published_on", e.target.value)} /></div>
+              <div className="field"><label>Published date</label><AUDatePicker value={form.published_on} onChange={v => setField("published_on", v)} placeholder="Select published date…" /></div>
             </div>
             {needsActual && <div className="field"><label>Actual fee amount (THB)</label><input value={form.requested_amount} onChange={e => setField("requested_amount", e.target.value.replace(/[^0-9]/g, ""))} /></div>}
             <div className="field"><label>Evidence PDF</label><input type="file" accept="application/pdf,.pdf" onChange={e => setFile((e.target.files || [])[0] || null)} /></div>

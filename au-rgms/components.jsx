@@ -389,9 +389,106 @@ function fmtBaht(n) {
   return new Intl.NumberFormat("en-US").format(n) + " THB";
 }
 
+/* ---------- AU Date Picker ---------- */
+/* Replaces the browser-default <input type="date"> popup with an AU-branded
+   calendar (crimson header, gold accents, cream hovers). value is ISO
+   yyyy-mm-dd; min/max are ISO strings too. */
+const AUDP_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const AUDP_DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+function audpPad(n) { return (n < 10 ? "0" : "") + n; }
+function audpISO(y, m, d) { return y + "-" + audpPad(m + 1) + "-" + audpPad(d); }
+function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…" }) {
+  const [open, setOpen] = useState(false);
+  const today = new Date();
+  const sel = value ? new Date(value + "T00:00:00") : null;
+  const [view, setView] = useState({ y: (sel || today).getFullYear(), m: (sel || today).getMonth() });
+  const wrapRef = useRef(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDoc = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
+    const onEsc = (e) => { if (e.key === "Escape") setOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    document.addEventListener("keydown", onEsc);
+    return () => { document.removeEventListener("mousedown", onDoc); document.removeEventListener("keydown", onEsc); };
+  }, [open]);
+
+  const toggle = () => {
+    if (!open) {
+      const base = value ? new Date(value + "T00:00:00") : today;
+      if (!isNaN(base)) setView({ y: base.getFullYear(), m: base.getMonth() });
+    }
+    setOpen(v => !v);
+  };
+  const shift = (delta) => setView(v => {
+    const d = new Date(v.y, v.m + delta, 1);
+    return { y: d.getFullYear(), m: d.getMonth() };
+  });
+  const pick = (iso) => { if (onChange) onChange(iso); setOpen(false); };
+  const inRange = (iso) => (!min || iso >= min) && (!max || iso <= max);
+
+  // 6x7 grid starting on the Sunday on/before the 1st of the viewed month.
+  const first = new Date(view.y, view.m, 1);
+  const start = new Date(view.y, view.m, 1 - first.getDay());
+  const cells = [];
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    cells.push(d);
+  }
+  const todayISO = audpISO(today.getFullYear(), today.getMonth(), today.getDate());
+  const nice = sel && !isNaN(sel)
+    ? sel.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })
+    : "";
+
+  return (
+    <div className={"audp" + (open ? " open" : "")} ref={wrapRef}>
+      <button type="button" className="audp-input" onClick={toggle} aria-haspopup="dialog" aria-expanded={open}>
+        <Icon name="Calendar" size={15} className="cal" />
+        {nice ? <span className="grow">{nice}</span> : <span className="grow ph">{placeholder}</span>}
+        {value && (
+          <span className="clear" role="button" aria-label="Clear date"
+            onClick={e => { e.stopPropagation(); if (onChange) onChange(""); }}>
+            <Icon name="X" size={13} />
+          </span>
+        )}
+      </button>
+      {open && (
+        <div className="audp-pop" role="dialog" aria-label="Choose date">
+          <div className="audp-head">
+            <span className="m">{AUDP_MONTHS[view.m]} {view.y}</span>
+            <button type="button" onClick={() => shift(-1)} aria-label="Previous month"><Icon name="ChevronLeft" size={15} /></button>
+            <button type="button" onClick={() => shift(1)} aria-label="Next month"><Icon name="ChevronRight" size={15} /></button>
+          </div>
+          <div className="audp-grid">
+            {AUDP_DOW.map(d => <div key={d} className="audp-dow">{d}</div>)}
+            {cells.map((d, i) => {
+              const iso = audpISO(d.getFullYear(), d.getMonth(), d.getDate());
+              const out = d.getMonth() !== view.m;
+              const dis = !inRange(iso);
+              const cls = "audp-day" + (out ? " out" : "") + (dis ? " dis" : "")
+                + (iso === todayISO ? " today" : "") + (value === iso ? " sel" : "");
+              return (
+                <div key={i} className={cls} onClick={() => !dis && pick(iso)}>{d.getDate()}</div>
+              );
+            })}
+          </div>
+          <div className="audp-foot">
+            <button type="button" onClick={() => pick("")}>Clear</button>
+            <button type="button" disabled={!inRange(todayISO)}
+              onClick={() => { setView({ y: today.getFullYear(), m: today.getMonth() }); if (inRange(todayISO)) pick(todayISO); }}>
+              Today
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ---------- Expose ---------- */
 Object.assign(window, {
   Icon, AULogo, Badge, Avatar, Toast, FileRow,
   Timeline, HTimeline, Stat, Modal, FilePreviewModal,
   ConfirmModal, NotifPanel, PageHeader, Empty, fmtBaht,
+  AUDatePicker,
 });

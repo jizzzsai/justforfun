@@ -40,7 +40,7 @@ async function buildAIContext() {
   try {
     if (role === "researcher") {
       const apps = await window.DB.myApplications();
-      ctx.myApplications = (apps || []).map(a => ({ code: a.code, title: a.title, status: a.status, faculty: a.faculty, requested: a.requested_amount }));
+      ctx.myApplications = (apps || []).map(a => ({ code: a.code, title: a.title, status: a.status, faculty: a.faculty, requested: a.requested_amount, grant_system: (a.grant_type || "au_r1").replace("au_r", "AU-R").toUpperCase() }));
       try {
         const pgs = await window.DB.myPublicationGrants();
         ctx.myPublicationGrants = (pgs || []).map(g => ({ code: g.id, title: g.title, status: g.status.label, statusKey: g.statusKey, amount: g.budgetTotal, indexing: g.indexing, quartile: g.quartile }));

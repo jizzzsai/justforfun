@@ -353,7 +353,7 @@ const GRANT_SYSTEMS = [
     name: "Paper Presentation Grant",
     tagline: "Present a paper at a domestic or international conference.",
     maxAmount: 50000, maxLabel: "฿50,000 / academic year",
-    icon: "Users", accent: "#C9A227", accentSoft: "#FAF1D6",
+    icon: "Users", accent: "#9E1B1B", accentSoft: "#F8E8E8",
     highlights: ["Co-apply with researchers & students", "Conference travel & registration", "Full article + Turnitin ≤ 20%"],
   },
   {
@@ -361,7 +361,7 @@ const GRANT_SYSTEMS = [
     name: "Publication Fees & Reward",
     tagline: "Claim the reward for an article already published in a journal.",
     maxAmount: 80000, maxLabel: "฿80,000 / article",
-    icon: "Award", accent: "#2D2A4A", accentSoft: "#EAE8F0",
+    icon: "Award", accent: "#9E1B1B", accentSoft: "#F8E8E8",
     highlights: ["Reward by journal quartile / index", "Publication fees reimbursed", "Scopus, WoS, TCI & more"],
   },
 ];
