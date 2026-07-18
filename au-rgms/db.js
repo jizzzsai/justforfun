@@ -188,6 +188,8 @@
         end_date: payload.end_date || null,
         budget_breakdown: payload.budget_breakdown || null,
         budget_items: payload.budget_items || null,
+        grant_type: payload.grant_type || "au_r1",
+        co_members: payload.co_members || null,
         status: submit ? "submitted" : "draft",
         submitted_at: submit ? new Date().toISOString() : (existing ? existing.submitted_at : null),
       };
@@ -244,9 +246,11 @@
       return true;
     },
 
-    async myApplications() {
+    async myApplications(grantType) {
       var me = await uid();
-      var res = await sb.from("applications").select("*").eq("researcher_id", me).order("created_at", { ascending: false });
+      var q = sb.from("applications").select("*").eq("researcher_id", me);
+      if (grantType) q = q.eq("grant_type", grantType);
+      var res = await q.order("created_at", { ascending: false });
       if (res.error) throw res.error;
       return res.data || [];
     },
@@ -863,8 +867,10 @@
       return items.slice(0, 8);
     },
 
-    async statusCounts() {
-      var r = await sb.from("applications").select("status");
+    async statusCounts(grantType) {
+      var q = sb.from("applications").select("status");
+      if (grantType) q = q.eq("grant_type", grantType);
+      var r = await q;
       if (r.error) throw r.error;
       var c = { _total: 0 };
       (r.data || []).forEach(function (a) { c[a.status] = (c[a.status] || 0) + 1; c._total++; });

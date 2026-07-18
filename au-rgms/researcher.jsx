@@ -14,17 +14,18 @@ function buildResearcherTimeline(statusKey) {
   return tl;
 }
 
-function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicationId }) {
+function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicationId, grantType }) {
+  const sys = grantSystemFor(grantType || "au_r1");
   const [c, setC] = useState(null);
   const [me, setMe] = useState(null);
   const [grant, setGrant] = useState(null);
   const [apps, setApps] = useState(null);
   useEffect(() => {
-    window.DB.statusCounts().then(setC).catch(() => setC({}));
+    window.DB.statusCounts(grantType || undefined).then(setC).catch(() => setC({}));
     window.AUTH.profile().then(setMe).catch(() => {});
     window.DB.myGrant().then(g => setGrant(g || false)).catch(() => setGrant(false));
-    window.DB.myApplications().then(setApps).catch(() => setApps([]));
-  }, []);
+    window.DB.myApplications(grantType || undefined).then(setApps).catch(() => setApps([]));
+  }, [grantType]);
   const n = (k) => (c ? (c[k] || 0) : "…");
   const latest = apps && apps.length ? apps[0] : null;
   const pays = grant && grant.payments && grant.payments.length ? grant.payments.slice().sort((a, b) => a.instalment - b.instalment) : [];
@@ -39,11 +40,11 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
   return (
     <>
       <PageHeader
-        title="Researcher Dashboard"
-        desc={"Welcome back" + (me ? ", " + me.full_name : "") + ". Here is the status of your research grant applications."}
+        title={sys.code + " · Researcher Dashboard"}
+        desc={"Welcome back" + (me ? ", " + me.full_name : "") + ". Here is the status of your " + sys.name + " applications."}
         actions={
           <>
-            <button className="btn btn-secondary"><Icon name="Calendar" size={14} /> AY 2025–2026</button>
+            <button className="btn btn-secondary" onClick={() => navigate("r-switch-system")} title="Switch grant system"><Icon name="Repeat" size={14} /> {sys.code}</button>
             <button className="btn btn-primary" onClick={() => { if (setSelectedApplicationId) setSelectedApplicationId(null); navigate("r-submit"); }}>
               <Icon name="Plus" size={14} /> New Application
             </button>
@@ -160,12 +161,30 @@ const RESEARCHER_DEFAULT_DRAFT = {
   department: "",
   outcome: "",
 };
-const RESEARCHER_DEFAULT_BUDGET_ROWS = [
-  { item: "Remuneration (research assistant)", amount: 30000, purpose: "" },
-  { item: "Research equipment", amount: 40000, purpose: "" },
-  { item: "Travel for off-campus data collection", amount: 18000, purpose: "" },
-  { item: "Miscellaneous (postage, photocopying, binding)", amount: 12000, purpose: "" },
+const RESEARCHER_DEFAULT_SPLIT = { remuneration: 30, equipment: 40, travel: 18, misc: 12 };
+const RESEARCHER_BUDGET_LABELS = [
+  "Remuneration (research assistant)",
+  "Research equipment",
+  "Travel for off-campus data collection",
+  "Miscellaneous (postage, photocopying, binding)",
 ];
+// Default budget rows scaled so the four categories sum to `total`.
+function scaledBudgetRows(total, split) {
+  const t = Number(total) || 0;
+  const s = split || RESEARCHER_DEFAULT_SPLIT;
+  const a = Math.round(t * (s.remuneration || 0) / 100);
+  const b = Math.round(t * (s.equipment || 0) / 100);
+  const c = Math.round(t * (s.travel || 0) / 100);
+  const amts = [a, b, c, t - a - b - c];
+  return RESEARCHER_BUDGET_LABELS.map((item, i) => ({ item: item, amount: amts[i], purpose: "" }));
+}
+const RESEARCHER_DEFAULT_BUDGET_ROWS = scaledBudgetRows(100000, RESEARCHER_DEFAULT_SPLIT);
+
+// Resolve the grant system (au_r1 / au_r3 / au_r4) for a given id.
+function grantSystemFor(id) {
+  const list = (RA && RA.GRANT_SYSTEMS) || [];
+  return list.find(s => s.id === id) || list[0] || { id: "au_r1", code: "AU-R1", name: "Research Grant", maxAmount: 100000, collaborative: false };
+}
 
 // Human-friendly date label, e.g. "Sat, 18 Sep 2026", from an ISO yyyy-mm-dd.
 function fmtNiceDate(iso) {
@@ -186,13 +205,23 @@ function monthsBetween(startISO, endISO) {
 }
 
 /* ---------- B. Submit Application ---------- */
-function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
+function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId, grantType }) {
+  const sys = grantSystemFor(grantType || "au_r1");
+  const isR3 = !!sys.collaborative;
+  const maxAmount = sys.maxAmount || 100000;
+
   const [draft, setDraft] = useState({ ...RESEARCHER_DEFAULT_DRAFT });
   const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
 
-  const [budgetRows, setBudgetRows] = useState(RESEARCHER_DEFAULT_BUDGET_ROWS.map(r => ({ ...r })));
+  // Collaborative co-members (AU-R3): other researchers + students on the paper.
+  const [coMembers, setCoMembers] = useState([]);
+  const addMember = () => setCoMembers(m => m.concat([{ name: "", kind: "Researcher", auId: "", email: "" }]));
+  const setMember = (i, k, v) => setCoMembers(m => m.map((r, j) => j === i ? { ...r, [k]: v } : r));
+  const removeMember = (i) => setCoMembers(m => m.filter((_, j) => j !== i));
+
+  const [budgetRows, setBudgetRows] = useState(scaledBudgetRows(maxAmount, RESEARCHER_DEFAULT_SPLIT));
   const total = budgetRows.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const [reqTotal, setReqTotal] = useState("100000");
+  const [reqTotal, setReqTotal] = useState(String(maxAmount));
   const setAmt = (i, v) => setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, amount: (v + "").replace(/[^0-9]/g, "") } : r));
   // Editable "% of total" — type a percentage and derive the amount from the requested total.
   const setPct = (i, v) => {
@@ -215,7 +244,8 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const [docType, setDocType] = useState("Research Proposal");
+  const docTypeOptions = isR3 ? (RA.R3_DOC_TYPES || RA.DOC_TYPES) : RA.DOC_TYPES;
+  const [docType, setDocType] = useState(isR3 ? "Full Research Article" : "Research Proposal");
   const [caps, setCaps] = useState(RA.DEFAULT_BUDGET_CAPS || { remuneration: 30, equipment: 50, travel: 40, misc: 20 });
   const [split, setSplit] = useState({ remuneration: 30, equipment: 40, travel: 18, misc: 12 });
   const capArr = [caps.remuneration, caps.equipment, caps.travel, caps.misc];
@@ -241,9 +271,10 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         setEditingId(null);
         setExistingDocs([]);
         setFiles([]);
-        setReqTotal("100000");
-        setBudgetRows(RESEARCHER_DEFAULT_BUDGET_ROWS.map(r => ({ ...r })));
+        setReqTotal(String(maxAmount));
+        setBudgetRows(scaledBudgetRows(maxAmount, RESEARCHER_DEFAULT_SPLIT));
         setItems([{ purpose: "", amount: "" }]);
+        setCoMembers([]);
         setDraft(d => ({
           ...RESEARCHER_DEFAULT_DRAFT,
           name: d.name,
@@ -285,8 +316,9 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
           email: app.researcher ? (app.researcher.email || d.email) : d.email,
         }));
         setReqTotal(String(Number(app.requested_amount || 0)));
-        setBudgetRows(Array.isArray(app.budget_breakdown) && app.budget_breakdown.length ? app.budget_breakdown : RESEARCHER_DEFAULT_BUDGET_ROWS.map(r => ({ ...r })));
+        setBudgetRows(Array.isArray(app.budget_breakdown) && app.budget_breakdown.length ? app.budget_breakdown : scaledBudgetRows(maxAmount, RESEARCHER_DEFAULT_SPLIT));
         setItems(Array.isArray(app.budget_items) && app.budget_items.length ? app.budget_items : [{ purpose: "", amount: "" }]);
+        setCoMembers(Array.isArray(app.co_members) ? app.co_members : []);
       } catch (e) {
         if (!cancelled) setErr((e && e.message) || "Could not load this draft.");
       } finally {
@@ -327,7 +359,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
     if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
     if (submit && (!draft.startDate || !draft.endDate)) { setErr("Select the project start and expected end dates."); return; }
     if (submit && autoDuration <= 0) { setErr("The expected end date must be after the start date."); return; }
-    if (submit && Number(reqTotal) > 100000) { setErr("Requested amount (" + Number(reqTotal).toLocaleString() + " THB) exceeds the 100,000 THB maximum for AU-R1 research grants."); return; }
+    if (submit && Number(reqTotal) > maxAmount) { setErr("Requested amount (" + Number(reqTotal).toLocaleString() + " THB) exceeds the " + maxAmount.toLocaleString() + " THB maximum for " + sys.code + " grants."); return; }
     if (submit && Number(reqTotal) <= 0) { setErr("Enter the grant amount you are requesting."); return; }
     if (submit && total !== Number(reqTotal)) { setErr("Budget breakdown (" + total.toLocaleString() + " THB) must equal the requested total (" + Number(reqTotal).toLocaleString() + " THB)."); return; }
     if (submit) {
@@ -345,6 +377,8 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         start_date: draft.startDate || null, end_date: draft.endDate || null,
         budget_breakdown: budgetRows,
         budget_items: items.filter(it => (it.purpose || "").trim() || Number(it.amount) > 0),
+        grant_type: sys.id,
+        co_members: isR3 ? coMembers.filter(m => (m.name || "").trim()) : null,
       }, submit, editingId);
       for (const it of files) { try { await window.DB.uploadDocument(app.id, it.file, it.docType || null); } catch (e) {} }
       if (!submit) {
@@ -365,8 +399,8 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   return (
     <>
       <PageHeader
-        title={editingId ? "Edit Application" : "Submit Research Grant Application"}
-        desc={editingId ? "Update this saved or returned application, add files, or submit it to Dean screening." : "Complete each section and upload the AU-R1 PDF documents before submitting."}
+        title={(editingId ? "Edit " : "Submit ") + sys.code + " Application"}
+        desc={sys.name + (isR3 ? " — present a paper with your collaborators. " : " — ") + (editingId ? "Update this saved or returned application, then submit it to Dean screening." : "Complete each section and upload the required documents before submitting.")}
         actions={
           <>
             <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
@@ -472,12 +506,46 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                 </select>
               </div>
             </div>
+
+            {isR3 && (
+              <div style={{ marginTop: 18, borderTop: "1px solid var(--line-2)", paddingTop: 16 }}>
+                <div className="eyebrow" style={{ marginBottom: 4 }}>Collaborators (Co-members)</div>
+                <p className="section-sub" style={{ marginTop: 0 }}>Add the other researchers and students collaborating on this paper. Leave empty if you are applying alone.</p>
+                <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
+                  <table className="tbl">
+                    <thead>
+                      <tr><th>Name</th><th style={{ width: 130 }}>Role</th><th style={{ width: 120 }}>AU ID</th><th>Email</th><th style={{ width: 48 }}></th></tr>
+                    </thead>
+                    <tbody>
+                      {coMembers.length === 0 && (
+                        <tr><td colSpan="5" style={{ color: "var(--ink-3)", textAlign: "center", padding: "14px" }}>No collaborators added — you are applying as the sole applicant.</td></tr>
+                      )}
+                      {coMembers.map((m, i) => (
+                        <tr key={i}>
+                          <td><input value={m.name} onChange={e => setMember(i, "name", e.target.value)} placeholder="Full name" style={{ width: "100%", minWidth: 140 }} /></td>
+                          <td>
+                            <select value={m.kind} onChange={e => setMember(i, "kind", e.target.value)}>
+                              <option value="Researcher">Researcher</option>
+                              <option value="Student">Student</option>
+                            </select>
+                          </td>
+                          <td><input value={m.auId} onChange={e => setMember(i, "auId", e.target.value)} placeholder="ID" style={{ width: "100%", minWidth: 90 }} /></td>
+                          <td><input type="email" value={m.email} onChange={e => setMember(i, "email", e.target.value)} placeholder="name@au.edu" style={{ width: "100%", minWidth: 150 }} /></td>
+                          <td style={{ textAlign: "center" }}><button type="button" className="btn btn-ghost btn-sm" onClick={() => removeMember(i)} title="Remove collaborator"><Icon name="Trash2" size={13} /></button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <button type="button" className="btn btn-secondary btn-sm mt-1" onClick={addMember}><Icon name="Plus" size={13} /> Add collaborator</button>
+              </div>
+            )}
           </div>
         </div>
 
         <div className="form-section">
           <h4><span className="num">3</span> Budget Information</h4>
-          <p className="section-sub">Enter any amount up to the 100,000 THB AU-R1 maximum, then itemise it below. Caps: remuneration ≤{caps.remuneration}%, equipment ≤{caps.equipment}%, travel ≤{caps.travel}%, misc ≤{caps.misc}%.</p>
+          <p className="section-sub">Enter any amount up to the {maxAmount.toLocaleString()} THB {sys.code} maximum, then itemise it below. Caps: remuneration ≤{caps.remuneration}%, equipment ≤{caps.equipment}%, travel ≤{caps.travel}%, misc ≤{caps.misc}%.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field">
@@ -580,18 +648,29 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
 
         <div className="form-section">
           <h4><span className="num">5</span> Required Documents</h4>
-          <p className="section-sub">Upload AU-R1 PDF documents. You can add or delete files while the application is still waiting for Dean screening.</p>
+          <p className="section-sub">Upload the {sys.code} PDF documents. You can add or delete files while the application is still waiting for Dean screening.</p>
           <div className="section-body">
-            <div style={{ background: "var(--paper-warm)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "12px 14px", marginBottom: 14 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--ink-2)" }}>Download the blank AU forms you need (opens in a new tab):</div>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {RA.NECESSARY_DOCS.map(d => (
-                  <a key={d.file} href={d.file} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
-                    <Icon name="Download" size={13} /> {d.name}
-                  </a>
-                ))}
+            {isR3 ? (
+              <div style={{ background: "var(--paper-warm)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "12px 14px", marginBottom: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--ink-2)" }}>Documents required for an {sys.code} Paper Presentation Grant:</div>
+                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink-2)", lineHeight: 1.7 }}>
+                  {(RA.PAPER_PRESENTATION_DOCS || []).map(d => (
+                    <li key={d.id}><b>{d.name.replace(/_/g, " ").replace(/\.pdf$/i, "")}</b> — {d.role.replace(/^AU-R3 requirement:?\s*/i, "")}</li>
+                  ))}
+                </ul>
               </div>
-            </div>
+            ) : (
+              <div style={{ background: "var(--paper-warm)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "12px 14px", marginBottom: 14 }}>
+                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--ink-2)" }}>Download the blank AU forms you need (opens in a new tab):</div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {RA.NECESSARY_DOCS.map(d => (
+                    <a key={d.file} href={d.file} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
+                      <Icon name="Download" size={13} /> {d.name}
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
             {existingDocs.length > 0 && (
               <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
                 {existingDocs.map(d => (
@@ -631,7 +710,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
             <div className="field" style={{ maxWidth: 360, marginBottom: 10 }}>
               <label>Document type for the next upload</label>
               <select value={docType} onChange={e => setDocType(e.target.value)}>
-                {RA.DOC_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                {docTypeOptions.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <label className="upload-box mt-1" style={{ cursor: "pointer", display: "block" }}>
@@ -660,12 +739,13 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
 }
 
 /* ---------- C. My Applications ---------- */
-function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, setSelectedApplicationId }) {
+function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, setSelectedApplicationId, grantType }) {
+  const sys = grantSystemFor(grantType || "au_r1");
   const [myApps, setMyApps] = useState(null);
   useEffect(() => {
     (async () => {
       try {
-        const apps = await window.DB.myApplications();
+        const apps = await window.DB.myApplications(grantType || undefined);
         setMyApps(apps.map(a => ({
           id: a.code, _uuid: a.id, title: a.title, faculty: a.faculty, department: a.department,
           submittedAt: a.submitted_at ? window.DB.fmtDate(a.submitted_at) : "—",
@@ -673,13 +753,13 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
         })));
       } catch (e) { setMyApps([]); }
     })();
-  }, []);
+  }, [grantType]);
 
   return (
     <>
       <PageHeader
         title="My Applications"
-        desc="All research grant submissions across academic years."
+        desc={sys.code + " · " + sys.name + " — your submissions across academic years."}
         actions={
           <button className="btn btn-primary" onClick={() => { if (setSelectedApplicationId) setSelectedApplicationId(null); navigate("r-submit"); }}>
             <Icon name="Plus" size={14} /> New Application
@@ -855,6 +935,17 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
               <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{app.faculty || "-"}</span></div>
               <div className="meta-row"><span className="l">Department</span><span className="r">{app.department || "-"}</span></div>
               <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.requested_amount || 0))}</span></div>
+              {Array.isArray(app.co_members) && app.co_members.length > 0 && (
+                <div style={{ marginTop: 8, borderTop: "1px solid var(--line-2)", paddingTop: 8 }}>
+                  <div className="eyebrow" style={{ marginBottom: 6 }}>Collaborators</div>
+                  {app.co_members.map((m, i) => (
+                    <div className="meta-row" key={i}>
+                      <span className="l">{m.kind || "Member"}</span>
+                      <span className="r">{m.name}{m.email ? " · " + m.email : ""}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 

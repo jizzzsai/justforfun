@@ -119,6 +119,75 @@ function LoginPage({ onLogin }) {
   );
 }
 
+/* ============= GRANT SYSTEM CHOOSER (researcher landing) ============= */
+function GrantSystemChooser({ profile, onPick, onLogout }) {
+  const systems = APP.GRANT_SYSTEMS || [];
+  const firstName = profile && profile.full_name ? profile.full_name.split(" ")[0] : "";
+  return (
+    <div className="chooser-shell" style={{ minHeight: "100vh", background: "var(--paper-warm)", display: "flex", flexDirection: "column" }}>
+      <header style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 28px", borderBottom: "1px solid var(--line)", background: "var(--paper)" }}>
+        <AULogo size={34} />
+        <div style={{ lineHeight: 1.2 }}>
+          <div style={{ fontWeight: 700, fontSize: 14 }}>Assumption University</div>
+          <div style={{ fontSize: 11, color: "var(--ink-3)" }}>RGMS · Office of Research Affairs</div>
+        </div>
+        <div style={{ flex: 1 }}></div>
+        <span className="text-sm text-muted" style={{ marginRight: 12 }}>{profile ? profile.email : ""}</span>
+        <button className="btn btn-secondary btn-sm" onClick={onLogout}><Icon name="LogOut" size={13} /> Sign out</button>
+      </header>
+
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "40px 20px" }}>
+        <div style={{ textAlign: "center", marginBottom: 30, maxWidth: 640 }}>
+          <div className="eyebrow" style={{ color: "var(--au-crimson)", marginBottom: 8 }}>Choose a grant to apply for</div>
+          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 30, fontWeight: 500, margin: "0 0 8px" }}>
+            Welcome{firstName ? ", " + firstName : ""}
+          </h1>
+          <p style={{ color: "var(--ink-2)", margin: 0, lineHeight: 1.6 }}>
+            Select which AU research grant system you want to work in. You can switch systems at any time.
+          </p>
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 300px))", gap: 20, width: "100%", maxWidth: 980, justifyContent: "center" }}>
+          {systems.map(sys => {
+            const disabled = !sys.enabled;
+            return (
+              <button
+                key={sys.id}
+                type="button"
+                disabled={disabled}
+                onClick={() => !disabled && onPick(sys.id)}
+                style={{
+                  textAlign: "left", cursor: disabled ? "not-allowed" : "pointer",
+                  background: "var(--paper)", border: "1px solid var(--line)",
+                  borderRadius: "var(--r-lg, 14px)", padding: "24px 22px",
+                  opacity: disabled ? 0.62 : 1, position: "relative",
+                  boxShadow: "0 1px 2px rgba(0,0,0,0.04)", transition: "border-color .15s, box-shadow .15s, transform .15s",
+                }}
+                onMouseEnter={e => { if (!disabled) { e.currentTarget.style.borderColor = "var(--au-crimson)"; e.currentTarget.style.boxShadow = "0 6px 22px rgba(158,27,27,0.12)"; e.currentTarget.style.transform = "translateY(-2px)"; } }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "none"; }}
+              >
+                {disabled && (
+                  <span style={{ position: "absolute", top: 14, right: 14, fontSize: 10, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--ink-3)", background: "var(--paper-warm)", border: "1px solid var(--line)", padding: "3px 8px", borderRadius: 999 }}>Coming soon</span>
+                )}
+                <div style={{ width: 46, height: 46, borderRadius: 12, background: "var(--au-crimson-soft, #f7e9e9)", color: "var(--au-crimson)", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                  <Icon name={sys.icon} size={24} />
+                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--au-crimson)", letterSpacing: 0.4 }}>{sys.code}</div>
+                <div style={{ fontFamily: "var(--font-serif)", fontSize: 19, fontWeight: 500, margin: "2px 0 8px" }}>{sys.name}</div>
+                <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.55, margin: "0 0 16px", minHeight: 58 }}>{sys.tagline}</p>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--line-2)", paddingTop: 12 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--ink-1)" }}>{sys.maxLabel}</span>
+                  {!disabled && <span style={{ fontSize: 13, fontWeight: 600, color: "var(--au-crimson)", display: "inline-flex", alignItems: "center", gap: 4 }}>Apply <Icon name="ArrowRight" size={13} /></span>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ============= ROLE-SCOPED CONFIG ============= */
 const ROLE_CONFIG = {
   researcher: {
@@ -352,9 +421,9 @@ function PageRouter({ pageKey, navigate, ctx }) {
   const c = ctx;
   switch (pageKey) {
     /* ---- Researcher ---- */
-    case "r-dashboard":     return <ResearcherDashboard navigate={navigate} onDownload={c.onDownload} onView={c.onView} setSelectedApplicationId={c.setSelectedApplicationId} />;
-    case "r-submit":        return <ResearcherSubmit applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} />;
-    case "r-applications":  return <ResearcherApplications navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} openDraft={(id) => { c.setSelectedApplicationId(id); navigate("r-submit"); }} openDetail={(id) => { c.setSelectedApplicationId(id); navigate("r-detail"); }} />;
+    case "r-dashboard":     return <ResearcherDashboard navigate={navigate} onDownload={c.onDownload} onView={c.onView} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} />;
+    case "r-submit":        return <ResearcherSubmit applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} />;
+    case "r-applications":  return <ResearcherApplications navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} openDraft={(id) => { c.setSelectedApplicationId(id); navigate("r-submit"); }} openDetail={(id) => { c.setSelectedApplicationId(id); navigate("r-detail"); }} />;
     case "r-detail":        return <ResearcherApplicationDetail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "r-progress":      return <ResearcherProgress onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
     case "r-final":         return <ResearcherFinal onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
@@ -436,6 +505,16 @@ function App() {
   const [page, setPage] = useState(startingPage);
   const [profile, setProfile] = useState(null);
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
+  // Which grant system a researcher is working in (au_r1 / au_r3). null → show chooser.
+  const [rSystem, setRSystem] = useState(() => { try { return localStorage.getItem("au-rgms-r-system") || null; } catch (e) { return null; } });
+  const chooseSystem = (sys) => { try { localStorage.setItem("au-rgms-r-system", sys); } catch (e) {} setSelectedApplicationId(null); setRSystem(sys); setPage("r-dashboard"); };
+  const switchSystem = () => { try { localStorage.removeItem("au-rgms-r-system"); } catch (e) {} setRSystem(null); };
+  // Central navigation: the "Switch Grant System" pseudo-page returns to the chooser.
+  const navigate = (key) => {
+    if (key === "r-switch-system") { switchSystem(); return; }
+    if (key === "r-submit") setSelectedApplicationId(null);
+    setPage(key);
+  };
 
   // shared UI state
   const [previewDoc, setPreviewDoc] = useState(null);
@@ -499,6 +578,7 @@ function App() {
 
   const onLogout = async () => {
     try { await window.AUTH.signOut(); } catch (e) {}
+    switchSystem();
     setProfile(null); setLoggedIn(false);
   };
 
@@ -545,6 +625,11 @@ function App() {
     return <LoginPage onLogin={onLogin} />;
   }
 
+  // Researchers pick a grant system first; every other role goes straight to its shell.
+  if (role === "researcher" && !rSystem) {
+    return <GrantSystemChooser profile={profile} onPick={chooseSystem} onLogout={onLogout} />;
+  }
+
   return (
     <div className="app">
       <AppHeader role={role} profile={profile} onSwitchRole={onSwitchRole} onLogout={onLogout} onNavigate={setPage} />
@@ -556,17 +641,14 @@ function App() {
       <Sidebar
         nav={cfg.nav}
         current={page}
-        onNavigate={(key) => {
-          if (key === "r-submit") setSelectedApplicationId(null);
-          setPage(key);
-        }}
+        onNavigate={navigate}
         footer={cfg.sidebarFooter}
       />
       <main className="main">
         <PageRouter
           pageKey={page}
-          navigate={setPage}
-          ctx={{ onDownload, onView, toast, setConfirm, profile, selectedApplicationId, setSelectedApplicationId }}
+          navigate={navigate}
+          ctx={{ onDownload, onView, toast, setConfirm, profile, selectedApplicationId, setSelectedApplicationId, grantType: role === "researcher" ? rSystem : null }}
         />
       </main>
       <footer className="app-footer">

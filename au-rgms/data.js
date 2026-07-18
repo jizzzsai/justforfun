@@ -156,6 +156,8 @@ const NAV_RESEARCHER = [
   { key: "r-final", label: "Final Report", icon: "FileCheck" },
   { section: "FINANCE" },
   { key: "r-payments", label: "Payment Status", icon: "Coins" },
+  { section: "GRANT SYSTEM" },
+  { key: "r-switch-system", label: "Switch Grant System", icon: "Repeat" },
 ];
 
 const NAV_DEAN = [
@@ -326,9 +328,44 @@ const DOC_TYPES = [
   "Other supporting document",
 ];
 
+// Document types for an AU-R3 Paper Presentation Grant upload.
+const R3_DOC_TYPES = [
+  "Full Research Article",
+  "Turnitin Result (≤ 20%)",
+  "Peer Review Comments",
+  "Dean-signed Memo & Estimated Budget",
+  "Other supporting document",
+];
+
+// The three AU research grant systems a researcher can apply to. Each tags its
+// applications with grant_type and shares the same Dean → RASSC → OFM workflow.
+const GRANT_SYSTEMS = [
+  {
+    id: "au_r1", code: "AU-R1", enabled: true, collaborative: false,
+    name: "Internal Research / Creative Grant",
+    tagline: "Research, creative or academic works produced within AU.",
+    maxAmount: 100000, maxLabel: "฿100,000 / academic year",
+    icon: "FileText",
+  },
+  {
+    id: "au_r3", code: "AU-R3", enabled: true, collaborative: true,
+    name: "Paper Presentation Grant",
+    tagline: "Present a paper at a domestic or international conference — apply together with other researchers and students.",
+    maxAmount: 50000, maxLabel: "฿50,000 / academic year",
+    icon: "Users",
+  },
+  {
+    id: "au_r4", code: "AU-R4", enabled: false, collaborative: false,
+    name: "Publication Fees & Reward",
+    tagline: "Reimburse publication fees and claim the reward for a published article.",
+    maxAmount: 80000, maxLabel: "฿80,000 / article",
+    icon: "Award",
+  },
+];
+
 window.AU = {
   ALL_STAGES, STATUS, FACULTIES, REQUIRED_DOCS, PAPER_PRESENTATION_DOCS,
-  AU_TITLES, WORK_TYPES, DEFAULT_BUDGET_CAPS, NECESSARY_DOCS, DOC_TYPES, REIMBURSE_CATEGORIES,
+  AU_TITLES, WORK_TYPES, DEFAULT_BUDGET_CAPS, NECESSARY_DOCS, DOC_TYPES, R3_DOC_TYPES, GRANT_SYSTEMS, REIMBURSE_CATEGORIES,
   PRIMARY_APP, APPLICATIONS,
   NOTIFS, PAYMENTS, ACTIVITY,
   ROLES,
