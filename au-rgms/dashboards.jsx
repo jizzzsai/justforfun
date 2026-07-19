@@ -80,24 +80,26 @@ function WiredQueue({ status, openLabel, confirmTitle, confirmLabel, onDownload,
    DEAN — Dashboard
    ----------------------------------------------------------- */
 function DeanDashboard({ navigate }) {
-  // The Dean handles two pipelines: AU-R1/AU-R4 (via Faculty Committee) and
-  // AU-R3 paper presentation requests (straight to IRAS). Toggle between them.
+  // The Dean handles three pipelines: AU-R1 (via Faculty Committee) and AU-R3 /
+  // AU-R4 (straight to IRAS). Toggle between them.
   const [sys, setSys] = useState("au_r1");
   const isR3 = sys === "au_r3";
+  const isR4 = sys === "au_r4";
   const [c, setC] = useState(null);
   const [screenRows, setScreenRows] = useState(null);
   useEffect(() => {
     setC(null); setScreenRows(null);
-    window.DB.statusCounts(isR3 ? "au_r3" : "!au_r3").then(setC).catch(() => setC({}));
-    window.DB.queue("submitted", isR3 ? "au_r3" : "!au_r3").then(setScreenRows).catch(() => setScreenRows([]));
+    window.DB.statusCounts(sys).then(setC).catch(() => setC({}));
+    window.DB.queue("submitted", sys).then(setScreenRows).catch(() => setScreenRows([]));
   }, [sys]);
   const n = (k) => (c ? (c[k] || 0) : "…");
-  const openQueue = () => navigate(isR3 ? "d-r3-screen" : "d-screen");
+  const openQueue = () => navigate(isR4 ? "d-r4-screen" : isR3 ? "d-r3-screen" : "d-screen");
+  const rowPage = isR4 ? "d-r4-screen" : isR3 ? "d-r3-screen" : "d-screen-detail";
   const sysToggle = (
     <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden", marginRight: 8 }}>
-      {[{ id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }].map(t => (
+      {[{ id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
         <button key={t.id} onClick={() => setSys(t.id)}
-          style={{ padding: "7px 16px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer",
+          style={{ padding: "7px 15px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer",
             background: sys === t.id ? "var(--au-crimson)" : "transparent",
             color: sys === t.id ? "#fff" : "var(--ink-2)" }}>
           {t.label}
@@ -108,21 +110,30 @@ function DeanDashboard({ navigate }) {
   return (
     <>
       <PageHeader
-        title={isR3 ? "AU-R3 · Dean's Dashboard" : "Dean's Dashboard"}
-        desc={isR3
+        title={isR4 ? "AU-R4 · Dean's Dashboard" : isR3 ? "AU-R3 · Dean's Dashboard" : "Dean's Dashboard"}
+        desc={isR4
+          ? "Review publication fee and reward applications before forwarding eligible claims to IRAS for verification."
+          : isR3
           ? "Review paper presentation grant applications from your faculty and forward eligible applications to IRAS for verification."
           : "Screen new proposals from your faculty, then forward them to the Faculty Committee."}
         actions={
           <>
             {sysToggle}
             <button className="btn btn-primary" onClick={openQueue}>
-              <Icon name="Inbox" size={14} /> {isR3 ? "Open AU-R3 Screening Queue" : "Open Screening Queue"}
+              <Icon name="Inbox" size={14} /> {isR4 ? "Open AU-R4 Screening Queue" : isR3 ? "Open AU-R3 Screening Queue" : "Open Screening Queue"}
             </button>
           </>
         }
       />
 
-      {isR3 ? (
+      {isR4 ? (
+        <div className="stats">
+          <Stat label="Pending Dean Review"    value={n("submitted")} icon="ClipboardCheck" tone="gold" />
+          <Stat label="Returned for Revision"  value={n("returned")} icon="Repeat" tone="navy" />
+          <Stat label="Forwarded to IRAS"      value={n("iras_review")} icon="Send" />
+          <Stat label="Approved / Paid"        value={(c ? (c.approved || 0) + (c.active || 0) + (c.completed || 0) : "…")} icon="CheckCircle" tone="green" />
+        </div>
+      ) : isR3 ? (
         <div className="stats">
           <Stat label="Pending Dean Review" value={n("submitted")} icon="ClipboardCheck" tone="gold" />
           <Stat label="Forwarded to IRAS"   value={n("iras_review")} icon="Send" tone="navy" />
@@ -140,7 +151,7 @@ function DeanDashboard({ navigate }) {
 
       <div className="card card-pad-0">
         <div className="card-head">
-          <h3>{isR3 ? "AU-R3 Screening Queue" : "Screening Queue"}</h3>
+          <h3>{isR4 ? "AU-R4 Screening Queue" : isR3 ? "AU-R3 Screening Queue" : "Screening Queue"}</h3>
           <div className="grow"></div>
           <button className="btn btn-ghost btn-sm" onClick={openQueue}>
             Open queue <Icon name="ArrowRight" size={12} />
@@ -152,7 +163,7 @@ function DeanDashboard({ navigate }) {
             {screenRows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
             {screenRows && screenRows.length === 0 && <tr><td colSpan="4"><Empty title="Nothing to screen" desc="New submissions will appear here." icon="ClipboardCheck" /></td></tr>}
             {(screenRows || []).slice(0, 8).map(a => (
-              <tr key={a.id} style={{ cursor: "pointer" }} onClick={() => navigate(isR3 ? "d-r3-screen" : "d-screen-detail")}>
+              <tr key={a.id} style={{ cursor: "pointer" }} onClick={() => navigate(rowPage)}>
                 <td><span className="id">{a.id}</span></td>
                 <td className="title-cell"><div className="t" style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div></td>
                 <td style={{ fontSize: 12 }}>{a.researcher?.name}</td>
@@ -236,12 +247,68 @@ function DeanR3Queue({ navigate, setSelectedApplicationId }) {
 }
 
 /* -----------------------------------------------------------
+   DEAN — AU-R4 Screening Queue (publication fee & reward)
+   ----------------------------------------------------------- */
+function DeanR4Queue({ navigate, setSelectedApplicationId }) {
+  const [rows, setRows] = useState(null);
+  const [q, setQ] = useState("");
+  useEffect(() => { window.DB.queue("submitted", "au_r4").then(setRows).catch(() => setRows([])); }, []);
+  const open = (row) => { if (setSelectedApplicationId) setSelectedApplicationId(row._uuid); navigate("d-r4-detail"); };
+  const filtered = (rows || []).filter(a => {
+    if (!q.trim()) return true;
+    const pi = a.conference_info; // n/a
+    const hay = [a.id, a.title, a.researcher && a.researcher.name, a.department].join(" ").toLowerCase();
+    return hay.indexOf(q.toLowerCase()) >= 0;
+  });
+  return (
+    <>
+      <PageHeader title="AU-R4 Screening Queue" desc="Review submitted publication fee and reward applications from researchers in your faculty." />
+      <div className="card card-pad-0">
+        <div className="toolbar">
+          <div className="search">
+            <Icon name="Search" size={14} className="icon" />
+            <input placeholder="Search by ID, article, journal, researcher, or DOI" value={q} onChange={e => setQ(e.target.value)} />
+          </div>
+          <button className="filter active"><Icon name="Filter" size={12} /> All</button>
+          <div style={{ flex: 1 }}></div>
+          <button className="btn btn-secondary btn-sm"><Icon name="Download" size={12} /> Export</button>
+        </div>
+        <table className="tbl">
+          <thead>
+            <tr><th>Application ID</th><th>Article Title</th><th>Journal</th><th>Category</th><th>Researcher</th><th style={{ textAlign: "right" }}>Requested</th><th>Status</th><th style={{ textAlign: "right" }}>Actions</th></tr>
+          </thead>
+          <tbody>
+            {rows === null && <tr><td colSpan="8" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading queue…</td></tr>}
+            {rows && filtered.length === 0 && <tr><td colSpan="8" style={{ textAlign: "center", padding: "40px", color: "var(--ink-3)" }}>No AU-R4 applications waiting right now.</td></tr>}
+            {filtered.map(a => {
+              const pi = a.pub_info || {};
+              return (
+                <tr key={a.id}>
+                  <td><span className="id">{a.id}</span></td>
+                  <td className="title-cell"><div className="t" style={{ maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div><div className="s">{a.department || a.faculty || ""}</div></td>
+                  <td><div style={{ fontSize: 12.5, maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{pi.journal || "—"}</div></td>
+                  <td><span style={{ fontSize: 11, fontWeight: 700, padding: "2px 8px", borderRadius: 999, color: "var(--au-crimson)", background: "var(--au-crimson-soft)" }}>{pi.indexLabel || "—"}</span></td>
+                  <td style={{ fontSize: 12 }}>{a.researcher?.name}</td>
+                  <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{fmtBaht(Number(a.requested_amount || 0))}</td>
+                  <td><Badge status={a.status} /></td>
+                  <td className="actions"><button className="btn btn-primary btn-sm" onClick={() => open(a)}>Review</button></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+/* -----------------------------------------------------------
    DEAN — First Screening Queue
    ----------------------------------------------------------- */
 function DeanScreenQueue({ navigate, onDownload, toast, setConfirm, setSelectedApplicationId }) {
   const [rows, setRows] = useState(null);
-  // AU-R3 paper presentation requests have their own queue (d-r3-screen).
-  const load = () => window.DB.queue("submitted", "!au_r3").then(setRows).catch(() => setRows([]));
+  // AU-R3 and AU-R4 have their own queues; the R1 queue shows only au_r1.
+  const load = () => window.DB.queue("submitted", "au_r1").then(setRows).catch(() => setRows([]));
   useEffect(() => { load(); }, []);
   const openDetail = (row) => {
     if (setSelectedApplicationId) setSelectedApplicationId(row._uuid);
@@ -1934,7 +2001,7 @@ function Toggle({ defaultOn = false }) {
 }
 
 Object.assign(window, {
-  DeanDashboard, DeanScreenQueue, DeanSignQueue, DeanHistory, DeanR3Queue,
+  DeanDashboard, DeanScreenQueue, DeanSignQueue, DeanHistory, DeanR3Queue, DeanR4Queue,
   CommitteeDashboard, CommitteeQueue, CommitteeHistory,
   RASSCDashboardV2, RASSCScreen, RASSCReviewerPool,
   ExpertDashboard, ExpertAssignments, ExpertHistory,

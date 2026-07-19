@@ -119,7 +119,8 @@
       submittedAt: a.submitted_at ? fmtDate(a.submitted_at) : fmtDate(a.created_at),
       budgetTotal: a.requested_amount, requested_amount: a.requested_amount,
       status: badge(a.status), statusKey: a.status,
-      grant_type: a.grant_type || "au_r1", conference_info: a.conference_info || null,
+      grant_type: a.grant_type || "au_r1", conference_info: a.conference_info || null, pub_info: a.pub_info || null,
+      approved_amount: a.approved_amount,
     };
   }
 

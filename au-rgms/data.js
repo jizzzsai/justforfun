@@ -181,6 +181,7 @@ const NAV_DEAN = [
   { section: "QUEUES" },
   { key: "d-screen", label: "Screening Queue", icon: "ClipboardCheck" },
   { key: "d-r3-screen", label: "AU-R3 Queue", icon: "Users" },
+  { key: "d-r4-screen", label: "AU-R4 Queue", icon: "Award" },
   { key: "d-reimburse", label: "Reimbursement Claims", icon: "Receipt" },
   { section: "TRACKING" },
   { key: "d-history", label: "Decision History", icon: "Clock" },

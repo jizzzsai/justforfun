@@ -541,6 +541,8 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "d-screen-detail":  return <FacultyChecklist applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-r3-screen":      return <DeanR3Queue navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "d-r3-detail":      return <DeanR3Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "d-r4-screen":      return <DeanR4Queue navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
+    case "d-r4-detail":      return <DeanR4Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-history":        return <DeanHistory onDownload={c.onDownload} />;
     case "d-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
     case "d-reimburse":      return <DeanReimbursements toast={c.toast} />;
@@ -730,6 +732,7 @@ function App() {
       "d-screen-detail": "Screening · Detail",
       "d-sign-detail": "Sign &amp; Forward · Detail",
       "d-r3-detail": "AU-R3 Screening · Detail",
+      "d-r4-detail": "AU-R4 Screening · Detail",
       "forms": "Forms & Templates",
     };
     return special[page] || "Dashboard";

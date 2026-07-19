@@ -575,6 +575,232 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
   );
 }
 
+/* ---------- C3. AU-R4 Dean Screening (publication fee & reward) ---------- */
+function r4Badge(status) {
+  var base = window.DB.statusBadge(status);
+  var labels = {
+    submitted: "Pending Dean Review", iras_review: "Under IRAS Verification",
+    approved: "Approved for Payment", active: "Finance Processing", completed: "Paid / Completed",
+    returned: "Returned for Revision", rejected: "Rejected",
+  };
+  return { key: base.key, cls: base.cls, label: labels[status] || base.label };
+}
+
+function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
+  const [similarityOk, setSimilarityOk] = useState(false);
+  const [memoApproved, setMemoApproved] = useState(false);
+  return (
+    <LiveAppLoader
+      status="submitted"
+      applicationId={applicationId}
+      title="AU-R4 Screening"
+      desc="Review the publication, journal, author, claim and documents; digitally approve the memo, then forward to IRAS."
+      render={(app, load) => {
+        const docs = app.documents || [];
+        const pi = app.pub_info || {};
+        const authors = Array.isArray(app.co_members) ? app.co_members : [];
+        const requested = Number(app.requested_amount || 0);
+        const MAX = 80000;
+        const r = app.researcher || {};
+        const hasDoc = (kw) => docs.some(d => ((d.doc_type || "") + " " + (d.name || "")).toLowerCase().includes(kw));
+        const docCats = [
+          { label: "Full Research Article", req: true, ok: hasDoc("article") },
+          { label: "Turnitin Report", req: true, ok: hasDoc("turnitin") },
+          { label: "Original Publication Fee Receipt", req: true, ok: hasDoc("receipt") },
+          { label: "Memo for Dean Approval", req: true, ok: hasDoc("memo") },
+        ];
+        const turnitin = Number(pi.turnitin || 0);
+        const turnitinBad = turnitin > 20;
+        const overMax = requested > MAX;
+        const totalContrib = Math.round(Number(pi.totalContribution || authors.reduce((s, a) => s + (Number(a.contribution) || 0), 0)));
+        const principal = Math.max.apply(null, authors.map(a => Number(a.contribution) || 0).concat([0]));
+
+        const canApprove = docs.length > 0 && docCats.every(d => d.ok) && !turnitinBad && !overMax && similarityOk && memoApproved && totalContrib === 100;
+
+        const forward = () => setConfirm({
+          kind: "success",
+          title: "Confirm AU-R4 Approval",
+          message: "By approving, you confirm the faculty-level screening is complete and the memo is digitally approved. IRAS will perform the final eligibility and amount verification.",
+          confirmLabel: "Confirm & Forward to IRAS", withReason: true,
+          onConfirm: async (reason) => {
+            try { await window.DB.transition(app.id, "submitted", "advance", "Dean digitally approved memo. " + (reason || "")); toast(app.code + " approved — forwarded to IRAS."); navigate("d-r4-screen"); }
+            catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
+          },
+        });
+        const ret = () => setConfirm({
+          kind: "danger", title: "Return for Revision?",
+          message: app.code + " will be returned to the researcher. State what must be corrected (e.g. upload the original receipt, fix the author contribution percentages).",
+          confirmLabel: "Return", withReason: true, reasonRequired: true,
+          onConfirm: async (reason) => {
+            try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-r4-screen"); }
+            catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
+          },
+        });
+        const rej = () => setConfirm({
+          kind: "danger", title: "Reject Application?",
+          message: app.code + " will be rejected at Dean screening. This ends the claim.",
+          confirmLabel: "Reject", withReason: true, reasonRequired: true,
+          onConfirm: async (reason) => {
+            try { await window.DB.transition(app.id, "submitted", "reject", reason); toast(app.code + " rejected."); navigate("d-r4-screen"); }
+            catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
+          },
+        });
+
+        const row = (l, v) => <div className="meta-row"><span className="l">{l}</span><span className="r">{v || "-"}</span></div>;
+        const checklist = [
+          { label: "Article information is complete", checked: !!(app.title && pi.journal && pi.publisher) },
+          { label: "Journal classification is provided", checked: !!pi.journalDb },
+          { label: "Author contributions total 100%", checked: totalContrib === 100 },
+          { label: "Principal author contribution ≥ 50%", checked: principal >= 50 },
+          { label: "Full research article uploaded", checked: docCats[0].ok },
+          { label: "Turnitin report uploaded", checked: docCats[1].ok },
+          { label: "Turnitin similarity does not exceed 20%", checked: similarityOk, manual: true },
+          { label: "Original publication fee receipt uploaded", checked: docCats[2].ok },
+          { label: "Requested claim within 80,000 THB", checked: !overMax },
+          { label: "Memo digitally approved by Dean", checked: memoApproved, manual: true },
+        ];
+
+        return (
+          <>
+            <PageHeader title={"AU-R4 Screening — " + app.code}
+              desc={(r.full_name || "Researcher") + " · " + (app.faculty || "Faculty") + " · " + (app.department || "Department") + " · " + (pi.journal || "")}
+              actions={<Badge status={r4Badge(app.status)} />} />
+            <div className="grid-2">
+              <div>
+                <div className="card card-pad-0 mb-4">
+                  <div className="card-head"><h3>Publication Information</h3></div>
+                  <div className="card-body">
+                    {row("Article title", app.title)}
+                    {row("Article type", pi.articleType)}
+                    {row("Publication status", pi.pubStatus)}
+                    {row("Journal", pi.journal)}
+                    {row("Publisher", pi.publisher)}
+                    {pi.doi && row("DOI", pi.doi)}
+                    {pi.articleUrl && row("Article URL", pi.articleUrl)}
+                    {pi.pubStatus === "Published"
+                      ? <>{row("Publication date", pi.pubDate ? window.DB.fmtDate(pi.pubDate) : "-")}{row("Volume / Issue", (pi.volume || "-") + " / " + (pi.issue || "-"))}{row("Pages", (pi.startPage || "-") + "–" + (pi.endPage || "-"))}</>
+                      : <>{row("Acceptance date", pi.acceptDate ? window.DB.fmtDate(pi.acceptDate) : "-")}{row("Expected publication", pi.expectedPubDate ? window.DB.fmtDate(pi.expectedPubDate) : "-")}</>}
+                    {row("Academic year", pi.academicYear)}
+                  </div>
+                </div>
+
+                <div className="card card-pad-0 mb-4">
+                  <div className="card-head"><h3>Journal Classification</h3></div>
+                  <div className="card-body">
+                    {row("Database / index", pi.journalDb)}
+                    {pi.quartile && row("SCOPUS quartile", pi.quartile)}
+                    {pi.wosIndex && row("Web of Science index", pi.wosIndex)}
+                    {row("Open access status", pi.openAccess)}
+                    {row("Hybrid journal", pi.hybrid)}
+                    {pi.hybrid === "Yes" && row("Open access option selected", pi.openAccessSelected)}
+                    {row("Predatory-journal declaration", pi.predatory ? "Confirmed not predatory" : "Not confirmed")}
+                    {pi.journalDb === "Other" && <div style={{ fontSize: 12, color: "var(--au-gold-deep)", background: "var(--au-gold-soft)", padding: "8px 12px", borderRadius: "var(--r-md)", marginTop: 8 }}>This journal database requires additional verification by IRAS.</div>}
+                    {pi.hybrid === "Yes" && pi.openAccessSelected !== "Yes" && <div style={{ fontSize: 12, color: "var(--au-gold-deep)", background: "var(--au-gold-soft)", padding: "8px 12px", borderRadius: "var(--r-md)", marginTop: 8 }}>Open Access option not selected for a hybrid journal — verify eligibility.</div>}
+                  </div>
+                </div>
+
+                <div className="card card-pad-0 mb-4">
+                  <div className="card-head"><h3>Author &amp; Contribution</h3><div className="grow"></div>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: totalContrib === 100 ? "var(--status-approved)" : "var(--au-crimson)" }}>{totalContrib === 100 ? "Valid" : "Requires verification"}</span></div>
+                  <div className="card-body" style={{ padding: 0 }}>
+                    <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--line-2)", fontSize: 13 }}>
+                      {row("Applicant role", pi.applicantRole)}
+                      {row("Corresponding author", pi.isCorresponding)}
+                      {row("Student-based research", pi.studentBased)}
+                    </div>
+                    {pi.studentBased === "Yes" && <div style={{ fontSize: 12, color: "var(--au-gold-deep)", background: "var(--au-gold-soft)", padding: "8px 20px" }}>This publication may require additional eligibility review before an advisor reward can be approved.</div>}
+                    <table className="tbl">
+                      <thead><tr><th>Author</th><th>Type</th><th>AU ID</th><th style={{ textAlign: "right" }}>Contrib %</th></tr></thead>
+                      <tbody>
+                        {authors.map((a, i) => <tr key={i}><td>{a.name}</td><td style={{ fontSize: 12 }}>{a.type}</td><td style={{ fontSize: 12 }}>{a.auId || "—"}</td><td style={{ textAlign: "right" }}>{a.contribution || 0}%</td></tr>)}
+                        <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}><td colSpan="3">Total</td><td style={{ textAlign: "right", color: totalContrib === 100 ? "inherit" : "var(--au-crimson)" }}>{totalContrib}%</td></tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div className="card card-pad-0 mb-4">
+                  <div className="card-head"><h3>Researcher Information</h3></div>
+                  <div className="card-body">
+                    {row("Name", ((r.name_title || r.title) ? (r.name_title || r.title) + " " : "") + (r.full_name || "-"))}
+                    {row("AU ID", r.au_id)}
+                    {row("Email", r.email)}
+                    {row("Phone", r.phone)}
+                    {row("School / Faculty", app.faculty)}
+                    {row("Department", app.department)}
+                  </div>
+                </div>
+
+                <div className="card card-pad-0 mb-4">
+                  <div className="card-head"><h3>Publication Fee &amp; Claim Review</h3></div>
+                  <div className="card-body">
+                    {row("Claim type", pi.claimType)}
+                    {row("Publication fee paid", fmtBaht(Number(pi.feePaid || 0)))}
+                    {row("Receipt number", pi.receiptNo)}
+                    {row("Preliminary reward", pi.prelimReward ? fmtBaht(Number(pi.prelimReward)) : "Actual fee / IRAS")}
+                    {row("Requested claim", fmtBaht(requested))}
+                    {row("Maximum AU-R4 amount", "80,000 THB per article")}
+                    <div className="meta-row"><span className="l">Final IRAS-approved amount</span><span className="r" style={{ color: "var(--ink-3)" }}>Pending IRAS verification</span></div>
+                    {overMax && <div style={{ fontSize: 12, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "8px 12px", borderRadius: "var(--r-md)", marginTop: 8 }}>The requested claim exceeds the AU-R4 maximum of 80,000 THB. Return the application for correction.</div>}
+                  </div>
+                </div>
+
+                <div className="card card-pad-0 mb-4">
+                  <div className="card-head"><h3>Turnitin</h3></div>
+                  <div className="card-body">
+                    {row("Researcher-entered similarity", (pi.turnitin != null ? pi.turnitin + "%" : "-"))}
+                    {turnitinBad && <div style={{ fontSize: 12, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "8px 12px", borderRadius: "var(--r-md)", marginTop: 8 }}>Turnitin similarity exceeds the 20% limit. Return the application to the researcher.</div>}
+                  </div>
+                </div>
+
+                <div className="card card-pad-0">
+                  <div className="card-head"><h3>Submitted Documents</h3><div className="grow"></div><span className="text-sm text-muted">{docs.length} uploaded</span></div>
+                  <table className="tbl">
+                    <thead><tr><th>Document</th><th>Requirement</th><th>Status</th></tr></thead>
+                    <tbody>
+                      {docCats.map(dc => (
+                        <tr key={dc.label}><td>{dc.label}</td>
+                          <td style={{ fontSize: 12, color: dc.req ? "var(--au-crimson)" : "var(--ink-3)", fontWeight: dc.req ? 600 : 400 }}>{dc.req ? "Required" : "Optional"}</td>
+                          <td><span style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 12, fontWeight: 600, color: dc.ok ? "var(--status-approved, #2c7a4b)" : "var(--ink-3)" }}><Icon name={dc.ok ? "CheckCircle" : "AlertCircle"} size={14} /> {dc.ok ? "Uploaded" : "Not provided"}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                  <div>
+                    {docs.length === 0 && <Empty title="No uploaded documents" desc="The researcher has not uploaded any PDF documents for this claim." icon="FileText" />}
+                    {docs.map(d => <FileRow key={d.id || d.name} doc={d} onDownload={onDownload} onView={onView} />)}
+                  </div>
+                </div>
+              </div>
+
+              <div className="card card-pad-0" style={{ alignSelf: "start" }}>
+                <div className="card-head"><h3>AU-R4 Checklist Decision</h3></div>
+                <div className="card-body">
+                  {checklist.map((item, i, arr) => (
+                    <label key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: i < arr.length - 1 ? "1px solid var(--line-2)" : "none" }}>
+                      <input type="checkbox" checked={item.checked}
+                        onChange={item.manual ? (e => (item.label.indexOf("Turnitin") === 0 ? setSimilarityOk(e.target.checked) : setMemoApproved(e.target.checked))) : (() => {})}
+                        style={{ accentColor: "var(--au-crimson)" }} />
+                      <span style={{ flex: 1, fontSize: 13 }}>{item.label}{item.label.indexOf("Memo") === 0 && <span style={{ display: "block", fontSize: 11, color: "var(--ink-3)" }}>Tick to digitally approve &amp; sign the memo.</span>}</span>
+                      <Icon name={item.checked ? "CheckCircle" : "AlertCircle"} size={16} style={{ color: item.checked ? "var(--status-approved)" : "var(--au-gold)" }} />
+                    </label>
+                  ))}
+                  <div className="flex flex-col gap-2 mt-4">
+                    <button className="btn btn-primary btn-block" disabled={!canApprove} onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to IRAS</button>
+                    <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
+                    <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
+                  </div>
+                  {!canApprove && <div className="text-sm text-muted mt-3">Complete the required documents, Turnitin check, memo approval, and amount checks before forwarding.</div>}
+                </div>
+              </div>
+            </div>
+          </>
+        );
+      }}
+    />
+  );
+}
+
 function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
   const [form, setForm] = useState({ score: "", recommendation: "favorable", comments: "" });
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -707,6 +933,6 @@ function FacultyDean({ onDownload, onView, toast, setConfirm }) {
 }
 
 Object.assign(window, {
-  FacultyDashboard, FacultyIncoming, FacultyChecklist, DeanR3Detail,
+  FacultyDashboard, FacultyIncoming, FacultyChecklist, DeanR3Detail, DeanR4Detail,
   FacultyAcademic, FacultyDean,
 });
