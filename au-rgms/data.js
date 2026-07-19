@@ -64,7 +64,7 @@ const PAPER_PRESENTATION_DOCS = [
   { id: "r3-article", name: "Full_Research_Article.pdf", role: "AU-R3 requirement: full article only" },
   { id: "r3-turnitin", name: "Turnitin_Result.pdf", role: "AU-R3 requirement: similarity must not exceed 20%" },
   { id: "r3-peer", name: "Peer_Review_Comments.pdf", role: "AU-R3 requirement when available" },
-  { id: "r3-memo", name: "Dean_Signed_Memo_and_Estimated_Budget.pdf", role: "AU-R3 requirement: dean-signed memo and estimated budget" },
+  { id: "r3-memo", name: "Memo_and_Estimated_Budget.pdf", role: "AU-R3 requirement: memo and estimated budget" },
 ];
 
 const PRIMARY_APP = {
@@ -149,13 +149,28 @@ const NAV_RESEARCHER = [
   { key: "r-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { key: "r-submit", label: "Submit Application", icon: "FilePlus" },
   { key: "r-applications", label: "My Applications", icon: "Folder" },
-  { key: "r-publications", label: "Publication Grant", icon: "FileText" },
+  { key: "r-publications", label: "AU-R4 Publication Grant", icon: "FileText" },
   { key: "r-reimburse", label: "Reimbursement Claim", icon: "Receipt" },
   { section: "REPORTING" },
   { key: "r-progress", label: "Progress Report", icon: "FileText" },
   { key: "r-final", label: "Final Report", icon: "FileCheck" },
   { section: "FINANCE" },
   { key: "r-payments", label: "Payment Status", icon: "Coins" },
+  { section: "GRANT SYSTEM" },
+  { key: "r-switch-system", label: "Switch Grant System", icon: "Repeat" },
+];
+
+// Trimmed sidebar for the AU-R3 paper presentation flow (no progress/final
+// report or other grant flows — the AU-R3 summary doesn't require them).
+const NAV_RESEARCHER_R3 = [
+  { section: "WORKSPACE" },
+  { key: "r-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+  { key: "r-submit", label: "Submit Application", icon: "FilePlus" },
+  { key: "r-applications", label: "My Applications", icon: "Folder" },
+  { section: "FINANCE" },
+  { key: "r-payments", label: "Payment Status", icon: "Coins" },
+  { section: "RESOURCES" },
+  { key: "forms", label: "Forms & Templates", icon: "FileText" },
   { section: "GRANT SYSTEM" },
   { key: "r-switch-system", label: "Switch Grant System", icon: "Repeat" },
 ];
@@ -428,7 +443,7 @@ window.AU = {
   PRIMARY_APP, APPLICATIONS,
   NOTIFS, PAYMENTS, ACTIVITY,
   ROLES,
-  NAV_RESEARCHER, NAV_DEAN, NAV_COMMITTEE, NAV_RASSC,
+  NAV_RESEARCHER, NAV_RESEARCHER_R3, NAV_DEAN, NAV_COMMITTEE, NAV_RASSC,
   NAV_EXPERT, NAV_PRESIDENT, NAV_OFM, NAV_ADMIN,
   SYSTEM_USERS, JOURNAL_TIERS, AUDIT_LOG,
   Q_DEAN_SCREEN, Q_DEAN_SIGN, Q_COMMITTEE, Q_RASSC, Q_EXPERT, Q_PRESIDENT, Q_OFM,

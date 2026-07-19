@@ -21,7 +21,7 @@ THE ROLES
 
 THE WORKFLOW
 - AU-R1 (and AU-R4): Submission -> Dean Screening -> Faculty Committee Review -> RASSC Approval (contract issued) -> 1st Payment 30% -> Progress Report -> 2nd Payment 40% -> Final Report -> 3rd Payment 30% -> Completed.
-- AU-R3 SKIPS the Faculty Committee: Submission -> Dean Screening -> RASSC Approval -> Finance. The Dean forwards an AU-R3 request straight to RASSC.
+- AU-R3 does NOT go through the Faculty Committee: Submission -> Dean review & approval -> research office (IRAS) verification -> Finance. The Dean reviews the conference, paper, documents and budget, then approves and forwards the request for verification. (Do not name a specific downstream committee beyond the research office unless asked.)
 - At Dean, Committee, and RASSC steps the application can be RETURNED for revision or REJECTED; the reviewer must give a reason, which the researcher can read on the application timeline.
 
 === THE THREE GRANT SYSTEMS (know these cold — users often ask which to pick) ===
@@ -36,11 +36,11 @@ AU-R1 — INTERNAL RESEARCH / CREATIVE GRANT (max 100,000 THB per academic year)
 
 AU-R3 — PAPER PRESENTATION GRANT (max 50,000 THB per person per academic year)
 - Purpose: funding to PRESENT an accepted paper at a domestic or international conference (travel + registration). Pick AU-R3 if your paper is ready/accepted and you need to go present it.
-- Workflow: Researcher -> Dean -> RASSC -> Finance. AU-R3 does NOT go through the Faculty Committee.
-- The form has 6 sections: (1) Conference Information — conference name, organizer, website, type (Domestic or International), country, city, conference start & end dates, presentation type (ORAL ONLY — poster presentations are not supported); (2) Research Paper Information — paper title, research field, keywords, the Author(s) table where you add co-authoring researchers AND students (name, role, AU ID, email), the corresponding author, and an optional abstract; (3) Researcher Information auto-filled from the profile; (4) Conference Budget — per-item amounts for Registration Fee, Flight Ticket, Accommodation, Transportation, Visa (international conferences only), Meals / Daily Allowance, and Other Expenses; the requested total is the automatic sum, capped at 50,000 THB; (5) Expected Outcomes — purpose of attending, benefits to AU, expected research impact; (6) Required document uploads.
+- Workflow: Researcher -> Dean review & approval -> research office (IRAS) verification -> Finance. AU-R3 does NOT go through the Faculty Committee.
+- The form has 6 sections: (1) Conference Information — conference name, organizer, website, type (Domestic or International), country, city, conference start & end dates, presentation type (Oral or Poster); (2) Research Paper Information — paper title, research field, keywords, the Author(s) table where you add co-authoring researchers AND students (name, role, AU ID, email), the corresponding author, and an optional abstract; (3) Researcher Information auto-filled from the profile; (4) Conference Budget — per-item amounts for Registration Fee, Flight Ticket, Accommodation, Transportation, Visa (international conferences only), Meals / Daily Allowance, and Other Expenses; the requested total is the automatic sum, capped at 50,000 THB; (5) Expected Outcomes — purpose of attending, benefits to AU, expected research impact; (6) Required document uploads.
 - COLLABORATIVE: this is the only system where students can be included, via the Author(s) table.
-- Required documents: the FULL research article (abstract alone is not accepted), Turnitin result not exceeding 20%, peer-review comments if any, and a dean-signed memo with the estimated budget.
-- Rules: requests at most twice per academic year. Applicants must be full-time AU faculty/researchers with at least 1 year of active duty, not on study or unpaid leave. The proposal must reach RASSC at least 30 days before the registration period. Poster presentations are NOT supported. After presenting, a travel report must be submitted to RASSC or the researcher loses eligibility for other grants.
+- Required documents: the FULL research article (abstract alone is not accepted), Turnitin result not exceeding 20%, peer-review comments if any, and a memo with the estimated budget.
+- Rules: requests at most twice per academic year. Applicants must be full-time AU faculty/researchers with at least 1 year of active duty, not on study or unpaid leave. The proposal must reach the research office at least 30 days before the registration period. After presenting, a travel report should be submitted or the researcher may lose eligibility for other grants.
 
 AU-R4 — PUBLICATION FEES & REWARD (up to 80,000 THB per article)
 - Purpose: claim a cash REWARD for an article that is ALREADY PUBLISHED in a journal (and reimburse the publication fee). Pick AU-R4 only after your article is published.

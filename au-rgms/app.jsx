@@ -712,9 +712,15 @@ function App() {
   }, []);
 
   const cfg = ROLE_CONFIG[role];
+  // A researcher working in AU-R3 gets a trimmed sidebar + AU-R3 Quick Help.
+  const researcherR3 = role === "researcher" && rSystem === "au_r3";
+  const navForRole = researcherR3 ? (APP.NAV_RESEARCHER_R3 || cfg.nav) : cfg.nav;
+  const footerForRole = researcherR3
+    ? { title: "Quick Help", body: "Need to submit a new AU-R3 application? Prepare your full research article, Turnitin result, peer-review comments if available, and a memo with an estimated budget before you start." }
+    : cfg.sidebarFooter;
 
   const pageLabel = useMemo(() => {
-    const navItem = cfg.nav.find(n => n.key === page);
+    const navItem = navForRole.find(n => n.key === page);
     if (navItem) return navItem.label;
     // Special pages with no sidebar entry
     const special = {
@@ -722,9 +728,10 @@ function App() {
       "d-screen-detail": "Screening · Detail",
       "d-sign-detail": "Sign &amp; Forward · Detail",
       "d-r3-detail": "AU-R3 Screening · Detail",
+      "forms": "Forms & Templates",
     };
     return special[page] || "Dashboard";
-  }, [cfg, page]);
+  }, [navForRole, page]);
 
   const crumbs = useMemo(() => [cfg.crumbRoot, pageLabel], [cfg.crumbRoot, pageLabel]);
 
@@ -746,10 +753,10 @@ function App() {
         onCrumb={() => setPage(cfg.homeKey)}
       />
       <Sidebar
-        nav={cfg.nav}
+        nav={navForRole}
         current={page}
         onNavigate={navigate}
-        footer={cfg.sidebarFooter}
+        footer={footerForRole}
       />
       <main className="main">
         <PageRouter

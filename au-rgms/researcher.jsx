@@ -26,8 +26,12 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
     window.DB.myGrant().then(g => setGrant(g || false)).catch(() => setGrant(false));
     window.DB.myApplications(grantType || undefined).then(setApps).catch(() => setApps([]));
   }, [grantType]);
+  const isR3 = grantType === "au_r3";
   const n = (k) => (c ? (c[k] || 0) : "…");
   const latest = apps && apps.length ? apps[0] : null;
+  // AU-R3 shows a single conference-grant payment status (no 30/40/30 tranches).
+  const r3Grant = isR3 && apps ? apps.find(a => ["approved", "active", "completed"].indexOf(a.status) >= 0) : null;
+  const r3PayLabel = { approved: "Approved for Payment", active: "Payment Processing", completed: "Paid / Completed" };
   const pays = grant && grant.payments && grant.payments.length ? grant.payments.slice().sort((a, b) => a.instalment - b.instalment) : [];
   const grantTotal = grant ? Number(grant.approved_amount || grant.requested_amount || 0) : 0;
   const released = pays.filter(p => p.status === "paid").reduce((s, p) => s + Number(p.amount || 0), 0);
@@ -56,11 +60,39 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
         <Stat label="Total Applications"  value={n("_total")} icon="Folder" />
         <Stat label="Draft Applications"  value={n("draft")} icon="FileText"   tone="navy" />
         <Stat label="Under Review"        value={n("_underReview")} icon="FileSearch" tone="gold" />
-        <Stat label="Approved Projects"   value={n("_approved")} icon="CheckCircle" tone="green" />
+        <Stat label={isR3 ? "Approved Conference Grants" : "Approved Projects"} value={n("_approved")} icon="CheckCircle" tone="green" />
       </div>
 
       <div className="grid-2">
-        {/* Left: payment progress (live) */}
+        {/* Left: payment status */}
+        {isR3 ? (
+          <div className="card card-pad-0">
+            <div className="card-head">
+              <h3>Grant Payment Status{r3Grant ? " · " + r3Grant.code : ""}</h3>
+              <div className="grow"></div>
+              {r3Grant && <Badge status={window.DB.statusBadge(r3Grant.status)} />}
+            </div>
+            <div className="card-body">
+              {apps === null && <div className="text-sm text-muted">Loading…</div>}
+              {apps && !r3Grant && <Empty title="No approved conference grant yet" desc="Once your paper presentation grant is approved, its payment status appears here." icon="Coins" />}
+              {r3Grant && (
+                <>
+                  <div style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontSize: 17, marginBottom: 4 }}>{r3Grant.title}</div>
+                  <div className="text-sm text-muted mb-4">{(r3Grant.conference_info && r3Grant.conference_info.confName) || r3Grant.faculty || "—"}</div>
+                  <div className="meta-row"><span className="l">Application ID</span><span className="r">{r3Grant.code}</span></div>
+                  {r3Grant.conference_info && <div className="meta-row"><span className="l">Conference</span><span className="r">{r3Grant.conference_info.confName}</span></div>}
+                  <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(r3Grant.requested_amount || 0))}</span></div>
+                  <div className="meta-row"><span className="l">Approved amount</span><span className="r">{r3Grant.approved_amount ? fmtBaht(Number(r3Grant.approved_amount)) : "—"}</span></div>
+                  <div className="meta-row"><span className="l">Payment status</span><span className="r">{r3PayLabel[r3Grant.status] || "Pending Approval"}</span></div>
+                  <div className="meta-row"><span className="l">Payment date</span><span className="r">—</span></div>
+                  <button className="btn btn-secondary mt-4" onClick={() => navigate("r-payments")}>
+                    View payment status <Icon name="ArrowRight" size={13} />
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        ) : (
         <div className="card card-pad-0">
           <div className="card-head">
             <h3>Payment Progress{grant ? " · " + grant.code : ""}</h3>
@@ -69,7 +101,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
           </div>
           <div className="card-body">
             {grant === null && <div className="text-sm text-muted">Loading…</div>}
-            {grant === false && <Empty title="No approved grant yet" desc="Once the President approves your application, your 30 / 40 / 30 disbursements appear here." icon="Coins" />}
+            {grant === false && <Empty title="No approved grant yet" desc="Once your application is approved, your 30 / 40 / 30 disbursements appear here." icon="Coins" />}
             {grant && (
               <>
                 <div style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontSize: 17, marginBottom: 4 }}>
@@ -107,6 +139,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
             )}
           </div>
         </div>
+        )}
 
         {/* Right: my applications (live) */}
         <div className="card card-pad-0">
@@ -115,7 +148,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
           </div>
           <div style={{ padding: "8px 0" }}>
             {apps === null && <div style={{ padding: "12px 20px", color: "var(--ink-3)", fontSize: 12 }}>Loading…</div>}
-            {apps && apps.length === 0 && <div style={{ padding: "16px 20px" }}><Empty title="No applications yet" desc="Submit your first research grant application to get started." icon="FilePlus" /></div>}
+            {apps && apps.length === 0 && <div style={{ padding: "16px 20px" }}><Empty title="No applications yet" desc={isR3 ? "Submit your first paper presentation grant application to get started." : "Submit your first research grant application to get started."} icon="FilePlus" /></div>}
             {(apps || []).slice(0, 6).map((a, i) => (
               <div key={a.id} style={{
                 display: "flex", gap: 12, alignItems: "center", padding: "10px 20px", cursor: "pointer",
@@ -143,7 +176,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
         </div>
         <div className="card-body">
           {!latest && <Empty title="No application to track yet" desc="Your latest application's progress will appear here." icon="Folder" />}
-          {latest && <HTimeline steps={RA.ALL_STAGES.slice(0, 9)} app={{ timeline: buildResearcherTimeline(latest.status) }} />}
+          {latest && <HTimeline steps={(isR3 ? RA.ALL_STAGES.filter(s => s.key !== "committee") : RA.ALL_STAGES).slice(0, 9)} app={{ timeline: buildResearcherTimeline(latest.status) }} />}
         </div>
       </div>
     </>
@@ -179,6 +212,9 @@ function scaledBudgetRows(total, split) {
   return RESEARCHER_BUDGET_LABELS.map((item, i) => ({ item: item, amount: amts[i], purpose: "" }));
 }
 const RESEARCHER_DEFAULT_BUDGET_ROWS = scaledBudgetRows(100000, RESEARCHER_DEFAULT_SPLIT);
+
+// Style for identity fields auto-filled from the profile (shown read-only).
+const roStyle = { background: "var(--paper-warm)", color: "var(--ink-2)", cursor: "not-allowed" };
 
 // Resolve the grant system (au_r1 / au_r3 / au_r4) for a given id.
 function grantSystemFor(id) {
@@ -739,7 +775,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
 /* ---------- B1. Submit AU-R3 Paper Presentation (conference) ---------- */
 const R3_DEFAULT_DRAFT = {
   confName: "", organizer: "", website: "", confType: "International", country: "", city: "",
-  confStart: "", confEnd: "",
+  confStart: "", confEnd: "", presentation: "Oral Presentation",
   paperTitle: "", field: "", keywords: "", corresponding: "", paperAbstract: "",
   name: "", title2: "", auId: "", email: "", phone: "", office: "", school: "", department: "",
   outcome: "",
@@ -803,6 +839,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
           confName: ci.confName || "", organizer: ci.organizer || "", website: ci.website || "",
           confType: ci.confType || "International", country: ci.country || "", city: ci.city || "",
           confStart: ci.confStart || app.start_date || "", confEnd: ci.confEnd || app.end_date || "",
+          presentation: ci.presentation || "Oral Presentation",
           paperTitle: app.title || "", field: app.field || "", keywords: app.keywords || "",
           corresponding: ci.correspondingAuthor || "", paperAbstract: ci.paperAbstract || "",
           school: app.faculty || d.school, department: app.department || d.department,
@@ -855,7 +892,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         confName: draft.confName, organizer: draft.organizer, website: draft.website,
         confType: draft.confType, country: draft.country, city: draft.city,
         confStart: draft.confStart || null, confEnd: draft.confEnd || null,
-        presentation: "Oral Presentation",
+        presentation: draft.presentation || "Oral Presentation",
         correspondingAuthor: draft.corresponding, paperAbstract: draft.paperAbstract,
       };
       const app = await window.DB.createApplication({
@@ -885,7 +922,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
     <>
       <PageHeader
         title={(editingId ? "Edit " : "Submit ") + "AU-R3 Application"}
-        desc="Paper Presentation Grant — present your accepted paper at a conference. AU-R3 goes from the Dean straight to RASSC."
+        desc="Paper Presentation Grant — apply for financial support to present an accepted research paper at a domestic or international conference."
         actions={
           <>
             <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
@@ -922,10 +959,10 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
               </div>
               <div className="field">
                 <label>Presentation Type</label>
-                <select value="Oral Presentation" onChange={() => {}}>
-                  <option>Oral Presentation</option>
+                <select value={draft.presentation} onChange={e => upd("presentation", e.target.value)}>
+                  <option value="Oral Presentation">Oral Presentation</option>
+                  <option value="Poster Presentation">Poster Presentation</option>
                 </select>
-                <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>Poster presentations are not supported by the AU-R3 grant.</div>
               </div>
               <div className="field">
                 <label>Country</label>
@@ -1022,26 +1059,26 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
                   {RA.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="field"><label>Full Name</label><input value={draft.name} onChange={e => upd("name", e.target.value)} /></div>
-              <div className="field"><label>AU ID</label><input value={draft.auId} onChange={e => upd("auId", e.target.value)} placeholder="e.g. 5012345" /></div>
+              <div className="field"><label>Full Name</label><input value={draft.name} onChange={e => upd("name", e.target.value)} readOnly={!!draft.name} style={draft.name ? roStyle : null} /></div>
+              <div className="field"><label>AU ID</label><input value={draft.auId} onChange={e => upd("auId", e.target.value)} readOnly={!!draft.auId} placeholder="e.g. 5012345" style={draft.auId ? roStyle : null} /></div>
               <div className="field">
                 <label>Email (AU only)</label>
-                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} placeholder="name@au.edu"
-                  style={emailBad ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : {}} />
-                {emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}
+                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} readOnly={!!draft.email} placeholder="name@au.edu"
+                  style={draft.email ? roStyle : (emailBad ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : null)} />
+                {!draft.email && emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}
               </div>
               <div className="field"><label>Phone</label><input value={draft.phone} onChange={e => upd("phone", e.target.value)} /></div>
               <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
               <div className="field">
                 <label>School / Faculty</label>
-                <select value={draft.school} onChange={e => { upd("school", e.target.value); upd("department", ""); }}>
+                <select value={draft.school} onChange={e => { upd("school", e.target.value); upd("department", ""); }} disabled={!!draft.school} style={draft.school ? roStyle : null}>
                   <option value="">Select your faculty…</option>
                   {RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}
                 </select>
               </div>
               <div className="field">
                 <label>Department</label>
-                <select value={draft.department} onChange={e => upd("department", e.target.value)} disabled={!draft.school}>
+                <select value={draft.department} onChange={e => upd("department", e.target.value)} disabled={!draft.school || !!draft.department} style={draft.department ? roStyle : null}>
                   <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
                   {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
@@ -1345,26 +1382,26 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
                   {RA.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="field"><label>Full Name</label><input value={draft.name} onChange={e => upd("name", e.target.value)} /></div>
-              <div className="field"><label>AU ID</label><input value={draft.auId} onChange={e => upd("auId", e.target.value)} placeholder="e.g. 5012345" /></div>
+              <div className="field"><label>Full Name</label><input value={draft.name} onChange={e => upd("name", e.target.value)} readOnly={!!draft.name} style={draft.name ? roStyle : null} /></div>
+              <div className="field"><label>AU ID</label><input value={draft.auId} onChange={e => upd("auId", e.target.value)} readOnly={!!draft.auId} placeholder="e.g. 5012345" style={draft.auId ? roStyle : null} /></div>
               <div className="field">
                 <label>Email (AU only)</label>
-                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} placeholder="name@au.edu"
-                  style={emailBad ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : {}} />
-                {emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}
+                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} readOnly={!!draft.email} placeholder="name@au.edu"
+                  style={draft.email ? roStyle : (emailBad ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : null)} />
+                {!draft.email && emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}
               </div>
               <div className="field"><label>Phone</label><input value={draft.phone} onChange={e => upd("phone", e.target.value)} /></div>
               <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
               <div className="field">
                 <label>School / Faculty</label>
-                <select value={draft.school} onChange={e => { upd("school", e.target.value); upd("department", ""); }}>
+                <select value={draft.school} onChange={e => { upd("school", e.target.value); upd("department", ""); }} disabled={!!draft.school} style={draft.school ? roStyle : null}>
                   <option value="">Select your faculty…</option>
                   {RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}
                 </select>
               </div>
               <div className="field">
                 <label>Department</label>
-                <select value={draft.department} onChange={e => upd("department", e.target.value)} disabled={!draft.school}>
+                <select value={draft.department} onChange={e => upd("department", e.target.value)} disabled={!draft.school || !!draft.department} style={draft.department ? roStyle : null}>
                   <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
                   {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
