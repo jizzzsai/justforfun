@@ -539,6 +539,8 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "d-dashboard":      return <DeanDashboard navigate={navigate} />;
     case "d-screen":         return <DeanScreenQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "d-screen-detail":  return <FacultyChecklist applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "d-r3-screen":      return <DeanR3Queue navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
+    case "d-r3-detail":      return <DeanR3Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-history":        return <DeanHistory onDownload={c.onDownload} />;
     case "d-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
     case "d-reimburse":      return <DeanReimbursements toast={c.toast} />;
@@ -719,6 +721,7 @@ function App() {
       "r-detail": "Application Detail",
       "d-screen-detail": "Screening · Detail",
       "d-sign-detail": "Sign &amp; Forward · Detail",
+      "d-r3-detail": "AU-R3 Screening · Detail",
     };
     return special[page] || "Dashboard";
   }, [cfg, page]);

@@ -119,6 +119,7 @@
       submittedAt: a.submitted_at ? fmtDate(a.submitted_at) : fmtDate(a.created_at),
       budgetTotal: a.requested_amount, requested_amount: a.requested_amount,
       status: badge(a.status), statusKey: a.status,
+      grant_type: a.grant_type || "au_r1", conference_info: a.conference_info || null,
     };
   }
 
@@ -257,11 +258,17 @@
       return res.data || [];
     },
 
-    // generic role queue: applications at a given status, with researcher name
-    async queue(status) {
-      var res = await sb.from("applications")
+    // generic role queue: applications at a given status, with researcher name.
+    // Optional grantType filter: "au_r3" keeps only that system, "!au_r3" excludes it.
+    async queue(status, grantType) {
+      var q = sb.from("applications")
         .select("*, researcher:profiles(full_name)")
-        .eq("status", status).order("submitted_at", { ascending: true });
+        .eq("status", status);
+      if (grantType) {
+        if (grantType.charAt(0) === "!") q = q.neq("grant_type", grantType.slice(1));
+        else q = q.eq("grant_type", grantType);
+      }
+      var res = await q.order("submitted_at", { ascending: true });
       if (res.error) throw res.error;
       return (res.data || []).map(mapRow);
     },
@@ -270,7 +277,7 @@
     async applicationDetail(appId) {
       var isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appId || "");
       var res = await sb.from("applications")
-        .select("*, researcher:profiles(full_name,email), documents:application_documents(*), reviews(*, reviewer:profiles(full_name,email,title,faculty,department))")
+        .select("*, researcher:profiles(full_name,email,name_title,title,au_id,phone,office_room), documents:application_documents(*), reviews(*, reviewer:profiles(full_name,email,title,faculty,department))")
         .eq(isUuid ? "id" : "code", appId).single();
       if (res.error) throw res.error;
       var a = res.data;
@@ -884,7 +891,10 @@
 
     async statusCounts(grantType) {
       var q = sb.from("applications").select("status");
-      if (grantType) q = q.eq("grant_type", grantType);
+      if (grantType) {
+        if (grantType.charAt(0) === "!") q = q.neq("grant_type", grantType.slice(1));
+        else q = q.eq("grant_type", grantType);
+      }
       var r = await q;
       if (r.error) throw r.error;
       var c = { _total: 0 };
