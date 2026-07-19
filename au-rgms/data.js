@@ -328,6 +328,19 @@ const DOC_TYPES = [
   "Other supporting document",
 ];
 
+// AU-R3 conference budget categories. "intlOnly" rows apply only to
+// international conferences (hidden/zeroed for domestic ones).
+const R3_BUDGET_ITEMS = [
+  { item: "Registration Fee" },
+  { item: "Flight Ticket" },
+  { item: "Accommodation" },
+  { item: "Transportation" },
+  { item: "Visa", intlOnly: true },
+  { item: "Meals / Daily Allowance" },
+  { item: "Other Expenses" },
+];
+const R3_CONFERENCE_TYPES = ["Domestic", "International"];
+
 // Document types for an AU-R3 Paper Presentation Grant upload.
 const R3_DOC_TYPES = [
   "Full Research Article",
@@ -409,7 +422,7 @@ const R4_REQUIRED_DOCS = [
 
 window.AU = {
   ALL_STAGES, STATUS, FACULTIES, REQUIRED_DOCS, PAPER_PRESENTATION_DOCS,
-  AU_TITLES, WORK_TYPES, DEFAULT_BUDGET_CAPS, NECESSARY_DOCS, DOC_TYPES, R3_DOC_TYPES, GRANT_SYSTEMS, REIMBURSE_CATEGORIES,
+  AU_TITLES, WORK_TYPES, DEFAULT_BUDGET_CAPS, NECESSARY_DOCS, DOC_TYPES, R3_DOC_TYPES, R3_BUDGET_ITEMS, R3_CONFERENCE_TYPES, GRANT_SYSTEMS, REIMBURSE_CATEGORIES,
   R4_INDEX_TYPES, R4_SCOPUS_QUARTILE_REWARD, r4EstimateReward, R4_DOC_TYPES, R4_REQUIRED_DOCS,
   PRIMARY_APP, APPLICATIONS,
   NOTIFS, PAYMENTS, ACTIVITY,

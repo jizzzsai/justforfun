@@ -736,6 +736,436 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   );
 }
 
+/* ---------- B1. Submit AU-R3 Paper Presentation (conference) ---------- */
+const R3_DEFAULT_DRAFT = {
+  confName: "", organizer: "", website: "", confType: "International", country: "", city: "",
+  confStart: "", confEnd: "",
+  paperTitle: "", field: "", keywords: "", corresponding: "", paperAbstract: "",
+  name: "", title2: "", auId: "", email: "", phone: "", office: "", school: "", department: "",
+  outcome: "",
+};
+function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
+  const sys = grantSystemFor("au_r3");
+  const maxAmount = sys.maxAmount || 50000;
+  const [draft, setDraft] = useState({ ...R3_DEFAULT_DRAFT });
+  const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
+
+  // Paper authors (co-members): the other researchers + students on the paper.
+  const [authors, setAuthors] = useState([]);
+  const addAuthor = () => setAuthors(m => m.concat([{ name: "", kind: "Researcher", auId: "", email: "" }]));
+  const setAuthor = (i, k, v) => setAuthors(m => m.map((r, j) => j === i ? { ...r, [k]: v } : r));
+  const removeAuthor = (i) => setAuthors(m => m.filter((_, j) => j !== i));
+
+  // Conference budget — amounts per category; total requested is the sum.
+  const isIntl = draft.confType === "International";
+  const [budgetRows, setBudgetRows] = useState((RA.R3_BUDGET_ITEMS || []).map(r => ({ item: r.item, intlOnly: !!r.intlOnly, amount: "" })));
+  const visibleRows = budgetRows.filter(r => isIntl || !r.intlOnly);
+  const total = visibleRows.reduce((s, b) => s + (Number(b.amount) || 0), 0);
+  const setAmt = (item, v) => setBudgetRows(rows => rows.map(r => r.item === item ? { ...r, amount: (v + "").replace(/[^0-9]/g, "") } : r));
+
+  const [files, setFiles] = useState([]);
+  const [docType, setDocType] = useState("Full Research Article");
+  const onFiles = (e) => { const fs = Array.from(e.target.files || []); setFiles(prev => prev.concat(fs.map(f => ({ file: f, docType })))); e.target.value = ""; };
+  const [editingId, setEditingId] = useState(applicationId || null);
+  const [existingDocs, setExistingDocs] = useState([]);
+  const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
+  const confDuration = monthsBetween(draft.confStart, draft.confEnd);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const p = await window.AUTH.profile();
+        if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
+        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone, office: p.office_room || d.office }));
+      } catch (e) {}
+    })();
+  }, [applicationId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function load() {
+      if (!applicationId) { setEditingId(null); setExistingDocs([]); setFiles([]); setLoadingDraft(false); return; }
+      setLoadingDraft(true); setErr("");
+      try {
+        const app = await window.DB.applicationDetail(applicationId);
+        if (!app || ["draft", "returned"].indexOf(app.status) === -1) {
+          if (!cancelled) { setEditingId(null); setExistingDocs([]); setErr("Only draft or returned applications can be edited here."); }
+          return;
+        }
+        if (cancelled) return;
+        const ci = app.conference_info || {};
+        setEditingId(app.id);
+        setExistingDocs(app.documents || []);
+        setDraft(d => ({
+          ...d,
+          confName: ci.confName || "", organizer: ci.organizer || "", website: ci.website || "",
+          confType: ci.confType || "International", country: ci.country || "", city: ci.city || "",
+          confStart: ci.confStart || app.start_date || "", confEnd: ci.confEnd || app.end_date || "",
+          paperTitle: app.title || "", field: app.field || "", keywords: app.keywords || "",
+          corresponding: ci.correspondingAuthor || "", paperAbstract: ci.paperAbstract || "",
+          school: app.faculty || d.school, department: app.department || d.department,
+          outcome: app.abstract || "",
+          name: app.researcher ? (app.researcher.full_name || d.name) : d.name,
+          email: app.researcher ? (app.researcher.email || d.email) : d.email,
+        }));
+        setAuthors(Array.isArray(app.co_members) ? app.co_members : []);
+        if (Array.isArray(app.budget_breakdown) && app.budget_breakdown.length) {
+          setBudgetRows((RA.R3_BUDGET_ITEMS || []).map(r => {
+            const saved = app.budget_breakdown.find(b => b.item === r.item);
+            return { item: r.item, intlOnly: !!r.intlOnly, amount: saved ? String(saved.amount || "") : "" };
+          }));
+        }
+      } catch (e) { if (!cancelled) setErr((e && e.message) || "Could not load this draft."); }
+      finally { if (!cancelled) setLoadingDraft(false); }
+    }
+    load();
+    return () => { cancelled = true; };
+  }, [applicationId]);
+
+  const deleteExistingDoc = (doc) => {
+    const runDelete = async () => {
+      try { await window.DB.deleteDocument(doc); setExistingDocs(ds => ds.filter(d => d.id !== doc.id)); toast(doc.name + " deleted."); }
+      catch (ex) { toast("Delete error: " + ((ex && ex.message) || ex)); }
+    };
+    if (setConfirm) setConfirm({ kind: "danger", title: "Delete uploaded file?", message: doc.name + " will be removed from this draft and from storage.", confirmLabel: "Delete File", onConfirm: runDelete });
+    else runDelete();
+  };
+
+  async function save(submit) {
+    setErr("");
+    if (submit && !draft.confName.trim()) { setErr("Enter the conference name."); return; }
+    if (submit && !draft.organizer.trim()) { setErr("Enter the conference organizer."); return; }
+    if (submit && !draft.country.trim()) { setErr("Enter the conference country."); return; }
+    if (submit && !draft.city.trim()) { setErr("Enter the conference city."); return; }
+    if (submit && (!draft.confStart || !draft.confEnd)) { setErr("Select the conference start and end dates."); return; }
+    if (submit && draft.confEnd < draft.confStart) { setErr("The conference end date must be on or after the start date."); return; }
+    if (submit && !draft.paperTitle.trim()) { setErr("Enter the paper title."); return; }
+    if (submit && !draft.field.trim()) { setErr("Enter the research field."); return; }
+    if (submit && !draft.corresponding.trim()) { setErr("Enter the corresponding author."); return; }
+    if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
+    if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
+    if (submit && total <= 0) { setErr("Enter the conference budget amounts."); return; }
+    if (submit && total > maxAmount) { setErr("Total budget (" + total.toLocaleString() + " THB) exceeds the " + maxAmount.toLocaleString() + " THB maximum for AU-R3 grants."); return; }
+    setBusy(true);
+    try {
+      try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
+      const confInfo = {
+        confName: draft.confName, organizer: draft.organizer, website: draft.website,
+        confType: draft.confType, country: draft.country, city: draft.city,
+        confStart: draft.confStart || null, confEnd: draft.confEnd || null,
+        presentation: "Oral Presentation",
+        correspondingAuthor: draft.corresponding, paperAbstract: draft.paperAbstract,
+      };
+      const app = await window.DB.createApplication({
+        title: draft.paperTitle, abstract: draft.outcome, field: draft.field,
+        faculty: draft.school, department: draft.department, keywords: draft.keywords,
+        requested_amount: total, duration_months: confDuration || 1,
+        start_date: draft.confStart || null, end_date: draft.confEnd || null,
+        budget_breakdown: visibleRows.filter(r => Number(r.amount) > 0).map(r => ({ item: r.item, amount: Number(r.amount) || 0 })),
+        grant_type: "au_r3",
+        co_members: authors.filter(m => (m.name || "").trim()),
+        conference_info: confInfo,
+      }, submit, editingId);
+      for (const it of files) { try { await window.DB.uploadDocument(app.id, it.file, it.docType || null); } catch (e) {} }
+      if (!submit) { setEditingId(app.id); if (setSelectedApplicationId) setSelectedApplicationId(app.id); }
+      else if (setSelectedApplicationId) setSelectedApplicationId(null);
+      toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
+      navigate("r-applications");
+    } catch (ex) { setErr((ex && ex.message) || "Could not save the application."); setBusy(false); }
+  }
+
+  if (loadingDraft) {
+    return <><PageHeader title="Edit AU-R3 Application" desc="Loading saved draft." /><div className="card" style={{ padding: 44, textAlign: "center", color: "var(--ink-3)" }}>Loading draft...</div></>;
+  }
+
+  const emailBad = draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim());
+  return (
+    <>
+      <PageHeader
+        title={(editingId ? "Edit " : "Submit ") + "AU-R3 Application"}
+        desc="Paper Presentation Grant — present your accepted paper at a conference. AU-R3 goes from the Dean straight to RASSC."
+        actions={
+          <>
+            <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
+            <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
+              <Icon name="Send" size={13} /> {busy ? "Saving…" : "Submit Application"}
+            </button>
+          </>
+        }
+      />
+
+      <div className="card card-pad-0">
+        <div className="form-section">
+          <h4><span className="num">1</span> Conference Information</h4>
+          <p className="section-sub">The conference where your paper has been accepted for presentation.</p>
+          <div className="section-body">
+            <div className="form-grid">
+              <div className="field full">
+                <label>Conference Name</label>
+                <input value={draft.confName} onChange={e => upd("confName", e.target.value)} placeholder="e.g. International Conference on Machine Learning 2027" />
+              </div>
+              <div className="field">
+                <label>Conference Organizer</label>
+                <input value={draft.organizer} onChange={e => upd("organizer", e.target.value)} placeholder="e.g. IEEE, ACM, professional association" />
+              </div>
+              <div className="field">
+                <label>Conference Website</label>
+                <input value={draft.website} onChange={e => upd("website", e.target.value)} placeholder="https://…" />
+              </div>
+              <div className="field">
+                <label>Conference Type</label>
+                <select value={draft.confType} onChange={e => upd("confType", e.target.value)}>
+                  {(RA.R3_CONFERENCE_TYPES || ["Domestic", "International"]).map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>Presentation Type</label>
+                <select value="Oral Presentation" onChange={() => {}}>
+                  <option>Oral Presentation</option>
+                </select>
+                <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>Poster presentations are not supported by the AU-R3 grant.</div>
+              </div>
+              <div className="field">
+                <label>Country</label>
+                <input value={draft.country} onChange={e => upd("country", e.target.value)} placeholder={isIntl ? "e.g. Japan" : "Thailand"} />
+              </div>
+              <div className="field">
+                <label>City</label>
+                <input value={draft.city} onChange={e => upd("city", e.target.value)} placeholder="e.g. Tokyo" />
+              </div>
+              <div className="field">
+                <label>Conference Start Date</label>
+                <AUDatePicker value={draft.confStart} max={draft.confEnd || undefined}
+                  onChange={v => upd("confStart", v)} placeholder="Select start date…" />
+              </div>
+              <div className="field">
+                <label>Conference End Date</label>
+                <AUDatePicker value={draft.confEnd} min={draft.confStart || undefined}
+                  onChange={v => upd("confEnd", v)} placeholder="Select end date…" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h4><span className="num">2</span> Research Paper Information</h4>
+          <p className="section-sub">The accepted paper you will present.</p>
+          <div className="section-body">
+            <div className="form-grid">
+              <div className="field full">
+                <label>Paper Title</label>
+                <input value={draft.paperTitle} onChange={e => upd("paperTitle", e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Research Field</label>
+                <input value={draft.field} onChange={e => upd("field", e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Keywords</label>
+                <input value={draft.keywords} onChange={e => upd("keywords", e.target.value)} />
+              </div>
+              <div className="field full">
+                <label>Corresponding Author</label>
+                <input value={draft.corresponding} onChange={e => upd("corresponding", e.target.value)} placeholder="Name of the corresponding author" />
+              </div>
+              <div className="field full">
+                <label>Abstract (optional)</label>
+                <textarea className="comment-input" style={{ minHeight: 90 }} value={draft.paperAbstract} onChange={e => upd("paperAbstract", e.target.value)} placeholder="Paste the paper abstract here (optional)." />
+              </div>
+            </div>
+
+            <div style={{ marginTop: 6 }}>
+              <div className="eyebrow" style={{ marginBottom: 4 }}>Author(s)</div>
+              <p className="section-sub" style={{ marginTop: 0 }}>You are the main applicant. Add the other researchers and students who co-authored this paper.</p>
+              <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
+                <table className="tbl">
+                  <thead>
+                    <tr><th>Name</th><th style={{ width: 130 }}>Role</th><th style={{ width: 120 }}>AU ID</th><th>Email</th><th style={{ width: 48 }}></th></tr>
+                  </thead>
+                  <tbody>
+                    {authors.length === 0 && (
+                      <tr><td colSpan="5" style={{ color: "var(--ink-3)", textAlign: "center", padding: "14px" }}>No co-authors added — you are the sole author.</td></tr>
+                    )}
+                    {authors.map((m, i) => (
+                      <tr key={i}>
+                        <td><input value={m.name} onChange={e => setAuthor(i, "name", e.target.value)} placeholder="Full name" style={{ width: "100%", minWidth: 140 }} /></td>
+                        <td>
+                          <select value={m.kind} onChange={e => setAuthor(i, "kind", e.target.value)}>
+                            <option value="Researcher">Researcher</option>
+                            <option value="Student">Student</option>
+                          </select>
+                        </td>
+                        <td><input value={m.auId} onChange={e => setAuthor(i, "auId", e.target.value)} placeholder="ID" style={{ width: "100%", minWidth: 90 }} /></td>
+                        <td><input type="email" value={m.email} onChange={e => setAuthor(i, "email", e.target.value)} placeholder="name@au.edu" style={{ width: "100%", minWidth: 150 }} /></td>
+                        <td style={{ textAlign: "center" }}><button type="button" className="btn btn-ghost btn-sm" onClick={() => removeAuthor(i)} title="Remove author"><Icon name="Trash2" size={13} /></button></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <button type="button" className="btn btn-secondary btn-sm mt-1" onClick={addAuthor}><Icon name="Plus" size={13} /> Add author</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h4><span className="num">3</span> Researcher Information</h4>
+          <p className="section-sub">Auto-filled from your profile — check it before submitting. The faculty routes the application to your Dean.</p>
+          <div className="section-body">
+            <div className="form-grid">
+              <div className="field">
+                <label>Title</label>
+                <select value={draft.title2} onChange={e => upd("title2", e.target.value)}>
+                  <option value="">Select title…</option>
+                  {RA.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="field"><label>Full Name</label><input value={draft.name} onChange={e => upd("name", e.target.value)} /></div>
+              <div className="field"><label>AU ID</label><input value={draft.auId} onChange={e => upd("auId", e.target.value)} placeholder="e.g. 5012345" /></div>
+              <div className="field">
+                <label>Email (AU only)</label>
+                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} placeholder="name@au.edu"
+                  style={emailBad ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : {}} />
+                {emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}
+              </div>
+              <div className="field"><label>Phone</label><input value={draft.phone} onChange={e => upd("phone", e.target.value)} /></div>
+              <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
+              <div className="field">
+                <label>School / Faculty</label>
+                <select value={draft.school} onChange={e => { upd("school", e.target.value); upd("department", ""); }}>
+                  <option value="">Select your faculty…</option>
+                  {RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>Department</label>
+                <select value={draft.department} onChange={e => upd("department", e.target.value)} disabled={!draft.school}>
+                  <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
+                  {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d} value={d}>{d}</option>)}
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h4><span className="num">4</span> Conference Budget Information</h4>
+          <p className="section-sub">Enter the estimated cost per item — the requested total adds up automatically (maximum {maxAmount.toLocaleString()} THB).{isIntl ? "" : " Visa applies to international conferences only, so it is hidden."}</p>
+          <div className="section-body">
+            <div className="field full">
+              <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
+                <table className="tbl">
+                  <thead>
+                    <tr><th>Expense Item</th><th style={{ width: 170, textAlign: "right" }}>Amount (THB)</th></tr>
+                  </thead>
+                  <tbody>
+                    {visibleRows.map(r => (
+                      <tr key={r.item}>
+                        <td>{r.item}{r.intlOnly ? <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-gold-deep)", background: "var(--au-gold-soft)", padding: "2px 8px", borderRadius: 999 }}>International</span> : null}</td>
+                        <td style={{ textAlign: "right" }}>
+                          <input value={r.amount === "" ? "" : Number(r.amount || 0).toLocaleString()} onChange={e => setAmt(r.item, e.target.value)}
+                            placeholder="0" style={{ width: 130, textAlign: "right", fontFamily: "ui-monospace, monospace" }} />
+                        </td>
+                      </tr>
+                    ))}
+                    <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}>
+                      <td>Total Requested Amount</td>
+                      <td style={{ textAlign: "right", color: total > maxAmount ? "var(--au-crimson)" : "inherit" }}>{fmtBaht(total)}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              {total > maxAmount && <div style={{ fontSize: 12, color: "var(--au-crimson)", marginTop: 6 }}>Total ({fmtBaht(total)}) exceeds the AU-R3 maximum of {fmtBaht(maxAmount)} — reduce the amounts.</div>}
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h4><span className="num">5</span> Expected Outcomes</h4>
+          <p className="section-sub">Purpose of attending, expected benefits to Assumption University, and expected research impact.</p>
+          <div className="section-body">
+            <div className="field">
+              <textarea className="comment-input" style={{ minHeight: 120 }} value={draft.outcome} onChange={e => upd("outcome", e.target.value)}
+                placeholder={"e.g.\n- Purpose of attending the conference\n- Expected benefits to Assumption University\n- Expected research impact and outcomes"} />
+            </div>
+          </div>
+        </div>
+
+        <div className="form-section">
+          <h4><span className="num">6</span> Required Documents</h4>
+          <p className="section-sub">Upload the AU-R3 PDF documents. You can add or delete files while the application is still waiting for Dean screening.</p>
+          <div className="section-body">
+            <div style={{ background: "var(--paper-warm)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "12px 14px", marginBottom: 14 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--ink-2)" }}>Documents required for an AU-R3 Paper Presentation Grant:</div>
+              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink-2)", lineHeight: 1.7 }}>
+                {(RA.PAPER_PRESENTATION_DOCS || []).map(d => (
+                  <li key={d.id}><b>{d.name.replace(/_/g, " ").replace(/\.pdf$/i, "")}</b> — {d.role.replace(/^AU-R3 requirement:?\s*/i, "")}</li>
+                ))}
+              </ul>
+            </div>
+            {existingDocs.length > 0 && (
+              <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
+                {existingDocs.map(d => (
+                  <div className="file-row" key={d.id || d.name}>
+                    <div className="ficon"><Icon name="FileText" size={18} /></div>
+                    <div className="fmeta">
+                      <div className="fn">{d.name}{d.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{d.doc_type}</span>}</div>
+                      <div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div>
+                    </div>
+                    <div className="factions">
+                      <button className="btn btn-secondary btn-sm" onClick={() => onView(d)}><Icon name="Eye" size={13} /> View</button>
+                      <button className="btn btn-secondary btn-sm" onClick={() => onDownload(d)}><Icon name="Download" size={13} /> Download</button>
+                      <button className="btn btn-danger btn-sm" onClick={() => deleteExistingDoc(d)}><Icon name="Trash2" size={13} /> Delete</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {files.length > 0 && (
+              <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
+                {files.map((it, i) => (
+                  <div className="file-row" key={i}>
+                    <div className="ficon"><Icon name="FileText" size={18} /></div>
+                    <div className="fmeta">
+                      <div className="fn">{it.file.name}{it.docType && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{it.docType}</span>}</div>
+                      <div className="fs">{(it.file.size / 1024).toFixed(0)} KB · ready to upload</div>
+                    </div>
+                    <div className="factions">
+                      <button className="btn btn-secondary btn-sm" onClick={() => setFiles(fs => fs.filter((_, j) => j !== i))}><Icon name="X" size={13} /> Remove</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="field" style={{ maxWidth: 360, marginBottom: 10 }}>
+              <label>Document type for the next upload</label>
+              <select value={docType} onChange={e => setDocType(e.target.value)}>
+                {(RA.R3_DOC_TYPES || RA.DOC_TYPES).map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <label className="upload-box mt-1" style={{ cursor: "pointer", display: "block" }}>
+              <input type="file" accept="application/pdf,.pdf" multiple style={{ display: "none" }} onChange={onFiles} />
+              <Icon name="Upload" size={26} className="icon" />
+              <div className="t">Click to upload your <b>{docType}</b></div>
+              <div className="s">PDF · max 10 MB per file</div>
+            </label>
+          </div>
+        </div>
+
+        <div style={{ padding: "16px 24px", borderTop: "1px solid var(--line)", background: "var(--paper-warm)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
+          {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, alignSelf: "center", marginRight: "auto" }}>{err}</div>}
+          <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
+          <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
+            <Icon name="Send" size={13} /> {busy ? "Saving…" : "Submit Application"}
+          </button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 /* ---------- B2. Submit AU-R4 Publication Fees & Reward ---------- */
 const R4_DEFAULT_DRAFT = {
   title: "", journal: "", indexType: "scopus", quartile: "Q1", doi: "", pubDate: "", feeAmount: "",
@@ -1245,6 +1675,17 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
                   ))}
                 </div>
               )}
+              {app.conference_info && (
+                <div style={{ marginTop: 8, borderTop: "1px solid var(--line-2)", paddingTop: 8 }}>
+                  <div className="eyebrow" style={{ marginBottom: 6 }}>Conference (AU-R3)</div>
+                  <div className="meta-row"><span className="l">Conference</span><span className="r">{app.conference_info.confName || "-"}</span></div>
+                  <div className="meta-row"><span className="l">Organizer</span><span className="r">{app.conference_info.organizer || "-"}</span></div>
+                  <div className="meta-row"><span className="l">Type / Place</span><span className="r">{(app.conference_info.confType || "-") + " · " + (app.conference_info.city || "-") + ", " + (app.conference_info.country || "-")}</span></div>
+                  <div className="meta-row"><span className="l">Dates</span><span className="r">{(app.conference_info.confStart ? fmtNiceDate(app.conference_info.confStart) : "-") + " → " + (app.conference_info.confEnd ? fmtNiceDate(app.conference_info.confEnd) : "-")}</span></div>
+                  <div className="meta-row"><span className="l">Presentation</span><span className="r">{app.conference_info.presentation || "Oral Presentation"}</span></div>
+                  <div className="meta-row"><span className="l">Corresponding</span><span className="r">{app.conference_info.correspondingAuthor || "-"}</span></div>
+                </div>
+              )}
               {app.pub_info && (
                 <div style={{ marginTop: 8, borderTop: "1px solid var(--line-2)", paddingTop: 8 }}>
                   <div className="eyebrow" style={{ marginBottom: 6 }}>Publication (AU-R4)</div>
@@ -1303,7 +1744,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
 
         <div className="card card-pad-0" style={{ alignSelf: "start", position: "sticky", top: 116 }}>
           <div className="card-head"><h3>Approval Timeline</h3><div className="grow"></div><Badge status={status} /></div>
-          <div className="card-body"><Timeline steps={RA.ALL_STAGES} app={timelineApp} /></div>
+          <div className="card-body"><Timeline steps={app.grant_type === "au_r3" ? RA.ALL_STAGES.filter(s => s.key !== "committee") : RA.ALL_STAGES} app={timelineApp} /></div>
         </div>
       </div>
     </>

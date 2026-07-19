@@ -200,14 +200,19 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
         const docs = app.documents || [];
         const budgetRows = Array.isArray(app.budget_breakdown) ? app.budget_breakdown : [];
         const requested = Number(app.requested_amount || 0);
-        const withinCap = requested > 0 && requested <= 100000;
+        const grantCap = app.grant_type === "au_r3" ? 50000 : app.grant_type === "au_r4" ? 80000 : 100000;
+        const grantCode = app.grant_type === "au_r3" ? "AU-R3" : app.grant_type === "au_r4" ? "AU-R4" : "AU-R1";
+        const withinCap = requested > 0 && requested <= grantCap;
+        const isR3 = app.grant_type === "au_r3";
         const forward = () => setConfirm({
           kind: "success",
-          title: "Forward to Faculty Committee?",
-          message: app.code + " will move to committee review.",
+          title: isR3 ? "Forward to RASSC?" : "Forward to Faculty Committee?",
+          message: isR3
+            ? app.code + " is an AU-R3 paper presentation request — it goes straight to RASSC screening."
+            : app.code + " will move to committee review.",
           confirmLabel: "Forward", withReason: true,
           onConfirm: async (reason) => {
-            try { await window.DB.transition(app.id, "submitted", "advance", reason); toast(app.code + " forwarded to Faculty Committee."); navigate("d-screen"); }
+            try { await window.DB.transition(app.id, "submitted", "advance", reason); toast(app.code + (isR3 ? " forwarded to RASSC." : " forwarded to Faculty Committee.")); navigate("d-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
@@ -296,7 +301,7 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
                 <div className="card-body">
                   {[
                     { label: docs.length + " uploaded PDF document(s)", checked: docs.length > 0 },
-                    { label: "Budget total within 100,000 THB AU-R1 ceiling", checked: withinCap },
+                    { label: "Budget total within " + grantCap.toLocaleString() + " THB " + grantCode + " ceiling", checked: withinCap },
                     { label: "Research title, researcher, faculty and department entered", checked: !!(app.title && app.researcher && app.faculty && app.department) },
                     { label: "Expected outcomes / proposal summary entered", checked: !!app.abstract },
                   ].map((item, i, arr) => (

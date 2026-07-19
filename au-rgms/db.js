@@ -191,6 +191,7 @@
         grant_type: payload.grant_type || "au_r1",
         co_members: payload.co_members || null,
         pub_info: payload.pub_info || null,
+        conference_info: payload.conference_info || null,
         status: submit ? "submitted" : "draft",
         submitted_at: submit ? new Date().toISOString() : (existing ? existing.submitted_at : null),
       };
@@ -378,10 +379,23 @@
     async transition(appId, fromStatus, kind, note) {
       var me = await uid();
       var role = await myRole();
-      var to;
+      var to, labelOverride = null;
       if (kind === "return") to = "returned";
       else if (kind === "reject") to = "rejected";
-      else { var n = NEXT[fromStatus]; if (!n) throw new Error("No next step from " + fromStatus); to = n.to; }
+      else {
+        var n = NEXT[fromStatus]; if (!n) throw new Error("No next step from " + fromStatus); to = n.to;
+        // AU-R3 (paper presentation) skips the Faculty Committee: the Dean
+        // forwards it straight to RASSC.
+        if (fromStatus === "submitted") {
+          try {
+            var gt = await sb.from("applications").select("grant_type").eq("id", appId).single();
+            if (gt.data && gt.data.grant_type === "au_r3") {
+              to = "iras_review";
+              labelOverride = "Dean approved — forwarded to RASSC";
+            }
+          } catch (e) {}
+        }
+      }
       var patch = { status: to };
       if (to === "approved" || to === "rejected") patch.decided_at = new Date().toISOString();
       var upd = await sb.from("applications").update(patch).eq("id", appId).eq("status", fromStatus).select();
@@ -395,7 +409,7 @@
       var app = upd.data[0];
       var label = kind === "return" ? "Returned to researcher"
         : kind === "reject" ? "Application rejected"
-        : (NEXT[fromStatus] ? NEXT[fromStatus].verb : "Advanced");
+        : (labelOverride || (NEXT[fromStatus] ? NEXT[fromStatus].verb : "Advanced"));
       try {
         await sb.from("application_events").insert({
           application_id: appId, actor_id: me, actor_role: role,
