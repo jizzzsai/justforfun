@@ -391,14 +391,14 @@
       else if (kind === "reject") to = "rejected";
       else {
         var n = NEXT[fromStatus]; if (!n) throw new Error("No next step from " + fromStatus); to = n.to;
-        // AU-R3 (paper presentation) skips the Faculty Committee: the Dean
-        // forwards it straight to RASSC.
+        // AU-R3 (paper presentation) and AU-R4 (publication reward) skip the
+        // Faculty Committee: the Dean forwards straight to IRAS.
         if (fromStatus === "submitted") {
           try {
             var gt = await sb.from("applications").select("grant_type").eq("id", appId).single();
-            if (gt.data && gt.data.grant_type === "au_r3") {
+            if (gt.data && (gt.data.grant_type === "au_r3" || gt.data.grant_type === "au_r4")) {
               to = "iras_review";
-              labelOverride = "Dean approved — forwarded to RASSC";
+              labelOverride = "Dean approved — forwarded to IRAS";
             }
           } catch (e) {}
         }

@@ -32,6 +32,24 @@ function buildR3Timeline(statusKey) {
   return tl;
 }
 
+// AU-R4 pipeline: Draft → Submitted → Dean → IRAS Verification → Approved → Payment → Paid.
+const R4_PIPELINE = [
+  { key: "submission", label: "Submitted" },
+  { key: "dean", label: "Dean Review" },
+  { key: "iras", label: "IRAS Verification" },
+  { key: "approved", label: "Approved for Payment" },
+  { key: "payment", label: "Finance Processing" },
+  { key: "paid", label: "Paid" },
+];
+function buildR4Timeline(statusKey) {
+  const order = ["submission", "dean", "iras", "approved", "payment", "paid"];
+  const idxMap = { draft: 0, submitted: 1, iras_review: 2, approved: 3, active: 4, completed: 5, returned: 0, rejected: 0 };
+  let idx = idxMap[statusKey]; if (idx === undefined) idx = 0;
+  const tl = {};
+  order.forEach((k, i) => { tl[k] = i < idx ? { done: true } : (i === idx ? { current: true } : {}); });
+  return tl;
+}
+
 function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicationId, grantType }) {
   const sys = grantSystemFor(grantType || "au_r1");
   const [c, setC] = useState(null);
@@ -45,11 +63,13 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
     window.DB.myApplications(grantType || undefined).then(setApps).catch(() => setApps([]));
   }, [grantType]);
   const isR3 = grantType === "au_r3";
+  const isR4 = grantType === "au_r4";
+  const isSingle = isR3 || isR4; // AU-R3/AU-R4 use a single payment, not 30/40/30 tranches
   const n = (k) => (c ? (c[k] || 0) : "…");
   const latest = apps && apps.length ? apps[0] : null;
-  // AU-R3 shows a single conference-grant payment status (no 30/40/30 tranches).
-  const r3Grant = isR3 && apps ? apps.find(a => ["approved", "active", "completed"].indexOf(a.status) >= 0) : null;
+  const singleGrant = isSingle && apps ? apps.find(a => ["approved", "active", "completed"].indexOf(a.status) >= 0) : null;
   const r3PayLabel = { approved: "Approved for Payment", active: "Payment Processing", completed: "Paid / Completed" };
+  const approvedLabel = isR4 ? "Approved / Paid" : isR3 ? "Approved Conference Grants" : "Approved Projects";
   const pays = grant && grant.payments && grant.payments.length ? grant.payments.slice().sort((a, b) => a.instalment - b.instalment) : [];
   const grantTotal = grant ? Number(grant.approved_amount || grant.requested_amount || 0) : 0;
   const released = pays.filter(p => p.status === "paid").reduce((s, p) => s + Number(p.amount || 0), 0);
@@ -78,30 +98,31 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
         <Stat label="Total Applications"  value={n("_total")} icon="Folder" />
         <Stat label="Draft Applications"  value={n("draft")} icon="FileText"   tone="navy" />
         <Stat label="Under Review"        value={n("_underReview")} icon="FileSearch" tone="gold" />
-        <Stat label={isR3 ? "Approved Conference Grants" : "Approved Projects"} value={n("_approved")} icon="CheckCircle" tone="green" />
+        <Stat label={approvedLabel} value={n("_approved")} icon="CheckCircle" tone="green" />
       </div>
 
       <div className="grid-2">
         {/* Left: payment status */}
-        {isR3 ? (
+        {isSingle ? (
           <div className="card card-pad-0">
             <div className="card-head">
-              <h3>Grant Payment Status{r3Grant ? " · " + r3Grant.code : ""}</h3>
+              <h3>{isR4 ? "Latest Claim Status" : "Grant Payment Status"}{singleGrant ? " · " + singleGrant.code : ""}</h3>
               <div className="grow"></div>
-              {r3Grant && <Badge status={window.DB.statusBadge(r3Grant.status)} />}
+              {singleGrant && <Badge status={window.DB.statusBadge(singleGrant.status)} />}
             </div>
             <div className="card-body">
               {apps === null && <div className="text-sm text-muted">Loading…</div>}
-              {apps && !r3Grant && <Empty title="No approved conference grant yet" desc="Once your paper presentation grant is approved, its payment status appears here." icon="Coins" />}
-              {r3Grant && (
+              {apps && !singleGrant && <Empty title={isR4 ? "No approved claim yet" : "No approved conference grant yet"} desc={isR4 ? "Once IRAS approves your publication claim, its payment status appears here." : "Once your paper presentation grant is approved, its payment status appears here."} icon="Coins" />}
+              {singleGrant && (
                 <>
-                  <div style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontSize: 17, marginBottom: 4 }}>{r3Grant.title}</div>
-                  <div className="text-sm text-muted mb-4">{(r3Grant.conference_info && r3Grant.conference_info.confName) || r3Grant.faculty || "—"}</div>
-                  <div className="meta-row"><span className="l">Application ID</span><span className="r">{r3Grant.code}</span></div>
-                  {r3Grant.conference_info && <div className="meta-row"><span className="l">Conference</span><span className="r">{r3Grant.conference_info.confName}</span></div>}
-                  <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(r3Grant.requested_amount || 0))}</span></div>
-                  <div className="meta-row"><span className="l">Approved amount</span><span className="r">{r3Grant.approved_amount ? fmtBaht(Number(r3Grant.approved_amount)) : "—"}</span></div>
-                  <div className="meta-row"><span className="l">Payment status</span><span className="r">{r3PayLabel[r3Grant.status] || "Pending Approval"}</span></div>
+                  <div style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontSize: 17, marginBottom: 4 }}>{singleGrant.title}</div>
+                  <div className="text-sm text-muted mb-4">{(singleGrant.pub_info && singleGrant.pub_info.journal) || (singleGrant.conference_info && singleGrant.conference_info.confName) || singleGrant.faculty || "—"}</div>
+                  <div className="meta-row"><span className="l">Application ID</span><span className="r">{singleGrant.code}</span></div>
+                  {isR4 && singleGrant.pub_info && <div className="meta-row"><span className="l">Journal</span><span className="r">{singleGrant.pub_info.journal}{singleGrant.pub_info.indexLabel ? " · " + singleGrant.pub_info.indexLabel : ""}</span></div>}
+                  {isR3 && singleGrant.conference_info && <div className="meta-row"><span className="l">Conference</span><span className="r">{singleGrant.conference_info.confName}</span></div>}
+                  <div className="meta-row"><span className="l">{isR4 ? "Requested claim" : "Requested amount"}</span><span className="r">{fmtBaht(Number(singleGrant.requested_amount || 0))}</span></div>
+                  <div className="meta-row"><span className="l">{isR4 ? "IRAS-approved amount" : "Approved amount"}</span><span className="r">{singleGrant.approved_amount ? fmtBaht(Number(singleGrant.approved_amount)) : "—"}</span></div>
+                  <div className="meta-row"><span className="l">Payment status</span><span className="r">{r3PayLabel[singleGrant.status] || "Pending Approval"}</span></div>
                   <div className="meta-row"><span className="l">Payment date</span><span className="r">—</span></div>
                   <button className="btn btn-secondary mt-4" onClick={() => navigate("r-payments")}>
                     View payment status <Icon name="ArrowRight" size={13} />
@@ -166,7 +187,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
           </div>
           <div style={{ padding: "8px 0" }}>
             {apps === null && <div style={{ padding: "12px 20px", color: "var(--ink-3)", fontSize: 12 }}>Loading…</div>}
-            {apps && apps.length === 0 && <div style={{ padding: "16px 20px" }}><Empty title="No applications yet" desc={isR3 ? "Submit your first paper presentation grant application to get started." : "Submit your first research grant application to get started."} icon="FilePlus" /></div>}
+            {apps && apps.length === 0 && <div style={{ padding: "16px 20px" }}><Empty title="No applications yet" desc={isR4 ? "Submit your first publication reward application to get started." : isR3 ? "Submit your first paper presentation grant application to get started." : "Submit your first research grant application to get started."} icon="FilePlus" /></div>}
             {(apps || []).slice(0, 6).map((a, i) => (
               <div key={a.id} style={{
                 display: "flex", gap: 12, alignItems: "center", padding: "10px 20px", cursor: "pointer",
@@ -194,8 +215,9 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
         </div>
         <div className="card-body">
           {!latest && <Empty title="No application to track yet" desc="Your latest application's progress will appear here." icon="Folder" />}
+          {latest && isR4 && <HTimeline steps={R4_PIPELINE} app={{ timeline: buildR4Timeline(latest.status) }} />}
           {latest && isR3 && <HTimeline steps={R3_PIPELINE} app={{ timeline: buildR3Timeline(latest.status) }} />}
-          {latest && !isR3 && <HTimeline steps={RA.ALL_STAGES.slice(0, 9)} app={{ timeline: buildResearcherTimeline(latest.status) }} />}
+          {latest && !isSingle && <HTimeline steps={RA.ALL_STAGES.slice(0, 9)} app={{ timeline: buildResearcherTimeline(latest.status) }} />}
         </div>
       </div>
     </>
@@ -1224,13 +1246,37 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
 
 /* ---------- B2. Submit AU-R4 Publication Fees & Reward ---------- */
 const R4_DEFAULT_DRAFT = {
-  title: "", journal: "", indexType: "scopus", quartile: "Q1", doi: "", pubDate: "", feeAmount: "",
+  // Publication information
+  title: "", articleType: "Research Article", pubStatus: "Published",
+  journal: "", publisher: "", website: "", articleUrl: "", doi: "", issn: "",
+  acceptDate: "", pubDate: "", expectedPubDate: "", volume: "", issue: "",
+  startPage: "", endPage: "", academicYear: "2025 / 2026",
+  // Journal classification
+  journalDb: "SCOPUS", quartile: "Q1", wosIndex: "SCIE", otherDb: "",
+  openAccess: "Open Access", hybrid: "No", openAccessSelected: "Yes",
+  journalCountry: "", evidenceUrl: "", predatory: false,
+  // Author & contribution
+  applicantRole: "Principal / First Author", isCorresponding: "Yes", studentBased: "No",
+  // Researcher
   name: "", title2: "", auId: "", email: "", phone: "", office: "", school: "", department: "",
+  // Fee & claim
+  claimType: "Publication Reward", feePaid: "", currency: "THB", feeDate: "", receiptNo: "", paidBy: "",
+  turnitin: "",
 };
 function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
   const sys = grantSystemFor("au_r4");
+  const MAX = 80000;
   const [draft, setDraft] = useState({ ...R4_DEFAULT_DRAFT });
   const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
+
+  // Author & contribution table.
+  const [authors, setAuthors] = useState([{ name: "", type: "Principal Author", affiliation: "Assumption University", auId: "", email: "", contribution: "100" }]);
+  const addAuthor = () => setAuthors(a => a.concat([{ name: "", type: "Co-Author", affiliation: "", auId: "", email: "", contribution: "" }]));
+  const setAuthor = (i, k, v) => setAuthors(a => a.map((r, j) => j === i ? { ...r, [k]: k === "contribution" ? (v + "").replace(/[^0-9.]/g, "") : v } : r));
+  const removeAuthor = (i) => setAuthors(a => a.length > 1 ? a.filter((_, j) => j !== i) : a);
+
+  const [decls, setDecls] = useState((RA.R4_DECLARATIONS || []).map(() => false));
+  const allDecl = decls.length > 0 && decls.every(Boolean);
 
   const [files, setFiles] = useState([]);
   const [docType, setDocType] = useState("Full Research Article");
@@ -1241,15 +1287,29 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
-  const idxType = (RA.R4_INDEX_TYPES || []).find(t => t.key === draft.indexType) || {};
-  const reward = RA.r4EstimateReward ? RA.r4EstimateReward(draft.indexType, draft.quartile, draft.feeAmount) : 0;
+  const isScopus = draft.journalDb === "SCOPUS";
+  const isWos = draft.journalDb === "Web of Science";
+  const isOther = draft.journalDb === "Other";
+  const isHybrid = draft.hybrid === "Yes";
+  const published = draft.pubStatus === "Published";
+  const prelim = RA.r4RewardForJournal ? RA.r4RewardForJournal(draft.journalDb, draft.quartile, draft.feePaid) : 0;
+  const requested = Math.min(MAX, prelim > 0 ? prelim : (Number(draft.feePaid) || 0));
+  const catLabel = RA.r4CategoryLabel ? RA.r4CategoryLabel(draft.journalDb, draft.quartile, draft.wosIndex) : draft.journalDb;
+  const totalContrib = authors.reduce((s, a) => s + (Number(a.contribution) || 0), 0);
+  const principalContrib = Math.max.apply(null, authors.map(a => Number(a.contribution) || 0).concat([0]));
+  const turnitinNum = Number(draft.turnitin);
+  const turnitinBad = draft.turnitin !== "" && turnitinNum > 20;
+  const emailBad = draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim());
 
   useEffect(() => {
     (async () => {
       try {
         const p = await window.AUTH.profile();
         if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
-        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone, office: p.office_room || d.office }));
+        if (p && !applicationId) {
+          setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone, office: p.office_room || d.office }));
+          setAuthors(a => a.map((r, i) => i === 0 ? { ...r, name: p.full_name || r.name, auId: p.au_id || r.auId, email: p.email || r.email } : r));
+        }
       } catch (e) {}
     })();
   }, [applicationId]);
@@ -1269,20 +1329,10 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         const pi = app.pub_info || {};
         setEditingId(app.id);
         setExistingDocs(app.documents || []);
-        setDraft(d => ({
-          ...d,
-          title: app.title || "",
-          journal: pi.journal || "",
-          indexType: pi.indexType || "scopus",
-          quartile: pi.quartile || "Q1",
-          doi: pi.doi || "",
-          pubDate: pi.pubDate || "",
-          feeAmount: pi.feeAmount != null ? String(pi.feeAmount) : "",
-          school: app.faculty || d.school,
-          department: app.department || d.department,
-          name: app.researcher ? (app.researcher.full_name || d.name) : d.name,
-          email: app.researcher ? (app.researcher.email || d.email) : d.email,
-        }));
+        setDraft(d => ({ ...d, ...pi, title: app.title || "", school: app.faculty || d.school, department: app.department || d.department,
+          name: app.researcher ? (app.researcher.full_name || d.name) : d.name, email: app.researcher ? (app.researcher.email || d.email) : d.email }));
+        if (Array.isArray(app.co_members) && app.co_members.length) setAuthors(app.co_members);
+        if (pi.declarations && Array.isArray(pi.declarations)) setDecls((RA.R4_DECLARATIONS || []).map((_, i) => !!pi.declarations[i]));
       } catch (e) { if (!cancelled) setErr((e && e.message) || "Could not load this draft."); }
       finally { if (!cancelled) setLoadingDraft(false); }
     }
@@ -1301,25 +1351,46 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
 
   async function save(submit) {
     setErr("");
-    if (submit && !draft.title.trim()) { setErr("Enter the title of your published article."); return; }
-    if (submit && !draft.journal.trim()) { setErr("Enter the journal / publication name."); return; }
-    if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
-    if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
-    if (submit && idxType.actual && Number(draft.feeAmount) <= 0) { setErr("Enter the publication fee you paid (the reward for this type equals the actual fee)."); return; }
-    if (submit && reward <= 0) { setErr("Choose the indexing / type (and Scopus quartile) so the reward can be estimated."); return; }
+    if (submit) {
+      if (!draft.title.trim()) return setErr("Enter the article title.");
+      if (!draft.journal.trim()) return setErr("Enter the journal name.");
+      if (!draft.school) return setErr("Your faculty is required so the application routes to your Dean.");
+      if (emailBad) return setErr("Email must be an Assumption University address ending in @au.edu.");
+      if (!draft.predatory) return setErr("You must confirm the journal is not a predatory / Beall's List journal.");
+      if (turnitinBad) return setErr("Turnitin similarity exceeds the 20% limit — it must be 20% or lower.");
+      if (draft.turnitin === "") return setErr("Enter the Turnitin similarity percentage.");
+      if (Math.round(totalContrib) !== 100) return setErr("Author contribution percentages must total 100% (currently " + totalContrib + "%).");
+      if (principalContrib < 50) return setErr("The principal author must have at least 50% contribution.");
+      const lowCo = authors.some(a => Number(a.contribution) > 0 && Number(a.contribution) < 5);
+      if (lowCo) return setErr("Each listed author must have at least 5% contribution.");
+      if (!draft.receiptNo.trim()) return setErr("Enter the publication-fee receipt number.");
+      if (requested > MAX) return setErr("The requested claim exceeds the AU-R4 maximum of 80,000 THB per article.");
+      if (requested <= 0) return setErr("Choose the journal database (and Scopus quartile) so the claim can be estimated.");
+      if (!allDecl) return setErr("You must accept every eligibility declaration before submitting.");
+    }
     setBusy(true);
     try {
       try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
       const pubInfo = {
-        journal: draft.journal, indexType: draft.indexType, indexLabel: idxType.label || draft.indexType,
-        quartile: idxType.quartiles ? draft.quartile : null, doi: draft.doi, pubDate: draft.pubDate || null,
-        feeAmount: Number(draft.feeAmount) || 0, reward: reward,
+        articleType: draft.articleType, pubStatus: draft.pubStatus, journal: draft.journal, publisher: draft.publisher,
+        website: draft.website, articleUrl: draft.articleUrl, doi: draft.doi, issn: draft.issn,
+        acceptDate: draft.acceptDate || null, pubDate: draft.pubDate || null, expectedPubDate: draft.expectedPubDate || null,
+        volume: draft.volume, issue: draft.issue, startPage: draft.startPage, endPage: draft.endPage, academicYear: draft.academicYear,
+        journalDb: draft.journalDb, quartile: isScopus ? draft.quartile : null, wosIndex: isWos ? draft.wosIndex : null,
+        otherDb: isOther ? draft.otherDb : null, indexLabel: catLabel,
+        openAccess: draft.openAccess, hybrid: draft.hybrid, openAccessSelected: isHybrid ? draft.openAccessSelected : null,
+        journalCountry: draft.journalCountry, evidenceUrl: draft.evidenceUrl, predatory: draft.predatory,
+        applicantRole: draft.applicantRole, isCorresponding: draft.isCorresponding, studentBased: draft.studentBased,
+        claimType: draft.claimType, feePaid: Number(draft.feePaid) || 0, currency: draft.currency, feeDate: draft.feeDate || null,
+        receiptNo: draft.receiptNo, paidBy: draft.paidBy, turnitin: Number(draft.turnitin) || 0,
+        prelimReward: prelim, reward: requested, requestedClaim: requested, maxAmount: MAX,
+        totalContribution: totalContrib, declarations: decls,
       };
       const app = await window.DB.createApplication({
-        title: draft.title, abstract: "Publication reward claim — " + draft.journal + (idxType.label ? " (" + idxType.label + ")" : ""),
+        title: draft.title, abstract: "AU-R4 publication reward — " + draft.journal + " (" + catLabel + ")",
         faculty: draft.school, department: draft.department,
-        requested_amount: reward, duration_months: 12,
-        grant_type: "au_r4", pub_info: pubInfo,
+        requested_amount: requested, duration_months: 12,
+        grant_type: "au_r4", pub_info: pubInfo, co_members: authors.filter(a => (a.name || "").trim()),
       }, submit, editingId);
       for (const it of files) { try { await window.DB.uploadDocument(app.id, it.file, it.docType || null); } catch (e) {} }
       if (!submit) { setEditingId(app.id); if (setSelectedApplicationId) setSelectedApplicationId(app.id); }
@@ -1333,12 +1404,11 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
     return <><PageHeader title="Edit AU-R4 Application" desc="Loading saved draft." /><div className="card" style={{ padding: 44, textAlign: "center", color: "var(--ink-3)" }}>Loading draft...</div></>;
   }
 
-  const emailBad = draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim());
   return (
     <>
       <PageHeader
         title={(editingId ? "Edit " : "Submit ") + "AU-R4 Application"}
-        desc={sys.name + " — claim the reward for an article already published in a journal. Complete each section and upload the required documents before submitting."}
+        desc="Publication Fees and Reward Application — submit the publication information, author contributions, claim details, and required documents."
         actions={
           <>
             <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
@@ -1350,116 +1420,191 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       />
 
       <div className="card card-pad-0">
+        {/* 1. Publication Information */}
         <div className="form-section">
-          <h4><span className="num">1</span> Publication Details</h4>
-          <p className="section-sub">The article you already published and where it appeared.</p>
+          <h4><span className="num">1</span> Publication Information</h4>
+          <p className="section-sub">The published (or accepted) article you are claiming for.</p>
           <div className="section-body">
             <div className="form-grid">
-              <div className="field full">
-                <label>Article / Paper Title</label>
-                <input value={draft.title} onChange={e => upd("title", e.target.value)} />
-              </div>
-              <div className="field">
-                <label>Journal / Publication Name</label>
-                <input value={draft.journal} onChange={e => upd("journal", e.target.value)} />
-              </div>
-              <div className="field">
-                <label>Indexing / Type</label>
-                <select value={draft.indexType} onChange={e => upd("indexType", e.target.value)}>
-                  {(RA.R4_INDEX_TYPES || []).map(t => <option key={t.key} value={t.key}>{t.label}</option>)}
-                </select>
-              </div>
-              {idxType.quartiles && (
-                <div className="field">
-                  <label>Scopus SJR Quartile</label>
-                  <select value={draft.quartile} onChange={e => upd("quartile", e.target.value)}>
-                    {["Q1", "Q2", "Q3", "Q4"].map(q => <option key={q} value={q}>{q}</option>)}
-                  </select>
-                </div>
+              <div className="field full"><label>Article Title *</label><input value={draft.title} onChange={e => upd("title", e.target.value)} /></div>
+              <div className="field"><label>Article Type *</label>
+                <select value={draft.articleType} onChange={e => upd("articleType", e.target.value)}>{(RA.R4_ARTICLE_TYPES || []).map(t => <option key={t}>{t}</option>)}</select></div>
+              <div className="field"><label>Publication Status *</label>
+                <select value={draft.pubStatus} onChange={e => upd("pubStatus", e.target.value)}>{(RA.R4_PUB_STATUS || []).map(t => <option key={t}>{t}</option>)}</select></div>
+              <div className="field"><label>Journal Name *</label><input value={draft.journal} onChange={e => upd("journal", e.target.value)} /></div>
+              <div className="field"><label>Publisher *</label><input value={draft.publisher} onChange={e => upd("publisher", e.target.value)} /></div>
+              <div className="field"><label>Journal Website</label><input value={draft.website} onChange={e => upd("website", e.target.value)} placeholder="https://…" /></div>
+              <div className="field"><label>Article URL{published ? " *" : ""}</label><input value={draft.articleUrl} onChange={e => upd("articleUrl", e.target.value)} placeholder="https://…" /></div>
+              <div className="field"><label>DOI</label><input value={draft.doi} onChange={e => upd("doi", e.target.value)} placeholder="10.xxxx/…" /></div>
+              <div className="field"><label>ISSN / eISSN</label><input value={draft.issn} onChange={e => upd("issn", e.target.value)} /></div>
+              <div className="field"><label>Academic Year *</label><input value={draft.academicYear} onChange={e => upd("academicYear", e.target.value)} /></div>
+              {published ? (
+                <>
+                  <div className="field"><label>Publication Date *</label><AUDatePicker value={draft.pubDate} onChange={v => upd("pubDate", v)} placeholder="Select date…" /></div>
+                  <div className="field"><label>Volume *</label><input value={draft.volume} onChange={e => upd("volume", e.target.value)} /></div>
+                  <div className="field"><label>Issue *</label><input value={draft.issue} onChange={e => upd("issue", e.target.value)} /></div>
+                  <div className="field"><label>Start Page *</label><input value={draft.startPage} onChange={e => upd("startPage", e.target.value)} /></div>
+                  <div className="field"><label>End Page *</label><input value={draft.endPage} onChange={e => upd("endPage", e.target.value)} /></div>
+                </>
+              ) : (
+                <>
+                  <div className="field"><label>Acceptance Date *</label><AUDatePicker value={draft.acceptDate} onChange={v => upd("acceptDate", v)} placeholder="Select date…" /></div>
+                  <div className="field"><label>Expected Publication Date *</label><AUDatePicker value={draft.expectedPubDate} onChange={v => upd("expectedPubDate", v)} placeholder="Select date…" /></div>
+                </>
               )}
-              <div className="field">
-                <label>DOI / Article URL</label>
-                <input value={draft.doi} onChange={e => upd("doi", e.target.value)} placeholder="https://doi.org/…" />
-              </div>
-              <div className="field">
-                <label>Publication Date</label>
-                <AUDatePicker value={draft.pubDate} onChange={v => upd("pubDate", v)} placeholder="Select publication date…" />
-              </div>
             </div>
           </div>
         </div>
 
+        {/* 2. Journal Classification */}
         <div className="form-section">
-          <h4><span className="num">2</span> Researcher Information</h4>
-          <p className="section-sub">Principal author contact details and the faculty used to route the application.</p>
+          <h4><span className="num">2</span> Journal Classification</h4>
+          <p className="section-sub">How the journal is indexed — this drives the preliminary reward. IRAS makes the final verification.</p>
           <div className="section-body">
             <div className="form-grid">
-              <div className="field">
-                <label>Title</label>
-                <select value={draft.title2} onChange={e => upd("title2", e.target.value)}>
-                  <option value="">Select title…</option>
-                  {RA.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
+              <div className="field"><label>Journal Database / Index *</label>
+                <select value={draft.journalDb} onChange={e => upd("journalDb", e.target.value)}>{(RA.R4_JOURNAL_DBS || []).map(t => <option key={t}>{t}</option>)}</select></div>
+              {isScopus && <div className="field"><label>SCOPUS Quartile *</label>
+                <select value={draft.quartile} onChange={e => upd("quartile", e.target.value)}>{["Q1", "Q2", "Q3", "Q4"].map(q => <option key={q}>{q}</option>)}</select></div>}
+              {isWos && <div className="field"><label>Web of Science Index *</label>
+                <select value={draft.wosIndex} onChange={e => upd("wosIndex", e.target.value)}>{(RA.R4_WOS_INDEXES || []).map(t => <option key={t}>{t}</option>)}</select></div>}
+              {isOther && <div className="field"><label>Other Database Name *</label><input value={draft.otherDb} onChange={e => upd("otherDb", e.target.value)} /></div>}
+              <div className="field"><label>Open Access Status *</label>
+                <select value={draft.openAccess} onChange={e => upd("openAccess", e.target.value)}>{(RA.R4_OPEN_ACCESS || []).map(t => <option key={t}>{t}</option>)}</select></div>
+              <div className="field"><label>Hybrid Journal? *</label>
+                <select value={draft.hybrid} onChange={e => upd("hybrid", e.target.value)}><option>No</option><option>Yes</option></select></div>
+              {isHybrid && <div className="field"><label>Open Access option selected?</label>
+                <select value={draft.openAccessSelected} onChange={e => upd("openAccessSelected", e.target.value)}><option>Yes</option><option>No</option></select></div>}
+              <div className="field"><label>Journal Country</label><input value={draft.journalCountry} onChange={e => upd("journalCountry", e.target.value)} /></div>
+              <div className="field"><label>Index / Quartile Evidence URL</label><input value={draft.evidenceUrl} onChange={e => upd("evidenceUrl", e.target.value)} placeholder="https://…" /></div>
+            </div>
+            {isOther && <div style={{ fontSize: 12, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "8px 12px", borderRadius: "var(--r-md)", marginTop: 6 }}>The selected database may not be eligible under the current AU publication-grant criteria. Final eligibility is subject to IRAS verification.</div>}
+            {isHybrid && draft.openAccessSelected !== "Yes" && <div style={{ fontSize: 12, color: "var(--au-gold-deep)", background: "var(--au-gold-soft)", padding: "8px 12px", borderRadius: "var(--r-md)", marginTop: 6 }}>For a hybrid journal, the online Open Access option is required for reimbursement eligibility.</div>}
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 12, fontSize: 13 }}>
+              <input type="checkbox" checked={draft.predatory} onChange={e => upd("predatory", e.target.checked)} style={{ accentColor: "var(--au-crimson)", marginTop: 3 }} />
+              <span>I confirm this journal is not included in a predatory-journal or Beall's List database. *</span>
+            </label>
+            <div style={{ marginTop: 14, border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "14px 16px", background: "var(--au-gold-soft)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <Icon name="Award" size={18} style={{ color: "var(--au-gold-deep)" }} />
+                <span style={{ fontSize: 12, color: "var(--ink-3)" }}>Preliminary reward estimate ({catLabel || "—"})</span>
+                <div style={{ flex: 1 }}></div>
+                <span style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 500 }}>{prelim > 0 ? fmtBaht(prelim) : (draft.journalDb.indexOf("TCI") === 0 ? "Actual fee" : "—")}</span>
               </div>
+              <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 6 }}>This is a preliminary estimate only. The final eligible amount will be determined by IRAS after verifying the journal, documents, publication fee, author contribution, and previous claims. Maximum 80,000 THB per article.</div>
+            </div>
+          </div>
+        </div>
+
+        {/* 3. Author & Contribution */}
+        <div className="form-section">
+          <h4><span className="num">3</span> Author and Contribution Information</h4>
+          <p className="section-sub">List every author and their contribution percentage. Contributions must total 100%; the principal author needs ≥ 50%, each author ≥ 5%.</p>
+          <div className="section-body">
+            <div className="form-grid">
+              <div className="field"><label>Your Author Role *</label>
+                <select value={draft.applicantRole} onChange={e => upd("applicantRole", e.target.value)}>{(RA.R4_APPLICANT_ROLES || []).map(t => <option key={t}>{t}</option>)}</select></div>
+              <div className="field"><label>Are you the corresponding author?</label>
+                <select value={draft.isCorresponding} onChange={e => upd("isCorresponding", e.target.value)}><option>Yes</option><option>No</option></select></div>
+              <div className="field"><label>Based on a student senior project / thesis / IS?</label>
+                <select value={draft.studentBased} onChange={e => upd("studentBased", e.target.value)}><option>No</option><option>Yes</option></select></div>
+            </div>
+            {draft.studentBased === "Yes" && <div style={{ fontSize: 12, color: "var(--au-gold-deep)", background: "var(--au-gold-soft)", padding: "8px 12px", borderRadius: "var(--r-md)", margin: "6px 0 12px" }}>Articles derived from a student senior project, thesis, dissertation, or IS may not be eligible for the advisor's publication reward. Final eligibility is determined by IRAS.</div>}
+            <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
+              <table className="tbl">
+                <thead><tr><th>Author Name</th><th style={{ width: 140 }}>Type</th><th>Affiliation</th><th style={{ width: 100 }}>AU ID</th><th style={{ width: 100, textAlign: "right" }}>Contrib %</th><th style={{ width: 44 }}></th></tr></thead>
+                <tbody>
+                  {authors.map((a, i) => (
+                    <tr key={i}>
+                      <td><input value={a.name} onChange={e => setAuthor(i, "name", e.target.value)} placeholder="Full name" style={{ width: "100%", minWidth: 130 }} /></td>
+                      <td><select value={a.type} onChange={e => setAuthor(i, "type", e.target.value)}>{(RA.R4_AUTHOR_TYPES || []).map(t => <option key={t}>{t}</option>)}</select></td>
+                      <td><input value={a.affiliation} onChange={e => setAuthor(i, "affiliation", e.target.value)} placeholder="Institution" style={{ width: "100%", minWidth: 120 }} /></td>
+                      <td><input value={a.auId} onChange={e => setAuthor(i, "auId", e.target.value)} placeholder="ID" style={{ width: "100%", minWidth: 70 }} /></td>
+                      <td style={{ textAlign: "right" }}><input value={a.contribution} onChange={e => setAuthor(i, "contribution", e.target.value)} style={{ width: 64, textAlign: "right" }} /></td>
+                      <td style={{ textAlign: "center" }}><button type="button" className="btn btn-ghost btn-sm" onClick={() => removeAuthor(i)}><Icon name="Trash2" size={13} /></button></td>
+                    </tr>
+                  ))}
+                  <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}>
+                    <td colSpan="4">Total contribution</td>
+                    <td style={{ textAlign: "right", color: Math.round(totalContrib) === 100 ? "var(--status-approved)" : "var(--au-crimson)" }}>{totalContrib}%</td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <button type="button" className="btn btn-secondary btn-sm mt-1" onClick={addAuthor}><Icon name="Plus" size={13} /> Add author</button>
+          </div>
+        </div>
+
+        {/* 4. Researcher Information */}
+        <div className="form-section">
+          <h4><span className="num">4</span> Researcher Information</h4>
+          <p className="section-sub">Auto-filled from your profile. Identity and faculty fields are read-only.</p>
+          <div className="section-body">
+            <div className="form-grid">
+              <div className="field"><label>Title</label>
+                <select value={draft.title2} onChange={e => upd("title2", e.target.value)}><option value="">Select title…</option>{RA.AU_TITLES.map(t => <option key={t}>{t}</option>)}</select></div>
               <div className="field"><label>Full Name</label><input value={draft.name} onChange={e => upd("name", e.target.value)} readOnly={!!draft.name} style={draft.name ? roStyle : null} /></div>
-              <div className="field"><label>AU ID</label><input value={draft.auId} onChange={e => upd("auId", e.target.value)} readOnly={!!draft.auId} placeholder="e.g. 5012345" style={draft.auId ? roStyle : null} /></div>
-              <div className="field">
-                <label>Email (AU only)</label>
-                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} readOnly={!!draft.email} placeholder="name@au.edu"
-                  style={draft.email ? roStyle : (emailBad ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : null)} />
-                {!draft.email && emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}
-              </div>
+              <div className="field"><label>AU ID</label><input value={draft.auId} onChange={e => upd("auId", e.target.value)} readOnly={!!draft.auId} style={draft.auId ? roStyle : null} placeholder="e.g. 5012345" /></div>
+              <div className="field"><label>Email (AU only)</label>
+                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} readOnly={!!draft.email} style={draft.email ? roStyle : (emailBad ? { borderColor: "var(--au-crimson)" } : null)} placeholder="name@au.edu" />
+                {!draft.email && emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}</div>
               <div className="field"><label>Phone</label><input value={draft.phone} onChange={e => upd("phone", e.target.value)} /></div>
-              <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
-              <div className="field">
-                <label>School / Faculty</label>
+              <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} /></div>
+              <div className="field"><label>School / Faculty</label>
                 <select value={draft.school} onChange={e => { upd("school", e.target.value); upd("department", ""); }} disabled={!!draft.school} style={draft.school ? roStyle : null}>
-                  <option value="">Select your faculty…</option>
-                  {RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label>Department</label>
+                  <option value="">Select your faculty…</option>{RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}</select></div>
+              <div className="field"><label>Department</label>
                 <select value={draft.department} onChange={e => upd("department", e.target.value)} disabled={!draft.school || !!draft.department} style={draft.department ? roStyle : null}>
                   <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
-                  {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
+                  {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d}>{d}</option>)}</select></div>
             </div>
           </div>
         </div>
 
+        {/* 5. Publication Fee and Claim */}
         <div className="form-section">
-          <h4><span className="num">3</span> Reward &amp; Fee</h4>
-          <p className="section-sub">The reward is set by the indexing you chose; RASSC confirms it against the journal database. {idxType.actual ? "For this type the reward equals the actual publication fee you paid." : ""}</p>
+          <h4><span className="num">5</span> Publication Fee and Claim Information</h4>
+          <p className="section-sub">The final eligible amount is decided by IRAS after verification.</p>
           <div className="section-body">
             <div className="form-grid">
-              <div className="field">
-                <label>Publication Fee Paid (THB){idxType.actual ? "" : " — for the receipt"}</label>
-                <input value={draft.feeAmount === "" ? "" : Number(draft.feeAmount || 0).toLocaleString()}
-                  onChange={e => upd("feeAmount", (e.target.value + "").replace(/[^0-9]/g, ""))}
-                  placeholder="0" />
-              </div>
-              <div className="field">
-                <label>Estimated Reward</label>
-                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", border: "1px solid var(--line)", borderRadius: "var(--r-md)", background: "var(--au-gold-soft)" }}>
-                  <Icon name="Award" size={18} style={{ color: "var(--au-gold-deep)" }} />
-                  <span style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 500 }}>{fmtBaht(reward)}</span>
-                </div>
-                <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>{idxType.label || ""}{idxType.quartiles ? " · " + draft.quartile : ""}</div>
-              </div>
+              <div className="field"><label>Claim Type *</label>
+                <select value={draft.claimType} onChange={e => upd("claimType", e.target.value)}>{(RA.R4_CLAIM_TYPES || []).map(t => <option key={t}>{t}</option>)}</select></div>
+              <div className="field"><label>Publication Fee Paid (THB)</label><input value={draft.feePaid === "" ? "" : Number(draft.feePaid || 0).toLocaleString()} onChange={e => upd("feePaid", (e.target.value + "").replace(/[^0-9]/g, ""))} placeholder="0" /></div>
+              <div className="field"><label>Payment Date</label><AUDatePicker value={draft.feeDate} onChange={v => upd("feeDate", v)} placeholder="Select date…" /></div>
+              <div className="field"><label>Receipt Number *</label><input value={draft.receiptNo} onChange={e => upd("receiptNo", e.target.value)} /></div>
+              <div className="field"><label>Paid By</label><input value={draft.paidBy} onChange={e => upd("paidBy", e.target.value)} placeholder="Name / department" /></div>
+            </div>
+            <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginTop: 8 }}>
+              <table className="tbl"><tbody>
+                <tr><td>Publication fee paid</td><td style={{ textAlign: "right" }}>{fmtBaht(Number(draft.feePaid) || 0)}</td></tr>
+                <tr><td>Preliminary reward</td><td style={{ textAlign: "right" }}>{prelim > 0 ? fmtBaht(prelim) : "Actual fee / IRAS"}</td></tr>
+                <tr><td>Requested claim amount</td><td style={{ textAlign: "right", fontWeight: 600 }}>{fmtBaht(requested)}</td></tr>
+                <tr><td>Maximum eligible</td><td style={{ textAlign: "right" }}>80,000 THB / article</td></tr>
+                <tr style={{ color: "var(--ink-3)" }}><td>Final IRAS-approved amount</td><td style={{ textAlign: "right" }}>Pending IRAS verification</td></tr>
+              </tbody></table>
             </div>
           </div>
         </div>
 
+        {/* 6. Required Documents */}
         <div className="form-section">
-          <h4><span className="num">4</span> Required Documents</h4>
-          <p className="section-sub">Upload the AU-R4 PDF documents. You can add or delete files while the application is still waiting for Dean screening.</p>
+          <h4><span className="num">6</span> Required Documents</h4>
+          <p className="section-sub">The full article, Turnitin report (≤ 20%), original receipt, and a memo for Dean approval are required.</p>
           <div className="section-body">
+            <div className="form-grid" style={{ marginBottom: 10 }}>
+              <div className="field"><label>Turnitin Similarity % *</label>
+                <input value={draft.turnitin} onChange={e => upd("turnitin", (e.target.value + "").replace(/[^0-9.]/g, ""))} placeholder="e.g. 12"
+                  style={turnitinBad ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : null} />
+                {turnitinBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Exceeds the 20% limit — submission is blocked.</div>}</div>
+            </div>
             <div style={{ background: "var(--paper-warm)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "12px 14px", marginBottom: 14 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--ink-2)" }}>Documents required for an AU-R4 Publication Fees &amp; Reward claim:</div>
+              <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--ink-2)" }}>Required for an AU-R4 claim:</div>
               <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink-2)", lineHeight: 1.7 }}>
-                {(RA.R4_REQUIRED_DOCS || []).map(d => <li key={d.id}><b>{d.name}</b> — {d.role}</li>)}
+                <li><b>Full Research Article</b> — the full published article</li>
+                <li><b>Turnitin Report</b> — similarity ≤ 20%</li>
+                <li><b>Original Publication Fee Receipt</b></li>
+                <li><b>Memo for Dean Approval</b></li>
               </ul>
             </div>
             {existingDocs.length > 0 && (
@@ -1467,10 +1612,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
                 {existingDocs.map(d => (
                   <div className="file-row" key={d.id || d.name}>
                     <div className="ficon"><Icon name="FileText" size={18} /></div>
-                    <div className="fmeta">
-                      <div className="fn">{d.name}{d.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{d.doc_type}</span>}</div>
-                      <div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div>
-                    </div>
+                    <div className="fmeta"><div className="fn">{d.name}{d.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{d.doc_type}</span>}</div><div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div></div>
                     <div className="factions">
                       <button className="btn btn-secondary btn-sm" onClick={() => onView(d)}><Icon name="Eye" size={13} /> View</button>
                       <button className="btn btn-secondary btn-sm" onClick={() => onDownload(d)}><Icon name="Download" size={13} /> Download</button>
@@ -1485,22 +1627,15 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
                 {files.map((it, i) => (
                   <div className="file-row" key={i}>
                     <div className="ficon"><Icon name="FileText" size={18} /></div>
-                    <div className="fmeta">
-                      <div className="fn">{it.file.name}{it.docType && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{it.docType}</span>}</div>
-                      <div className="fs">{(it.file.size / 1024).toFixed(0)} KB · ready to upload</div>
-                    </div>
-                    <div className="factions">
-                      <button className="btn btn-secondary btn-sm" onClick={() => setFiles(fs => fs.filter((_, j) => j !== i))}><Icon name="X" size={13} /> Remove</button>
-                    </div>
+                    <div className="fmeta"><div className="fn">{it.file.name}{it.docType && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{it.docType}</span>}</div><div className="fs">{(it.file.size / 1024).toFixed(0)} KB · ready to upload</div></div>
+                    <div className="factions"><button className="btn btn-secondary btn-sm" onClick={() => setFiles(fs => fs.filter((_, j) => j !== i))}><Icon name="X" size={13} /> Remove</button></div>
                   </div>
                 ))}
               </div>
             )}
             <div className="field" style={{ maxWidth: 360, marginBottom: 10 }}>
               <label>Document type for the next upload</label>
-              <select value={docType} onChange={e => setDocType(e.target.value)}>
-                {(RA.R4_DOC_TYPES || RA.DOC_TYPES).map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
+              <select value={docType} onChange={e => setDocType(e.target.value)}>{(RA.R4_DOC_TYPES || RA.DOC_TYPES).map(t => <option key={t} value={t}>{t}</option>)}</select>
             </div>
             <label className="upload-box mt-1" style={{ cursor: "pointer", display: "block" }}>
               <input type="file" accept="application/pdf,.pdf" multiple style={{ display: "none" }} onChange={onFiles} />
@@ -1511,10 +1646,24 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           </div>
         </div>
 
+        {/* 7. Eligibility Declaration */}
+        <div className="form-section">
+          <h4><span className="num">7</span> Eligibility Declaration</h4>
+          <p className="section-sub">You must accept all declarations before you can submit.</p>
+          <div className="section-body">
+            {(RA.R4_DECLARATIONS || []).map((d, i) => (
+              <label key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", fontSize: 13, borderBottom: "1px solid var(--line-2)" }}>
+                <input type="checkbox" checked={decls[i] || false} onChange={e => setDecls(s => s.map((v, j) => j === i ? e.target.checked : v))} style={{ accentColor: "var(--au-crimson)", marginTop: 3 }} />
+                <span>{d}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
         <div style={{ padding: "16px 24px", borderTop: "1px solid var(--line)", background: "var(--paper-warm)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
           {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, alignSelf: "center", marginRight: "auto" }}>{err}</div>}
           <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
-          <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
+          <button className="btn btn-primary" disabled={busy || !allDecl || turnitinBad} onClick={() => save(true)}>
             <Icon name="Send" size={13} /> {busy ? "Saving…" : "Submit Application"}
           </button>
         </div>
@@ -1800,7 +1949,9 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
 
         <div className="card card-pad-0" style={{ alignSelf: "start", position: "sticky", top: 116 }}>
           <div className="card-head"><h3>Approval Timeline</h3><div className="grow"></div><Badge status={status} /></div>
-          <div className="card-body">{app.grant_type === "au_r3"
+          <div className="card-body">{app.grant_type === "au_r4"
+            ? <Timeline steps={R4_PIPELINE} app={{ timeline: buildR4Timeline(app.status) }} />
+            : app.grant_type === "au_r3"
             ? <Timeline steps={R3_PIPELINE} app={{ timeline: buildR3Timeline(app.status) }} />
             : <Timeline steps={RA.ALL_STAGES} app={timelineApp} />}</div>
         </div>

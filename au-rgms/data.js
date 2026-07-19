@@ -419,6 +419,42 @@ function r4EstimateReward(indexKey, quartile, feeAmount) {
   return t.reward || 0;
 }
 
+// ---- AU-R4 rich form option sets (per the AU-R4 module spec) ----
+const R4_ARTICLE_TYPES = ["Research Article", "Academic Article"];
+const R4_PUB_STATUS = ["Published", "Accepted for Publication"];
+const R4_JOURNAL_DBS = ["TCI Tier 1", "TCI Tier 2", "ERIC", "MathSciNet", "PubMed", "JSTOR", "Project Muse", "SCOPUS", "Web of Science", "Other"];
+const R4_WOS_INDEXES = ["SCIE", "SSCI", "AHCI"];
+const R4_OPEN_ACCESS = ["Open Access", "Subscription", "Hybrid"];
+const R4_AUTHOR_TYPES = ["Principal Author", "Co-Author", "Student Author", "External Research Partner"];
+const R4_APPLICANT_ROLES = ["Principal / First Author", "Corresponding Author", "Co-Author"];
+const R4_CLAIM_TYPES = ["Publication Fee Reimbursement", "Publication Reward", "Publication Fee and Reward"];
+const R4_DECLARATIONS = [
+  "The article is not part of a senior project, thesis, dissertation, or IS for which I am claiming an ineligible advisor reward.",
+  "Assumption University is identified as the grantor or institutional affiliation where required.",
+  "The journal is not a predatory journal or listed in Beall's List.",
+  "The author names and contribution percentages are accurate.",
+  "The original publication-fee receipt has not been used for another claim.",
+  "This application is being submitted within the eligible academic year.",
+  "All submitted information and documents are true and complete.",
+];
+
+// Preliminary AU-R4 reward from the journal database + Scopus quartile / entered fee.
+// TCI tiers and "Other" are actual-fee / IRAS-verified; publication fees are included
+// in the indexed rewards.
+function r4RewardForJournal(db, quartile, feeAmount) {
+  var fee = Math.max(0, Number(feeAmount) || 0);
+  if (db === "SCOPUS") return ({ Q1: 80000, Q2: 60000, Q3: 50000, Q4: 40000 })[quartile] || 0;
+  if (db === "Web of Science") return 80000;
+  if (["ERIC", "MathSciNet", "PubMed", "JSTOR", "Project Muse"].indexOf(db) >= 0) return 25000;
+  if (db === "TCI Tier 1" || db === "TCI Tier 2") return fee; // actual eligible fee
+  return 0; // Other → IRAS decides
+}
+function r4CategoryLabel(db, quartile, wos) {
+  if (db === "SCOPUS") return "SCOPUS " + (quartile || "");
+  if (db === "Web of Science") return "Web of Science" + (wos ? " (" + wos + ")" : "");
+  return db || "";
+}
+
 // Document types for an AU-R4 Publication Fees & Reward upload.
 const R4_DOC_TYPES = [
   "Full Research Article",
@@ -440,6 +476,8 @@ window.AU = {
   ALL_STAGES, STATUS, FACULTIES, REQUIRED_DOCS, PAPER_PRESENTATION_DOCS,
   AU_TITLES, WORK_TYPES, DEFAULT_BUDGET_CAPS, NECESSARY_DOCS, DOC_TYPES, R3_DOC_TYPES, R3_BUDGET_ITEMS, R3_CONFERENCE_TYPES, GRANT_SYSTEMS, REIMBURSE_CATEGORIES,
   R4_INDEX_TYPES, R4_SCOPUS_QUARTILE_REWARD, r4EstimateReward, R4_DOC_TYPES, R4_REQUIRED_DOCS,
+  R4_ARTICLE_TYPES, R4_PUB_STATUS, R4_JOURNAL_DBS, R4_WOS_INDEXES, R4_OPEN_ACCESS, R4_AUTHOR_TYPES,
+  R4_APPLICANT_ROLES, R4_CLAIM_TYPES, R4_DECLARATIONS, r4RewardForJournal, r4CategoryLabel,
   PRIMARY_APP, APPLICATIONS,
   NOTIFS, PAYMENTS, ACTIVITY,
   ROLES,

@@ -712,10 +712,12 @@ function App() {
   }, []);
 
   const cfg = ROLE_CONFIG[role];
-  // A researcher working in AU-R3 gets a trimmed sidebar + AU-R3 Quick Help.
-  const researcherR3 = role === "researcher" && rSystem === "au_r3";
-  const navForRole = researcherR3 ? (APP.NAV_RESEARCHER_R3 || cfg.nav) : cfg.nav;
-  const footerForRole = researcherR3
+  // A researcher in AU-R3 or AU-R4 gets a trimmed sidebar + system-specific Quick Help.
+  const researcherTrimmed = role === "researcher" && (rSystem === "au_r3" || rSystem === "au_r4");
+  const navForRole = researcherTrimmed ? (APP.NAV_RESEARCHER_R3 || cfg.nav) : cfg.nav;
+  const footerForRole = rSystem === "au_r4" && role === "researcher"
+    ? { title: "Quick Help", body: "Need to submit an AU-R4 application? Prepare your full published article, Turnitin report, original publication-fee receipt, and memo for Dean approval before submitting." }
+    : researcherTrimmed
     ? { title: "Quick Help", body: "Need to submit a new AU-R3 application? Prepare your full research article, Turnitin result, peer-review comments if available, and a memo with an estimated budget before you start." }
     : cfg.sidebarFooter;
 
