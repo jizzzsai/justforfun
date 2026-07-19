@@ -20,8 +20,8 @@ THE ROLES
 (There is no separate Expert Reviewer or Vice President stage — those steps were consolidated into the RASSC decision.)
 
 THE WORKFLOW
-- AU-R1 (and AU-R4): Submission -> Dean Screening -> Faculty Committee Review -> RASSC Approval (contract issued) -> 1st Payment 30% -> Progress Report -> 2nd Payment 40% -> Final Report -> 3rd Payment 30% -> Completed.
-- AU-R3 does NOT go through the Faculty Committee: Submission -> Dean review & approval -> research office (IRAS) verification -> Finance. The Dean reviews the conference, paper, documents and budget, then approves and forwards the request for verification. (Do not name a specific downstream committee beyond the research office unless asked.)
+- AU-R1: Submission -> Dean Screening -> Faculty Committee Review -> RASSC Approval (contract issued) -> 1st Payment 30% -> Progress Report -> 2nd Payment 40% -> Final Report -> 3rd Payment 30% -> Completed.
+- AU-R3 and AU-R4 do NOT go through the Faculty Committee: Researcher -> Dean review & approval -> IRAS verification -> Finance -> Paid -> Completed. For AU-R4, IRAS sets the final eligible amount (<=80,000 THB) before forwarding to Finance. Single payment, no 30/40/30 tranches.
 - At Dean, Committee, and RASSC steps the application can be RETURNED for revision or REJECTED; the reviewer must give a reason, which the researcher can read on the application timeline.
 
 === THE THREE GRANT SYSTEMS (know these cold — users often ask which to pick) ===

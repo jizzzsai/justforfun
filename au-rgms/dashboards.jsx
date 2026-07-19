@@ -1697,36 +1697,64 @@ function OFMHistory({ onDownload }) {
 /* -----------------------------------------------------------
    ADMINISTRATOR — Dashboard + Users + Journals + Audit + Settings
    ----------------------------------------------------------- */
+const ADMIN_R4_ROLES = ["researcher", "dean", "iras", "ofm", "admin"];
 function AdminDashboard({ navigate }) {
+  const [sys, setSys] = useState("all");
+  const isR4 = sys === "au_r4";
   const [c, setC] = useState(null);
   const [profiles, setProfiles] = useState(null);
   const [events, setEvents] = useState(null);
   useEffect(() => {
-    window.DB.statusCounts().then(setC).catch(() => setC({}));
+    setC(null);
+    window.DB.statusCounts(sys === "all" ? undefined : sys).then(setC).catch(() => setC({}));
+  }, [sys]);
+  useEffect(() => {
     window.DB.allProfiles().then(setProfiles).catch(() => setProfiles([]));
     window.DB.auditEvents().then(setEvents).catch(() => setEvents([]));
   }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
   const totalUsers = profiles ? profiles.length : 0;
-  const roleRows = profiles === null ? null : D.ROLES.map(r => ({ key: r.key, name: r.name, count: profiles.filter(p => p.role === r.key).length })).filter(r => r.count > 0);
+  const codePrefix = sys === "au_r4" ? "AU-R4-" : sys === "au_r3" ? "AU-R3-" : sys === "au_r1" ? "RG-" : null;
+  const evFiltered = events === null ? null : (codePrefix ? events.filter(e => e.application && (e.application.code || "").indexOf(codePrefix) === 0) : events);
+  const roleList = isR4 ? D.ROLES.filter(r => ADMIN_R4_ROLES.indexOf(r.key) >= 0) : D.ROLES;
+  const roleRows = profiles === null ? null : roleList.map(r => ({ key: r.key, name: r.key === "iras" && isR4 ? "IRAS" : r.name, count: profiles.filter(p => p.role === r.key).length })).filter(r => r.count > 0);
+  const sysToggle = (
+    <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden", marginRight: 8 }}>
+      {[{ id: "all", label: "All" }, { id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
+        <button key={t.id} onClick={() => setSys(t.id)} style={{ padding: "7px 13px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: sys === t.id ? "var(--au-crimson)" : "transparent", color: sys === t.id ? "#fff" : "var(--ink-2)" }}>{t.label}</button>
+      ))}
+    </div>
+  );
   return (
     <>
       <PageHeader
-        title="Administrator Dashboard"
-        desc="Users, activity, and reference data for the AU-RGMS portal."
+        title={isR4 ? "AU-R4 · Administrator Dashboard" : "Administrator Dashboard"}
+        desc={isR4 ? "AU-R4 publication fee and reward statistics, activity, roles, and reference data." : "Users, activity, and reference data for the AU-RGMS portal."}
         actions={
-          <button className="btn btn-primary" onClick={() => navigate("a-users")}>
-            <Icon name="UserPlus" size={14} /> Manage Users
-          </button>
+          <>
+            {sysToggle}
+            <button className="btn btn-primary" onClick={() => navigate("a-users")}>
+              <Icon name="UserPlus" size={14} /> Manage Users
+            </button>
+          </>
         }
       />
 
-      <div className="stats">
-        <Stat label="Total Users"          value={profiles ? totalUsers : "…"} icon="Users" tone="gold" />
-        <Stat label="Applications"         value={n("_total")} icon="Folder" tone="navy" />
-        <Stat label="Approved Grants"      value={n("_approved")} icon="CheckCircle" tone="green" />
-        <Stat label="Active Grants"        value={n("active")} icon="TrendingUp" tone="green" />
-      </div>
+      {isR4 ? (
+        <div className="stats">
+          <Stat label="Total Users"        value={profiles ? totalUsers : "…"} icon="Users" tone="gold" />
+          <Stat label="AU-R4 Applications" value={n("_total")} icon="Award" tone="navy" />
+          <Stat label="Under Review"       value={(c ? (c.submitted || 0) + (c.iras_review || 0) + (c.approved || 0) : "…")} icon="FileSearch" tone="gold" />
+          <Stat label="Paid / Completed"   value={(c ? (c.active || 0) + (c.completed || 0) : "…")} icon="CheckCircle" tone="green" />
+        </div>
+      ) : (
+        <div className="stats">
+          <Stat label="Total Users"          value={profiles ? totalUsers : "…"} icon="Users" tone="gold" />
+          <Stat label="Applications"         value={n("_total")} icon="Folder" tone="navy" />
+          <Stat label="Approved Grants"      value={n("_approved")} icon="CheckCircle" tone="green" />
+          <Stat label="Active Grants"        value={n("active")} icon="TrendingUp" tone="green" />
+        </div>
+      )}
 
       <div className="grid-2">
         <div className="card card-pad-0">
@@ -1755,9 +1783,9 @@ function AdminDashboard({ navigate }) {
             <button className="btn btn-ghost btn-sm" onClick={() => navigate("a-audit")}>See all <Icon name="ArrowRight" size={12} /></button>
           </div>
           <div style={{ padding: "8px 0" }}>
-            {events === null && <div style={{ padding: 20, color: "var(--ink-3)", fontSize: 13 }}>Loading activity…</div>}
-            {events && events.length === 0 && <Empty title="No activity yet" desc="Workflow actions will appear here." icon="Clock" />}
-            {(events || []).slice(0, 6).map((e, i, arr) => (
+            {evFiltered === null && <div style={{ padding: 20, color: "var(--ink-3)", fontSize: 13 }}>Loading activity…</div>}
+            {evFiltered && evFiltered.length === 0 && <Empty title="No activity yet" desc={isR4 ? "AU-R4 workflow actions will appear here." : "Workflow actions will appear here."} icon="Clock" />}
+            {(evFiltered || []).slice(0, 6).map((e, i, arr) => (
               <div key={e.id || i} style={{ padding: "10px 20px", borderBottom: i < arr.length - 1 ? "1px solid var(--line-2)" : "none", display: "flex", gap: 10 }}>
                 <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--paper-warm)", color: "var(--ink-2)", display: "grid", placeItems: "center", flexShrink: 0 }}><Icon name="Clock" size={12} /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
@@ -1896,7 +1924,7 @@ function AdminUsers({ toast }) {
   const filtered = (users || []).filter(u => !search || (u.full_name + u.email + u.role + (u.department || "")).toLowerCase().includes(search.toLowerCase()));
   return (
     <>
-      <PageHeader title="User Management" desc="Create and scope AU-RGMS accounts (role + faculty)." actions={<button className="btn btn-primary" onClick={() => setAdding(a => !a)}><Icon name="Plus" size={14} /> Add User</button>} />
+      <PageHeader title="User Management" desc="Create and manage AU-RGMS accounts, roles, faculty scope, and grant-module access." actions={<button className="btn btn-primary" onClick={() => setAdding(a => !a)}><Icon name="Plus" size={14} /> Add User</button>} />
       {adding && <AdminAddUserForm toast={toast} onClose={() => setAdding(false)} onCreated={() => { setAdding(false); load(); }} />}
       <div className="card card-pad-0">
         <div className="toolbar">
@@ -1906,21 +1934,24 @@ function AdminUsers({ toast }) {
           <button className="btn btn-secondary btn-sm" onClick={() => toast("Profile export is based on live Supabase profiles.")}><Icon name="Download" size={12} /> Export</button>
         </div>
         <table className="tbl">
-          <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Department</th><th>Status</th><th>Created</th><th style={{textAlign: "right"}}>Actions</th></tr></thead>
+          <thead><tr><th>User</th><th>Email</th><th>Role</th><th>Faculty / Department</th><th>Grant Access</th><th>Status</th><th>Created</th><th style={{textAlign: "right"}}>Actions</th></tr></thead>
           <tbody>
-            {users === null && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading users...</td></tr>}
-            {users && filtered.length === 0 && <tr><td colSpan="7"><Empty title="No users found" desc="Try another search." icon="Users" /></td></tr>}
-            {filtered.map(u => (
+            {users === null && <tr><td colSpan="8" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading users...</td></tr>}
+            {users && filtered.length === 0 && <tr><td colSpan="8"><Empty title="No users found" desc="Try another search." icon="Users" /></td></tr>}
+            {filtered.map(u => {
+              const grantAccess = (u.role === "committee" || u.role === "expert") ? "AU-R1" : "All Grants";
+              return (
               <tr key={u.id}>
                 <td><div style={{display: "flex", alignItems: "center", gap: 8}}><Avatar initials={(u.full_name || "U").split(" ").map(p => p[0]).join("").slice(0,2).toUpperCase()} size={28} color="var(--au-navy)" /><div><div style={{fontSize: 13, fontWeight: 600}}>{u.full_name}</div><div style={{fontSize: 11, color: "var(--ink-3)"}} className="id">{String(u.id).slice(0, 8)}</div></div></div></td>
                 <td style={{fontSize: 12, color: "var(--ink-2)"}}>{u.email}</td>
                 <td><span className="badge badge-academic" style={{fontSize: 10}}><span className="dot"></span>{u.role}</span></td>
-                <td style={{fontSize: 12, color: "var(--ink-3)"}}>{u.department || "-"}</td>
+                <td style={{fontSize: 12, color: "var(--ink-3)"}}>{(u.faculty ? u.faculty + (u.department ? " · " + u.department : "") : (u.department || "-"))}</td>
+                <td><span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, color: "var(--au-crimson)", background: "var(--au-crimson-soft)" }}>{grantAccess}</span></td>
                 <td><span className={"badge " + (u.is_active === false ? "badge-draft" : "badge-check")}><span className="dot"></span>{u.is_active === false ? "Inactive" : "Active"}</span></td>
                 <td style={{fontSize: 11, color: "var(--ink-3)"}}>{window.DB.fmtDate(u.created_at)}</td>
                 <td className="actions"><button className="btn btn-ghost btn-sm" onClick={() => toast(u.full_name + " is stored in Supabase profiles.")}><Icon name="Info" size={13} /></button></td>
               </tr>
-            ))}
+            ); })}
           </tbody>
         </table>
       </div>
