@@ -434,6 +434,18 @@
       return app;
     },
 
+    // IRAS records the final eligible amount before approving (AU-R3 / AU-R4).
+    async setApprovedAmount(appId, amount) {
+      var res = await sb.from("applications").update({ approved_amount: Number(amount) || 0 }).eq("id", appId).select();
+      if (res.error) throw res.error;
+      return res.data && res.data[0];
+    },
+    // Finance single-payment progression for AU-R3 / AU-R4 (approved → active "paid" → completed).
+    async payGrantOnce(appId, fromStatus, note) {
+      var kind = "advance";
+      return await this.transition(appId, fromStatus, kind, note);
+    },
+
     async submitExpertReview(appId, payload) {
       var me = await uid();
       var role = await myRole();

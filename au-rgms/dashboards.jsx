@@ -512,7 +512,56 @@ function CommitteeHistory({ onDownload }) {
 /* -----------------------------------------------------------
    RASSC — Dashboard (refreshed for 8-role flow)
    ----------------------------------------------------------- */
-function RASSCDashboardV2({ navigate }) {
+function IRASGrantDashboard({ navigate, setSelectedApplicationId, sys }) {
+  const isR4 = sys === "au_r4";
+  const [c, setC] = useState(null);
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    setC(null); setRows(null);
+    window.DB.statusCounts(sys).then(setC).catch(() => setC({}));
+    window.DB.queue("iras_review", sys).then(setRows).catch(() => setRows([]));
+  }, [sys]);
+  const n = (k) => (c ? (c[k] || 0) : "…");
+  const detailPage = isR4 ? "i-r4-verify" : "i-r3-verify";
+  const open = (row) => { if (setSelectedApplicationId) setSelectedApplicationId(row._uuid); navigate(detailPage); };
+  return (
+    <>
+      <div className="stats">
+        <Stat label="Pending Verification"  value={n("iras_review")} icon="ClipboardCheck" tone="gold" />
+        <Stat label="Returned for Revision" value={n("returned")} icon="Repeat" tone="navy" />
+        <Stat label="Forwarded to Finance"  value={n("approved")} icon="Send" />
+        <Stat label="Paid / Completed"      value={(c ? (c.active || 0) + (c.completed || 0) : "…")} icon="CheckCircle" tone="green" />
+      </div>
+      <div className="card card-pad-0">
+        <div className="card-head"><h3>{isR4 ? "AU-R4" : "AU-R3"} Verification Queue</h3></div>
+        <table className="tbl">
+          <thead><tr><th>Application ID</th><th>{isR4 ? "Article" : "Paper"} Title</th><th>{isR4 ? "Journal / Category" : "Conference"}</th><th>Researcher</th><th style={{ textAlign: "right" }}>Requested</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
+          <tbody>
+            {rows === null && <tr><td colSpan="6" style={{ textAlign: "center", padding: "28px", color: "var(--ink-3)" }}>Loading…</td></tr>}
+            {rows && rows.length === 0 && <tr><td colSpan="6" style={{ textAlign: "center", padding: "36px", color: "var(--ink-3)" }}>No Dean-approved {isR4 ? "AU-R4" : "AU-R3"} applications waiting.</td></tr>}
+            {(rows || []).map(a => {
+              const pi = a.pub_info || {}, ci = a.conference_info || {};
+              return (
+                <tr key={a.id}>
+                  <td><span className="id">{a.id}</span></td>
+                  <td className="title-cell"><div className="t" style={{ maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div></td>
+                  <td style={{ fontSize: 12 }}>{isR4 ? ((pi.journal || "—") + (pi.indexLabel ? " · " + pi.indexLabel : "")) : (ci.confName || "—")}</td>
+                  <td style={{ fontSize: 12 }}>{a.researcher?.name}</td>
+                  <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{fmtBaht(Number(a.requested_amount || 0))}</td>
+                  <td className="actions"><button className="btn btn-primary btn-sm" onClick={() => open(a)}>Verify</button></td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+function RASSCDashboardV2({ navigate, setSelectedApplicationId }) {
+  const [sys, setSys] = useState("au_r1");
+  const isR4 = sys === "au_r4", isR3 = sys === "au_r3";
   const [c, setC] = useState(null);
   const [rows, setRows] = useState(null);
   const [experts, setExperts] = useState(null);
@@ -527,15 +576,39 @@ function RASSCDashboardV2({ navigate }) {
   const openWork = (row) => {
     navigate(row.statusKey === "iras_review" ? "i-screen" : row.statusKey === "expert_review" ? "i-reviewers" : "i-received");
   };
+  const sysToggle = (
+    <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden", marginRight: 8 }}>
+      {[{ id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
+        <button key={t.id} onClick={() => setSys(t.id)} style={{ padding: "7px 15px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: sys === t.id ? "var(--au-crimson)" : "transparent", color: sys === t.id ? "#fff" : "var(--ink-2)" }}>{t.label}</button>
+      ))}
+    </div>
+  );
+  if (isR3 || isR4) {
+    return (
+      <>
+        <PageHeader
+          title={(isR4 ? "AU-R4" : "AU-R3") + " · IRAS Dashboard"}
+          desc={isR4
+            ? "Verify Dean-approved publication fee and reward applications before forwarding eligible claims to Finance."
+            : "Verify Dean-approved paper presentation applications before forwarding them to Finance."}
+          actions={sysToggle}
+        />
+        <IRASGrantDashboard navigate={navigate} setSelectedApplicationId={setSelectedApplicationId} sys={sys} />
+      </>
+    );
+  }
   return (
     <>
       <PageHeader
         title="RASSC Research Office"
         desc="Receive forwarded proposals, screen them, and assign the required expert reviewers."
         actions={
-          <button className="btn btn-primary" onClick={() => navigate("i-assign")}>
-            <Icon name="UserPlus" size={14} /> Assign Reviewers
-          </button>
+          <>
+            {sysToggle}
+            <button className="btn btn-primary" onClick={() => navigate("i-received")}>
+              <Icon name="Inbox" size={14} /> Received Queue
+            </button>
+          </>
         }
       />
 
@@ -738,6 +811,148 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
 }
 
 /* RASSC — Reviewer Pool */
+/* IRAS — AU-R3 Verification Detail */
+function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
+  return (
+    <LiveAppLoader status="iras_review" applicationId={applicationId}
+      title="AU-R3 Verification" desc="Verify the Dean-approved paper presentation request, then forward it to Finance."
+      render={(app, load) => {
+        const docs = app.documents || [];
+        const ci = app.conference_info || {};
+        const budgetRows = Array.isArray(app.budget_breakdown) ? app.budget_breakdown : [];
+        const requested = Number(app.requested_amount || 0);
+        const row = (l, v) => <div className="meta-row"><span className="l">{l}</span><span className="r">{v || "-"}</span></div>;
+        const forward = () => setConfirm({
+          kind: "success", title: "Approve & forward to Finance?",
+          message: app.code + " will be marked IRAS-approved and forwarded to the Finance Office for payment.",
+          confirmLabel: "Approve & Forward", withReason: true,
+          onConfirm: async (reason) => {
+            try { await window.DB.transition(app.id, "iras_review", "advance", reason); toast(app.code + " approved — forwarded to Finance."); navigate("i-dashboard"); }
+            catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
+          },
+        });
+        const ret = () => setConfirm({ kind: "danger", title: "Return for revision?", message: app.code + " will be returned to the researcher.", confirmLabel: "Return", withReason: true, reasonRequired: true,
+          onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "return", reason); toast(app.code + " returned."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); } } });
+        const rej = () => setConfirm({ kind: "danger", title: "Reject application?", message: app.code + " will be rejected. This ends the request.", confirmLabel: "Reject", withReason: true, reasonRequired: true,
+          onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "reject", reason); toast(app.code + " rejected."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); } } });
+        return (
+          <>
+            <PageHeader title={"AU-R3 Verification — " + app.code} desc={(app.researcher ? app.researcher.full_name : "Researcher") + " · " + (app.faculty || "") + " · " + (ci.confName || "")} actions={<Badge status={r3Badge(app.status)} />} />
+            <div className="grid-2">
+              <div>
+                <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Conference</h3></div><div className="card-body">
+                  {row("Conference", ci.confName)}{row("Organizer", ci.organizer)}{row("Type", ci.confType)}{row("Location", (ci.city || "-") + ", " + (ci.country || "-"))}
+                  {row("Dates", (ci.confStart ? window.DB.fmtDate(ci.confStart) : "-") + " – " + (ci.confEnd ? window.DB.fmtDate(ci.confEnd) : "-"))}{row("Presentation", ci.presentation)}
+                </div></div>
+                <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Paper</h3></div><div className="card-body">
+                  {row("Paper title", app.title)}{row("Field", app.field)}{row("Corresponding author", ci.correspondingAuthor)}
+                </div></div>
+                <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Budget</h3><div className="grow"></div><span className="text-sm text-muted">{fmtBaht(requested)} / 50,000 THB</span></div>
+                  <div className="card-body" style={{ padding: 0 }}>{budgetRows.length > 0 && <table className="tbl"><tbody>{budgetRows.map((b, i) => <tr key={i}><td>{b.item}</td><td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{fmtBaht(Number(b.amount || 0))}</td></tr>)}</tbody></table>}</div>
+                </div>
+                <div className="card card-pad-0"><div className="card-head"><h3>Documents</h3></div><div>
+                  {docs.length === 0 && <Empty title="No documents" desc="No files forwarded." icon="FileText" />}
+                  {docs.map(d => <FileRow key={d.id || d.name} doc={d} onDownload={onDownload} onView={onView} />)}
+                </div></div>
+              </div>
+              <div className="card card-pad-0" style={{ alignSelf: "start" }}><div className="card-head"><h3>IRAS Decision</h3></div><div className="card-body">
+                <p className="text-sm text-muted mb-4">Confirm the conference, paper, documents, and budget are eligible, then forward to Finance for payment.</p>
+                <div className="flex flex-col gap-2">
+                  <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Finance</button>
+                  <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
+                  <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
+                </div>
+              </div></div>
+            </div>
+          </>
+        );
+      }} />
+  );
+}
+
+/* IRAS — AU-R4 Verification Detail (enters the Final Approved Amount) */
+function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
+  const [finalAmt, setFinalAmt] = useState("");
+  return (
+    <LiveAppLoader status="iras_review" applicationId={applicationId}
+      title="AU-R4 Verification" desc="Verify eligibility, confirm the final eligible amount, then forward to Finance."
+      render={(app, load) => {
+        const pi = app.pub_info || {};
+        const authors = Array.isArray(app.co_members) ? app.co_members : [];
+        const requested = Number(app.requested_amount || 0);
+        const MAX = 80000;
+        // Blank input defaults to the requested claim when forwarding.
+        const finalNum = finalAmt === "" ? requested : (Number(finalAmt) || 0);
+        const overMax = finalNum > MAX;
+        const row = (l, v) => <div className="meta-row"><span className="l">{l}</span><span className="r">{v || "-"}</span></div>;
+        const docs = app.documents || [];
+        const forward = () => {
+          if (finalNum <= 0) { toast("Enter the final eligible amount first."); return; }
+          if (overMax) { toast("Final amount cannot exceed 80,000 THB."); return; }
+          setConfirm({
+            kind: "success", title: "Approve & forward to Finance?",
+            message: app.code + " will be approved at " + fmtBaht(finalNum) + " and forwarded to the Finance Office for payment.",
+            confirmLabel: "Confirm & Forward to Finance", withReason: true, reasonRequired: true,
+            onConfirm: async (reason) => {
+              try {
+                await window.DB.setApprovedAmount(app.id, finalNum);
+                await window.DB.transition(app.id, "iras_review", "advance", "Final eligible amount confirmed at " + fmtBaht(finalNum) + ". " + (reason || ""));
+                toast(app.code + " approved at " + fmtBaht(finalNum) + " — forwarded to Finance.");
+                navigate("i-dashboard");
+              } catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
+            },
+          });
+        };
+        const ret = () => setConfirm({ kind: "danger", title: "Return for revision?", message: app.code + " will be returned to the researcher.", confirmLabel: "Return", withReason: true, reasonRequired: true,
+          onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "return", reason); toast(app.code + " returned."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); } } });
+        const rej = () => setConfirm({ kind: "danger", title: "Reject application?", message: app.code + " will be rejected. This ends the claim.", confirmLabel: "Reject", withReason: true, reasonRequired: true,
+          onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "reject", reason); toast(app.code + " rejected."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); } } });
+        return (
+          <>
+            <PageHeader title={"AU-R4 Verification — " + app.code} desc={(app.researcher ? app.researcher.full_name : "Researcher") + " · " + (pi.journal || "") + " · " + (pi.indexLabel || "")} actions={<Badge status={r4Badge(app.status)} />} />
+            <div className="grid-2">
+              <div>
+                <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Publication &amp; Journal</h3></div><div className="card-body">
+                  {row("Article", app.title)}{row("Journal", pi.journal)}{row("Publisher", pi.publisher)}{row("Database / index", pi.journalDb)}{pi.quartile && row("Quartile", pi.quartile)}{pi.wosIndex && row("WoS index", pi.wosIndex)}{row("Open access", pi.openAccess)}{row("Hybrid", pi.hybrid)}{pi.doi && row("DOI", pi.doi)}
+                </div></div>
+                <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Authors &amp; Eligibility</h3></div><div className="card-body" style={{ padding: 0 }}>
+                  <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--line-2)", fontSize: 13 }}>{row("Applicant role", pi.applicantRole)}{row("Student-based", pi.studentBased)}</div>
+                  <table className="tbl"><thead><tr><th>Author</th><th>Type</th><th style={{ textAlign: "right" }}>%</th></tr></thead><tbody>
+                    {authors.map((a, i) => <tr key={i}><td>{a.name}</td><td style={{ fontSize: 12 }}>{a.type}</td><td style={{ textAlign: "right" }}>{a.contribution || 0}%</td></tr>)}
+                  </tbody></table>
+                </div></div>
+                <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Fee &amp; Turnitin</h3></div><div className="card-body">
+                  {row("Claim type", pi.claimType)}{row("Fee paid", fmtBaht(Number(pi.feePaid || 0)))}{row("Receipt no.", pi.receiptNo)}{row("Preliminary reward", pi.prelimReward ? fmtBaht(Number(pi.prelimReward)) : "Actual fee")}{row("Requested claim", fmtBaht(requested))}{row("Turnitin", (pi.turnitin != null ? pi.turnitin + "%" : "-"))}
+                </div></div>
+                <div className="card card-pad-0"><div className="card-head"><h3>Documents</h3></div><div>
+                  {docs.length === 0 && <Empty title="No documents" desc="No files forwarded." icon="FileText" />}
+                  {docs.map(d => <FileRow key={d.id || d.name} doc={d} onDownload={onDownload} onView={onView} />)}
+                </div></div>
+              </div>
+              <div className="card card-pad-0" style={{ alignSelf: "start" }}><div className="card-head"><h3>Final Eligible Amount</h3></div><div className="card-body">
+                <p className="text-sm text-muted mb-4">Set the final eligible amount from the verified journal category, then forward to Finance. Maximum 80,000 THB per article.</p>
+                <div className="field"><label>Final Approved Amount (THB)</label>
+                  <input value={finalAmt === "" ? "" : Number(finalAmt || 0).toLocaleString()} onChange={e => setFinalAmt((e.target.value + "").replace(/[^0-9]/g, ""))}
+                    placeholder={Number(requested || 0).toLocaleString()}
+                    style={overMax ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)", fontWeight: 600 } : null} />
+                  {overMax && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Cannot exceed 80,000 THB.</div>}
+                  <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 4 }}>Leave blank to approve the full requested claim.</div>
+                </div>
+                <div className="meta-row"><span className="l">Preliminary reward</span><span className="r">{pi.prelimReward ? fmtBaht(Number(pi.prelimReward)) : "—"}</span></div>
+                <div className="meta-row"><span className="l">Requested claim</span><span className="r">{fmtBaht(requested)}</span></div>
+                <div className="flex flex-col gap-2 mt-4">
+                  <button className="btn btn-primary btn-block" disabled={overMax || finalNum <= 0} onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Finance</button>
+                  <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
+                  <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
+                </div>
+              </div></div>
+            </div>
+          </>
+        );
+      }} />
+  );
+}
+
 function RASSCReviewerPool({ toast }) {
   const [pool, setPool] = useState(null);
   useEffect(() => {
@@ -1185,9 +1400,98 @@ function PresidentQueue({ navigate, onDownload, onView, toast, setConfirm }) {
 }
 
 /* -----------------------------------------------------------
+   OFM / FINANCE — AU-R3 / AU-R4 single-payment queue
+   ----------------------------------------------------------- */
+function OFMGrantPayments({ sys, toast, setConfirm }) {
+  const isR4 = sys === "au_r4";
+  const [rows, setRows] = useState(null);
+  const load = () => {
+    Promise.all([window.DB.queue("approved", sys), window.DB.queue("active", sys)])
+      .then(([a, b]) => setRows((a || []).concat(b || [])))
+      .catch(() => setRows([]));
+  };
+  useEffect(() => { setRows(null); load(); }, [sys]);
+  const pay = (a) => setConfirm({
+    kind: "success", title: "Record payment as paid?",
+    message: a.id + " will be marked as paid (" + fmtBaht(Number(a.approved_amount || a.requested_amount || 0)) + ").",
+    confirmLabel: "Mark as Paid", withReason: true,
+    onConfirm: async (reason) => {
+      try { await window.DB.transition(a._uuid, "approved", "advance", "Payment processed. " + (reason || "")); toast(a.id + " marked as paid."); load(); }
+      catch (e) { toast("Error: " + ((e && e.message) || e)); }
+    },
+  });
+  const complete = (a) => setConfirm({
+    kind: "success", title: "Mark application completed?",
+    message: a.id + " will be marked completed.",
+    confirmLabel: "Complete", withReason: true,
+    onConfirm: async (reason) => {
+      try { await window.DB.transition(a._uuid, "active", "advance", reason); toast(a.id + " completed."); load(); }
+      catch (e) { toast("Error: " + ((e && e.message) || e)); }
+    },
+  });
+  return (
+    <div className="card card-pad-0">
+      <div className="card-head"><h3>{isR4 ? "AU-R4" : "AU-R3"} Payment Queue</h3></div>
+      <table className="tbl">
+        <thead><tr><th>Application ID</th><th>{isR4 ? "Article" : "Paper"}</th><th>Researcher</th><th style={{ textAlign: "right" }}>Approved Amount</th><th>Status</th><th style={{ textAlign: "right" }}>Action</th></tr></thead>
+        <tbody>
+          {rows === null && <tr><td colSpan="6" style={{ textAlign: "center", padding: "28px", color: "var(--ink-3)" }}>Loading…</td></tr>}
+          {rows && rows.length === 0 && <tr><td colSpan="6" style={{ textAlign: "center", padding: "36px", color: "var(--ink-3)" }}>No {isR4 ? "AU-R4" : "AU-R3"} payments waiting.</td></tr>}
+          {(rows || []).map(a => (
+            <tr key={a.id}>
+              <td><span className="id">{a.id}</span></td>
+              <td className="title-cell"><div className="t" style={{ maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div></td>
+              <td style={{ fontSize: 12 }}>{a.researcher?.name}</td>
+              <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{fmtBaht(Number(a.approved_amount || a.requested_amount || 0))}</td>
+              <td><Badge status={a.statusKey === "active" ? { key: "active", cls: "badge-progress", label: "Payment Processing" } : { key: "approved", cls: "badge-contract", label: "Approved for Payment" }} /></td>
+              <td className="actions">
+                {a.statusKey === "approved" && <button className="btn btn-primary btn-sm" onClick={() => pay(a)}>Mark as Paid</button>}
+                {a.statusKey === "active" && <button className="btn btn-secondary btn-sm" onClick={() => complete(a)}>Complete</button>}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* -----------------------------------------------------------
    OFM / FINANCE — Dashboard
    ----------------------------------------------------------- */
-function OFMDashboard({ navigate }) {
+function OFMDashboard({ navigate, toast, setConfirm }) {
+  const [sys, setSys] = useState("au_r1");
+  const isR3 = sys === "au_r3", isR4 = sys === "au_r4";
+  const [gc, setGc] = useState(null);
+  useEffect(() => { if (sys !== "au_r1") window.DB.statusCounts(sys).then(setGc).catch(() => setGc({})); }, [sys]);
+  const gn = (k) => (gc ? (gc[k] || 0) : "…");
+  const sysToggle = (
+    <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden", marginRight: 8 }}>
+      {[{ id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
+        <button key={t.id} onClick={() => setSys(t.id)} style={{ padding: "7px 15px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: sys === t.id ? "var(--au-crimson)" : "transparent", color: sys === t.id ? "#fff" : "var(--ink-2)" }}>{t.label}</button>
+      ))}
+    </div>
+  );
+  if (isR3 || isR4) {
+    return (
+      <>
+        <PageHeader title={(isR4 ? "AU-R4" : "AU-R3") + " · Finance Dashboard"}
+          desc={"Process payments for IRAS-approved " + (isR4 ? "publication fee and reward" : "paper presentation grant") + " applications."}
+          actions={sysToggle} />
+        <div className="stats">
+          <Stat label="At Finance"      value={gn("approved")} icon="Clock" tone="gold" />
+          <Stat label="Processing"      value={gn("active")} icon="TrendingUp" tone="green" />
+          <Stat label="Completed"       value={gn("completed")} icon="CheckCircle" tone="navy" />
+          <Stat label="Total"           value={(gc ? (gc.approved || 0) + (gc.active || 0) + (gc.completed || 0) : "…")} icon="Coins" />
+        </div>
+        <OFMGrantPayments sys={sys} toast={toast} setConfirm={setConfirm} />
+      </>
+    );
+  }
+  return <OFMDashboardR1 navigate={navigate} sysToggle={sysToggle} />;
+}
+
+function OFMDashboardR1({ navigate, sysToggle }) {
   const [c, setC] = useState(null);
   const [payments, setPayments] = useState(null);
   useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
@@ -1213,9 +1517,12 @@ function OFMDashboard({ navigate }) {
         title="Finance / OFM Dashboard"
         desc="Disburse the 30% / 40% / 30% payment tranches as researchers reach each milestone."
         actions={
-          <button className="btn btn-primary" onClick={() => navigate("o-payments")}>
-            <Icon name="Coins" size={14} /> Open Payment Queue
-          </button>
+          <>
+            {sysToggle}
+            <button className="btn btn-primary" onClick={() => navigate("o-payments")}>
+              <Icon name="Coins" size={14} /> Open Payment Queue
+            </button>
+          </>
         }
       />
 
@@ -2003,7 +2310,7 @@ function Toggle({ defaultOn = false }) {
 Object.assign(window, {
   DeanDashboard, DeanScreenQueue, DeanSignQueue, DeanHistory, DeanR3Queue, DeanR4Queue,
   CommitteeDashboard, CommitteeQueue, CommitteeHistory,
-  RASSCDashboardV2, RASSCScreen, RASSCReviewerPool,
+  RASSCDashboardV2, RASSCScreen, RASSCReviewerPool, IRASr3Detail, IRASr4Detail,
   ExpertDashboard, ExpertAssignments, ExpertHistory,
   PresidentDashboard, PresidentQueue,
   OFMDashboard, OFMDetail, OFMHistory,

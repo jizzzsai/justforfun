@@ -555,7 +555,9 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "c-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
 
     /* ---- RASSC ---- */
-    case "i-dashboard":      return <RASSCDashboardV2 navigate={navigate} />;
+    case "i-dashboard":      return <RASSCDashboardV2 navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
+    case "i-r3-verify":      return <IRASr3Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "i-r4-verify":      return <IRASr4Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-received":       return <RASSCReceived navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "i-screen":         return <RASSCScreen applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-reports":        return <RASSCReports onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
@@ -565,7 +567,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "i-reviewers":      return <RASSCReviewerPool toast={c.toast} />;
 
     /* ---- OFM / Finance ---- */
-    case "o-dashboard":      return <OFMDashboard navigate={navigate} />;
+    case "o-dashboard":      return <OFMDashboard navigate={navigate} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-payments":       return <RASSCPayment onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-detail":         return <OFMDetail onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-publications":   return <OFMPublicationPayments toast={c.toast} />;
@@ -733,6 +735,8 @@ function App() {
       "d-sign-detail": "Sign &amp; Forward · Detail",
       "d-r3-detail": "AU-R3 Screening · Detail",
       "d-r4-detail": "AU-R4 Screening · Detail",
+      "i-r3-verify": "AU-R3 Verification",
+      "i-r4-verify": "AU-R4 Verification",
       "forms": "Forms & Templates",
     };
     return special[page] || "Dashboard";
