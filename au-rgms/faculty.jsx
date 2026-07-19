@@ -312,7 +312,7 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
                     </label>
                   ))}
                   <div className="flex flex-col gap-2 mt-4">
-                    <button className="btn btn-primary btn-block" disabled={docs.length === 0} onClick={forward}><Icon name="Send" size={14} /> Forward to Faculty Committee</button>
+                    <button className="btn btn-primary btn-block" disabled={docs.length === 0} onClick={forward}><Icon name="Send" size={14} /> {isR3 ? "Forward to RASSC" : "Forward to Faculty Committee"}</button>
                     <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
                     <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
                   </div>
