@@ -14,6 +14,24 @@ function buildResearcherTimeline(statusKey) {
   return tl;
 }
 
+// AU-R3 has its own short pipeline (no Faculty Committee, no 30/40/30 tranches).
+const R3_PIPELINE = [
+  { key: "submission", label: "Submitted" },
+  { key: "dean", label: "Dean Review" },
+  { key: "iras", label: "IRAS Verification" },
+  { key: "approved", label: "Approved" },
+  { key: "payment", label: "Payment" },
+  { key: "completed", label: "Completed" },
+];
+function buildR3Timeline(statusKey) {
+  const order = ["submission", "dean", "iras", "approved", "payment", "completed"];
+  const idxMap = { draft: 0, submitted: 1, iras_review: 2, approved: 3, active: 4, completed: 5, returned: 0, rejected: 0 };
+  let idx = idxMap[statusKey]; if (idx === undefined) idx = 0;
+  const tl = {};
+  order.forEach((k, i) => { tl[k] = i < idx ? { done: true } : (i === idx ? { current: true } : {}); });
+  return tl;
+}
+
 function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicationId, grantType }) {
   const sys = grantSystemFor(grantType || "au_r1");
   const [c, setC] = useState(null);
@@ -176,7 +194,8 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
         </div>
         <div className="card-body">
           {!latest && <Empty title="No application to track yet" desc="Your latest application's progress will appear here." icon="Folder" />}
-          {latest && <HTimeline steps={(isR3 ? RA.ALL_STAGES.filter(s => s.key !== "committee") : RA.ALL_STAGES).slice(0, 9)} app={{ timeline: buildResearcherTimeline(latest.status) }} />}
+          {latest && isR3 && <HTimeline steps={R3_PIPELINE} app={{ timeline: buildR3Timeline(latest.status) }} />}
+          {latest && !isR3 && <HTimeline steps={RA.ALL_STAGES.slice(0, 9)} app={{ timeline: buildResearcherTimeline(latest.status) }} />}
         </div>
       </div>
     </>
@@ -1781,7 +1800,9 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
 
         <div className="card card-pad-0" style={{ alignSelf: "start", position: "sticky", top: 116 }}>
           <div className="card-head"><h3>Approval Timeline</h3><div className="grow"></div><Badge status={status} /></div>
-          <div className="card-body"><Timeline steps={app.grant_type === "au_r3" ? RA.ALL_STAGES.filter(s => s.key !== "committee") : RA.ALL_STAGES} app={timelineApp} /></div>
+          <div className="card-body">{app.grant_type === "au_r3"
+            ? <Timeline steps={R3_PIPELINE} app={{ timeline: buildR3Timeline(app.status) }} />
+            : <Timeline steps={RA.ALL_STAGES} app={timelineApp} />}</div>
         </div>
       </div>
     </>
