@@ -27,6 +27,7 @@
     committee_review: { to: "iras_review",      verb: "Committee recommended — forwarded to RASSC" },
     iras_review:      { to: "approved",          verb: "RASSC approved — contract issued, sent to Finance Office" },
     approved:         { to: "active",           verb: "Contract signed — project active" },
+    active:           { to: "completed",        verb: "Payment completed — application closed" },
   };
 
   async function uid() {
