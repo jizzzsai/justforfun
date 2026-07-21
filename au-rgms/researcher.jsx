@@ -2183,9 +2183,62 @@ function ResearcherFinal({ onDownload, onView, toast }) {
 }
 
 /* ---------- G. Payment Status ---------- */
-function ResearcherPayments({ onDownload, toast }) {
+// AU-R3 / AU-R4 single-payment status page (no 30/40/30 tranches).
+function SingleGrantPaymentStatus({ grantType }) {
+  const isR4 = grantType === "au_r4";
   const [grant, setGrant] = useState(null);
-  useEffect(() => { window.DB.myGrant().then(g => setGrant(g || false)).catch(() => setGrant(false)); }, []);
+  useEffect(() => { window.DB.myGrant(grantType).then(g => setGrant(g || false)).catch(() => setGrant(false)); }, [grantType]);
+  const STEPS = ["Not yet approved", "Approved for Payment", "Payment Processing", "Paid", "Completed"];
+  const stepIdx = { approved: 1, active: 3, completed: 4 };
+  if (grant === null) {
+    return (<><PageHeader title="Payment Status" desc="Your publication reward payment status." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "40px" }}>Loading…</div></>);
+  }
+  if (!grant) {
+    return (<><PageHeader title="Payment Status" desc={isR4 ? "Your publication reward payment status." : "Your paper presentation grant payment status."} /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "48px" }}>{isR4 ? "No approved claim yet. Once IRAS approves your publication claim, its payment status appears here." : "No approved grant yet. Once your paper presentation grant is approved, its payment status appears here."}</div></>);
+  }
+  const idx = stepIdx[grant.status] != null ? stepIdx[grant.status] : 0;
+  const pi = grant.pub_info || {}, ci = grant.conference_info || {};
+  return (
+    <>
+      <PageHeader title="Payment Status" desc={(isR4 ? "Publication reward · " : "Paper presentation grant · ") + grant.code} actions={<Badge status={window.DB.statusBadge(grant.status)} />} />
+      <div className="card card-pad-0 mb-6">
+        <div className="card-head"><h3>{grant.title}</h3></div>
+        <div className="card-body">
+          <div className="meta-row"><span className="l">Application ID</span><span className="r">{grant.code}</span></div>
+          {isR4 && <div className="meta-row"><span className="l">Journal</span><span className="r">{pi.journal || "-"}{pi.indexLabel ? " · " + pi.indexLabel : ""}</span></div>}
+          {!isR4 && <div className="meta-row"><span className="l">Conference</span><span className="r">{ci.confName || "-"}</span></div>}
+          <div className="meta-row"><span className="l">{isR4 ? "Requested claim" : "Requested amount"}</span><span className="r">{fmtBaht(Number(grant.requested_amount || 0))}</span></div>
+          <div className="meta-row"><span className="l">{isR4 ? "IRAS-approved amount" : "Approved amount"}</span><span className="r">{grant.approved_amount ? fmtBaht(Number(grant.approved_amount)) : "—"}</span></div>
+          <div className="meta-row"><span className="l">Payment status</span><span className="r">{STEPS[idx]}</span></div>
+          <div className="meta-row"><span className="l">Payment date</span><span className="r">{grant.status === "completed" && grant.decided_at ? window.DB.fmtDate(grant.decided_at) : "—"}</span></div>
+        </div>
+      </div>
+      <div className="card card-pad-0">
+        <div className="card-head"><h3>Payment Progress</h3></div>
+        <div className="card-body">
+          <div style={{ display: "flex", gap: 0 }}>
+            {STEPS.map((s, i) => (
+              <div key={s} style={{ flex: 1, textAlign: "center", position: "relative" }}>
+                <div style={{ height: 4, background: i <= idx ? "var(--au-crimson)" : "var(--line)", margin: "0 0 10px" }}></div>
+                <div style={{ width: 12, height: 12, borderRadius: "50%", background: i <= idx ? "var(--au-crimson)" : "var(--line)", margin: "-17px auto 8px", border: "2px solid var(--paper)" }}></div>
+                <div style={{ fontSize: 11, color: i === idx ? "var(--au-crimson)" : "var(--ink-3)", fontWeight: i === idx ? 700 : 400 }}>{s}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function ResearcherPayments({ onDownload, toast, grantType }) {
+  if (grantType === "au_r3" || grantType === "au_r4") return <SingleGrantPaymentStatus grantType={grantType} />;
+  return <R1PaymentStatus onDownload={onDownload} toast={toast} />;
+}
+
+function R1PaymentStatus({ onDownload, toast }) {
+  const [grant, setGrant] = useState(null);
+  useEffect(() => { window.DB.myGrant("au_r1").then(g => setGrant(g || false)).catch(() => setGrant(false)); }, []);
   const triggers = { 1: "After contract signing", 2: "After progress report", 3: "After final report" };
   const trName = { 1: "1st · 30%", 2: "2nd · 40%", 3: "3rd · 30%" };
 
@@ -2193,7 +2246,7 @@ function ResearcherPayments({ onDownload, toast }) {
     return (<><PageHeader title="Payment Status" desc="Your grant disbursement tranches." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "40px" }}>Loading…</div></>);
   }
   if (!grant) {
-    return (<><PageHeader title="Payment Status" desc="Your grant disbursement tranches." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "48px" }}>No approved grant yet. Once the President approves your application, your 30 / 40 / 30 payments will appear here.</div></>);
+    return (<><PageHeader title="Payment Status" desc="Your grant disbursement tranches." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "48px" }}>No approved grant yet. Once your application is approved, your 30 / 40 / 30 payments will appear here.</div></>);
   }
 
   const pays = grant.payments || [];

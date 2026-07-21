@@ -626,12 +626,13 @@
       } catch (e) {}
       return r.data;
     },
-    async myGrant() {
+    async myGrant(grantType) {
       var me = await uid();
-      var res = await sb.from("applications")
+      var q = sb.from("applications")
         .select("*, payments(*), reports(kind,status), contracts(contract_no,status,amount)")
-        .eq("researcher_id", me).in("status", ["approved", "active", "completed"])
-        .order("decided_at", { ascending: false }).limit(1);
+        .eq("researcher_id", me).in("status", ["approved", "active", "completed"]);
+      if (grantType) q = q.eq("grant_type", grantType);
+      var res = await q.order("decided_at", { ascending: false }).limit(1);
       if (res.error) throw res.error;
       var a = (res.data && res.data[0]) || null;
       if (a && a.payments) a.payments.sort(function (x, y) { return x.instalment - y.instalment; });

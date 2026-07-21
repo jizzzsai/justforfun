@@ -531,7 +531,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "r-detail":        return <ResearcherApplicationDetail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "r-progress":      return <ResearcherProgress onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
     case "r-final":         return <ResearcherFinal onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
-    case "r-payments":      return <ResearcherPayments onDownload={c.onDownload} toast={c.toast} />;
+    case "r-payments":      return <ResearcherPayments onDownload={c.onDownload} toast={c.toast} grantType={c.grantType} />;
     case "r-publications":  return <ResearcherPublicationGrants toast={c.toast} />;
     case "r-reimburse":     return <ResearcherReimbursements toast={c.toast} />;
 
