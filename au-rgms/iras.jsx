@@ -618,7 +618,7 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
         kind: "success",
         title: "Disburse tranche " + p.instalment + " (" + p.pct + "%)?",
         message: "Pay " + fmtBaht(p.amount) + " for " + app.code + ".",
-        confirmLabel: "Pay " + fmtBaht(p.amount),
+        confirmLabel: "Pay " + fmtBaht(p.amount), withReason: true, reasonLabel: "Payment note / reference",
         onConfirm: async () => {
           try { await window.DB.markPaid(p.id, p.instalment, app.id); toast("Tranche " + p.instalment + " paid for " + app.code); load(); }
           catch (e) { toast("Error: " + (e.message || e)); }
@@ -690,7 +690,7 @@ function RASSCReports({ onDownload, onView, toast, setConfirm }) {
     kind: "success",
     title: "Accept " + r.kind + " report?",
     message: "This opens the " + (r.kind === "progress" ? "40%" : "final 30%") + " payment gate for " + (r.application ? r.application.code : "this grant") + ".",
-    confirmLabel: "Accept Report",
+    confirmLabel: "Accept Report", withReason: true, reasonLabel: "Review note",
     onConfirm: async () => {
       try { await window.DB.acceptReport(r.id); toast((r.application ? r.application.code : "Report") + " accepted."); load(); }
       catch (e) { toast("Error: " + ((e && e.message) || e)); }

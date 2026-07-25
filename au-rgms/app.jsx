@@ -811,6 +811,7 @@ function App() {
           withReason={confirm.withReason}
           reasonLabel={confirm.reasonLabel}
           reasonRequired={confirm.reasonRequired}
+          finalConfirm={confirm.finalConfirm}
         />
       )}
 

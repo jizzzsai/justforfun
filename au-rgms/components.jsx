@@ -299,14 +299,48 @@ function FilePreviewModal({ doc, onClose, onDownload }) {
 }
 
 /* ---------- Confirm Modal ---------- */
-function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primary", confirmLabel = "Confirm", withReason = false, reasonLabel = "Reason / note", reasonRequired = false }) {
+/* Two-step confirm: step 1 collects the decision + reason, step 2 is a final
+   "are you sure" check. Every workflow decision (Dean / Committee / RASSC / IRAS
+   / Finance forward, return, reject — AU-R1, AU-R3 and AU-R4 alike) passes
+   withReason, so they all get the second confirmation automatically.
+   Pass finalConfirm={false} to opt a caller out. */
+function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primary", confirmLabel = "Confirm", withReason = false, reasonLabel = "Reason / note", reasonRequired = false, finalConfirm }) {
   const [reason, setReason] = useState("");
-  useEffect(() => { if (open) setReason(""); }, [open]);
+  const [step, setStep] = useState(1);
+  useEffect(() => { if (open) { setReason(""); setStep(1); } }, [open]);
   if (!open) return null;
   const icons = { primary: "Info", success: "CheckCircle", danger: "AlertCircle" };
   const iconCls = { primary: "", success: "green", danger: "red" }[kind];
   const btnCls = { primary: "btn-primary", success: "btn-success", danger: "btn-primary" }[kind];
   const blocked = withReason && reasonRequired && !reason.trim();
+  // Major decisions (anything that asks for a reason) get the extra step.
+  const twoStep = finalConfirm === undefined ? withReason : finalConfirm;
+
+  if (step === 2) {
+    return (
+      <Modal open={true} onClose={onClose} size="sm">
+        <div className={`conf-icon ${iconCls}`}>
+          <Icon name="AlertCircle" size={26} />
+        </div>
+        <h3>Are you sure?</h3>
+        <p>You are about to <b>{confirmLabel.toLowerCase()}</b> this application. {message}</p>
+        <div style={{ textAlign: "left", marginTop: 10, border: "1px solid var(--line)", borderRadius: "var(--r-md)", background: "var(--paper-warm)", padding: "10px 12px" }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--ink-3)", marginBottom: 4 }}>Your note</div>
+          <div style={{ fontSize: 13, color: reason.trim() ? "var(--ink-1)" : "var(--ink-3)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
+            {reason.trim() || "No note added."}
+          </div>
+        </div>
+        <p style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 10 }}>
+          This decision is recorded in the application timeline and cannot be undone.
+        </p>
+        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8 }}>
+          <button className="btn btn-secondary" onClick={() => setStep(1)}><Icon name="ChevronLeft" size={14} /> Back</button>
+          <button className={`btn ${btnCls}`} onClick={() => onConfirm(reason)}>Yes, {confirmLabel}</button>
+        </div>
+      </Modal>
+    );
+  }
+
   return (
     <Modal open={true} onClose={onClose} size="sm">
       <div className={`conf-icon ${iconCls}`}>
@@ -322,7 +356,9 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
       )}
       <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8 }}>
         <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
-        <button className={`btn ${btnCls}`} disabled={blocked} onClick={() => onConfirm(reason)}>{confirmLabel}</button>
+        <button className={`btn ${btnCls}`} disabled={blocked} onClick={() => (twoStep ? setStep(2) : onConfirm(reason))}>
+          {confirmLabel}{twoStep ? <Icon name="ChevronRight" size={14} /> : null}
+        </button>
       </div>
     </Modal>
   );

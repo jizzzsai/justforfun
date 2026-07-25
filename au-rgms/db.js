@@ -568,7 +568,9 @@
     },
     // can this instalment be paid yet? (report-gated)
     payable: function (app, inst) {
-      if (inst === 1) return app && (app.status === "active" || app.status === "completed");
+      // Tranche 1 opens as soon as RASSC/IRAS approves (status "approved" =
+      // contract issued, sent to Finance). Paying it moves the app to "active".
+      if (inst === 1) return app && (app.status === "approved" || app.status === "active" || app.status === "completed");
       var reps = app.reports || [];
       if (inst === 2) return reps.some(function (r) { return r.kind === "progress" && r.status === "accepted"; });
       if (inst === 3) return reps.some(function (r) { return r.kind === "final" && r.status === "accepted"; });

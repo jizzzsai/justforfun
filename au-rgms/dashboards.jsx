@@ -1584,7 +1584,7 @@ function OFMDetail({ onDownload, toast, setConfirm }) {
     kind: "success",
     title: "Mark tranche " + p.instalment + " as paid?",
     message: "Disburse " + fmtBaht(p.amount) + " for " + app.code + ".",
-    confirmLabel: "Mark as Paid",
+    confirmLabel: "Mark as Paid", withReason: true, reasonLabel: "Payment note / reference",
     onConfirm: async () => {
       try { await window.DB.markPaid(p.id, p.instalment, app.id); toast("Tranche " + p.instalment + " paid for " + app.code); load(); }
       catch (e) { toast("Error: " + ((e && e.message) || e)); }
