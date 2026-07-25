@@ -1877,7 +1877,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
         actions={
           <>
             <Badge status={status} />
-            {app.status === "draft" && <button className="btn btn-secondary" onClick={() => navigate("r-submit")}><Icon name="Edit3" size={13} /> Edit Draft</button>}
+            {["draft", "returned"].includes(app.status) && <button className="btn btn-secondary" onClick={() => navigate("r-submit", { keepSelection: true })}><Icon name="Edit3" size={13} /> {app.status === "returned" ? "Edit & Resubmit" : "Edit Draft"}</button>}
           </>
         }
       />
