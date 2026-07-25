@@ -564,17 +564,13 @@ function RASSCDashboardV2({ navigate, setSelectedApplicationId }) {
   const isR4 = sys === "au_r4", isR3 = sys === "au_r3";
   const [c, setC] = useState(null);
   const [rows, setRows] = useState(null);
-  const [experts, setExperts] = useState(null);
   useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
   useEffect(() => {
-    window.DB.byStatuses(["iras_review", "expert_review", "president_review"]).then(setRows).catch(() => setRows([]));
-  }, []);
-  useEffect(() => {
-    window.DB.profilesByRole("expert").then(setExperts).catch(() => setExperts([]));
+    window.DB.byStatuses(["iras_review", "approved", "active"]).then(setRows).catch(() => setRows([]));
   }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
   const openWork = (row) => {
-    navigate(row.statusKey === "iras_review" ? "i-screen" : row.statusKey === "expert_review" ? "i-reviewers" : "i-received");
+    navigate(row.statusKey === "iras_review" ? "i-screen" : "i-received");
   };
   const sysToggle = (
     <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden", marginRight: 8 }}>
@@ -601,7 +597,7 @@ function RASSCDashboardV2({ navigate, setSelectedApplicationId }) {
     <>
       <PageHeader
         title="RASSC Research Office"
-        desc="Receive forwarded proposals, screen them, and assign the required expert reviewers."
+        desc="Receive committee-recommended proposals, screen them, and approve eligible ones for Finance."
         actions={
           <>
             {sysToggle}
@@ -613,60 +609,34 @@ function RASSCDashboardV2({ navigate, setSelectedApplicationId }) {
       />
 
       <div className="stats">
-        <Stat label="Received from Dean"        value={n("iras_review")} icon="Inbox" tone="gold" />
-        <Stat label="Pending Expert Assignment" value={n("iras_review")} icon="UserPlus" tone="navy" />
-        <Stat label="Under Expert Review"       value={n("expert_review")} icon="FileSearch" tone="green" />
-        <Stat label="At President"              value={n("president_review")} icon="Award" />
+        <Stat label="Received from Committee" value={n("iras_review")} icon="Inbox" tone="gold" />
+        <Stat label="At Finance"              value={n("approved")} icon="Coins" tone="navy" />
+        <Stat label="Active Grants"           value={n("active")} icon="TrendingUp" tone="green" />
+        <Stat label="Completed"               value={n("completed")} icon="CheckCircle" />
       </div>
 
-      <div className="grid-2">
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>Active RASSC Workload</h3>
-            <div className="grow"></div>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate("i-received")}>
-              See all <Icon name="ArrowRight" size={12} />
-            </button>
-          </div>
-          <table className="tbl">
-            <thead><tr><th>ID</th><th>Title</th><th>Faculty</th><th>Status</th></tr></thead>
-            <tbody>
-              {rows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
-              {rows && rows.length === 0 && <tr><td colSpan="4"><Empty title="No active RASSC work" desc="Forwarded applications will appear here." icon="Inbox" /></td></tr>}
-              {(rows || []).map(a => (
-                <tr key={a.id} style={{cursor: "pointer"}} onClick={() => openWork(a)}>
-                  <td><span className="id">{a.id}</span></td>
-                  <td className="title-cell"><div className="t" style={{maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.title}</div></td>
-                  <td style={{fontSize: 11, color: "var(--ink-3)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.faculty}</td>
-                  <td><Badge status={a.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="card card-pad-0">
+        <div className="card-head"><h3>Active RASSC Workload</h3>
+          <div className="grow"></div>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate("i-received")}>
+            See all <Icon name="ArrowRight" size={12} />
+          </button>
         </div>
-
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>Reviewer Pool Snapshot</h3>
-            <div className="grow"></div>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate("i-reviewers")}>
-              Manage pool <Icon name="ArrowRight" size={12} />
-            </button>
-          </div>
-          <div style={{padding: "8px 0"}}>
-            {experts === null && <div style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>Loading experts...</div>}
-            {experts && experts.length === 0 && <Empty title="No expert accounts" desc="Expert test accounts will appear here." icon="Users" />}
-            {(experts || []).map((e, i) => (
-              <div key={e.id} style={{display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", borderBottom: i < experts.length - 1 ? "1px solid var(--line-2)" : "none"}}>
-                <Avatar initials={initialsFromName(e.full_name, "E")} color="var(--au-navy)" />
-                <div style={{flex: 1}}>
-                  <div style={{fontSize: 13, fontWeight: 600}}>{e.full_name}</div>
-                  <div style={{fontSize: 11, color: "var(--ink-3)"}}>{e.email}</div>
-                </div>
-                <span className="badge badge-iras"><span className="dot"></span>Expert</span>
-                <span className="text-sm text-muted" style={{minWidth: 70, textAlign: "right"}}>Available</span>
-              </div>
+        <table className="tbl">
+          <thead><tr><th>ID</th><th>Title</th><th>Faculty</th><th>Status</th></tr></thead>
+          <tbody>
+            {rows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
+            {rows && rows.length === 0 && <tr><td colSpan="4"><Empty title="No active RASSC work" desc="Forwarded applications will appear here." icon="Inbox" /></td></tr>}
+            {(rows || []).map(a => (
+              <tr key={a.id} style={{cursor: "pointer"}} onClick={() => openWork(a)}>
+                <td><span className="id">{a.id}</span></td>
+                <td className="title-cell"><div className="t" style={{maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.title}</div></td>
+                <td style={{fontSize: 11, color: "var(--ink-3)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.faculty}</td>
+                <td><Badge status={a.status} /></td>
+              </tr>
             ))}
-          </div>
-        </div>
+          </tbody>
+        </table>
       </div>
     </>
   );
@@ -1860,7 +1830,6 @@ function AdminJournals({ toast }) {
 const ADMIN_ROLE_OPTIONS = [
   { key: "researcher", label: "Researcher" }, { key: "dean", label: "Dean" },
   { key: "committee", label: "Faculty Committee" }, { key: "iras", label: "RASSC" },
-  { key: "expert", label: "Expert Reviewer" }, { key: "president", label: "Vice President" },
   { key: "ofm", label: "OFM / Finance" }, { key: "admin", label: "Administrator" },
 ];
 

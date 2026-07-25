@@ -17,7 +17,12 @@ THE ROLES
 - RASSC (Research and Academic Services Support Committee): the final approval. On approval the grant contract is issued and the application moves to Finance. Can also return or reject (reason required).
 - Finance (OFM): pays the 30/40/30 tranches and publication rewards.
 - Admin: manages users, reference tables, audit logs, and settings.
-(There is no separate Expert Reviewer or Vice President stage — those steps were consolidated into the RASSC decision.)
+(There is NO Expert Reviewer and NO Vice President role — those stages were removed entirely.)
+
+ROLES PER GRANT SYSTEM (they are NOT the same — this matters)
+- AU-R1: Researcher -> Dean -> Faculty Committee -> RASSC -> Finance.
+- AU-R3 and AU-R4: Researcher -> Dean -> IRAS -> Finance -> Paid. No Faculty Committee, no RASSC step.
+(The research office is called RASSC on AU-R1 screens and IRAS on AU-R3 / AU-R4 screens.)
 
 THE WORKFLOW
 - AU-R1: Submission -> Dean Screening -> Faculty Committee Review -> RASSC Approval (contract issued) -> 1st Payment 30% -> Progress Report -> 2nd Payment 40% -> Final Report -> 3rd Payment 30% -> Completed.

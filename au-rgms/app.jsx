@@ -323,7 +323,7 @@ const ROLE_CONFIG = {
     crumbRoot: "RASSC",
     sidebarFooter: {
       title: "RASSC",
-      body: "Assign the available expert reviewers required for the proposal; the President queue opens after all assigned reviews are complete.",
+      body: "Screen committee-recommended AU-R1 proposals and verify AU-R3 / AU-R4 applications, then approve eligible ones for the Finance Office.",
     },
   },
   ofm: {

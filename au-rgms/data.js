@@ -209,8 +209,6 @@ const NAV_RASSC = [
   { key: "i-publications", label: "Publication Grants", icon: "FileText" },
   { key: "i-reimburse", label: "Reimbursements", icon: "Receipt" },
   { key: "i-analytics", label: "AI Analytics", icon: "TrendingUp" },
-  { section: "TRACKING" },
-  { key: "i-reviewers", label: "Reviewer Pool", icon: "Users" },
 ];
 
 const NAV_EXPERT = [
