@@ -320,10 +320,10 @@ const ROLE_CONFIG = {
   iras: {
     nav: APP.NAV_RASSC,
     homeKey: "i-dashboard",
-    crumbRoot: "RASSC",
+    crumbRoot: "IRAS",
     sidebarFooter: {
-      title: "RASSC",
-      body: "Assign the available expert reviewers required for the proposal; the President queue opens after all assigned reviews are complete.",
+      title: "IRAS",
+      body: "Verify Dean-approved applications — documents, eligibility, journal category and final amount — then forward eligible ones to Finance.",
     },
   },
   ofm: {

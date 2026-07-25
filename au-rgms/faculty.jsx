@@ -203,16 +203,13 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
         const grantCap = app.grant_type === "au_r3" ? 50000 : app.grant_type === "au_r4" ? 80000 : 100000;
         const grantCode = app.grant_type === "au_r3" ? "AU-R3" : app.grant_type === "au_r4" ? "AU-R4" : "AU-R1";
         const withinCap = requested > 0 && requested <= grantCap;
-        const isR3 = app.grant_type === "au_r3";
         const forward = () => setConfirm({
           kind: "success",
-          title: isR3 ? "Forward to RASSC?" : "Forward to Faculty Committee?",
-          message: isR3
-            ? app.code + " is an AU-R3 paper presentation request — it goes straight to RASSC screening."
-            : app.code + " will move to committee review.",
+          title: "Forward to IRAS?",
+          message: app.code + " will be approved at the Dean level and forwarded to IRAS for verification.",
           confirmLabel: "Forward", withReason: true,
           onConfirm: async (reason) => {
-            try { await window.DB.transition(app.id, "submitted", "advance", reason); toast(app.code + (isR3 ? " forwarded to RASSC." : " forwarded to Faculty Committee.")); navigate("d-screen"); }
+            try { await window.DB.transition(app.id, "submitted", "advance", reason); toast(app.code + " forwarded to IRAS."); navigate("d-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
@@ -312,7 +309,7 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
                     </label>
                   ))}
                   <div className="flex flex-col gap-2 mt-4">
-                    <button className="btn btn-primary btn-block" disabled={docs.length === 0} onClick={forward}><Icon name="Send" size={14} /> {isR3 ? "Forward to RASSC" : "Forward to Faculty Committee"}</button>
+                    <button className="btn btn-primary btn-block" disabled={docs.length === 0} onClick={forward}><Icon name="Send" size={14} /> Forward to IRAS</button>
                     <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
                     <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
                   </div>

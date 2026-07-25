@@ -10,7 +10,7 @@
     submitted:        { label: "Submitted",           cls: "badge-submitted" },
     committee_review: { label: "Committee Review",    cls: "badge-academic" },
     dean_sign:        { label: "Dean Sign & Forward", cls: "badge-dean" },
-    iras_review:      { label: "RASSC Screening",     cls: "badge-iras" },
+    iras_review:      { label: "IRAS Verification",   cls: "badge-iras" },
     expert_review:    { label: "Under Expert Review", cls: "badge-expert" },
     president_review: { label: "President Approval",  cls: "badge-president" },
     approved:         { label: "Approved",            cls: "badge-signed" },
@@ -23,10 +23,10 @@
   // forward workflow: current status -> { to, verb }
   // AU-R1 chain: Researcher -> Dean -> Faculty Committee -> RASSC -> Finance.
   var NEXT = {
-    submitted:        { to: "committee_review", verb: "Dean approved — sent to Faculty Committee" },
-    committee_review: { to: "iras_review",      verb: "Committee recommended — forwarded to RASSC" },
-    iras_review:      { to: "approved",          verb: "RASSC approved — contract issued, sent to Finance Office" },
-    approved:         { to: "active",           verb: "Contract signed — project active" },
+    submitted:        { to: "iras_review",       verb: "Dean approved — forwarded to IRAS" },
+    committee_review: { to: "iras_review",       verb: "Forwarded to IRAS" },
+    iras_review:      { to: "approved",          verb: "IRAS approved — sent to Finance Office" },
+    approved:         { to: "active",           verb: "Approved for payment — sent to Finance" },
     active:           { to: "completed",        verb: "Payment completed — application closed" },
   };
 
@@ -388,22 +388,12 @@
     async transition(appId, fromStatus, kind, note) {
       var me = await uid();
       var role = await myRole();
-      var to, labelOverride = null;
+      var to;
       if (kind === "return") to = "returned";
       else if (kind === "reject") to = "rejected";
       else {
+        // Every grant now goes Dean -> IRAS -> Finance (no Faculty Committee).
         var n = NEXT[fromStatus]; if (!n) throw new Error("No next step from " + fromStatus); to = n.to;
-        // AU-R3 (paper presentation) and AU-R4 (publication reward) skip the
-        // Faculty Committee: the Dean forwards straight to IRAS.
-        if (fromStatus === "submitted") {
-          try {
-            var gt = await sb.from("applications").select("grant_type").eq("id", appId).single();
-            if (gt.data && (gt.data.grant_type === "au_r3" || gt.data.grant_type === "au_r4")) {
-              to = "iras_review";
-              labelOverride = "Dean approved — forwarded to IRAS";
-            }
-          } catch (e) {}
-        }
       }
       var patch = { status: to };
       if (to === "approved" || to === "rejected") patch.decided_at = new Date().toISOString();
@@ -418,7 +408,7 @@
       var app = upd.data[0];
       var label = kind === "return" ? "Returned to researcher"
         : kind === "reject" ? "Application rejected"
-        : (labelOverride || (NEXT[fromStatus] ? NEXT[fromStatus].verb : "Advanced"));
+        : (NEXT[fromStatus] ? NEXT[fromStatus].verb : "Advanced");
       try {
         await sb.from("application_events").insert({
           application_id: appId, actor_id: me, actor_role: role,
@@ -867,7 +857,7 @@
           // Downstream progress on this faculty's proposals (counts are RLS-scoped to the dean's faculty).
           var dsc = await this.statusCounts();
           var atRassc = dsc.iras_review || 0;
-          if (atRassc) push("dean-rassc", "Send", "Now at RASSC", atRassc + " proposal(s) from your faculty passed committee and are with RASSC.", "d-analytics", true);
+          if (atRassc) push("dean-rassc", "Send", "Now at IRAS", atRassc + " proposal(s) from your faculty are with IRAS for verification.", "d-analytics", true);
           var deanApproved = (dsc.approved || 0) + (dsc.active || 0) + (dsc.completed || 0);
           if (deanApproved) push("dean-approved", "Award", "Approved", deanApproved + " proposal(s) from your faculty have been approved.", "d-analytics", true);
           var deanRejected = dsc.rejected || 0;
@@ -885,9 +875,9 @@
           });
           if (cdecided) push("committee-decided", "Bell", "RASSC outcome", cdecided + " proposal(s) you recommended now have a RASSC decision.", "c-history", true);
         } else if (role === "iras") {
-          var iq = await this.queue("iras_review"); if (iq.length) push("iras-screen", "Inbox", "RASSC", iq.length + " research proposal(s) awaiting screening.", "i-received", true);
-          var reports = await this.reportQueue(); if (reports.length) push("reports", "FileCheck", "Reports", reports.length + " report(s) awaiting RASSC acceptance.", "i-reports", true);
-          var pgq = await this.publicationGrantQueue(["submitted"]); if (pgq.length) push("pub-review", "FileText", "Publication grants", pgq.length + " publication grant(s) awaiting RASSC review.", "i-publications", true);
+          var iq = await this.queue("iras_review"); if (iq.length) push("iras-screen", "Inbox", "IRAS", iq.length + " application(s) awaiting IRAS verification.", "i-received", true);
+          var reports = await this.reportQueue(); if (reports.length) push("reports", "FileCheck", "Reports", reports.length + " report(s) awaiting IRAS acceptance.", "i-reports", true);
+          var pgq = await this.publicationGrantQueue(["submitted"]); if (pgq.length) push("pub-review", "FileText", "Publication grants", pgq.length + " publication grant(s) awaiting IRAS review.", "i-publications", true);
         } else if (role === "expert") {
           var ex = await this.myExpertAssignments(); if (ex.length) push("expert", "FileSearch", "Expert review", ex.length + " proposal(s) assigned to you.", "e-assignments", true);
         } else if (role === "president") {

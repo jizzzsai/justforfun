@@ -115,7 +115,7 @@ function DeanDashboard({ navigate }) {
           ? "Review publication fee and reward applications before forwarding eligible claims to IRAS for verification."
           : isR3
           ? "Review paper presentation grant applications from your faculty and forward eligible applications to IRAS for verification."
-          : "Screen new proposals from your faculty, then forward them to the Faculty Committee."}
+          : "Screen new proposals from your faculty, then forward them to IRAS for verification."}
         actions={
           <>
             {sysToggle}
@@ -143,9 +143,9 @@ function DeanDashboard({ navigate }) {
       ) : (
         <div className="stats">
           <Stat label="Pending Screening"      value={n("submitted")} icon="ClipboardCheck" tone="gold" />
-          <Stat label="At Faculty Committee"   value={n("committee_review")} icon="Users" tone="navy" />
-          <Stat label="At RASSC"               value={n("iras_review")} icon="Landmark" />
-          <Stat label="Approved (system)"      value={n("_approved")} icon="CheckCircle" tone="green" />
+          <Stat label="At IRAS"                value={n("iras_review")} icon="Landmark" tone="navy" />
+          <Stat label="At Finance"             value={n("approved")} icon="Coins" />
+          <Stat label="Approved / Active"      value={(c ? (c.active || 0) + (c.completed || 0) : "…")} icon="CheckCircle" tone="green" />
         </div>
       )}
 
@@ -318,7 +318,7 @@ function DeanScreenQueue({ navigate, onDownload, toast, setConfirm, setSelectedA
     <>
       <PageHeader
         title="First Screening Queue"
-        desc="New submissions from researchers awaiting your initial screening before they are sent to the Faculty Committee."
+        desc="New submissions from researchers awaiting your initial screening before they are forwarded to IRAS."
       />
       <div className="card card-pad-0">
         <div className="toolbar">
@@ -600,8 +600,8 @@ function RASSCDashboardV2({ navigate, setSelectedApplicationId }) {
   return (
     <>
       <PageHeader
-        title="RASSC Research Office"
-        desc="Receive forwarded proposals, screen them, and assign the required expert reviewers."
+        title="IRAS Research Office"
+        desc="Receive Dean-approved applications, verify them, and forward eligible ones to Finance."
         actions={
           <>
             {sysToggle}
@@ -613,60 +613,34 @@ function RASSCDashboardV2({ navigate, setSelectedApplicationId }) {
       />
 
       <div className="stats">
-        <Stat label="Received from Dean"        value={n("iras_review")} icon="Inbox" tone="gold" />
-        <Stat label="Pending Expert Assignment" value={n("iras_review")} icon="UserPlus" tone="navy" />
-        <Stat label="Under Expert Review"       value={n("expert_review")} icon="FileSearch" tone="green" />
-        <Stat label="At President"              value={n("president_review")} icon="Award" />
+        <Stat label="Received from Dean"  value={n("iras_review")} icon="Inbox" tone="gold" />
+        <Stat label="At Finance"          value={n("approved")} icon="Coins" tone="navy" />
+        <Stat label="Active"              value={n("active")} icon="TrendingUp" tone="green" />
+        <Stat label="Completed"           value={n("completed")} icon="CheckCircle" />
       </div>
 
-      <div className="grid-2">
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>Active RASSC Workload</h3>
-            <div className="grow"></div>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate("i-received")}>
-              See all <Icon name="ArrowRight" size={12} />
-            </button>
-          </div>
-          <table className="tbl">
-            <thead><tr><th>ID</th><th>Title</th><th>Faculty</th><th>Status</th></tr></thead>
-            <tbody>
-              {rows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
-              {rows && rows.length === 0 && <tr><td colSpan="4"><Empty title="No active RASSC work" desc="Forwarded applications will appear here." icon="Inbox" /></td></tr>}
-              {(rows || []).map(a => (
-                <tr key={a.id} style={{cursor: "pointer"}} onClick={() => openWork(a)}>
-                  <td><span className="id">{a.id}</span></td>
-                  <td className="title-cell"><div className="t" style={{maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.title}</div></td>
-                  <td style={{fontSize: 11, color: "var(--ink-3)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.faculty}</td>
-                  <td><Badge status={a.status} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      <div className="card card-pad-0">
+        <div className="card-head"><h3>Active IRAS Workload</h3>
+          <div className="grow"></div>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate("i-received")}>
+            See all <Icon name="ArrowRight" size={12} />
+          </button>
         </div>
-
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>Reviewer Pool Snapshot</h3>
-            <div className="grow"></div>
-            <button className="btn btn-ghost btn-sm" onClick={() => navigate("i-reviewers")}>
-              Manage pool <Icon name="ArrowRight" size={12} />
-            </button>
-          </div>
-          <div style={{padding: "8px 0"}}>
-            {experts === null && <div style={{ padding: "24px", textAlign: "center", color: "var(--ink-3)" }}>Loading experts...</div>}
-            {experts && experts.length === 0 && <Empty title="No expert accounts" desc="Expert test accounts will appear here." icon="Users" />}
-            {(experts || []).map((e, i) => (
-              <div key={e.id} style={{display: "flex", alignItems: "center", gap: 10, padding: "12px 20px", borderBottom: i < experts.length - 1 ? "1px solid var(--line-2)" : "none"}}>
-                <Avatar initials={initialsFromName(e.full_name, "E")} color="var(--au-navy)" />
-                <div style={{flex: 1}}>
-                  <div style={{fontSize: 13, fontWeight: 600}}>{e.full_name}</div>
-                  <div style={{fontSize: 11, color: "var(--ink-3)"}}>{e.email}</div>
-                </div>
-                <span className="badge badge-iras"><span className="dot"></span>Expert</span>
-                <span className="text-sm text-muted" style={{minWidth: 70, textAlign: "right"}}>Available</span>
-              </div>
+        <table className="tbl">
+          <thead><tr><th>ID</th><th>Title</th><th>Faculty</th><th>Status</th></tr></thead>
+          <tbody>
+            {rows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
+            {rows && rows.length === 0 && <tr><td colSpan="4"><Empty title="No active IRAS work" desc="Dean-forwarded applications will appear here." icon="Inbox" /></td></tr>}
+            {(rows || []).map(a => (
+              <tr key={a.id} style={{cursor: "pointer"}} onClick={() => openWork(a)}>
+                <td><span className="id">{a.id}</span></td>
+                <td className="title-cell"><div className="t" style={{maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.title}</div></td>
+                <td style={{fontSize: 11, color: "var(--ink-3)", maxWidth: 140, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"}}>{a.faculty}</td>
+                <td><Badge status={a.status} /></td>
+              </tr>
             ))}
-          </div>
-        </div>
+          </tbody>
+        </table>
       </div>
     </>
   );
@@ -744,7 +718,7 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
     return (
       <>
         <PageHeader title="Office Screening" desc="Verify proposal completeness before approving the grant." />
-        <div className="card"><Empty title="No RASSC screening item" desc="Applications appear here after the Faculty Committee recommends them." icon="ClipboardCheck" /></div>
+        <div className="card"><Empty title="No RASSC screening item" desc="Applications appear here after the Dean forwards them for verification." icon="ClipboardCheck" /></div>
       </>
     );
   }
@@ -1859,8 +1833,7 @@ function AdminJournals({ toast }) {
 /* ADMIN — System settings */
 const ADMIN_ROLE_OPTIONS = [
   { key: "researcher", label: "Researcher" }, { key: "dean", label: "Dean" },
-  { key: "committee", label: "Faculty Committee" }, { key: "iras", label: "RASSC" },
-  { key: "expert", label: "Expert Reviewer" }, { key: "president", label: "Vice President" },
+  { key: "iras", label: "IRAS" },
   { key: "ofm", label: "OFM / Finance" }, { key: "admin", label: "Administrator" },
 ];
 
