@@ -258,6 +258,30 @@ const RESEARCHER_DEFAULT_BUDGET_ROWS = scaledBudgetRows(100000, RESEARCHER_DEFAU
 // Style for identity fields auto-filled from the profile (shown read-only).
 const roStyle = { background: "var(--paper-warm)", color: "var(--ink-2)", cursor: "not-allowed" };
 
+/* Banner shown when a researcher re-opens an application that a reviewer sent
+   back. Everything they already filled in is still loaded — this tells them what
+   still needs fixing before they resubmit. */
+function ReturnNotice({ info }) {
+  if (!info) return null;
+  const who = (info.actor && info.actor.full_name) || ({ dean: "The Dean", committee: "The Faculty Committee", iras: "The research office" }[info.actor_role] || "A reviewer");
+  return (
+    <div style={{ border: "1px solid var(--au-gold)", background: "var(--au-gold-soft)", borderRadius: "var(--r-md)", padding: "14px 16px", marginBottom: 18, display: "flex", gap: 12 }}>
+      <Icon name="AlertCircle" size={20} style={{ color: "var(--au-gold-deep)", flexShrink: 0, marginTop: 2 }} />
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>
+          Returned for revision — {who}{info.created_at ? " · " + window.DB.fmtDate(info.created_at) : ""}
+        </div>
+        <div style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+          {info.note || "No reason was recorded."}
+        </div>
+        <div style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 8 }}>
+          Your previous answers are already filled in below — update only what is asked for (add the missing file or fix the details), then submit again.
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Resolve the grant system (au_r1 / au_r3 / au_r4) for a given id.
 function grantSystemFor(id) {
   const list = (RA && RA.GRANT_SYSTEMS) || [];
@@ -320,6 +344,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   const [editingId, setEditingId] = useState(applicationId || null);
   const [existingDocs, setExistingDocs] = useState([]);
   const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
+  const [returnInfo, setReturnInfo] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const docTypeOptions = isR3 ? (RA.R3_DOC_TYPES || RA.DOC_TYPES) : RA.DOC_TYPES;
@@ -378,6 +403,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         }
         if (cancelled) return;
         setEditingId(app.id);
+        if (app.status === "returned") { window.DB.lastReturnReason(app.id).then(r => { if (!cancelled) setReturnInfo(r); }).catch(() => {}); } else setReturnInfo(null);
         setExistingDocs(app.documents || []);
         setDraft(d => ({
           ...d,
@@ -488,6 +514,8 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
           </>
         }
       />
+
+      <ReturnNotice info={returnInfo} />
 
       <div className="card card-pad-0">
         <div className="form-section">
@@ -847,6 +875,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
   const [editingId, setEditingId] = useState(applicationId || null);
   const [existingDocs, setExistingDocs] = useState([]);
   const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
+  const [returnInfo, setReturnInfo] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
   const confDuration = monthsBetween(draft.confStart, draft.confEnd);
@@ -875,6 +904,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         if (cancelled) return;
         const ci = app.conference_info || {};
         setEditingId(app.id);
+        if (app.status === "returned") { window.DB.lastReturnReason(app.id).then(r => { if (!cancelled) setReturnInfo(r); }).catch(() => {}); } else setReturnInfo(null);
         setExistingDocs(app.documents || []);
         setDraft(d => ({
           ...d,
@@ -948,7 +978,8 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         conference_info: confInfo,
       }, submit, editingId);
       for (const it of files) { try { await window.DB.uploadDocument(app.id, it.file, it.docType || null); } catch (e) {} }
-      if (!submit) { setEditingId(app.id); if (setSelectedApplicationId) setSelectedApplicationId(app.id); }
+      if (!submit) { setEditingId(app.id);
+        if (setSelectedApplicationId) setSelectedApplicationId(app.id); }
       else if (setSelectedApplicationId) setSelectedApplicationId(null);
       toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
       navigate("r-applications");
@@ -974,6 +1005,8 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
           </>
         }
       />
+
+      <ReturnNotice info={returnInfo} />
 
       <div className="card card-pad-0">
         <div className="form-section">
@@ -1285,6 +1318,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const [editingId, setEditingId] = useState(applicationId || null);
   const [existingDocs, setExistingDocs] = useState([]);
   const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
+  const [returnInfo, setReturnInfo] = useState(null);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
 
@@ -1329,6 +1363,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         if (cancelled) return;
         const pi = app.pub_info || {};
         setEditingId(app.id);
+        if (app.status === "returned") { window.DB.lastReturnReason(app.id).then(r => { if (!cancelled) setReturnInfo(r); }).catch(() => {}); } else setReturnInfo(null);
         setExistingDocs(app.documents || []);
         setDraft(d => ({ ...d, ...pi, title: app.title || "", school: app.faculty || d.school, department: app.department || d.department,
           name: app.researcher ? (app.researcher.full_name || d.name) : d.name, email: app.researcher ? (app.researcher.email || d.email) : d.email }));
@@ -1394,7 +1429,8 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         grant_type: "au_r4", pub_info: pubInfo, co_members: authors.filter(a => (a.name || "").trim()),
       }, submit, editingId);
       for (const it of files) { try { await window.DB.uploadDocument(app.id, it.file, it.docType || null); } catch (e) {} }
-      if (!submit) { setEditingId(app.id); if (setSelectedApplicationId) setSelectedApplicationId(app.id); }
+      if (!submit) { setEditingId(app.id);
+        if (setSelectedApplicationId) setSelectedApplicationId(app.id); }
       else if (setSelectedApplicationId) setSelectedApplicationId(null);
       toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
       navigate("r-applications");
@@ -1419,6 +1455,8 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           </>
         }
       />
+
+      <ReturnNotice info={returnInfo} />
 
       <div className="card card-pad-0">
         {/* 1. Publication Information */}
@@ -1701,7 +1739,6 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
           </button>
         }
       />
-
       <div className="card card-pad-0">
         <div className="toolbar">
           <div className="search">

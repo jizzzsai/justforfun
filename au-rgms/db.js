@@ -544,6 +544,17 @@
       } catch (e) {}
       return upd.data[0];
     },
+    // Most recent "returned to researcher" event for an application, so the edit
+    // form can show the reviewer's reason and who asked for the revision.
+    async lastReturnReason(appId) {
+      var res = await sb.from("application_events")
+        .select("action, note, actor_role, created_at, actor:profiles(full_name)")
+        .eq("application_id", appId).eq("to_status", "returned")
+        .order("created_at", { ascending: false }).limit(1);
+      if (res.error) return null;
+      return (res.data && res.data[0]) || null;
+    },
+
     async ofmPayments() {
       var res = await sb.from("applications")
         .select("*, researcher:profiles(full_name), payments(*), reports(kind,status), contracts(contract_no,status)")

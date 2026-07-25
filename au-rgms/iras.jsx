@@ -647,9 +647,15 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
           <table className="tbl">
             <thead>
               <tr>
-                <th>Research</th>
+                <th>Application ID</th>
+                <th>Research Title</th>
+                <th>System</th>
                 <th>Researcher</th>
-                <th style={{ textAlign: "right" }}>Grant</th>
+                <th>Faculty / Department</th>
+                <th style={{ textAlign: "right" }}>Requested</th>
+                <th style={{ textAlign: "right" }}>Approved</th>
+                <th style={{ textAlign: "right" }}>Disbursed</th>
+                <th>Status</th>
                 <th>1st · 30%</th>
                 <th>2nd · 40%</th>
                 <th>3rd · 30%</th>
@@ -659,14 +665,26 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
               {apps.map(a => {
                 const p = {};
                 (a.payments || []).forEach(x => { p[x.instalment] = x; });
+                const gt = a.grant_type || "au_r1";
+                const sysLabel = gt === "au_r3" ? "AU-R3" : gt === "au_r4" ? "AU-R4" : "AU-R1";
+                const paidSum = (a.payments || []).filter(x => x.status === "paid").reduce((s, x) => s + Number(x.amount || 0), 0);
                 return (
                   <tr key={a.id}>
+                    <td><span className="id">{a.code}</span></td>
                     <td className="title-cell">
-                      <div className="t">{a.code}</div>
-                      <div className="s" style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div>
+                      <div className="t" style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div>
+                    </td>
+                    <td>
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, color: "var(--au-crimson)", background: "var(--au-crimson-soft)" }}>{sysLabel}</span>
                     </td>
                     <td style={{ fontSize: 12 }}>{a.researcher ? a.researcher.full_name : "—"}</td>
-                    <td style={{ textAlign: "right", fontWeight: 600 }}>{fmtBaht(a.approved_amount || a.requested_amount)}</td>
+                    <td style={{ fontSize: 11, color: "var(--ink-3)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {(a.faculty || "—")}{a.department ? " · " + a.department : ""}
+                    </td>
+                    <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{fmtBaht(Number(a.requested_amount || 0))}</td>
+                    <td style={{ textAlign: "right", fontWeight: 600 }}>{a.approved_amount ? fmtBaht(Number(a.approved_amount)) : "—"}</td>
+                    <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", color: paidSum > 0 ? "var(--status-approved)" : "var(--ink-3)" }}>{fmtBaht(paidSum)}</td>
+                    <td><Badge status={window.DB.statusBadge(a.status)} /></td>
                     <td>{payCell(a, p[1])}</td>
                     <td>{payCell(a, p[2])}</td>
                     <td>{payCell(a, p[3])}</td>

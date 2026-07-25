@@ -150,7 +150,6 @@ const NAV_RESEARCHER = [
   { key: "r-submit", label: "Submit Application", icon: "FilePlus" },
   { key: "r-applications", label: "My Applications", icon: "Folder" },
   { key: "r-publications", label: "AU-R4 Publication Grant", icon: "FileText" },
-  { key: "r-reimburse", label: "Reimbursement Claim", icon: "Receipt" },
   { section: "REPORTING" },
   { key: "r-progress", label: "Progress Report", icon: "FileText" },
   { key: "r-final", label: "Final Report", icon: "FileCheck" },
@@ -182,7 +181,6 @@ const NAV_DEAN = [
   { key: "d-screen", label: "Screening Queue", icon: "ClipboardCheck" },
   { key: "d-r3-screen", label: "AU-R3 Queue", icon: "Users" },
   { key: "d-r4-screen", label: "AU-R4 Queue", icon: "Award" },
-  { key: "d-reimburse", label: "Reimbursement Claims", icon: "Receipt" },
   { section: "TRACKING" },
   { key: "d-history", label: "Decision History", icon: "Clock" },
   { key: "d-analytics", label: "AI Analytics", icon: "TrendingUp" },
@@ -207,7 +205,6 @@ const NAV_RASSC = [
   { key: "i-screen", label: "Office Screening", icon: "ClipboardCheck" },
   { key: "i-reports", label: "Report Review", icon: "FileCheck" },
   { key: "i-publications", label: "Publication Grants", icon: "FileText" },
-  { key: "i-reimburse", label: "Reimbursements", icon: "Receipt" },
   { key: "i-analytics", label: "AI Analytics", icon: "TrendingUp" },
 ];
 
@@ -237,7 +234,6 @@ const NAV_OFM = [
   { key: "o-payments", label: "Payment Queue", icon: "Coins" },
   { key: "o-detail", label: "Grant Detail", icon: "FileText" },
   { key: "o-publications", label: "Publication Payments", icon: "Award" },
-  { key: "o-reimburse", label: "Reimbursement Payments", icon: "Receipt" },
   { section: "TRACKING" },
   { key: "o-history", label: "Payment History", icon: "Clock" },
 ];
