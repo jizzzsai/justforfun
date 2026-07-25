@@ -347,11 +347,33 @@ const ROLE_CONFIG = {
 };
 
 /* ============= APP HEADER ============= */
-function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate }) {
+// Each grant system has its own set of roles:
+//   AU-R1 → Researcher, Dean, Faculty Committee, RASSC, Finance
+//   AU-R3 / AU-R4 → Researcher, Dean, IRAS, Finance
+// (Administrator is a system-wide account and is always available.)
+const SYSTEM_ROLE_KEYS = {
+  au_r1: ["researcher", "dean", "committee", "iras", "ofm", "admin"],
+  au_r3: ["researcher", "dean", "iras", "ofm", "admin"],
+  au_r4: ["researcher", "dean", "iras", "ofm", "admin"],
+};
+function rolesForSystem(sys) {
+  const all = APP.ROLES || [];
+  const keys = SYSTEM_ROLE_KEYS[sys];
+  const list = keys ? keys.map(k => all.find(r => r.key === k)).filter(Boolean) : all;
+  // The research office is called RASSC on AU-R1 and IRAS on AU-R3 / AU-R4.
+  if (sys === "au_r3" || sys === "au_r4") {
+    return list.map(r => r.key === "iras"
+      ? { ...r, name: "IRAS", full: "IRAS Test", subtitle: "IRAS - Test Account", initials: "IR" }
+      : r);
+  }
+  return list;
+}
+
+function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSystem }) {
   const [roleOpen, setRoleOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifItems, setNotifItems] = useState(APP.NOTIFS || []);
-  const current = APP.ROLES.find(r => r.key === role);
+  const current = rolesForSystem(grantSystem).find(r => r.key === role) || APP.ROLES.find(r => r.key === role);
   const displayName = (profile && profile.full_name) || current.full;
   const displayInitials = (profile && profile.full_name)
     ? profile.full_name.trim().split(/\s+/).slice(-2).map(s => s[0]).join("").toUpperCase()
@@ -417,8 +439,10 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate }) {
           </button>
           {roleOpen && (
             <div className="dropdown" onClick={e => e.stopPropagation()} style={{minWidth: 320}}>
-              <div className="dropdown-section">Switch test account</div>
-              {APP.ROLES.map(r => (
+              <div className="dropdown-section">
+                Switch test account{grantSystem ? " · " + (grantSystem === "au_r1" ? "AU-R1" : grantSystem === "au_r3" ? "AU-R3" : "AU-R4") : ""}
+              </div>
+              {rolesForSystem(grantSystem).map(r => (
                 <div
                   key={r.key}
                   className={`dropdown-item ${role === r.key ? "active" : ""}`}
@@ -755,7 +779,7 @@ function App() {
 
   return (
     <div className="app">
-      <AppHeader role={role} profile={profile} onSwitchRole={onSwitchRole} onLogout={onLogout} onNavigate={setPage} />
+      <AppHeader role={role} profile={profile} onSwitchRole={onSwitchRole} onLogout={onLogout} onNavigate={setPage} grantSystem={rSystem} />
       <SubBar
         crumbs={crumbs}
         onHome={() => setPage(cfg.homeKey)}
