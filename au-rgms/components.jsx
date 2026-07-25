@@ -323,7 +323,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
           <Icon name="AlertCircle" size={26} />
         </div>
         <h3>Are you sure?</h3>
-        <p>You are about to <b>{confirmLabel.toLowerCase()}</b> this application. {message}</p>
+        <p><b>{title.replace(/\?$/, "")}</b> — {message}</p>
         <div style={{ textAlign: "left", marginTop: 10, border: "1px solid var(--line)", borderRadius: "var(--r-md)", background: "var(--paper-warm)", padding: "10px 12px" }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--ink-3)", marginBottom: 4 }}>Your note</div>
           <div style={{ fontSize: 13, color: reason.trim() ? "var(--ink-1)" : "var(--ink-3)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
