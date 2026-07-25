@@ -56,10 +56,10 @@ function LoginPage({ onLogin }) {
             Research Grant <em>Management</em> System
           </h1>
           <p>
-            A unified portal for AU researchers, deans, IRAS, and the Office of
-            Financial Management to submit, review, verify, and disburse
-            research, presentation, and publication grants — Researcher to Dean
-            to IRAS to Finance.
+            A unified portal for AU researchers, deans, committees, RASSC,
+            the President, and the Office of Financial Management to submit,
+            review, and disburse research grants — across the fourteen-stage
+            workflow.
           </p>
         </div>
 
