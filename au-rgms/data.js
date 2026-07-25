@@ -10,8 +10,9 @@
 const ALL_STAGES = [
   { key: "submission",   label: "Researcher Submission" },
   { key: "deanScreen",   label: "Dean Screening" },
-  { key: "iras",         label: "IRAS Verification" },
-  { key: "contract",     label: "Approved / Contract" },
+  { key: "committee",    label: "Faculty Committee Review" },
+  { key: "iras",         label: "RASSC Approval" },
+  { key: "contract",     label: "Contract Signed" },
   { key: "pay1",         label: "First Payment 30%" },
   { key: "progress",     label: "Progress Report" },
   { key: "pay2",         label: "Second Payment 40%" },
@@ -137,7 +138,8 @@ const ACTIVITY = [
 const ROLES = [
   { key: "researcher", name: "Researcher", full: "Researcher Test", subtitle: "Researcher - Test Account", initials: "RT", iconName: "GraduationCap" },
   { key: "dean", name: "Dean", full: "Dean Test", subtitle: "Dean - Test Account", initials: "DT", iconName: "Building2" },
-  { key: "iras", name: "IRAS", full: "IRAS Test", subtitle: "IRAS - Test Account", initials: "IR", iconName: "Landmark" },
+  { key: "committee", name: "Faculty Committee", full: "Committee Test", subtitle: "Committee - Test Account", initials: "CT", iconName: "Users" },
+  { key: "iras", name: "RASSC", full: "RASSC Test", subtitle: "RASSC - Test Account", initials: "RS", iconName: "Landmark" },
   { key: "ofm", name: "OFM / Finance", full: "Finance Test", subtitle: "Finance - Test Account", initials: "FT", iconName: "Coins" },
   { key: "admin", name: "Administrator", full: "Admin Test", subtitle: "Admin - Test Account", initials: "AT", iconName: "Settings" },
 ];
@@ -207,6 +209,8 @@ const NAV_RASSC = [
   { key: "i-publications", label: "Publication Grants", icon: "FileText" },
   { key: "i-reimburse", label: "Reimbursements", icon: "Receipt" },
   { key: "i-analytics", label: "AI Analytics", icon: "TrendingUp" },
+  { section: "TRACKING" },
+  { key: "i-reviewers", label: "Reviewer Pool", icon: "Users" },
 ];
 
 const NAV_EXPERT = [

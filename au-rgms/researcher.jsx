@@ -6,8 +6,8 @@ const RA = window.AU;
 
 /* ---------- A. Dashboard Overview ---------- */
 function buildResearcherTimeline(statusKey) {
-  const order = ["submission", "deanScreen", "iras", "contract", "pay1"];
-  const idxMap = { draft: 0, submitted: 1, iras_review: 2, approved: 3, active: 4, completed: 5, returned: 0, rejected: 0 };
+  const order = ["submission", "deanScreen", "committee", "deanSign", "iras", "expert", "president", "contract", "pay1"];
+  const idxMap = { draft: 0, submitted: 1, committee_review: 2, dean_sign: 3, iras_review: 4, expert_review: 5, president_review: 6, approved: 7, active: 8, completed: 9, returned: 0, rejected: 0 };
   let idx = idxMap[statusKey]; if (idx === undefined) idx = 0;
   const tl = {};
   order.forEach((k, i) => { tl[k] = i < idx ? { done: true } : (i === idx ? { current: true } : {}); });
@@ -1824,8 +1824,12 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
     timeline: {
       submission: { done: true, current: app.status === "submitted", date: window.DB.fmtDate(app.submitted_at || app.created_at), who: researcherName },
       deanScreen: { current: app.status === "submitted", done: !["draft", "submitted", "returned"].includes(app.status), date: app.status === "submitted" ? "Waiting Dean screening" : "Completed" },
-      iras: { current: app.status === "iras_review", done: ["approved", "active", "completed"].includes(app.status), date: app.status === "iras_review" ? "IRAS verification" : "Pending" },
-      contract: { current: app.status === "approved", done: ["active", "completed"].includes(app.status), date: app.status === "approved" ? "Approved / contract" : "Pending" },
+      committee: { current: app.status === "committee_review", done: ["dean_sign", "iras_review", "expert_review", "president_review", "approved", "active", "completed"].includes(app.status), date: app.status === "committee_review" ? "In committee review" : "Pending" },
+      deanSign: { current: app.status === "dean_sign", done: ["iras_review", "expert_review", "president_review", "approved", "active", "completed"].includes(app.status), date: app.status === "dean_sign" ? "Waiting Dean sign" : "Pending" },
+      iras: { current: app.status === "iras_review", done: ["expert_review", "president_review", "approved", "active", "completed"].includes(app.status), date: app.status === "iras_review" ? "RASSC screening" : "Pending" },
+      expert: { current: app.status === "expert_review", done: ["president_review", "approved", "active", "completed"].includes(app.status), date: app.status === "expert_review" ? "Expert review" : "Pending" },
+      president: { current: app.status === "president_review", done: ["approved", "active", "completed"].includes(app.status), date: app.status === "president_review" ? "President review" : "Pending" },
+      contract: { current: app.status === "approved", done: ["active", "completed"].includes(app.status), date: app.status === "approved" ? "Contract pending" : "Pending" },
       pay1: { current: app.status === "active", done: app.status === "completed", date: app.status === "active" ? "Active grant" : "Pending" },
     },
   };
