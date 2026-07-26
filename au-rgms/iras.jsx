@@ -19,7 +19,7 @@ function RASSCReceived({ navigate, onDownload, setSelectedApplicationId }) {
     <>
       <PageHeader
         title="Received Applications"
-        desc="Applications forwarded by Faculty Deans for university-level review."
+        desc="AU-R1 proposals recommended by the Faculty Committee, and AU-R3 / AU-R4 applications forwarded by the Dean, awaiting university-level review."
       />
 
       <div className="card card-pad-0">
@@ -612,18 +612,24 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
   const payCell = (app, p) => {
     if (!p) return "—";
     if (p.status === "paid") return <span className="badge badge-paid"><span className="dot"></span>Paid</span>;
-    if (!window.DB.payable(app, p.instalment)) return <span className="badge badge-draft"><span className="dot"></span>Not due</span>;
+    if (!window.DB.payable(app, p.instalment)) {
+      return (
+        <span className="badge badge-draft" title={window.DB.payBlockedReason(app, p.instalment)}>
+          <span className="dot"></span>Locked
+        </span>
+      );
+    }
     return (
       <button className="btn btn-primary btn-sm" onClick={() => setConfirm({
         kind: "success",
-        title: "Disburse tranche " + p.instalment + " (" + p.pct + "%)?",
+        title: "Release Phase " + p.instalment + " (" + p.pct + "%)?",
         message: "Pay " + fmtBaht(p.amount) + " for " + app.code + ".",
         confirmLabel: "Pay " + fmtBaht(p.amount), withReason: true, reasonLabel: "Payment note / reference",
         onConfirm: async () => {
-          try { await window.DB.markPaid(p.id, p.instalment, app.id); toast("Tranche " + p.instalment + " paid for " + app.code); load(); }
+          try { await window.DB.markPaid(p.id, p.instalment, app.id); toast("Phase " + p.instalment + " paid for " + app.code); load(); }
           catch (e) { toast("Error: " + (e.message || e)); }
         },
-      })}>Pay {p.pct}%</button>
+      })}>Pay Phase {p.instalment}</button>
     );
   };
 
@@ -656,9 +662,9 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
                 <th style={{ textAlign: "right" }}>Approved</th>
                 <th style={{ textAlign: "right" }}>Disbursed</th>
                 <th>Status</th>
-                <th>1st · 30%</th>
-                <th>2nd · 40%</th>
-                <th>3rd · 30%</th>
+                <th>Phase 1 · 30%</th>
+                <th>Phase 2 · 40%</th>
+                <th>Phase 3 · 30%</th>
               </tr>
             </thead>
             <tbody>

@@ -163,7 +163,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
                       padding: 14, border: "1px solid var(--line)",
                       borderRadius: "var(--r-md)", background: "var(--paper-warm)",
                     }}>
-                      <div style={{ fontSize: 11, color: "var(--ink-3)" }}>Tranche {p.instalment} · {p.pct}%</div>
+                      <div style={{ fontSize: 11, color: "var(--ink-3)" }}>Phase {p.instalment} · {p.pct}%</div>
                       <div style={{ fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 500, margin: "4px 0" }}>
                         {fmtBaht(p.amount)}
                       </div>
@@ -2274,14 +2274,14 @@ function ResearcherPayments({ onDownload, toast, grantType }) {
 function R1PaymentStatus({ onDownload, toast }) {
   const [grant, setGrant] = useState(null);
   useEffect(() => { window.DB.myGrant("au_r1").then(g => setGrant(g || false)).catch(() => setGrant(false)); }, []);
-  const triggers = { 1: "After contract signing", 2: "After progress report", 3: "After final report" };
-  const trName = { 1: "1st · 30%", 2: "2nd · 40%", 3: "3rd · 30%" };
+  const triggers = { 1: "Released once approved", 2: "After Phase 1 + accepted progress report", 3: "After Phase 2 + accepted final report" };
+  const trName = { 1: "Phase 1 · 30%", 2: "Phase 2 · 40%", 3: "Phase 3 · 30%" };
 
   if (grant === null) {
-    return (<><PageHeader title="Payment Status" desc="Your grant disbursement tranches." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "40px" }}>Loading…</div></>);
+    return (<><PageHeader title="Payment Status" desc="Your grant is released in three phases." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "40px" }}>Loading…</div></>);
   }
   if (!grant) {
-    return (<><PageHeader title="Payment Status" desc="Your grant disbursement tranches." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "48px" }}>No approved grant yet. Once your application is approved, your 30 / 40 / 30 payments will appear here.</div></>);
+    return (<><PageHeader title="Payment Status" desc="Your grant is released in three phases." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "48px" }}>No approved grant yet. Once your application is approved, your 30 / 40 / 30 payments will appear here.</div></>);
   }
 
   const pays = grant.payments || [];
@@ -2289,14 +2289,14 @@ function R1PaymentStatus({ onDownload, toast }) {
     <>
       <PageHeader
         title="Payment Status"
-        desc={"Disbursement tranches for " + grant.code + " · Total grant " + fmtBaht(grant.approved_amount || grant.requested_amount)}
+        desc={"Three-phase disbursement for " + grant.code + " · Total grant " + fmtBaht(grant.approved_amount || grant.requested_amount)}
       />
 
       <div className="grid-3 mb-6">
         {pays.map(p => (
           <div key={p.id} className="pay-card">
             <div className="pay-num">{p.pct}%</div>
-            <div className="pct">Tranche {p.instalment}</div>
+            <div className="pct">Phase {p.instalment}</div>
             <div className="amt">{fmtBaht(p.amount)}</div>
             <span className={"badge " + (p.status === "paid" ? "badge-paid" : "badge-pending")}><span className="dot"></span>{p.status === "paid" ? "Paid" : "Pending"}</span>
             <div className="meta-row mt-4"><span className="l">Condition</span><span className="r">{triggers[p.instalment]}</span></div>
@@ -2309,7 +2309,7 @@ function R1PaymentStatus({ onDownload, toast }) {
         <div className="card-head"><h3>Disbursement Log</h3></div>
         <table className="tbl">
           <thead>
-            <tr><th>Tranche</th><th>Amount</th><th>Condition</th><th>Status</th><th>Paid on</th></tr>
+            <tr><th>Phase</th><th>Amount</th><th>Condition</th><th>Status</th><th>Paid on</th></tr>
           </thead>
           <tbody>
             {pays.map(p => (

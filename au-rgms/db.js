@@ -578,14 +578,35 @@
       return apps;
     },
     // can this instalment be paid yet? (report-gated)
+    // The three AU-R1 payments run strictly in order: Phase 2 only opens after
+    // Phase 1 is paid AND the progress report is accepted; Phase 3 only after
+    // Phase 2 is paid AND the final report is accepted.
     payable: function (app, inst) {
-      // Tranche 1 opens as soon as RASSC/IRAS approves (status "approved" =
-      // contract issued, sent to Finance). Paying it moves the app to "active".
-      if (inst === 1) return app && (app.status === "approved" || app.status === "active" || app.status === "completed");
+      if (!app) return false;
       var reps = app.reports || [];
-      if (inst === 2) return reps.some(function (r) { return r.kind === "progress" && r.status === "accepted"; });
-      if (inst === 3) return reps.some(function (r) { return r.kind === "final" && r.status === "accepted"; });
+      var paid = function (i) { return (app.payments || []).some(function (p) { return p.instalment === i && p.status === "paid"; }); };
+      // Phase 1 opens as soon as RASSC/IRAS approves (contract issued, sent to
+      // Finance). Paying it moves the application to "active".
+      if (inst === 1) return app.status === "approved" || app.status === "active" || app.status === "completed";
+      if (inst === 2) return paid(1) && reps.some(function (r) { return r.kind === "progress" && r.status === "accepted"; });
+      if (inst === 3) return paid(2) && reps.some(function (r) { return r.kind === "final" && r.status === "accepted"; });
       return false;
+    },
+    // Why a phase isn't payable yet — shown as a tooltip on the "Not due" chip.
+    payBlockedReason: function (app, inst) {
+      if (!app) return "";
+      var reps = app.reports || [];
+      var paid = function (i) { return (app.payments || []).some(function (p) { return p.instalment === i && p.status === "paid"; }); };
+      if (inst === 1) return "Waiting for RASSC / IRAS approval.";
+      if (inst === 2) {
+        if (!paid(1)) return "Phase 1 must be paid first.";
+        return "Waiting for the progress report to be accepted.";
+      }
+      if (inst === 3) {
+        if (!paid(2)) return "Phase 2 must be paid first.";
+        return "Waiting for the final report to be accepted.";
+      }
+      return "";
     },
     async markPaid(paymentId, instalment, appId) {
       var r = await sb.from("payments").update({ status: "paid", paid_at: new Date().toISOString() }).eq("id", paymentId);

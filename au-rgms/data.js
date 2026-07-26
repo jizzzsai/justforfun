@@ -200,7 +200,7 @@ const NAV_COMMITTEE = [
 const NAV_RASSC = [
   { section: "WORKSPACE" },
   { key: "i-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
-  { key: "i-received", label: "Received from Dean", icon: "Inbox" },
+  { key: "i-received", label: "Received from Committee", icon: "Inbox" },
   { section: "REVIEW" },
   { key: "i-screen", label: "Office Screening", icon: "ClipboardCheck" },
   { key: "i-reports", label: "Report Review", icon: "FileCheck" },

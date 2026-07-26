@@ -1472,7 +1472,7 @@ function OFMDashboardR1({ navigate, sysToggle }) {
         (a.payments || []).filter(p => p.status !== "paid").forEach(p => rows.push({
           id: a.code,
           who: a.researcher ? a.researcher.full_name : "-",
-          stage: p.instalment === 1 ? "1st 30%" : p.instalment === 2 ? "2nd 40%" : "Final 30%",
+          stage: "Phase " + p.instalment + " · " + (p.instalment === 1 ? "30%" : p.instalment === 2 ? "40%" : "30%"),
           amount: Number(p.amount || 0),
           status: p.status,
         }));
@@ -1552,7 +1552,7 @@ function OFMDashboardR1({ navigate, sysToggle }) {
               {[
                 { l: "First 30%",  v: 9, t: 12 },
                 { l: "Second 40%", v: 6, t: 12 },
-                { l: "Final 30%",  v: 4, t: 12 },
+                { l: "Phase 3 · 30%",  v: 4, t: 12 },
               ].map((b, i) => (
                 <div key={i} style={{marginBottom: 12}}>
                   <div className="flex justify-between mb-2" style={{fontSize: 12}}>
@@ -1582,11 +1582,11 @@ function OFMDetail({ onDownload, toast, setConfirm }) {
   const pays = (app.payments || []).slice().sort((a, b) => a.instalment - b.instalment);
   const pay = (p) => setConfirm({
     kind: "success",
-    title: "Mark tranche " + p.instalment + " as paid?",
+    title: "Release Phase " + p.instalment + " as paid?",
     message: "Disburse " + fmtBaht(p.amount) + " for " + app.code + ".",
     confirmLabel: "Mark as Paid", withReason: true, reasonLabel: "Payment note / reference",
     onConfirm: async () => {
-      try { await window.DB.markPaid(p.id, p.instalment, app.id); toast("Tranche " + p.instalment + " paid for " + app.code); load(); }
+      try { await window.DB.markPaid(p.id, p.instalment, app.id); toast("Phase " + p.instalment + " paid for " + app.code); load(); }
       catch (e) { toast("Error: " + ((e && e.message) || e)); }
     },
   });
@@ -1600,7 +1600,7 @@ function OFMDetail({ onDownload, toast, setConfirm }) {
           return (
             <div key={p.id} className="pay-card">
               <div className="pay-num">{p.pct}%</div>
-              <div className="pct">Tranche {p.instalment}</div>
+              <div className="pct">Phase {p.instalment}</div>
               <div className="amt">{fmtBaht(p.amount)}</div>
               <span className={"badge " + (p.status === "paid" ? "badge-paid" : ready ? "badge-approved" : "badge-draft")}><span className="dot"></span>{p.status === "paid" ? "Paid" : ready ? "Ready" : "Not due"}</span>
               <div className="meta-row mt-4"><span className="l">Trigger</span><span className="r">{p.trigger}</span></div>
@@ -1615,9 +1615,9 @@ function OFMDetail({ onDownload, toast, setConfirm }) {
       <div className="card card-pad-0">
         <div className="card-head"><h3>Grant Payment Conditions</h3></div>
         <div className="card-body">
-          <div className="meta-row"><span className="l">1st 30%</span><span className="r">Available after contract signing</span></div>
-          <div className="meta-row"><span className="l">2nd 40%</span><span className="r">Available after accepted progress report</span></div>
-          <div className="meta-row"><span className="l">Final 30%</span><span className="r">Available after accepted final report</span></div>
+          <div className="meta-row"><span className="l">Phase 1 · 30%</span><span className="r">Available once approved by RASSC / IRAS</span></div>
+          <div className="meta-row"><span className="l">Phase 2 · 40%</span><span className="r">After Phase 1 is paid and the progress report is accepted</span></div>
+          <div className="meta-row"><span className="l">Phase 3 · 30%</span><span className="r">After Phase 2 is paid and the final report is accepted</span></div>
         </div>
       </div>
     </>
