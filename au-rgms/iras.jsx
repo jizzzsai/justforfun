@@ -676,7 +676,7 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
                 return (
                   <tr key={a.id}>
                     {/* Application: id + system badge on one line, title beneath */}
-                    <td style={{ maxWidth: 260 }}>
+                    <td style={{ maxWidth: 230 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span className="id" style={{ fontSize: 11 }}>{a.code}</span>
                         <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 999, color: "var(--au-crimson)", background: "var(--au-crimson-soft)" }}>{sysLabel}</span>
@@ -684,7 +684,7 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
                       <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={a.title}>{a.title}</div>
                     </td>
                     {/* Researcher: name + faculty·dept beneath */}
-                    <td style={{ maxWidth: 175 }}>
+                    <td style={{ maxWidth: 150 }}>
                       <div style={{ fontSize: 12 }}>{a.researcher ? a.researcher.full_name : "—"}</div>
                       <div style={{ fontSize: 10.5, color: "var(--ink-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                         title={(a.faculty || "") + (a.department ? " · " + a.department : "")}>
