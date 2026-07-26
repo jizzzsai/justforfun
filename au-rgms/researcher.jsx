@@ -358,6 +358,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
   const [returnInfo, setReturnInfo] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [busyKind, setBusyKind] = useState(null); // "submit" | "draft" — drives the button label
   const [err, setErr] = useState("");
   const docTypeOptions = isR3 ? (RA.R3_DOC_TYPES || RA.DOC_TYPES) : RA.DOC_TYPES;
   const [docType, setDocType] = useState(isR3 ? "Full Research Article" : "Research Proposal");
@@ -374,7 +375,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         const p = await window.AUTH.profile();
         if (p && p.budget_split) setSplit(s => ({ ...s, ...p.budget_split }));
         if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
-        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone, office: p.office_room || d.office }));
+        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: p.phone || d.phone, office: p.office_room || d.office }));
       } catch (e) {}
     })();
   }, [applicationId]);
@@ -482,7 +483,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
       const overIdx = budgetRows.findIndex((b, i) => Number(reqTotal) > 0 && Math.round((Number(b.amount) || 0) / Number(reqTotal) * 100) > capArr[i]);
       if (overIdx !== -1) { setErr(budgetRows[overIdx].item + " exceeds its AU cap of " + capArr[overIdx] + "% of the total budget."); return; }
     }
-    setBusy(true);
+    setBusy(true); setBusyKind(submit ? "submit" : "draft");
     try {
       // Persist the applicant's own details to their profile (enter once, reused).
       try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
@@ -523,9 +524,9 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         desc={sys.name + (isR3 ? " — present a paper with your collaborators. " : " — ") + (editingId ? "Update this saved or returned application, then submit it to Dean screening." : "Complete each section and upload the required documents before submitting.")}
         actions={
           <>
-            <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
+            <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
             <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
-              <Icon name="Send" size={13} /> {busy ? (files.length ? "Uploading " + files.length + " file(s)…" : "Saving…") : "Submit Application"}
+              <Icon name="Send" size={13} /> {busy ? (busyKind === "submit" ? (files.length ? "Uploading " + files.length + " file(s)…" : "Submitting…") : "Saving draft…") : "Submit Application"}
             </button>
           </>
         }
@@ -848,9 +849,9 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
           display: "flex", gap: 8, justifyContent: "flex-end",
         }}>
           {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, alignSelf: "center", marginRight: "auto" }}>{err}</div>}
-          <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
+          <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
           <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
-            <Icon name="Send" size={13} /> {busy ? (files.length ? "Uploading " + files.length + " file(s)…" : "Saving…") : "Submit Application"}
+            <Icon name="Send" size={13} /> {busy ? (busyKind === "submit" ? (files.length ? "Uploading " + files.length + " file(s)…" : "Submitting…") : "Saving draft…") : "Submit Application"}
           </button>
         </div>
       </div>
@@ -893,6 +894,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
   const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
   const [returnInfo, setReturnInfo] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [busyKind, setBusyKind] = useState(null); // "submit" | "draft" — drives the button label
   const [err, setErr] = useState("");
   const confDuration = monthsBetween(draft.confStart, draft.confEnd);
 
@@ -901,7 +903,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
       try {
         const p = await window.AUTH.profile();
         if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
-        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone, office: p.office_room || d.office }));
+        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: p.phone || d.phone, office: p.office_room || d.office }));
       } catch (e) {}
     })();
   }, [applicationId]);
@@ -973,7 +975,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
     if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
     if (submit && total <= 0) { setErr("Enter the conference budget amounts."); return; }
     if (submit && total > maxAmount) { setErr("Total budget (" + total.toLocaleString() + " THB) exceeds the " + maxAmount.toLocaleString() + " THB maximum for AU-R3 grants."); return; }
-    setBusy(true);
+    setBusy(true); setBusyKind(submit ? "submit" : "draft");
     try {
       try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
       const confInfo = {
@@ -1011,6 +1013,11 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
   }
 
   const emailBad = draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim());
+  const facultyValid = RA.FACULTIES.some(f => f.name === draft.school);
+  const facultyLocked = facultyValid; // only lock once it is a real AU faculty
+  const deptOptions = (RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments;
+  const deptValid = facultyValid && deptOptions.indexOf(draft.department) >= 0;
+  const deptLocked = deptValid;
   return (
     <>
       <PageHeader
@@ -1018,9 +1025,9 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         desc="Paper Presentation Grant — apply for financial support to present an accepted research paper at a domestic or international conference."
         actions={
           <>
-            <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
+            <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
             <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
-              <Icon name="Send" size={13} /> {busy ? (files.length ? "Uploading " + files.length + " file(s)…" : "Saving…") : "Submit Application"}
+              <Icon name="Send" size={13} /> {busy ? (busyKind === "submit" ? (files.length ? "Uploading " + files.length + " file(s)…" : "Submitting…") : "Saving draft…") : "Submit Application"}
             </button>
           </>
         }
@@ -1166,14 +1173,14 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
               <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
               <div className="field">
                 <label>School / Faculty</label>
-                <select value={draft.school} onChange={e => { upd("school", e.target.value); upd("department", ""); }} disabled={!!draft.school} style={draft.school ? roStyle : null}>
+                <select value={facultyLocked ? draft.school : (facultyValid ? draft.school : "")} onChange={e => { upd("school", e.target.value); upd("department", ""); }} disabled={facultyLocked} style={facultyLocked ? roStyle : null}>
                   <option value="">Select your faculty…</option>
                   {RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}
                 </select>
               </div>
               <div className="field">
                 <label>Department</label>
-                <select value={draft.department} onChange={e => upd("department", e.target.value)} disabled={!draft.school || !!draft.department} style={draft.department ? roStyle : null}>
+                <select value={deptValid ? draft.department : ""} onChange={e => upd("department", e.target.value)} disabled={!facultyValid || deptLocked} style={deptLocked ? roStyle : null}>
                   <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
                   {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
@@ -1288,9 +1295,9 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
 
         <div style={{ padding: "16px 24px", borderTop: "1px solid var(--line)", background: "var(--paper-warm)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
           {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, alignSelf: "center", marginRight: "auto" }}>{err}</div>}
-          <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
+          <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
           <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
-            <Icon name="Send" size={13} /> {busy ? (files.length ? "Uploading " + files.length + " file(s)…" : "Saving…") : "Submit Application"}
+            <Icon name="Send" size={13} /> {busy ? (busyKind === "submit" ? (files.length ? "Uploading " + files.length + " file(s)…" : "Submitting…") : "Saving draft…") : "Submit Application"}
           </button>
         </div>
       </div>
@@ -1340,6 +1347,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
   const [returnInfo, setReturnInfo] = useState(null);
   const [busy, setBusy] = useState(false);
+  const [busyKind, setBusyKind] = useState(null); // "submit" | "draft" — drives the button label
   const [err, setErr] = useState("");
 
   const isScopus = draft.journalDb === "SCOPUS";
@@ -1355,6 +1363,11 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const turnitinNum = Number(draft.turnitin);
   const turnitinBad = draft.turnitin !== "" && turnitinNum > 20;
   const emailBad = draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim());
+  const facultyValid = RA.FACULTIES.some(f => f.name === draft.school);
+  const facultyLocked = facultyValid; // only lock once it is a real AU faculty
+  const deptOptions = (RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments;
+  const deptValid = facultyValid && deptOptions.indexOf(draft.department) >= 0;
+  const deptLocked = deptValid;
 
   useEffect(() => {
     (async () => {
@@ -1362,7 +1375,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         const p = await window.AUTH.profile();
         if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
         if (p && !applicationId) {
-          setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: p.faculty || d.school, department: p.department || d.department, phone: p.phone || d.phone, office: p.office_room || d.office }));
+          setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: p.phone || d.phone, office: p.office_room || d.office }));
           setAuthors(a => a.map((r, i) => i === 0 ? { ...r, name: p.full_name || r.name, auId: p.au_id || r.auId, email: p.email || r.email } : r));
         }
       } catch (e) {}
@@ -1424,7 +1437,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       if (requested <= 0) return setErr("Choose the journal database (and Scopus quartile) so the claim can be estimated.");
       if (!allDecl) return setErr("You must accept every eligibility declaration before submitting.");
     }
-    setBusy(true);
+    setBusy(true); setBusyKind(submit ? "submit" : "draft");
     try {
       try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
       const pubInfo = {
@@ -1472,9 +1485,9 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         desc="Publication Fees and Reward Application — submit the publication information, author contributions, claim details, and required documents."
         actions={
           <>
-            <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
+            <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
             <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
-              <Icon name="Send" size={13} /> {busy ? (files.length ? "Uploading " + files.length + " file(s)…" : "Saving…") : "Submit Application"}
+              <Icon name="Send" size={13} /> {busy ? (busyKind === "submit" ? (files.length ? "Uploading " + files.length + " file(s)…" : "Submitting…") : "Saving draft…") : "Submit Application"}
             </button>
           </>
         }
@@ -1615,10 +1628,10 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
               <div className="field"><label>Phone</label><input value={draft.phone} onChange={e => upd("phone", e.target.value)} /></div>
               <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} /></div>
               <div className="field"><label>School / Faculty</label>
-                <select value={draft.school} onChange={e => { upd("school", e.target.value); upd("department", ""); }} disabled={!!draft.school} style={draft.school ? roStyle : null}>
+                <select value={facultyLocked ? draft.school : (facultyValid ? draft.school : "")} onChange={e => { upd("school", e.target.value); upd("department", ""); }} disabled={facultyLocked} style={facultyLocked ? roStyle : null}>
                   <option value="">Select your faculty…</option>{RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}</select></div>
               <div className="field"><label>Department</label>
-                <select value={draft.department} onChange={e => upd("department", e.target.value)} disabled={!draft.school || !!draft.department} style={draft.department ? roStyle : null}>
+                <select value={deptValid ? draft.department : ""} onChange={e => upd("department", e.target.value)} disabled={!facultyValid || deptLocked} style={deptLocked ? roStyle : null}>
                   <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
                   {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d}>{d}</option>)}</select></div>
             </div>
@@ -1725,9 +1738,9 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
 
         <div style={{ padding: "16px 24px", borderTop: "1px solid var(--line)", background: "var(--paper-warm)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
           {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, alignSelf: "center", marginRight: "auto" }}>{err}</div>}
-          <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
+          <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
           <button className="btn btn-primary" disabled={busy || !allDecl || turnitinBad} onClick={() => save(true)}>
-            <Icon name="Send" size={13} /> {busy ? (files.length ? "Uploading " + files.length + " file(s)…" : "Saving…") : "Submit Application"}
+            <Icon name="Send" size={13} /> {busy ? (busyKind === "submit" ? (files.length ? "Uploading " + files.length + " file(s)…" : "Submitting…") : "Saving draft…") : "Submit Application"}
           </button>
         </div>
       </div>
