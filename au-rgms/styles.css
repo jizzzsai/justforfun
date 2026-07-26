@@ -1017,3 +1017,11 @@ textarea.comment-input:focus { outline: none; border-color: var(--au-crimson); b
   padding: 5px 10px; border-radius: 8px; transition: background .15s;
 }
 .audp-foot button:hover { background: var(--au-crimson-soft); }
+
+/* ---------- Compact data table (wide queues like Finance payments) ---------- */
+.tbl.tbl-compact th,
+.tbl.tbl-compact td { padding: 9px 10px; }
+.tbl.tbl-compact th { font-size: 10px; letter-spacing: 0.04em; white-space: nowrap; }
+.tbl.tbl-compact td { font-size: 12.5px; }
+.tbl.tbl-compact .btn-sm { padding: 4px 9px; font-size: 11px; white-space: nowrap; }
+.tbl.tbl-compact .badge { font-size: 10px; padding: 2px 7px; white-space: nowrap; }

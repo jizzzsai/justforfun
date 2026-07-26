@@ -258,6 +258,18 @@ const RESEARCHER_DEFAULT_BUDGET_ROWS = scaledBudgetRows(100000, RESEARCHER_DEFAU
 // Style for identity fields auto-filled from the profile (shown read-only).
 const roStyle = { background: "var(--paper-warm)", color: "var(--ink-2)", cursor: "not-allowed" };
 
+/* Upload every pending file at once instead of one after another (a sequential
+   loop made submitting with several PDFs feel frozen) and report any that fail
+   instead of silently dropping them. Returns the names that did not upload. */
+async function uploadAllDocuments(appId, files) {
+  const results = await Promise.all((files || []).map(it =>
+    window.DB.uploadDocument(appId, it.file, it.docType || null)
+      .then(() => null)
+      .catch(() => (it.file && it.file.name) || "a file")
+  ));
+  return results.filter(Boolean);
+}
+
 /* Banner shown when a researcher re-opens an application that a reviewer sent
    back. Everything they already filled in is still loaded — this tells them what
    still needs fixing before they resubmit. */
@@ -484,14 +496,18 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         grant_type: sys.id,
         co_members: isR3 ? coMembers.filter(m => (m.name || "").trim()) : null,
       }, submit, editingId);
-      for (const it of files) { try { await window.DB.uploadDocument(app.id, it.file, it.docType || null); } catch (e) {} }
+      const failedUploads = await uploadAllDocuments(app.id, files);
       if (!submit) {
         setEditingId(app.id);
         if (setSelectedApplicationId) setSelectedApplicationId(app.id);
       } else if (setSelectedApplicationId) {
         setSelectedApplicationId(null);
       }
-      toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
+      if (failedUploads.length) {
+        toast(failedUploads.length + " file(s) could not be uploaded: " + failedUploads.join(", ") + ". Open the application and add them again.");
+      } else {
+        toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
+      }
       navigate("r-applications");
     } catch (ex) { setErr((ex && ex.message) || "Could not save the application."); setBusy(false); }
   }
@@ -509,7 +525,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
           <>
             <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
             <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
-              <Icon name="Send" size={13} /> {busy ? "Saving…" : "Submit Application"}
+              <Icon name="Send" size={13} /> {busy ? (files.length ? "Uploading " + files.length + " file(s)…" : "Saving…") : "Submit Application"}
             </button>
           </>
         }
@@ -834,7 +850,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
           {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, alignSelf: "center", marginRight: "auto" }}>{err}</div>}
           <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
           <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
-            <Icon name="Send" size={13} /> {busy ? "Saving…" : "Submit Application"}
+            <Icon name="Send" size={13} /> {busy ? (files.length ? "Uploading " + files.length + " file(s)…" : "Saving…") : "Submit Application"}
           </button>
         </div>
       </div>
@@ -977,11 +993,15 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         co_members: authors.filter(m => (m.name || "").trim()),
         conference_info: confInfo,
       }, submit, editingId);
-      for (const it of files) { try { await window.DB.uploadDocument(app.id, it.file, it.docType || null); } catch (e) {} }
+      const failedUploads = await uploadAllDocuments(app.id, files);
       if (!submit) { setEditingId(app.id);
         if (setSelectedApplicationId) setSelectedApplicationId(app.id); }
       else if (setSelectedApplicationId) setSelectedApplicationId(null);
-      toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
+      if (failedUploads.length) {
+        toast(failedUploads.length + " file(s) could not be uploaded: " + failedUploads.join(", ") + ". Open the application and add them again.");
+      } else {
+        toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
+      }
       navigate("r-applications");
     } catch (ex) { setErr((ex && ex.message) || "Could not save the application."); setBusy(false); }
   }
@@ -1000,7 +1020,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
           <>
             <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
             <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
-              <Icon name="Send" size={13} /> {busy ? "Saving…" : "Submit Application"}
+              <Icon name="Send" size={13} /> {busy ? (files.length ? "Uploading " + files.length + " file(s)…" : "Saving…") : "Submit Application"}
             </button>
           </>
         }
@@ -1270,7 +1290,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
           {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, alignSelf: "center", marginRight: "auto" }}>{err}</div>}
           <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
           <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
-            <Icon name="Send" size={13} /> {busy ? "Saving…" : "Submit Application"}
+            <Icon name="Send" size={13} /> {busy ? (files.length ? "Uploading " + files.length + " file(s)…" : "Saving…") : "Submit Application"}
           </button>
         </div>
       </div>
@@ -1428,11 +1448,15 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         requested_amount: requested, duration_months: 12,
         grant_type: "au_r4", pub_info: pubInfo, co_members: authors.filter(a => (a.name || "").trim()),
       }, submit, editingId);
-      for (const it of files) { try { await window.DB.uploadDocument(app.id, it.file, it.docType || null); } catch (e) {} }
+      const failedUploads = await uploadAllDocuments(app.id, files);
       if (!submit) { setEditingId(app.id);
         if (setSelectedApplicationId) setSelectedApplicationId(app.id); }
       else if (setSelectedApplicationId) setSelectedApplicationId(null);
-      toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
+      if (failedUploads.length) {
+        toast(failedUploads.length + " file(s) could not be uploaded: " + failedUploads.join(", ") + ". Open the application and add them again.");
+      } else {
+        toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
+      }
       navigate("r-applications");
     } catch (ex) { setErr((ex && ex.message) || "Could not save the application."); setBusy(false); }
   }
@@ -1450,7 +1474,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           <>
             <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
             <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
-              <Icon name="Send" size={13} /> {busy ? "Saving…" : "Submit Application"}
+              <Icon name="Send" size={13} /> {busy ? (files.length ? "Uploading " + files.length + " file(s)…" : "Saving…") : "Submit Application"}
             </button>
           </>
         }
@@ -1703,7 +1727,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, alignSelf: "center", marginRight: "auto" }}>{err}</div>}
           <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>Save as Draft</button>
           <button className="btn btn-primary" disabled={busy || !allDecl || turnitinBad} onClick={() => save(true)}>
-            <Icon name="Send" size={13} /> {busy ? "Saving…" : "Submit Application"}
+            <Icon name="Send" size={13} /> {busy ? (files.length ? "Uploading " + files.length + " file(s)…" : "Saving…") : "Submit Application"}
           </button>
         </div>
       </div>

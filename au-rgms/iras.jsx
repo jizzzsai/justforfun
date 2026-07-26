@@ -629,7 +629,7 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
           try { await window.DB.markPaid(p.id, p.instalment, app.id); toast("Phase " + p.instalment + " paid for " + app.code); load(); }
           catch (e) { toast("Error: " + (e.message || e)); }
         },
-      })}>Pay Phase {p.instalment}</button>
+      })}>Pay {p.pct}%</button>
     );
   };
 
@@ -650,21 +650,18 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
         {apps === null && <div style={{ padding: "36px", textAlign: "center", color: "var(--ink-3)" }}>Loading payments…</div>}
         {apps && apps.length === 0 && <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>No approved grants yet. Approve an application (as President) to set up its 30 / 40 / 30 payments.</div>}
         {apps && apps.length > 0 && (
-          <table className="tbl">
+          <div style={{ overflowX: "auto" }}>
+          <table className="tbl tbl-compact">
             <thead>
               <tr>
-                <th>Application ID</th>
-                <th>Research Title</th>
-                <th>System</th>
+                <th>Application</th>
                 <th>Researcher</th>
-                <th>Faculty / Department</th>
-                <th style={{ textAlign: "right" }}>Requested</th>
                 <th style={{ textAlign: "right" }}>Approved</th>
                 <th style={{ textAlign: "right" }}>Disbursed</th>
                 <th>Status</th>
-                <th>Phase 1 · 30%</th>
-                <th>Phase 2 · 40%</th>
-                <th>Phase 3 · 30%</th>
+                <th style={{ textAlign: "center" }}>Phase 1 · 30%</th>
+                <th style={{ textAlign: "center" }}>Phase 2 · 40%</th>
+                <th style={{ textAlign: "center" }}>Phase 3 · 30%</th>
               </tr>
             </thead>
             <tbody>
@@ -674,31 +671,44 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
                 const gt = a.grant_type || "au_r1";
                 const sysLabel = gt === "au_r3" ? "AU-R3" : gt === "au_r4" ? "AU-R4" : "AU-R1";
                 const paidSum = (a.payments || []).filter(x => x.status === "paid").reduce((s, x) => s + Number(x.amount || 0), 0);
+                const approved = Number(a.approved_amount || 0);
+                const requested = Number(a.requested_amount || 0);
                 return (
                   <tr key={a.id}>
-                    <td><span className="id">{a.code}</span></td>
-                    <td className="title-cell">
-                      <div className="t" style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div>
+                    {/* Application: id + system badge on one line, title beneath */}
+                    <td style={{ maxWidth: 260 }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <span className="id" style={{ fontSize: 11 }}>{a.code}</span>
+                        <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 999, color: "var(--au-crimson)", background: "var(--au-crimson-soft)" }}>{sysLabel}</span>
+                      </div>
+                      <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={a.title}>{a.title}</div>
                     </td>
-                    <td>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 8px", borderRadius: 999, color: "var(--au-crimson)", background: "var(--au-crimson-soft)" }}>{sysLabel}</span>
+                    {/* Researcher: name + faculty·dept beneath */}
+                    <td style={{ maxWidth: 175 }}>
+                      <div style={{ fontSize: 12 }}>{a.researcher ? a.researcher.full_name : "—"}</div>
+                      <div style={{ fontSize: 10.5, color: "var(--ink-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                        title={(a.faculty || "") + (a.department ? " · " + a.department : "")}>
+                        {(a.faculty || "—")}{a.department ? " · " + a.department : ""}
+                      </div>
                     </td>
-                    <td style={{ fontSize: 12 }}>{a.researcher ? a.researcher.full_name : "—"}</td>
-                    <td style={{ fontSize: 11, color: "var(--ink-3)", maxWidth: 170, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {(a.faculty || "—")}{a.department ? " · " + a.department : ""}
+                    {/* Approved (with requested beneath when they differ) */}
+                    <td style={{ textAlign: "right" }}>
+                      <div style={{ fontWeight: 600, fontFamily: "ui-monospace, monospace", fontSize: 12.5 }}>{approved ? fmtBaht(approved) : "—"}</div>
+                      {approved !== requested && requested > 0 && (
+                        <div style={{ fontSize: 10.5, color: "var(--ink-3)" }}>of {fmtBaht(requested)}</div>
+                      )}
                     </td>
-                    <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{fmtBaht(Number(a.requested_amount || 0))}</td>
-                    <td style={{ textAlign: "right", fontWeight: 600 }}>{a.approved_amount ? fmtBaht(Number(a.approved_amount)) : "—"}</td>
-                    <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", color: paidSum > 0 ? "var(--status-approved)" : "var(--ink-3)" }}>{fmtBaht(paidSum)}</td>
+                    <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace", fontSize: 12.5, color: paidSum > 0 ? "var(--status-approved)" : "var(--ink-3)" }}>{fmtBaht(paidSum)}</td>
                     <td><Badge status={window.DB.statusBadge(a.status)} /></td>
-                    <td>{payCell(a, p[1])}</td>
-                    <td>{payCell(a, p[2])}</td>
-                    <td>{payCell(a, p[3])}</td>
+                    <td style={{ textAlign: "center" }}>{payCell(a, p[1])}</td>
+                    <td style={{ textAlign: "center" }}>{payCell(a, p[2])}</td>
+                    <td style={{ textAlign: "center" }}>{payCell(a, p[3])}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </>
