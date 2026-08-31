@@ -32,6 +32,61 @@ const ROLE_LABEL = {
   expert: "Expert reviewer assistant", admin: "Admin assistant",
 };
 
+const AI_POSITION_KEY = "au-rgms-ai-position-v1";
+const AI_FAB_SIZE = 56;
+const AI_PANEL_WIDTH = 384;
+const AI_PANEL_HEIGHT = 540;
+const AI_VIEWPORT_MARGIN = 16;
+const AI_PANEL_GAP = 12;
+
+function clampAIPosition(position, viewport) {
+  const maxX = Math.max(AI_VIEWPORT_MARGIN, viewport.width - AI_FAB_SIZE - AI_VIEWPORT_MARGIN);
+  const maxY = Math.max(AI_VIEWPORT_MARGIN, viewport.height - AI_FAB_SIZE - AI_VIEWPORT_MARGIN);
+  return {
+    x: Math.min(Math.max(Number(position.x) || 0, AI_VIEWPORT_MARGIN), maxX),
+    y: Math.min(Math.max(Number(position.y) || 0, AI_VIEWPORT_MARGIN), maxY),
+  };
+}
+
+function initialAIPosition(viewport) {
+  try {
+    const saved = JSON.parse(localStorage.getItem(AI_POSITION_KEY));
+    if (saved && Number.isFinite(saved.x) && Number.isFinite(saved.y)) {
+      return clampAIPosition(saved, viewport);
+    }
+  } catch (e) {}
+  return clampAIPosition({
+    x: viewport.width - AI_FAB_SIZE - 24,
+    y: viewport.height - AI_FAB_SIZE - 24,
+  }, viewport);
+}
+
+function getAIPanelPosition(position, viewport) {
+  const width = Math.min(AI_PANEL_WIDTH, viewport.width - (AI_VIEWPORT_MARGIN * 2));
+  const height = Math.min(AI_PANEL_HEIGHT, Math.max(240, viewport.height - 140));
+  const maxLeft = Math.max(AI_VIEWPORT_MARGIN, viewport.width - width - AI_VIEWPORT_MARGIN);
+  const maxTop = Math.max(AI_VIEWPORT_MARGIN, viewport.height - height - AI_VIEWPORT_MARGIN);
+  const alignedLeft = Math.min(
+    Math.max(position.x + AI_FAB_SIZE - width, AI_VIEWPORT_MARGIN),
+    maxLeft
+  );
+  const above = position.y - AI_PANEL_GAP - height;
+  const below = position.y + AI_FAB_SIZE + AI_PANEL_GAP;
+  if (above >= AI_VIEWPORT_MARGIN) return { left: alignedLeft, top: above };
+  if (below <= maxTop) return { left: alignedLeft, top: below };
+
+  const centeredTop = Math.min(
+    Math.max(position.y + (AI_FAB_SIZE / 2) - (height / 2), AI_VIEWPORT_MARGIN),
+    maxTop
+  );
+  const leftOfButton = position.x - AI_PANEL_GAP - width;
+  if (leftOfButton >= AI_VIEWPORT_MARGIN) return { left: leftOfButton, top: centeredTop };
+  const rightOfButton = position.x + AI_FAB_SIZE + AI_PANEL_GAP;
+  if (rightOfButton <= maxLeft) return { left: rightOfButton, top: centeredTop };
+
+  return { left: alignedLeft, top: centeredTop };
+}
+
 async function buildAIContext() {
   let prof = null;
   try { prof = await window.AUTH.profile(); } catch (e) {}
@@ -75,7 +130,12 @@ function AIChat() {
   const [ctx, setCtx] = useState(null);
   const [role, setRole] = useState(null);
   const [msgs, setMsgs] = useState([{ role: "assistant", content: ROLE_INTRO._default }]);
+  const [viewport, setViewport] = useState(() => ({ width: window.innerWidth, height: window.innerHeight }));
+  const [position, setPosition] = useState(() => initialAIPosition({ width: window.innerWidth, height: window.innerHeight }));
+  const [dragging, setDragging] = useState(false);
   const bodyRef = useRef(null);
+  const dragRef = useRef(null);
+  const suppressClickRef = useRef(false);
 
   useEffect(() => {
     let alive = true;
@@ -92,6 +152,66 @@ function AIChat() {
     const el = bodyRef.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [msgs, busy, open]);
+
+  useEffect(() => {
+    function onResize() {
+      const nextViewport = { width: window.innerWidth, height: window.innerHeight };
+      setViewport(nextViewport);
+      setPosition(current => clampAIPosition(current, nextViewport));
+    }
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  useEffect(() => {
+    try { localStorage.setItem(AI_POSITION_KEY, JSON.stringify(position)); } catch (e) {}
+  }, [position]);
+
+  function startDrag(e, source) {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    if (source === "panel" && e.target.closest("button, input, textarea, select, a")) return;
+    dragRef.current = {
+      pointerId: e.pointerId,
+      source,
+      startX: e.clientX,
+      startY: e.clientY,
+      originX: position.x,
+      originY: position.y,
+      moved: false,
+    };
+    if (e.currentTarget.setPointerCapture) e.currentTarget.setPointerCapture(e.pointerId);
+  }
+
+  function moveDrag(e) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    const dx = e.clientX - drag.startX;
+    const dy = e.clientY - drag.startY;
+    if (!drag.moved && Math.hypot(dx, dy) < 5) return;
+    drag.moved = true;
+    setDragging(true);
+    e.preventDefault();
+    setPosition(clampAIPosition({ x: drag.originX + dx, y: drag.originY + dy }, viewport));
+  }
+
+  function endDrag(e) {
+    const drag = dragRef.current;
+    if (!drag || drag.pointerId !== e.pointerId) return;
+    if (e.currentTarget.releasePointerCapture && e.currentTarget.hasPointerCapture && e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+    if (drag.moved && drag.source === "fab") suppressClickRef.current = true;
+    dragRef.current = null;
+    setDragging(false);
+  }
+
+  function toggleOpen() {
+    if (suppressClickRef.current) {
+      suppressClickRef.current = false;
+      return;
+    }
+    setOpen(v => !v);
+  }
 
   async function send(e) {
     if (e) e.preventDefault();
@@ -117,27 +237,45 @@ function AIChat() {
   }
 
   const suggestions = ROLE_SUGGEST[role] || ROLE_SUGGEST._default;
+  const panelPosition = getAIPanelPosition(position, viewport);
 
   return (
     <>
       <button
-        className="ai-fab"
-        onClick={() => setOpen((v) => !v)}
-        title="AU AI"
+        className={`ai-fab${dragging ? " ai-dragging" : ""}`}
+        style={{ left: position.x, top: position.y }}
+        onPointerDown={(e) => startDrag(e, "fab")}
+        onPointerMove={moveDrag}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        onClick={toggleOpen}
+        title="Drag to move · Click to open AU AI"
         aria-label="AU AI assistant"
       >
         <Icon name={open ? "ChevronDown" : "HelpCircle"} size={22} />
       </button>
 
       {open && (
-        <div className="ai-panel" role="dialog" aria-label="AU AI assistant">
-          <div className="ai-head">
+        <div
+          className={`ai-panel${dragging ? " ai-dragging" : ""}`}
+          style={{ left: panelPosition.left, top: panelPosition.top }}
+          role="dialog"
+          aria-label="AU AI assistant"
+        >
+          <div
+            className="ai-head"
+            onPointerDown={(e) => startDrag(e, "panel")}
+            onPointerMove={moveDrag}
+            onPointerUp={endDrag}
+            onPointerCancel={endDrag}
+            title="Drag to move"
+          >
             <div className="ai-bot-ic">
               <Icon name="GraduationCap" size={16} />
             </div>
             <div className="ai-head-t">
               <b>AU AI</b>
-              <span>{role ? ROLE_LABEL[role] || "AU research grants" : "AU research grants · RASSC"}</span>
+              <span>{role ? ROLE_LABEL[role] || "AU research grants" : "AU research grants · RASSC"} · Drag to move</span>
             </div>
             <button className="ai-x" onClick={() => setOpen(false)} aria-label="Close">
               <Icon name="X" size={16} />
