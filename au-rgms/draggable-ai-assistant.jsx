@@ -1,7 +1,7 @@
 /* AU AI — role-aware floating assistant for Assumption University research grants.
-   Talks to /api/chat (serverless -> Google Gemini). Gathers a role-scoped data
+   Talks to /api/ai-response (serverless -> Google Gemini). Gathers a role-scoped data
    snapshot (RLS-limited, so it can only ever use data the signed-in user may see)
-   and sends it with each message. Mounts in its own root so app.jsx is untouched. */
+   and sends it with each message. Mounts in its own root so the main website file stays untouched. */
 const { useState, useRef, useEffect } = React;
 
 const ROLE_INTRO = {
@@ -222,7 +222,7 @@ function AIChat() {
     setInput("");
     setBusy(true);
     try {
-      const r = await fetch("/api/chat", {
+      const r = await fetch("/api/ai-response", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next, context: ctx }),

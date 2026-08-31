@@ -142,7 +142,7 @@ function GrantHelperChat({ profile }) {
     const next = [...msgs, { role: "user", content: q }];
     setMsgs(next); setInput(""); setBusy(true);
     try {
-      const r = await fetch("/api/chat", {
+      const r = await fetch("/api/ai-response", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next, context: ctx }),
       });
