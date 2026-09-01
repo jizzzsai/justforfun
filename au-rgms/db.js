@@ -113,15 +113,18 @@
   }
   // map a DB application row -> the shape the QueueTable / tables expect
   function mapRow(a) {
+    var requested = a.grant_type === "au_r3" ? 3500 : a.requested_amount;
+    var approved = a.grant_type === "au_r3" && a.approved_amount != null ? 3500 : a.approved_amount;
     return {
       id: a.code, _uuid: a.id, title: a.title,
       researcher: { name: a.researcher ? a.researcher.full_name : "—" },
       faculty: a.faculty, department: a.department,
       submittedAt: a.submitted_at ? fmtDate(a.submitted_at) : fmtDate(a.created_at),
-      budgetTotal: a.requested_amount, requested_amount: a.requested_amount,
+      budgetTotal: requested, requested_amount: requested,
       status: badge(a.status), statusKey: a.status,
       grant_type: a.grant_type || "au_r1", conference_info: a.conference_info || null, pub_info: a.pub_info || null,
-      approved_amount: a.approved_amount,
+      approved_amount: approved,
+      events: a.events || [],
     };
   }
 
@@ -170,6 +173,29 @@
     async createApplication(payload, submit, appId) {
       var me = await uid();
       if (!me) throw new Error("You must be signed in.");
+      if (submit) {
+        var grantType = payload.grant_type || "au_r1";
+        var joinedDate = grantType === "au_r3"
+          ? payload.conference_info && payload.conference_info.researcherJoinedDate
+          : payload.pub_info && payload.pub_info.researcherJoinedDate;
+        if (!joinedDate) throw new Error("Select the date you joined Assumption University.");
+        var joined = new Date(joinedDate + "T00:00:00");
+        if (isNaN(joined.getTime())) throw new Error("Enter a valid university joined date.");
+        var eligibleOn = new Date(joined.getFullYear() + 1, joined.getMonth(), joined.getDate());
+        var today = new Date();
+        today.setHours(0, 0, 0, 0);
+        if (today < eligibleOn) throw new Error("Researchers must complete at least one year of service at Assumption University before applying.");
+        if (grantType === "au_r3") {
+          var conference = payload.conference_info || {};
+          if (!String(conference.confName || "").trim()) throw new Error("Enter the conference name.");
+          if (!String(conference.organizer || "").trim()) throw new Error("Enter the conference organizer.");
+          if (!String(conference.conferenceLocation || "").trim()) throw new Error("Enter the conference location.");
+          if (!conference.presentationDate) throw new Error("Select the presentation date.");
+          if (!String(conference.paperAbstract || "").trim()) throw new Error("Enter the paper abstract.");
+          if (!String(conference.journalDb || "").trim()) throw new Error("Select the Journal Database / Index.");
+          if (!String(conference.journalClassification || "").trim()) throw new Error("Select or enter the journal classification.");
+        }
+      }
       var existing = null;
       if (appId) {
         var ex = await sb.from("applications").select("id,code,status,submitted_at")
@@ -198,6 +224,11 @@
         status: submit ? "submitted" : "draft",
         submitted_at: submit ? new Date().toISOString() : (existing ? existing.submitted_at : null),
       };
+      if (row.grant_type === "au_r3") {
+        row.requested_amount = 3500;
+        row.duration_months = 1;
+        row.budget_breakdown = [{ item: "Fixed AU-R3 Grant", amount: 3500 }];
+      }
       if (!existing) {
         // code is assigned server-side by the set_application_code trigger,
         // which sees every row (RLS-exempt) so it can't collide across researchers.
@@ -228,7 +259,10 @@
       var res = await sb.from("application_documents").insert({
         application_id: appId, name: file.name, doc_type: docType || null, storage_path: key, uploaded_by: me,
       }).select().single();
-      if (res.error) throw res.error;
+      if (res.error) {
+        try { await sb.storage.from("documents").remove([key]); } catch (e) {}
+        throw res.error;
+      }
       return res.data;
     },
 
@@ -274,19 +308,36 @@
       if (res.error) throw res.error;
       return (res.data || []).map(mapRow);
     },
+    async grantPaymentQueue(grantType) {
+      var res = await sb.from("applications")
+        .select("*, researcher:profiles(full_name), events:application_events(action,note,created_at)")
+        .eq("grant_type", grantType)
+        .in("status", ["approved", "active", "completed"])
+        .order("decided_at", { ascending: true, nullsFirst: false });
+      if (res.error) throw res.error;
+      return (res.data || []).map(mapRow);
+    },
     async deanQueue() { return this.queue("submitted"); },
 
     async applicationDetail(appId) {
       var isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appId || "");
       var res = await sb.from("applications")
-        .select("*, researcher:profiles(full_name,email,name_title,title,au_id,phone,office_room), documents:application_documents(*), reviews(*, reviewer:profiles(full_name,email,title,faculty,department))")
+        .select("*, researcher:profiles(full_name,email,name_title,title,au_id,phone,office_room), documents:application_documents(*), reviews(*, reviewer:profiles(full_name,email,title,faculty,department)), events:application_events(*, actor:profiles(full_name)), payments(*), reports(*)")
         .eq(isUuid ? "id" : "code", appId).single();
       if (res.error) throw res.error;
       var a = res.data;
+      if (a.grant_type === "au_r3") {
+        a.requested_amount = 3500;
+        if (a.approved_amount != null) a.approved_amount = 3500;
+        a.budget_breakdown = [{ item: "Fixed AU-R3 Grant", amount: 3500 }];
+      }
       a.statusBadge = badge(a.status);
       a.documents = (a.documents || []).map(mapDocument);
       a.reviews = (a.reviews || []).sort(function (x, y) {
         return new Date(y.submitted_at || 0) - new Date(x.submitted_at || 0);
+      });
+      a.events = (a.events || []).sort(function (x, y) {
+        return new Date(x.created_at || 0) - new Date(y.created_at || 0);
       });
       return a;
     },
@@ -385,20 +436,20 @@
     },
 
     // advance / return / reject an application
-    async transition(appId, fromStatus, kind, note) {
+    async transition(appId, fromStatus, kind, note, requestedLabel) {
       var me = await uid();
       var role = await myRole();
-      var to, labelOverride = null;
+      var to, labelOverride = requestedLabel || null;
       if (kind === "return") to = "returned";
       else if (kind === "reject") to = "rejected";
       else {
         var n = NEXT[fromStatus]; if (!n) throw new Error("No next step from " + fromStatus); to = n.to;
-        // AU-R3 (paper presentation) and AU-R4 (publication reward) skip the
-        // Faculty Committee: the Dean forwards straight to IRAS.
+        // AU-R3 (paper presentation) skips the Faculty Committee. AU-R4 follows
+        // the AU-R1 review path: Dean -> Faculty Committee -> research office.
         if (fromStatus === "submitted") {
           try {
             var gt = await sb.from("applications").select("grant_type").eq("id", appId).single();
-            if (gt.data && (gt.data.grant_type === "au_r3" || gt.data.grant_type === "au_r4")) {
+            if (gt.data && gt.data.grant_type === "au_r3") {
               to = "iras_review";
               labelOverride = "Dean approved — forwarded to IRAS";
             }
@@ -427,8 +478,12 @@
       } catch (e) {}
       if (to === "approved") {
         try {
-          var amt = Number(app.approved_amount || app.requested_amount || 0);
-          if (!app.approved_amount) await sb.from("applications").update({ approved_amount: amt }).eq("id", appId);
+          var amt = app.grant_type === "au_r3" ? 3500 : Number(app.approved_amount || app.requested_amount || 0);
+          if (app.grant_type === "au_r3") {
+            await sb.from("applications").update({ requested_amount: 3500, approved_amount: 3500, budget_breakdown: [{ item: "Fixed AU-R3 Grant", amount: 3500 }] }).eq("id", appId);
+            app.requested_amount = 3500;
+            app.approved_amount = 3500;
+          } else if (!app.approved_amount) await sb.from("applications").update({ approved_amount: amt }).eq("id", appId);
           await sb.from("contracts").insert({ application_id: appId, contract_no: "CT-" + app.code, amount: amt, status: "issued" });
         } catch (e) {}
       }
@@ -444,7 +499,8 @@
     // Finance single-payment progression for AU-R3 / AU-R4 (approved → active "paid" → completed).
     async payGrantOnce(appId, fromStatus, note) {
       var kind = "advance";
-      return await this.transition(appId, fromStatus, kind, note);
+      var label = fromStatus === "approved" ? "Finance marked payment as paid" : "Finance completed payment record";
+      return await this.transition(appId, fromStatus, kind, note, label);
     },
 
     async submitExpertReview(appId, payload) {
@@ -557,8 +613,12 @@
 
     async ofmPayments() {
       var res = await sb.from("applications")
-        .select("*, researcher:profiles(full_name), payments(*), reports(kind,status), contracts(contract_no,status)")
-        .in("status", ["approved", "active", "completed"]).order("decided_at", { ascending: false });
+        .select("*, researcher:profiles(full_name), payments(*), reports(kind,status), contracts(contract_no,status), events:application_events(action,note,created_at)")
+        // AU-R1 alone uses the 30 / 40 / 30 milestone schedule. AU-R3 and
+        // AU-R4 use their own single-payment queues.
+        .in("status", ["approved", "active", "completed"])
+        .or("grant_type.eq.au_r1,grant_type.is.null")
+        .order("decided_at", { ascending: false });
       if (res.error) throw res.error;
       var apps = res.data || [];
       for (var i = 0; i < apps.length; i++) {
@@ -573,14 +633,22 @@
           ]).select();
           a.payments = ins.data || [];
         }
+        // Older test records may contain duplicate rows from repeated setup
+        // calls. Show one authoritative row per phase, preferring a paid row.
+        var uniquePayments = {};
+        (a.payments || []).forEach(function (payment) {
+          var previous = uniquePayments[payment.instalment];
+          if (!previous || (payment.status === "paid" && previous.status !== "paid")) uniquePayments[payment.instalment] = payment;
+        });
+        a.payments = Object.keys(uniquePayments).map(function (key) { return uniquePayments[key]; });
         a.payments.sort(function (x, y) { return x.instalment - y.instalment; });
       }
       return apps;
     },
-    // can this instalment be paid yet? (report-gated)
+    // Can this instalment be paid yet?
     // The three AU-R1 payments run strictly in order: Phase 2 only opens after
-    // Phase 1 is paid AND the progress report is accepted; Phase 3 only after
-    // Phase 2 is paid AND the final report is accepted.
+    // Phase 1 is paid AND the progress report is accepted; Phase 3 opens only
+    // after Phase 2 is paid AND the final report is accepted.
     payable: function (app, inst) {
       if (!app) return false;
       var reps = app.reports || [];
@@ -599,39 +667,89 @@
       var paid = function (i) { return (app.payments || []).some(function (p) { return p.instalment === i && p.status === "paid"; }); };
       if (inst === 1) return "Waiting for RASSC / IRAS approval.";
       if (inst === 2) {
-        if (!paid(1)) return "Phase 1 must be paid first.";
+        if (!paid(1)) return "Phase 1 must be marked paid by Finance first.";
         return "Waiting for the progress report to be accepted.";
       }
       if (inst === 3) {
-        if (!paid(2)) return "Phase 2 must be paid first.";
+        if (!paid(2)) return "Phase 2 must be marked paid by Finance first.";
         return "Waiting for the final report to be accepted.";
       }
       return "";
     },
-    async markPaid(paymentId, instalment, appId) {
-      var r = await sb.from("payments").update({ status: "paid", paid_at: new Date().toISOString() }).eq("id", paymentId);
+    async markPaid(paymentId, instalment, appId, note) {
+      var me = await uid();
+      if (!me) throw new Error("You must be signed in.");
+      var currentPayment = await sb.from("payments").select("status,application_id").eq("id", paymentId).single();
+      if (currentPayment.error) throw currentPayment.error;
+      if (!currentPayment.data || currentPayment.data.application_id !== appId) throw new Error("Payment phase does not match this application.");
+      if (currentPayment.data.status === "paid") return currentPayment.data;
+      if (currentPayment.data.status !== "pending") throw new Error("This payment phase cannot be paid.");
+      var gate = await sb.from("applications").select("status,payments(instalment,status),reports(kind,status)").eq("id", appId).single();
+      if (gate.error) throw gate.error;
+      if (!this.payable(gate.data, instalment)) throw new Error(this.payBlockedReason(gate.data, instalment) || "This phase is not ready for payment.");
+      var paidAt = new Date().toISOString();
+      var r = await sb.from("payments").update({ status: "paid", paid_at: paidAt, processed_by: me }).eq("id", paymentId).select().single();
       if (r.error) throw r.error;
       if (instalment === 1) await sb.from("applications").update({ status: "active" }).eq("id", appId);
       if (instalment === 3) await sb.from("applications").update({ status: "completed" }).eq("id", appId);
-    },
-    async submitReport(appId, kind) {
-      var me = await uid();
-      var r = await sb.from("reports").insert({
-        application_id: appId, kind: kind, status: "submitted",
-        summary: (kind === "progress" ? "Progress" : "Final") + " report submitted by researcher.",
-      }).select().single();
-      if (r.error) throw r.error;
-      try { await sb.from("application_events").insert({ application_id: appId, actor_id: me, actor_role: "researcher", action: (kind === "progress" ? "Progress" : "Final") + " report submitted" }); } catch (e) {}
+      await sb.from("application_events").insert({
+        application_id: appId,
+        actor_id: me,
+        actor_role: "ofm",
+        action: "Finance paid Phase " + instalment,
+        from_status: instalment === 1 ? "approved" : "active",
+        to_status: instalment === 3 ? "completed" : "active",
+        note: note || null,
+      });
       return r.data;
     },
-    async myReports(kind) {
+    async submitReport(appId, kind, details) {
+      var me = await uid();
+      if (["progress", "final"].indexOf(kind) < 0) throw new Error("Unknown AU-R1 report type.");
+      var appCheck = await sb.from("applications")
+        .select("researcher_id,grant_type,status,payments(instalment,status),reports(id,kind,status)")
+        .eq("id", appId).single();
+      if (appCheck.error) throw appCheck.error;
+      var checkedApp = appCheck.data;
+      if (checkedApp.researcher_id !== me) throw new Error("You can submit reports only for your own AU-R1 grant.");
+      if (checkedApp.grant_type && checkedApp.grant_type !== "au_r1") throw new Error("Progress and final reports are available only for AU-R1 grants.");
+      var requiredPhase = kind === "progress" ? 1 : 2;
+      var priorApproved = (checkedApp.payments || []).some(function (payment) {
+        return Number(payment.instalment) === requiredPhase && payment.status === "paid";
+      });
+      if (!priorApproved) throw new Error("Finance must mark Phase " + requiredPhase + " as paid before you can submit this report.");
+      var existing = (checkedApp.reports || []).find(function (report) {
+        return report.kind === kind && ["submitted", "accepted"].indexOf(report.status) >= 0;
+      });
+      if (existing) throw new Error((kind === "progress" ? "Progress" : "Final") + " report is already " + (existing.status === "accepted" ? "accepted" : "waiting for RASSC review") + ".");
+      var reportDetails = details || {};
+      var reportSummary = (kind === "progress" ? "Progress" : "Final") + " report submitted by researcher and routed to RASSC.";
+      if (kind === "progress" && reportDetails.reporting_period) reportSummary += " Reporting period: " + reportDetails.reporting_period + ".";
+      if (reportDetails.summary) reportSummary += " Summary: " + String(reportDetails.summary).replace(/[\r\n]+/g, " ").slice(0, 1000);
+      if (kind === "progress" && reportDetails.budget_utilisation) reportSummary += " Budget utilisation: " + String(reportDetails.budget_utilisation).replace(/[\r\n]+/g, " ").slice(0, 500);
+      var r = await sb.from("reports").insert({
+        application_id: appId, kind: kind, status: "submitted",
+        summary: reportSummary,
+      }).select().single();
+      if (r.error) throw r.error;
+      try { await sb.from("application_events").insert({
+        application_id: appId, actor_id: me, actor_role: "researcher",
+        action: (kind === "progress" ? "Progress" : "Final") + " report submitted to RASSC",
+        note: "Waiting for RASSC acceptance before routing Phase " + (kind === "progress" ? "2 (40%)" : "3 (30%)") + " to Finance.",
+      }); } catch (e) {}
+      return r.data;
+    },
+    async myReports(kind, appId) {
       var apps = await this.myApplications();
-      var ids = (apps || []).map(function (a) { return a.id; });
+      var ids = (apps || []).filter(function (a) {
+        return !a.grant_type || a.grant_type === "au_r1";
+      }).map(function (a) { return a.id; });
       if (!ids.length) return [];
+      if (appId && ids.indexOf(appId) < 0) throw new Error("This AU-R1 project does not belong to the signed-in researcher.");
       var q = sb.from("reports")
         .select("*, application:applications(code,title)")
-        .in("application_id", ids)
         .order("submitted_at", { ascending: false });
+      q = appId ? q.eq("application_id", appId) : q.in("application_id", ids);
       if (kind) q = q.eq("kind", kind);
       var res = await q;
       if (res.error) throw res.error;
@@ -639,23 +757,38 @@
     },
     async reportQueue() {
       var res = await sb.from("reports")
-        .select("*, application:applications(code,title,researcher:profiles(full_name))")
+        .select("*, application:applications(code,title,grant_type,researcher:profiles(full_name),documents:application_documents(*))")
         .eq("status", "submitted").order("submitted_at", { ascending: true });
       if (res.error) throw res.error;
-      return res.data || [];
+      return (res.data || []).filter(function (report) {
+        return report.application && (!report.application.grant_type || report.application.grant_type === "au_r1");
+      }).map(function (report) {
+        if (report.application) report.application.documents = (report.application.documents || []).map(mapDocument);
+        return report;
+      });
     },
     async acceptReport(reportId) {
-      var r = await sb.from("reports").update({ status: "accepted" }).eq("id", reportId).select("*, application:applications(id,code)").single();
+      var me = await uid();
+      var role = await myRole();
+      if (role !== "iras") throw new Error("Only RASSC can accept milestone reports and release them to Finance.");
+      var current = await sb.from("reports")
+        .select("id,kind,status,application_id,application:applications(id,code,grant_type)")
+        .eq("id", reportId).single();
+      if (current.error) throw current.error;
+      if (!current.data.application || (current.data.application.grant_type && current.data.application.grant_type !== "au_r1")) {
+        throw new Error("Only AU-R1 milestone reports can be forwarded to Finance.");
+      }
+      if (current.data.status !== "submitted") throw new Error("This report is no longer awaiting RASSC review.");
+      var r = await sb.from("reports").update({ status: "accepted" }).eq("id", reportId).eq("status", "submitted")
+        .select("*, application:applications(id,code,grant_type)").single();
       if (r.error) throw r.error;
       try {
-        var me = await uid();
-        var role = await myRole();
         await sb.from("application_events").insert({
           application_id: r.data.application_id,
           actor_id: me,
           actor_role: role,
-          action: (r.data.kind === "progress" ? "Progress" : "Final") + " report accepted",
-          note: "Payment gate opened for " + (r.data.kind === "progress" ? "second" : "final") + " tranche.",
+          action: (r.data.kind === "progress" ? "Progress" : "Final") + " report accepted by RASSC and forwarded to Finance",
+          note: "Finance payment gate opened for Phase " + (r.data.kind === "progress" ? "2 (40%)" : "3 (30%)") + ".",
         });
       } catch (e) {}
       return r.data;
@@ -663,12 +796,17 @@
     async myGrant(grantType) {
       var me = await uid();
       var q = sb.from("applications")
-        .select("*, payments(*), reports(kind,status), contracts(contract_no,status,amount)")
+        .select("*, payments(*), reports(kind,status), contracts(contract_no,status,amount), events:application_events(action,note,created_at)")
         .eq("researcher_id", me).in("status", ["approved", "active", "completed"]);
-      if (grantType) q = q.eq("grant_type", grantType);
+      if (grantType === "au_r1") q = q.or("grant_type.eq.au_r1,grant_type.is.null");
+      else if (grantType) q = q.eq("grant_type", grantType);
       var res = await q.order("decided_at", { ascending: false }).limit(1);
       if (res.error) throw res.error;
       var a = (res.data && res.data[0]) || null;
+      if (a && a.grant_type === "au_r3") {
+        a.requested_amount = 3500;
+        if (a.approved_amount != null) a.approved_amount = 3500;
+      }
       if (a && a.payments) a.payments.sort(function (x, y) { return x.instalment - y.instalment; });
       return a;
     },
@@ -766,7 +904,8 @@
 
     async payPublicationGrant(grantId, note) {
       var res = await sb.from("publication_grants").update({
-        status: "paid", paid_at: new Date().toISOString(), payment_note: note || null, updated_at: new Date().toISOString(),
+        status: "paid", paid_at: new Date().toISOString(), payment_note: note || null,
+        updated_at: new Date().toISOString(),
       }).eq("id", grantId).select().single();
       if (res.error) throw res.error;
       return res.data;
@@ -901,11 +1040,11 @@
           // Downstream progress on this faculty's proposals (counts are RLS-scoped to the dean's faculty).
           var dsc = await this.statusCounts();
           var atRassc = dsc.iras_review || 0;
-          if (atRassc) push("dean-rassc", "Send", "Now at RASSC", atRassc + " proposal(s) from your faculty passed committee and are with RASSC.", "d-analytics", true);
+          if (atRassc) push("dean-rassc", "Send", "Now at RASSC", atRassc + " proposal(s) from your faculty passed committee and are with RASSC.", "d-history", true);
           var deanApproved = (dsc.approved || 0) + (dsc.active || 0) + (dsc.completed || 0);
-          if (deanApproved) push("dean-approved", "Award", "Approved", deanApproved + " proposal(s) from your faculty have been approved.", "d-analytics", true);
+          if (deanApproved) push("dean-approved", "Award", "Approved", deanApproved + " proposal(s) from your faculty have been approved.", "d-history", true);
           var deanRejected = dsc.rejected || 0;
-          if (deanRejected) push("dean-rejected", "AlertCircle", "Rejected", deanRejected + " proposal(s) from your faculty were rejected.", "d-analytics", false);
+          if (deanRejected) push("dean-rejected", "AlertCircle", "Rejected", deanRejected + " proposal(s) from your faculty were rejected.", "d-history", false);
         } else if (role === "committee") {
           var cq = await this.queue("committee_review"); if (cq.length) push("committee", "Users", "Committee", cq.length + " proposal(s) awaiting review.", "c-queue", true);
           // RASSC outcomes on proposals this member recommended to RASSC.
@@ -927,15 +1066,28 @@
         } else if (role === "president") {
           var pq = await this.queue("president_review"); if (pq.length) push("president", "Award", "President", pq.length + " proposal(s) awaiting final approval.", "p-queue", true);
         } else if (role === "ofm") {
-          var pay = await this.ofmPayments(); var due = (pay || []).filter(function (a) { return (a.payments || []).some(function (p) { return p.status !== "paid"; }); });
-          if (due.length) push("ofm", "Coins", "OFM", due.length + " research grant(s) with pending payment tranches.", "o-payments", true);
-          var pgp = await this.publicationGrantQueue(["payment_pending"]); if (pgp.length) push("pub-pay", "Coins", "Publication payments", pgp.length + " publication reward(s) ready to pay.", "o-publications", true);
+          var pay = await this.ofmPayments();
+          var readyPhases = [];
+          for (var payIndex = 0; payIndex < (pay || []).length; payIndex++) {
+            var payApp = pay[payIndex];
+            for (var phaseIndex = 0; phaseIndex < (payApp.payments || []).length; phaseIndex++) {
+              var payPhase = payApp.payments[phaseIndex];
+              if (payPhase.status !== "paid" && this.payable(payApp, payPhase.instalment)) readyPhases.push(payPhase);
+            }
+          }
+          if (readyPhases.length) push("ofm", "Coins", "Finance Office", readyPhases.length + " AU-R1 phase(s) ready for Finance approval after RASSC release.", "o-payments", true);
+          var pgp = await this.publicationGrantQueue(["payment_pending"]); if (pgp.length) push("pub-pay", "Coins", "Publication approvals", pgp.length + " publication reward(s) awaiting Finance approval.", "o-publications", true);
         } else if (role === "admin") {
           var ev = await this.auditEvents(); ev.slice(0, 5).forEach(function (e) { push("audit-" + e.id, "Clock", e.application ? e.application.code : "System", e.action, "a-audit", false); });
         }
       } catch (e) {}
       if (!items.length) push("quiet", "CheckCircle", "AU-RGMS", "No urgent items for your role right now.", null, false);
-      return items.slice(0, 8);
+      return items.sort(function (a, b) {
+        if (a.created_at && b.created_at) return new Date(b.created_at) - new Date(a.created_at);
+        if (a.created_at) return -1;
+        if (b.created_at) return 1;
+        return 0;
+      }).slice(0, 8);
     },
 
     async statusCounts(grantType) {
@@ -952,10 +1104,9 @@
       c._approved = (c.approved || 0) + (c.active || 0) + (c.completed || 0);
       return c;
     },
-    // per-faculty application stats (RLS-scoped: staff with full access see all faculties,
-    // a dean/committee see only their own faculty, a researcher sees only their own apps).
+    // Per-faculty analytics follow the normal Supabase role policies.
     async facultyStats() {
-      var r = await sb.from("applications").select("faculty,status,requested_amount,approved_amount");
+      var r = await sb.from("applications").select("faculty,status,requested_amount,approved_amount,grant_type");
       if (r.error) throw r.error;
       var map = {};
       (r.data || []).forEach(function (a) {
@@ -965,8 +1116,10 @@
         if (["approved", "active", "completed"].indexOf(a.status) >= 0) map[f].approved++;
         if (a.status === "active") map[f].active++;
         if (a.status === "completed") map[f].completed++;
-        map[f].requested_sum += Number(a.requested_amount || 0);
-        map[f].approved_sum += Number(a.approved_amount || 0);
+        var requestedAmount = a.grant_type === "au_r3" ? 3500 : Number(a.requested_amount || 0);
+        var approvedAmount = a.grant_type === "au_r3" && a.approved_amount != null ? 3500 : Number(a.approved_amount || 0);
+        map[f].requested_sum += requestedAmount;
+        map[f].approved_sum += approvedAmount;
       });
       return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.total - a.total; });
     },
@@ -1045,11 +1198,43 @@
       if (!res.ok || !data.ok) throw new Error(data.error || "Could not create the account.");
       return data;
     },
+    // Admin-only: update a login and its scoped profile through the serverless fn.
+    async adminUpdateUser(payload) {
+      var s = await sb.auth.getSession();
+      var token = s && s.data && s.data.session && s.data.session.access_token;
+      if (!token) throw new Error("You must be signed in as an administrator.");
+      var res = await fetch("/api/admin-user", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify(payload),
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok || !data.ok) throw new Error(data.error || "Could not update the account.");
+      return data;
+    },
+    // Admin-only: delete an auth account and its profile through the serverless fn.
+    async adminDeleteUser(id) {
+      var s = await sb.auth.getSession();
+      var token = s && s.data && s.data.session && s.data.session.access_token;
+      if (!token) throw new Error("You must be signed in as an administrator.");
+      var res = await fetch("/api/admin-user", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
+        body: JSON.stringify({ id: id }),
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok || !data.ok) throw new Error(data.error || "Could not delete the account.");
+      return data;
+    },
     // Save the signed-in user's own applicant details to their profile.
     // (role/faculty/email are locked server-side by the profiles_guard trigger.)
     async updateMyProfile(fields) {
       var me = await uid();
       if (!me) throw new Error("You must be signed in.");
+      var roleCheck = await sb.from("profiles").select("role").eq("id", me).single();
+      if (roleCheck.error || !roleCheck.data || roleCheck.data.role !== "admin") {
+        throw new Error("Account information can only be changed by an administrator.");
+      }
       var patch = {};
       ["full_name", "name_title", "au_id", "phone", "title", "department", "budget_split", "office_room"].forEach(function (k) {
         if (fields[k] !== undefined && fields[k] !== null) patch[k] = fields[k];

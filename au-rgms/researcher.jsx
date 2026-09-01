@@ -33,18 +33,19 @@ function buildR3Timeline(statusKey) {
   return tl;
 }
 
-// AU-R4 pipeline: Draft → Submitted → Dean → IRAS Verification → Approved → Payment → Paid.
+// AU-R4 follows the AU-R1 review handoff through the Faculty Committee.
 const R4_PIPELINE = [
   { key: "submission", label: "Submitted" },
   { key: "dean", label: "Dean Review" },
+  { key: "committee", label: "Faculty Committee Review" },
   { key: "iras", label: "IRAS Verification" },
-  { key: "approved", label: "Approved for Payment" },
-  { key: "payment", label: "Finance Processing" },
+  { key: "approved", label: "Approved by Research Office" },
+  { key: "payment", label: "Finance Payment" },
   { key: "paid", label: "Paid" },
 ];
 function buildR4Timeline(statusKey) {
-  const order = ["submission", "dean", "iras", "approved", "payment", "paid"];
-  const idxMap = { draft: 0, submitted: 1, iras_review: 2, approved: 3, active: 4, completed: 5, returned: 0, rejected: 0 };
+  const order = ["submission", "dean", "committee", "iras", "approved", "payment", "paid"];
+  const idxMap = { draft: 0, submitted: 1, committee_review: 2, iras_review: 3, approved: 4, active: 5, completed: 6, returned: 0, rejected: 0 };
   let idx = idxMap[statusKey]; if (idx === undefined) idx = 0;
   const tl = {};
   order.forEach((k, i) => { tl[k] = i < idx ? { done: true } : (i === idx ? { current: true } : {}); });
@@ -60,7 +61,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
   useEffect(() => {
     window.DB.statusCounts(grantType || undefined).then(setC).catch(() => setC({}));
     window.AUTH.profile().then(setMe).catch(() => {});
-    window.DB.myGrant().then(g => setGrant(g || false)).catch(() => setGrant(false));
+    window.DB.myGrant(grantType || "au_r1").then(g => setGrant(g || false)).catch(() => setGrant(false));
     window.DB.myApplications(grantType || undefined).then(setApps).catch(() => setApps([]));
   }, [grantType]);
   const isR3 = grantType === "au_r3";
@@ -68,13 +69,13 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
   const isSingle = isR3 || isR4; // AU-R3/AU-R4 use a single payment, not 30/40/30 tranches
   const n = (k) => (c ? (c[k] || 0) : "…");
   const latest = apps && apps.length ? apps[0] : null;
-  const singleGrant = isSingle && apps ? apps.find(a => ["approved", "active", "completed"].indexOf(a.status) >= 0) : null;
-  const r3PayLabel = { approved: "Approved for Payment", active: "Payment Processing", completed: "Paid / Completed" };
-  const approvedLabel = isR4 ? "Approved / Paid" : isR3 ? "Approved Conference Grants" : "Approved Projects";
+  const singleGrant = isSingle && grant && grant.grant_type === grantType ? grant : null;
+  const r3PayLabel = { approved: "Awaiting Finance Payment", active: "Paid", completed: "Completed" };
+  const approvedLabel = isR4 ? "Approved Publication Claims" : isR3 ? "Approved Conference Grants" : "Approved Projects";
   const pays = grant && grant.payments && grant.payments.length ? grant.payments.slice().sort((a, b) => a.instalment - b.instalment) : [];
   const grantTotal = grant ? Number(grant.approved_amount || grant.requested_amount || 0) : 0;
-  const released = pays.filter(p => p.status === "paid").reduce((s, p) => s + Number(p.amount || 0), 0);
-  const progressPct = grantTotal > 0 ? Math.round(released / grantTotal * 100) : 0;
+  const paidTotal = pays.filter(p => p.status === "paid").reduce((s, p) => s + Number(p.amount || 0), 0);
+  const progressPct = grantTotal > 0 ? Math.round(paidTotal / grantTotal * 100) : 0;
   const displayPays = pays.length ? pays : (grant ? [
     { id: "t1", instalment: 1, pct: 30, amount: Math.round(grantTotal * 0.30), status: "pending" },
     { id: "t2", instalment: 2, pct: 40, amount: grantTotal - 2 * Math.round(grantTotal * 0.30), status: "pending" },
@@ -102,7 +103,23 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
         <Stat label={approvedLabel} value={n("_approved")} icon="CheckCircle" tone="green" />
       </div>
 
-      <div className="grid-2">
+      <div className="card card-pad-0 mb-6">
+        <div className="card-head">
+          <h3>{sys.code} Application Pipeline{latest ? " · " + latest.code : ""}</h3>
+          <div className="grow"></div>
+          <button className="btn btn-ghost btn-sm" onClick={() => navigate("r-applications")}>
+            Open detail <Icon name="ArrowRight" size={12} />
+          </button>
+        </div>
+        <div className="card-body">
+          {!latest && <Empty title="No application to track yet" desc={"Your latest " + sys.code + " application's progress will appear here."} icon="Folder" />}
+          {latest && isR4 && <HTimeline steps={R4_PIPELINE} app={{ timeline: buildR4Timeline(latest.status) }} />}
+          {latest && isR3 && <HTimeline steps={R3_PIPELINE} app={{ timeline: buildR3Timeline(latest.status) }} />}
+          {latest && !isSingle && <HTimeline steps={RA.ALL_STAGES.slice(0, 9)} app={{ timeline: buildResearcherTimeline(latest.status) }} />}
+        </div>
+      </div>
+
+      <div className={isSingle ? "grid-2" : ""}>
         {/* Left: payment status */}
         {isSingle ? (
           <div className="card card-pad-0">
@@ -123,8 +140,8 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
                   {isR3 && singleGrant.conference_info && <div className="meta-row"><span className="l">Conference</span><span className="r">{singleGrant.conference_info.confName}</span></div>}
                   <div className="meta-row"><span className="l">{isR4 ? "Requested claim" : "Requested amount"}</span><span className="r">{fmtBaht(Number(singleGrant.requested_amount || 0))}</span></div>
                   <div className="meta-row"><span className="l">{isR4 ? "IRAS-approved amount" : "Approved amount"}</span><span className="r">{singleGrant.approved_amount ? fmtBaht(Number(singleGrant.approved_amount)) : "—"}</span></div>
-                  <div className="meta-row"><span className="l">Payment status</span><span className="r">{r3PayLabel[singleGrant.status] || "Pending Approval"}</span></div>
-                  <div className="meta-row"><span className="l">Payment date</span><span className="r">—</span></div>
+                  <div className="meta-row"><span className="l">Payment status</span><span className="r">{r3PayLabel[singleGrant.status] || "Pending"}</span></div>
+                  <div className="meta-row"><span className="l">Payment date</span><span className="r">{["active", "completed"].includes(singleGrant.status) ? window.DB.fmtDate(singleGrant.updated_at || singleGrant.decided_at) : "—"}</span></div>
                   <button className="btn btn-secondary mt-4" onClick={() => navigate("r-payments")}>
                     View payment status <Icon name="ArrowRight" size={13} />
                   </button>
@@ -141,7 +158,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
           </div>
           <div className="card-body">
             {grant === null && <div className="text-sm text-muted">Loading…</div>}
-            {grant === false && <Empty title="No approved grant yet" desc="Once your application is approved, your 30 / 40 / 30 disbursements appear here." icon="Coins" />}
+            {grant === false && <Empty title="No approved grant yet" desc="Once your application is approved, your 30 / 40 / 30 Finance approvals appear here." icon="Coins" />}
             {grant && (
               <>
                 <div style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontSize: 17, marginBottom: 4 }}>
@@ -150,8 +167,8 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
                 <div className="text-sm text-muted mb-4">{grant.faculty || "—"}{grant.department ? " · " + grant.department : ""}</div>
 
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted">Disbursement progress</span>
-                  <span className="text-sm font-semi">{fmtBaht(released)} of {fmtBaht(grantTotal)} released</span>
+                  <span className="text-sm text-muted">Finance approval progress</span>
+                  <span className="text-sm font-semi">{fmtBaht(paidTotal)} of {fmtBaht(grantTotal)} paid</span>
                 </div>
                 <div className="progress mb-4">
                   <div className="bar" style={{ width: progressPct + "%" }}></div>
@@ -167,22 +184,19 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
                       <div style={{ fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 500, margin: "4px 0" }}>
                         {fmtBaht(p.amount)}
                       </div>
-                      <span className={"badge " + (p.status === "paid" ? "badge-paid" : "badge-pending")}><span className="dot"></span>{p.status === "paid" ? "Paid" : "Pending"}</span>
+                      <span className={"badge " + (p.status === "paid" ? "badge-paid" : "badge-pending")}><span className="dot"></span>{p.status === "paid" ? "Paid" : "Pending Payment"}</span>
                     </div>
                   ))}
                 </div>
 
-                <button className="btn btn-secondary mt-4" onClick={() => navigate("r-payments")}>
-                  View payment status <Icon name="ArrowRight" size={13} />
-                </button>
               </>
             )}
           </div>
         </div>
         )}
 
-        {/* Right: my applications (live) */}
-        <div className="card card-pad-0">
+        {/* Right: my applications (live). AU-R1 keeps this on its dedicated page. */}
+        {isSingle && <div className="card card-pad-0">
           <div className="card-head">
             <h3>My Applications</h3>
           </div>
@@ -202,25 +216,9 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
               </div>
             ))}
           </div>
-        </div>
+        </div>}
       </div>
 
-      {/* Quick application snapshot (live, latest application) */}
-      <div className="card card-pad-0 mt-6">
-        <div className="card-head">
-          <h3>Application Pipeline{latest ? " · " + latest.code : ""}</h3>
-          <div className="grow"></div>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate("r-applications")}>
-            Open detail <Icon name="ArrowRight" size={12} />
-          </button>
-        </div>
-        <div className="card-body">
-          {!latest && <Empty title="No application to track yet" desc="Your latest application's progress will appear here." icon="Folder" />}
-          {latest && isR4 && <HTimeline steps={R4_PIPELINE} app={{ timeline: buildR4Timeline(latest.status) }} />}
-          {latest && isR3 && <HTimeline steps={R3_PIPELINE} app={{ timeline: buildR3Timeline(latest.status) }} />}
-          {latest && !isSingle && <HTimeline steps={RA.ALL_STAGES.slice(0, 9)} app={{ timeline: buildResearcherTimeline(latest.status) }} />}
-        </div>
-      </div>
     </>
   );
 }
@@ -231,7 +229,7 @@ const RESEARCHER_DEFAULT_DRAFT = {
   type: "Individual Research",
   startDate: "", endDate: "", duration: "12",
   keywords: "",
-  name: "", title2: "", auId: "", email: "", phone: "", office: "",
+  name: "", title2: "", auId: "", email: "", phone: "", office: "", joinedDate: "",
   school: "",
   department: "",
   outcome: "",
@@ -316,6 +314,28 @@ function monthsBetween(startISO, endISO) {
   var m = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
   if (e.getDate() >= s.getDate()) m += 1; // count the final partial month
   return Math.max(1, m);
+}
+
+function todayISO() {
+  const d = new Date();
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+
+function UniversityJoinedDateField({ value, onChange }) {
+  const service = universityServiceEligibility(value);
+  return (
+    <div className="field">
+      <label>Date Joined Assumption University *</label>
+      <AUDatePicker value={value} onChange={onChange} max={todayISO()} placeholder="Select joined date…" />
+      {value && (
+        <div style={{ fontSize: 11, marginTop: 5, color: service.eligible ? "var(--status-approved)" : "var(--au-crimson)", fontWeight: 650 }}>
+          {service.eligible
+            ? "Eligible — at least one year of university service completed."
+            : "Not eligible until " + fmtNiceDate(service.eligibleOn) + "."}
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ---------- B. Submit Application ---------- */
@@ -429,6 +449,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
           school: app.faculty || "",
           department: app.department || "",
           outcome: app.abstract || "",
+          joinedDate: (app.pub_info && app.pub_info.researcherJoinedDate) || "",
           name: app.researcher ? (app.researcher.full_name || d.name) : d.name,
           email: app.researcher ? (app.researcher.email || d.email) : d.email,
         }));
@@ -473,6 +494,8 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
     setErr("");
     if (submit && !draft.title.trim()) { setErr("Research title is required."); return; }
     if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
+    if (submit && !draft.joinedDate) { setErr("Select the date you joined Assumption University."); return; }
+    if (submit && !universityServiceEligibility(draft.joinedDate).eligible) { setErr("You are not eligible yet. Researchers must have at least one year of service at Assumption University."); return; }
     if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
     if (submit && (!draft.startDate || !draft.endDate)) { setErr("Select the project start and expected end dates."); return; }
     if (submit && autoDuration <= 0) { setErr("The expected end date must be after the start date."); return; }
@@ -495,6 +518,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         budget_breakdown: budgetRows,
         budget_items: items.filter(it => (it.purpose || "").trim() || Number(it.amount) > 0),
         grant_type: sys.id,
+        pub_info: { researcherJoinedDate: draft.joinedDate || null },
         co_members: isR3 ? coMembers.filter(m => (m.name || "").trim()) : null,
       }, submit, editingId);
       const failedUploads = await uploadAllDocuments(app.id, files);
@@ -612,6 +636,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                 <label>Office / Room</label>
                 <input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" />
               </div>
+              <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} />
               <div className="field">
                 <label>School / Faculty</label>
                 <select value={draft.school} onChange={e => { upd("school", e.target.value); upd("department", ""); }}>
@@ -831,7 +856,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
             <div className="field" style={{ maxWidth: 360, marginBottom: 10 }}>
               <label>Document type for the next upload</label>
               <select value={docType} onChange={e => setDocType(e.target.value)}>
-                {docTypeOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                {docTypeOptions.map(t => <option key={t} value={t}>{t === "Other supporting document" && !isR3 ? t + " (optional)" : t}</option>)}
               </select>
             </div>
             <label className="upload-box mt-1" style={{ cursor: "pointer", display: "block" }}>
@@ -861,30 +886,23 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
 
 /* ---------- B1. Submit AU-R3 Paper Presentation (conference) ---------- */
 const R3_DEFAULT_DRAFT = {
-  confName: "", organizer: "", website: "", confType: "International", country: "", city: "",
-  confStart: "", confEnd: "", presentation: "Oral Presentation",
+  confName: "", organizer: "", website: "", confType: "International", conferenceLocation: "",
+  presentationDate: "", presentation: "Oral Presentation", journalDb: "", journalClassification: "",
   paperTitle: "", field: "", keywords: "", corresponding: "", paperAbstract: "",
-  name: "", title2: "", auId: "", email: "", phone: "", office: "", school: "", department: "",
+  name: "", title2: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
   outcome: "",
 };
 function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
-  const sys = grantSystemFor("au_r3");
-  const maxAmount = sys.maxAmount || 50000;
+  const fixedGrantAmount = 3500;
   const [draft, setDraft] = useState({ ...R3_DEFAULT_DRAFT });
   const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
+  const classificationOptions = (RA.R4_JOURNAL_CLASSIFICATIONS || {})[draft.journalDb] || null;
 
   // Paper authors (co-members): the other researchers + students on the paper.
   const [authors, setAuthors] = useState([]);
   const addAuthor = () => setAuthors(m => m.concat([{ name: "", kind: "Researcher", auId: "", email: "" }]));
   const setAuthor = (i, k, v) => setAuthors(m => m.map((r, j) => j === i ? { ...r, [k]: v } : r));
   const removeAuthor = (i) => setAuthors(m => m.filter((_, j) => j !== i));
-
-  // Conference budget — amounts per category; total requested is the sum.
-  const isIntl = draft.confType === "International";
-  const [budgetRows, setBudgetRows] = useState((RA.R3_BUDGET_ITEMS || []).map(r => ({ item: r.item, intlOnly: !!r.intlOnly, amount: "" })));
-  const visibleRows = budgetRows.filter(r => isIntl || !r.intlOnly);
-  const total = visibleRows.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const setAmt = (item, v) => setBudgetRows(rows => rows.map(r => r.item === item ? { ...r, amount: (v + "").replace(/[^0-9]/g, "") } : r));
 
   const [files, setFiles] = useState([]);
   const [docType, setDocType] = useState("Full Research Article");
@@ -896,7 +914,6 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
   const [busy, setBusy] = useState(false);
   const [busyKind, setBusyKind] = useState(null); // "submit" | "draft" — drives the button label
   const [err, setErr] = useState("");
-  const confDuration = monthsBetween(draft.confStart, draft.confEnd);
 
   useEffect(() => {
     (async () => {
@@ -927,23 +944,20 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         setDraft(d => ({
           ...d,
           confName: ci.confName || "", organizer: ci.organizer || "", website: ci.website || "",
-          confType: ci.confType || "International", country: ci.country || "", city: ci.city || "",
-          confStart: ci.confStart || app.start_date || "", confEnd: ci.confEnd || app.end_date || "",
+          confType: ci.confType || "International",
+          conferenceLocation: ci.conferenceLocation || [ci.city, ci.country].filter(Boolean).join(", "),
+          presentationDate: ci.presentationDate || ci.confStart || app.start_date || "",
           presentation: ci.presentation || "Oral Presentation",
+          journalDb: ci.journalDb || "", journalClassification: ci.journalClassification || "",
           paperTitle: app.title || "", field: app.field || "", keywords: app.keywords || "",
           corresponding: ci.correspondingAuthor || "", paperAbstract: ci.paperAbstract || "",
+          joinedDate: ci.researcherJoinedDate || "",
           school: app.faculty || d.school, department: app.department || d.department,
           outcome: app.abstract || "",
           name: app.researcher ? (app.researcher.full_name || d.name) : d.name,
           email: app.researcher ? (app.researcher.email || d.email) : d.email,
         }));
         setAuthors(Array.isArray(app.co_members) ? app.co_members : []);
-        if (Array.isArray(app.budget_breakdown) && app.budget_breakdown.length) {
-          setBudgetRows((RA.R3_BUDGET_ITEMS || []).map(r => {
-            const saved = app.budget_breakdown.find(b => b.item === r.item);
-            return { item: r.item, intlOnly: !!r.intlOnly, amount: saved ? String(saved.amount || "") : "" };
-          }));
-        }
       } catch (e) { if (!cancelled) setErr((e && e.message) || "Could not load this draft."); }
       finally { if (!cancelled) setLoadingDraft(false); }
     }
@@ -964,33 +978,36 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
     setErr("");
     if (submit && !draft.confName.trim()) { setErr("Enter the conference name."); return; }
     if (submit && !draft.organizer.trim()) { setErr("Enter the conference organizer."); return; }
-    if (submit && !draft.country.trim()) { setErr("Enter the conference country."); return; }
-    if (submit && !draft.city.trim()) { setErr("Enter the conference city."); return; }
-    if (submit && (!draft.confStart || !draft.confEnd)) { setErr("Select the conference start and end dates."); return; }
-    if (submit && draft.confEnd < draft.confStart) { setErr("The conference end date must be on or after the start date."); return; }
+    if (submit && !draft.conferenceLocation.trim()) { setErr("Enter the conference location."); return; }
+    if (submit && !draft.presentationDate) { setErr("Select the presentation date."); return; }
     if (submit && !draft.paperTitle.trim()) { setErr("Enter the paper title."); return; }
     if (submit && !draft.field.trim()) { setErr("Enter the research field."); return; }
     if (submit && !draft.corresponding.trim()) { setErr("Enter the corresponding author."); return; }
+    if (submit && !draft.paperAbstract.trim()) { setErr("Enter the paper abstract."); return; }
+    if (submit && !draft.journalDb) { setErr("Select the Journal Database / Index."); return; }
+    if (submit && !draft.journalClassification.trim()) { setErr("Select or enter the journal classification."); return; }
     if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
+    if (submit && !draft.joinedDate) { setErr("Select the date you joined Assumption University."); return; }
+    if (submit && !universityServiceEligibility(draft.joinedDate).eligible) { setErr("You are not eligible yet. AU-R3 applicants must have at least one year of service at Assumption University."); return; }
     if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
-    if (submit && total <= 0) { setErr("Enter the conference budget amounts."); return; }
-    if (submit && total > maxAmount) { setErr("Total budget (" + total.toLocaleString() + " THB) exceeds the " + maxAmount.toLocaleString() + " THB maximum for AU-R3 grants."); return; }
     setBusy(true); setBusyKind(submit ? "submit" : "draft");
     try {
       try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
       const confInfo = {
         confName: draft.confName, organizer: draft.organizer, website: draft.website,
-        confType: draft.confType, country: draft.country, city: draft.city,
-        confStart: draft.confStart || null, confEnd: draft.confEnd || null,
+        confType: draft.confType, conferenceLocation: draft.conferenceLocation,
+        presentationDate: draft.presentationDate || null,
         presentation: draft.presentation || "Oral Presentation",
+        journalDb: draft.journalDb, journalClassification: draft.journalClassification,
         correspondingAuthor: draft.corresponding, paperAbstract: draft.paperAbstract,
+        researcherJoinedDate: draft.joinedDate || null,
       };
       const app = await window.DB.createApplication({
         title: draft.paperTitle, abstract: draft.outcome, field: draft.field,
         faculty: draft.school, department: draft.department, keywords: draft.keywords,
-        requested_amount: total, duration_months: confDuration || 1,
-        start_date: draft.confStart || null, end_date: draft.confEnd || null,
-        budget_breakdown: visibleRows.filter(r => Number(r.amount) > 0).map(r => ({ item: r.item, amount: Number(r.amount) || 0 })),
+        requested_amount: fixedGrantAmount, duration_months: 1,
+        start_date: draft.presentationDate || null, end_date: draft.presentationDate || null,
+        budget_breakdown: [{ item: "Fixed AU-R3 Grant", amount: fixedGrantAmount }],
         grant_type: "au_r3",
         co_members: authors.filter(m => (m.name || "").trim()),
         conference_info: confInfo,
@@ -1014,15 +1031,13 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
 
   const emailBad = draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim());
   const facultyValid = RA.FACULTIES.some(f => f.name === draft.school);
-  const facultyLocked = facultyValid; // only lock once it is a real AU faculty
   const deptOptions = (RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments;
   const deptValid = facultyValid && deptOptions.indexOf(draft.department) >= 0;
-  const deptLocked = deptValid;
   return (
     <>
       <PageHeader
         title={(editingId ? "Edit " : "Submit ") + "AU-R3 Application"}
-        desc="Paper Presentation Grant — apply for financial support to present an accepted research paper at a domestic or international conference."
+        desc="Paper Presentation Grant — fixed support of 3,500 THB for an accepted conference paper."
         actions={
           <>
             <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
@@ -1066,23 +1081,13 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
                   <option value="Poster Presentation">Poster Presentation</option>
                 </select>
               </div>
-              <div className="field">
-                <label>Country</label>
-                <input value={draft.country} onChange={e => upd("country", e.target.value)} placeholder={isIntl ? "e.g. Japan" : "Thailand"} />
+              <div className="field full">
+                <label>Conference Location *</label>
+                <input value={draft.conferenceLocation} onChange={e => upd("conferenceLocation", e.target.value)} placeholder="Type the venue, city, and country" />
               </div>
               <div className="field">
-                <label>City</label>
-                <input value={draft.city} onChange={e => upd("city", e.target.value)} placeholder="e.g. Tokyo" />
-              </div>
-              <div className="field">
-                <label>Conference Start Date</label>
-                <AUDatePicker value={draft.confStart} max={draft.confEnd || undefined}
-                  onChange={v => upd("confStart", v)} placeholder="Select start date…" />
-              </div>
-              <div className="field">
-                <label>Conference End Date</label>
-                <AUDatePicker value={draft.confEnd} min={draft.confStart || undefined}
-                  onChange={v => upd("confEnd", v)} placeholder="Select end date…" />
+                <label>Presentation Date *</label>
+                <AUDatePicker value={draft.presentationDate} onChange={v => upd("presentationDate", v)} placeholder="Select presentation date…" />
               </div>
             </div>
           </div>
@@ -1101,17 +1106,17 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
                 <label>Research Field</label>
                 <input value={draft.field} onChange={e => upd("field", e.target.value)} />
               </div>
-              <div className="field">
-                <label>Keywords</label>
-                <input value={draft.keywords} onChange={e => upd("keywords", e.target.value)} />
-              </div>
               <div className="field full">
                 <label>Corresponding Author</label>
                 <input value={draft.corresponding} onChange={e => upd("corresponding", e.target.value)} placeholder="Name of the corresponding author" />
               </div>
               <div className="field full">
-                <label>Abstract (optional)</label>
-                <textarea className="comment-input" style={{ minHeight: 90 }} value={draft.paperAbstract} onChange={e => upd("paperAbstract", e.target.value)} placeholder="Paste the paper abstract here (optional)." />
+                <label>Abstract *</label>
+                <textarea className="comment-input" style={{ minHeight: 90 }} value={draft.paperAbstract} onChange={e => upd("paperAbstract", e.target.value)} placeholder="Paste the paper abstract here." />
+              </div>
+              <div className="field full">
+                <label>Keywords</label>
+                <input value={draft.keywords} onChange={e => upd("keywords", e.target.value)} placeholder="Enter keywords after the abstract" />
               </div>
             </div>
 
@@ -1171,16 +1176,17 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
               </div>
               <div className="field"><label>Phone</label><input value={draft.phone} onChange={e => upd("phone", e.target.value)} /></div>
               <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
+              <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} />
               <div className="field">
                 <label>School / Faculty</label>
-                <select value={facultyLocked ? draft.school : (facultyValid ? draft.school : "")} onChange={e => { upd("school", e.target.value); upd("department", ""); }} disabled={facultyLocked} style={facultyLocked ? roStyle : null}>
+                <select value={facultyValid ? draft.school : ""} onChange={e => { upd("school", e.target.value); upd("department", ""); }}>
                   <option value="">Select your faculty…</option>
                   {RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}
                 </select>
               </div>
               <div className="field">
                 <label>Department</label>
-                <select value={deptValid ? draft.department : ""} onChange={e => upd("department", e.target.value)} disabled={!facultyValid || deptLocked} style={deptLocked ? roStyle : null}>
+                <select value={deptValid ? draft.department : ""} onChange={e => upd("department", e.target.value)} disabled={!facultyValid}>
                   <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
                   {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
@@ -1190,33 +1196,27 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         </div>
 
         <div className="form-section">
-          <h4><span className="num">4</span> Conference Budget Information</h4>
-          <p className="section-sub">Enter the estimated cost per item — the requested total adds up automatically (maximum {maxAmount.toLocaleString()} THB).{isIntl ? "" : " Visa applies to international conferences only, so it is hidden."}</p>
+          <h4><span className="num">4</span> Journal Classification</h4>
+          <p className="section-sub">Select the journal or proceedings database and its classification. The AU-R3 grant amount is fixed at 3,500 THB.</p>
           <div className="section-body">
-            <div className="field full">
-              <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
-                <table className="tbl">
-                  <thead>
-                    <tr><th>Expense Item</th><th style={{ width: 170, textAlign: "right" }}>Amount (THB)</th></tr>
-                  </thead>
-                  <tbody>
-                    {visibleRows.map(r => (
-                      <tr key={r.item}>
-                        <td>{r.item}{r.intlOnly ? <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-gold-deep)", background: "var(--au-gold-soft)", padding: "2px 8px", borderRadius: 999 }}>International</span> : null}</td>
-                        <td style={{ textAlign: "right" }}>
-                          <input value={r.amount === "" ? "" : Number(r.amount || 0).toLocaleString()} onChange={e => setAmt(r.item, e.target.value)}
-                            placeholder="0" style={{ width: 130, textAlign: "right", fontFamily: "ui-monospace, monospace" }} />
-                        </td>
-                      </tr>
-                    ))}
-                    <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}>
-                      <td>Total Requested Amount</td>
-                      <td style={{ textAlign: "right", color: total > maxAmount ? "var(--au-crimson)" : "inherit" }}>{fmtBaht(total)}</td>
-                    </tr>
-                  </tbody>
-                </table>
+            <div className="form-grid">
+              <div className="field"><label>Journal Database / Index *</label>
+                <select value={draft.journalDb} onChange={e => setDraft(d => ({ ...d, journalDb: e.target.value, journalClassification: "" }))}>
+                  <option value="">Select database / index…</option>
+                  {(RA.R4_JOURNAL_DBS || []).map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
-              {total > maxAmount && <div style={{ fontSize: 12, color: "var(--au-crimson)", marginTop: 6 }}>Total ({fmtBaht(total)}) exceeds the AU-R3 maximum of {fmtBaht(maxAmount)} — reduce the amounts.</div>}
+              <div className="field"><label>Classification *</label>
+                {classificationOptions ? (
+                  <select value={draft.journalClassification} onChange={e => upd("journalClassification", e.target.value)} disabled={!draft.journalDb}>
+                    <option value="">Select classification…</option>
+                    {classificationOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                ) : (
+                  <input value={draft.journalClassification} onChange={e => upd("journalClassification", e.target.value)} disabled={!draft.journalDb}
+                    placeholder={draft.journalDb === "Other" ? "Enter database / index name manually" : draft.journalDb ? "Enter additional tier" : "Select a database / index first"} />
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -1310,18 +1310,15 @@ const R4_DEFAULT_DRAFT = {
   // Publication information
   title: "", articleType: "Research Article", pubStatus: "Published",
   journal: "", publisher: "", website: "", articleUrl: "", doi: "", issn: "",
-  acceptDate: "", pubDate: "", expectedPubDate: "", volume: "", issue: "",
-  startPage: "", endPage: "", academicYear: "2025 / 2026",
+  acceptDate: "", pubDate: "", volume: "", issue: "", pageNumber: "", academicYear: "2025",
   // Journal classification
-  journalDb: "SCOPUS", quartile: "Q1", wosIndex: "SCIE", otherDb: "",
-  openAccess: "Open Access", hybrid: "No", openAccessSelected: "Yes",
-  journalCountry: "", evidenceUrl: "", predatory: false,
+  journalDb: "", journalClassification: "", predatory: false,
   // Author & contribution
-  applicantRole: "Principal / First Author", isCorresponding: "Yes", studentBased: "No",
+  applicantRole: "First Author",
   // Researcher
-  name: "", title2: "", auId: "", email: "", phone: "", office: "", school: "", department: "",
+  name: "", title2: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
   // Fee & claim
-  claimType: "Publication Reward", feePaid: "", currency: "THB", feeDate: "", receiptNo: "", paidBy: "",
+  claimType: "Publication Reward", feePaid: "", feeDate: "", paidBy: "",
   turnitin: "",
 };
 function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
@@ -1331,9 +1328,19 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
 
   // Author & contribution table.
-  const [authors, setAuthors] = useState([{ name: "", type: "Principal Author", affiliation: "Assumption University", auId: "", email: "", contribution: "100" }]);
-  const addAuthor = () => setAuthors(a => a.concat([{ name: "", type: "Co-Author", affiliation: "", auId: "", email: "", contribution: "" }]));
-  const setAuthor = (i, k, v) => setAuthors(a => a.map((r, j) => j === i ? { ...r, [k]: k === "contribution" ? (v + "").replace(/[^0-9.]/g, "") : v } : r));
+  const [authors, setAuthors] = useState([{ name: "", type: "First Author", email: "", contribution: "100" }]);
+  const addAuthor = () => setAuthors(a => a.concat([{ name: "", type: "Corresponding Author", email: "", contribution: "" }]));
+  const setAuthor = (i, k, v) => setAuthors(list => {
+    if (k !== "contribution") return list.map((r, j) => j === i ? { ...r, [k]: v } : r);
+    const cleaned = (v + "").replace(/[^0-9.]/g, "");
+    if (list.length !== 2 || cleaned === "" || !Number.isFinite(Number(cleaned))) {
+      return list.map((r, j) => j === i ? { ...r, contribution: cleaned } : r);
+    }
+    const entered = Math.max(0, Math.min(100, Number(cleaned)));
+    const normalized = String(Math.round(entered * 100) / 100);
+    const complement = String(Math.round((100 - entered) * 100) / 100);
+    return list.map((r, j) => j === i ? { ...r, contribution: normalized } : { ...r, contribution: complement });
+  });
   const removeAuthor = (i) => setAuthors(a => a.length > 1 ? a.filter((_, j) => j !== i) : a);
 
   const [decls, setDecls] = useState((RA.R4_DECLARATIONS || []).map(() => false));
@@ -1342,6 +1349,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const [files, setFiles] = useState([]);
   const [docType, setDocType] = useState("Full Research Article");
   const onFiles = (e) => { const fs = Array.from(e.target.files || []); setFiles(prev => prev.concat(fs.map(f => ({ file: f, docType })))); e.target.value = ""; };
+  const onTypedFiles = (e, type) => { const fs = Array.from(e.target.files || []); setFiles(prev => prev.concat(fs.map(f => ({ file: f, docType: type })))); e.target.value = ""; };
   const [editingId, setEditingId] = useState(applicationId || null);
   const [existingDocs, setExistingDocs] = useState([]);
   const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
@@ -1350,24 +1358,26 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const [busyKind, setBusyKind] = useState(null); // "submit" | "draft" — drives the button label
   const [err, setErr] = useState("");
 
-  const isScopus = draft.journalDb === "SCOPUS";
-  const isWos = draft.journalDb === "Web of Science";
-  const isOther = draft.journalDb === "Other";
-  const isHybrid = draft.hybrid === "Yes";
   const published = draft.pubStatus === "Published";
-  const prelim = RA.r4RewardForJournal ? RA.r4RewardForJournal(draft.journalDb, draft.quartile, draft.feePaid) : 0;
-  const requested = Math.min(MAX, prelim > 0 ? prelim : (Number(draft.feePaid) || 0));
-  const catLabel = RA.r4CategoryLabel ? RA.r4CategoryLabel(draft.journalDb, draft.quartile, draft.wosIndex) : draft.journalDb;
+  const classificationOptions = (RA.R4_JOURNAL_CLASSIFICATIONS || {})[draft.journalDb] || null;
+  const tierSelected = draft.journalDb === "TCI" && ["Tier 1", "Tier 2"].includes(draft.journalClassification);
+  const automaticReward = draft.journalDb === "SCOPUS"
+    ? ({ Q1: 80000, Q2: 60000, Q3: 50000, Q4: 40000 })[draft.journalClassification] || 0
+    : draft.journalDb === "Web of Science (WoS)" ? 80000
+    : ["ERIC", "MathSciNet", "PubMed", "JSTOR", "Project MUSE"].includes(draft.journalDb) ? 25000 : 0;
+  const requested = tierSelected ? Math.min(MAX, Number(draft.feePaid) || 0) : automaticReward;
+  const catLabel = [draft.journalDb, draft.journalClassification].filter(Boolean).join(" — ");
+  const showPreliminaryReward = !!draft.journalDb && !!draft.journalClassification.trim() && !tierSelected;
   const totalContrib = authors.reduce((s, a) => s + (Number(a.contribution) || 0), 0);
-  const principalContrib = Math.max.apply(null, authors.map(a => Number(a.contribution) || 0).concat([0]));
+  const firstContrib = Number((authors.find(a => a.type === "First Author") || {}).contribution) || 0;
   const turnitinNum = Number(draft.turnitin);
   const turnitinBad = draft.turnitin !== "" && turnitinNum > 20;
   const emailBad = draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim());
   const facultyValid = RA.FACULTIES.some(f => f.name === draft.school);
-  const facultyLocked = facultyValid; // only lock once it is a real AU faculty
   const deptOptions = (RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments;
   const deptValid = facultyValid && deptOptions.indexOf(draft.department) >= 0;
-  const deptLocked = deptValid;
+  const hasDocument = (keyword) => existingDocs.concat(files.map(it => ({ name: it.file.name, doc_type: it.docType })))
+    .some(d => (((d && d.doc_type) || "") + " " + ((d && d.name) || "")).toLowerCase().includes(keyword));
 
   useEffect(() => {
     (async () => {
@@ -1376,7 +1386,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
         if (p && !applicationId) {
           setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: p.phone || d.phone, office: p.office_room || d.office }));
-          setAuthors(a => a.map((r, i) => i === 0 ? { ...r, name: p.full_name || r.name, auId: p.au_id || r.auId, email: p.email || r.email } : r));
+          setAuthors(a => a.map((r, i) => i === 0 ? { ...r, name: p.full_name || r.name, email: p.email || r.email } : r));
         }
       } catch (e) {}
     })();
@@ -1398,10 +1408,39 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         setEditingId(app.id);
         if (app.status === "returned") { window.DB.lastReturnReason(app.id).then(r => { if (!cancelled) setReturnInfo(r); }).catch(() => {}); } else setReturnInfo(null);
         setExistingDocs(app.documents || []);
-        setDraft(d => ({ ...d, ...pi, title: app.title || "", school: app.faculty || d.school, department: app.department || d.department,
+        let loadedDb = pi.journalDb || "";
+        let loadedClassification = pi.journalClassification || "";
+        if (loadedDb === "TCI Tier 1" || loadedDb === "TCI Tier 2") {
+          loadedClassification = loadedDb.replace("TCI ", "");
+          loadedDb = "TCI";
+        } else if (loadedDb === "Web of Science") {
+          loadedDb = "Web of Science (WoS)";
+          loadedClassification = loadedClassification || pi.wosIndex || "SCIE";
+        } else if (loadedDb === "Project Muse") {
+          loadedDb = "Project MUSE";
+        } else if (loadedDb === "SCOPUS") {
+          loadedClassification = loadedClassification || pi.quartile || "Q1";
+        }
+        setDraft(d => ({ ...d, ...pi,
+          journalDb: loadedDb,
+          journalClassification: loadedClassification,
+          pubStatus: /^accepted for publication$/i.test(pi.pubStatus || "") ? "Accepted for Publication" : (pi.pubStatus || d.pubStatus),
+          academicYear: ((String(pi.academicYear || d.academicYear).match(/\d{4}/) || ["2025"])[0]),
+          joinedDate: pi.researcherJoinedDate || "",
+          pageNumber: pi.pageNumber || ([pi.startPage, pi.endPage].filter(Boolean).join("–")),
+          title: app.title || "", school: app.faculty || d.school, department: app.department || d.department,
           name: app.researcher ? (app.researcher.full_name || d.name) : d.name, email: app.researcher ? (app.researcher.email || d.email) : d.email }));
-        if (Array.isArray(app.co_members) && app.co_members.length) setAuthors(app.co_members);
-        if (pi.declarations && Array.isArray(pi.declarations)) setDecls((RA.R4_DECLARATIONS || []).map((_, i) => !!pi.declarations[i]));
+        if (Array.isArray(app.co_members) && app.co_members.length) {
+          setAuthors(app.co_members.map((a, i) => ({
+            name: a.name || "",
+            type: /corresponding/i.test(a.type || "") ? "Corresponding Author" : "First Author",
+            email: a.email || "",
+            contribution: a.contribution === undefined || a.contribution === null ? (i === 0 ? "100" : "") : String(a.contribution),
+          })));
+        }
+        if (pi.declarations && Array.isArray(pi.declarations)) {
+          setDecls((RA.R4_DECLARATIONS || []).map((_, i) => i === 2 ? !!pi.predatory : !!pi.declarations[i]));
+        }
       } catch (e) { if (!cancelled) setErr((e && e.message) || "Could not load this draft."); }
       finally { if (!cancelled) setLoadingDraft(false); }
     }
@@ -1423,18 +1462,27 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
     if (submit) {
       if (!draft.title.trim()) return setErr("Enter the article title.");
       if (!draft.journal.trim()) return setErr("Enter the journal name.");
+      if (!draft.journalDb) return setErr("Select the Journal Database / Index.");
+      if (!draft.journalClassification.trim()) return setErr("Select or enter the journal classification.");
+      if (published && !draft.articleUrl.trim()) return setErr("Enter the Article URL for the published article.");
+      if (published && !draft.pageNumber.trim()) return setErr("Enter the Page Number(s) for the published article.");
+      if (!published && !draft.acceptDate) return setErr("Select the Acceptance Date.");
       if (!draft.school) return setErr("Your faculty is required so the application routes to your Dean.");
+      if (!draft.joinedDate) return setErr("Select the date you joined Assumption University.");
+      if (!universityServiceEligibility(draft.joinedDate).eligible) return setErr("You are not eligible yet. AU-R4 applicants must have at least one year of service at Assumption University.");
       if (emailBad) return setErr("Email must be an Assumption University address ending in @au.edu.");
       if (!draft.predatory) return setErr("You must confirm the journal is not a predatory / Beall's List journal.");
       if (turnitinBad) return setErr("Turnitin similarity exceeds the 20% limit — it must be 20% or lower.");
       if (draft.turnitin === "") return setErr("Enter the Turnitin similarity percentage.");
       if (Math.round(totalContrib) !== 100) return setErr("Author contribution percentages must total 100% (currently " + totalContrib + "%).");
-      if (principalContrib < 50) return setErr("The principal author must have at least 50% contribution.");
+      if (firstContrib < 50) return setErr("The first author must have at least 50% contribution.");
       const lowCo = authors.some(a => Number(a.contribution) > 0 && Number(a.contribution) < 5);
       if (lowCo) return setErr("Each listed author must have at least 5% contribution.");
-      if (!draft.receiptNo.trim()) return setErr("Enter the publication-fee receipt number.");
+      if (authors.some(a => !a.name.trim() || !a.email.trim())) return setErr("Enter the name and email address for every listed author.");
+      if (!hasDocument("author contribution")) return setErr("Attach the Author Contribution Statement.");
+      if (!published && !hasDocument("acceptance")) return setErr("Attach the Acceptance Letter.");
       if (requested > MAX) return setErr("The requested claim exceeds the AU-R4 maximum of 80,000 THB per article.");
-      if (requested <= 0) return setErr("Choose the journal database (and Scopus quartile) so the claim can be estimated.");
+      if (tierSelected && requested <= 0) return setErr("Enter the publication fee for the selected journal tier.");
       if (!allDecl) return setErr("You must accept every eligibility declaration before submitting.");
     }
     setBusy(true); setBusyKind(submit ? "submit" : "draft");
@@ -1442,17 +1490,15 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
       const pubInfo = {
         articleType: draft.articleType, pubStatus: draft.pubStatus, journal: draft.journal, publisher: draft.publisher,
-        website: draft.website, articleUrl: draft.articleUrl, doi: draft.doi, issn: draft.issn,
-        acceptDate: draft.acceptDate || null, pubDate: draft.pubDate || null, expectedPubDate: draft.expectedPubDate || null,
-        volume: draft.volume, issue: draft.issue, startPage: draft.startPage, endPage: draft.endPage, academicYear: draft.academicYear,
-        journalDb: draft.journalDb, quartile: isScopus ? draft.quartile : null, wosIndex: isWos ? draft.wosIndex : null,
-        otherDb: isOther ? draft.otherDb : null, indexLabel: catLabel,
-        openAccess: draft.openAccess, hybrid: draft.hybrid, openAccessSelected: isHybrid ? draft.openAccessSelected : null,
-        journalCountry: draft.journalCountry, evidenceUrl: draft.evidenceUrl, predatory: draft.predatory,
-        applicantRole: draft.applicantRole, isCorresponding: draft.isCorresponding, studentBased: draft.studentBased,
-        claimType: draft.claimType, feePaid: Number(draft.feePaid) || 0, currency: draft.currency, feeDate: draft.feeDate || null,
-        receiptNo: draft.receiptNo, paidBy: draft.paidBy, turnitin: Number(draft.turnitin) || 0,
-        prelimReward: prelim, reward: requested, requestedClaim: requested, maxAmount: MAX,
+        website: draft.website, articleUrl: published ? draft.articleUrl : null, doi: published ? draft.doi : null, issn: published ? draft.issn : null,
+        acceptDate: draft.acceptDate || null, pubDate: draft.pubDate || null,
+        volume: draft.volume, issue: draft.issue, pageNumber: draft.pageNumber, academicYear: draft.academicYear,
+        journalDb: draft.journalDb, journalClassification: draft.journalClassification, indexLabel: catLabel, predatory: draft.predatory,
+        applicantRole: draft.applicantRole, claimType: draft.claimType,
+        researcherName: draft.name, researcherAuId: draft.auId, contactEmail: draft.email,
+        researcherJoinedDate: draft.joinedDate || null,
+        feePaid: Number(draft.feePaid) || 0, feeDate: draft.feeDate || null, paidBy: draft.paidBy, turnitin: Number(draft.turnitin) || 0,
+        reward: requested, requestedClaim: requested, maxAmount: MAX,
         totalContribution: totalContrib, declarations: decls,
       };
       const app = await window.DB.createApplication({
@@ -1482,7 +1528,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
     <>
       <PageHeader
         title={(editingId ? "Edit " : "Submit ") + "AU-R4 Application"}
-        desc="Publication Fees and Reward Application — submit the publication information, author contributions, claim details, and required documents."
+        desc="Publication Fees and Reward Application — submit publication information, author contributions, and required documents."
         actions={
           <>
             <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
@@ -1510,22 +1556,27 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
               <div className="field"><label>Journal Name *</label><input value={draft.journal} onChange={e => upd("journal", e.target.value)} /></div>
               <div className="field"><label>Publisher *</label><input value={draft.publisher} onChange={e => upd("publisher", e.target.value)} /></div>
               <div className="field"><label>Journal Website</label><input value={draft.website} onChange={e => upd("website", e.target.value)} placeholder="https://…" /></div>
-              <div className="field"><label>Article URL{published ? " *" : ""}</label><input value={draft.articleUrl} onChange={e => upd("articleUrl", e.target.value)} placeholder="https://…" /></div>
-              <div className="field"><label>DOI</label><input value={draft.doi} onChange={e => upd("doi", e.target.value)} placeholder="10.xxxx/…" /></div>
-              <div className="field"><label>ISSN / eISSN</label><input value={draft.issn} onChange={e => upd("issn", e.target.value)} /></div>
-              <div className="field"><label>Academic Year *</label><input value={draft.academicYear} onChange={e => upd("academicYear", e.target.value)} /></div>
+              <div className="field"><label>Academic Year <span style={{ color: "var(--ink-3)", fontWeight: 700 }}>(AD)</span> *</label><input value={draft.academicYear} onChange={e => upd("academicYear", (e.target.value + "").replace(/[^0-9]/g, "").slice(0, 4))} placeholder="2025" inputMode="numeric" /></div>
               {published ? (
                 <>
+                  <div className="field"><label>Article URL *</label><input value={draft.articleUrl} onChange={e => upd("articleUrl", e.target.value)} placeholder="https://…" /></div>
+                  <div className="field"><label>DOI</label><input value={draft.doi} onChange={e => upd("doi", e.target.value)} placeholder="10.xxxx/…" /></div>
+                  <div className="field"><label>ISSN / eISSN</label><input value={draft.issn} onChange={e => upd("issn", e.target.value)} /></div>
                   <div className="field"><label>Publication Date *</label><AUDatePicker value={draft.pubDate} onChange={v => upd("pubDate", v)} placeholder="Select date…" /></div>
                   <div className="field"><label>Volume *</label><input value={draft.volume} onChange={e => upd("volume", e.target.value)} /></div>
                   <div className="field"><label>Issue *</label><input value={draft.issue} onChange={e => upd("issue", e.target.value)} /></div>
-                  <div className="field"><label>Start Page *</label><input value={draft.startPage} onChange={e => upd("startPage", e.target.value)} /></div>
-                  <div className="field"><label>End Page *</label><input value={draft.endPage} onChange={e => upd("endPage", e.target.value)} /></div>
+                  <div className="field"><label>Page Number(s) *</label><input value={draft.pageNumber} onChange={e => upd("pageNumber", e.target.value)} placeholder="e.g. 25–38" /></div>
                 </>
               ) : (
                 <>
                   <div className="field"><label>Acceptance Date *</label><AUDatePicker value={draft.acceptDate} onChange={v => upd("acceptDate", v)} placeholder="Select date…" /></div>
-                  <div className="field"><label>Expected Publication Date *</label><AUDatePicker value={draft.expectedPubDate} onChange={v => upd("expectedPubDate", v)} placeholder="Select date…" /></div>
+                  <div className="field full">
+                    <label>Acceptance Letter *</label>
+                    <label className="upload-box" style={{ cursor: "pointer", display: "block" }}>
+                      <input type="file" accept="application/pdf,.pdf" style={{ display: "none" }} onChange={e => onTypedFiles(e, "Acceptance Letter")} />
+                      <Icon name="Upload" size={24} className="icon" /><div className="t">Attach acceptance letter</div><div className="s">PDF · max 10 MB</div>
+                    </label>
+                  </div>
                 </>
               )}
             </div>
@@ -1535,73 +1586,63 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         {/* 2. Journal Classification */}
         <div className="form-section">
           <h4><span className="num">2</span> Journal Classification</h4>
-          <p className="section-sub">How the journal is indexed — this drives the preliminary reward. IRAS makes the final verification.</p>
+          <p className="section-sub">Select the journal database / index and its matching classification. The research office makes the final verification.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field"><label>Journal Database / Index *</label>
-                <select value={draft.journalDb} onChange={e => upd("journalDb", e.target.value)}>{(RA.R4_JOURNAL_DBS || []).map(t => <option key={t}>{t}</option>)}</select></div>
-              {isScopus && <div className="field"><label>SCOPUS Quartile *</label>
-                <select value={draft.quartile} onChange={e => upd("quartile", e.target.value)}>{["Q1", "Q2", "Q3", "Q4"].map(q => <option key={q}>{q}</option>)}</select></div>}
-              {isWos && <div className="field"><label>Web of Science Index *</label>
-                <select value={draft.wosIndex} onChange={e => upd("wosIndex", e.target.value)}>{(RA.R4_WOS_INDEXES || []).map(t => <option key={t}>{t}</option>)}</select></div>}
-              {isOther && <div className="field"><label>Other Database Name *</label><input value={draft.otherDb} onChange={e => upd("otherDb", e.target.value)} /></div>}
-              <div className="field"><label>Open Access Status *</label>
-                <select value={draft.openAccess} onChange={e => upd("openAccess", e.target.value)}>{(RA.R4_OPEN_ACCESS || []).map(t => <option key={t}>{t}</option>)}</select></div>
-              <div className="field"><label>Hybrid Journal? *</label>
-                <select value={draft.hybrid} onChange={e => upd("hybrid", e.target.value)}><option>No</option><option>Yes</option></select></div>
-              {isHybrid && <div className="field"><label>Open Access option selected?</label>
-                <select value={draft.openAccessSelected} onChange={e => upd("openAccessSelected", e.target.value)}><option>Yes</option><option>No</option></select></div>}
-              <div className="field"><label>Journal Country</label><input value={draft.journalCountry} onChange={e => upd("journalCountry", e.target.value)} /></div>
-              <div className="field"><label>Index / Quartile Evidence URL</label><input value={draft.evidenceUrl} onChange={e => upd("evidenceUrl", e.target.value)} placeholder="https://…" /></div>
-            </div>
-            {isOther && <div style={{ fontSize: 12, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "8px 12px", borderRadius: "var(--r-md)", marginTop: 6 }}>The selected database may not be eligible under the current AU publication-grant criteria. Final eligibility is subject to IRAS verification.</div>}
-            {isHybrid && draft.openAccessSelected !== "Yes" && <div style={{ fontSize: 12, color: "var(--au-gold-deep)", background: "var(--au-gold-soft)", padding: "8px 12px", borderRadius: "var(--r-md)", marginTop: 6 }}>For a hybrid journal, the online Open Access option is required for reimbursement eligibility.</div>}
-            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 12, fontSize: 13 }}>
-              <input type="checkbox" checked={draft.predatory} onChange={e => upd("predatory", e.target.checked)} style={{ accentColor: "var(--au-crimson)", marginTop: 3 }} />
-              <span>I confirm this journal is not included in a predatory-journal or Beall's List database. *</span>
-            </label>
-            <div style={{ marginTop: 14, border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "14px 16px", background: "var(--au-gold-soft)" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <Icon name="Award" size={18} style={{ color: "var(--au-gold-deep)" }} />
-                <span style={{ fontSize: 12, color: "var(--ink-3)" }}>Preliminary reward estimate ({catLabel || "—"})</span>
-                <div style={{ flex: 1 }}></div>
-                <span style={{ fontFamily: "var(--font-serif)", fontSize: 22, fontWeight: 500 }}>{prelim > 0 ? fmtBaht(prelim) : (draft.journalDb.indexOf("TCI") === 0 ? "Actual fee" : "—")}</span>
+                <select value={draft.journalDb} onChange={e => setDraft(d => ({ ...d, journalDb: e.target.value, journalClassification: "" }))}>
+                  <option value="">Select database / index…</option>
+                  {(RA.R4_JOURNAL_DBS || []).map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
-              <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 6 }}>This is a preliminary estimate only. The final eligible amount will be determined by IRAS after verifying the journal, documents, publication fee, author contribution, and previous claims. Maximum 80,000 THB per article.</div>
+              <div className="field"><label>Classification *</label>
+                {classificationOptions ? (
+                  <select value={draft.journalClassification} onChange={e => upd("journalClassification", e.target.value)} disabled={!draft.journalDb}>
+                    <option value="">Select classification…</option>
+                    {classificationOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                ) : (
+                  <input value={draft.journalClassification} onChange={e => upd("journalClassification", e.target.value)} disabled={!draft.journalDb}
+                    placeholder={draft.journalDb === "Other" ? "Enter database / index name manually" : draft.journalDb ? "Enter additional tier" : "Select a database / index first"} />
+                )}
+              </div>
             </div>
+            {showPreliminaryReward && (
+              <div className="r4-reward-estimate">
+                <div className="r4-reward-estimate-head">
+                  <div className="r4-reward-estimate-label"><Icon name="Award" size={20} /> Preliminary reward estimate ({catLabel})</div>
+                  <div className="r4-reward-estimate-amount">{automaticReward > 0 ? fmtBaht(automaticReward) : "Pending IRAS verification"}</div>
+                </div>
+                <p>This is a preliminary estimate only. The final eligible amount will be determined by IRAS after verifying the journal, documents, publication fee, author contribution, and previous claims. Maximum 80,000 THB per article.</p>
+              </div>
+            )}
           </div>
         </div>
 
         {/* 3. Author & Contribution */}
         <div className="form-section">
           <h4><span className="num">3</span> Author and Contribution Information</h4>
-          <p className="section-sub">List every author and their contribution percentage. Contributions must total 100%; the principal author needs ≥ 50%, each author ≥ 5%.</p>
+          <p className="section-sub">Provide the First Author and Corresponding Author. Contributions must total 100%; the First Author needs ≥ 50%. With two authors, changing one percentage automatically balances the other.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field"><label>Your Author Role *</label>
                 <select value={draft.applicantRole} onChange={e => upd("applicantRole", e.target.value)}>{(RA.R4_APPLICANT_ROLES || []).map(t => <option key={t}>{t}</option>)}</select></div>
-              <div className="field"><label>Are you the corresponding author?</label>
-                <select value={draft.isCorresponding} onChange={e => upd("isCorresponding", e.target.value)}><option>Yes</option><option>No</option></select></div>
-              <div className="field"><label>Based on a student senior project / thesis / IS?</label>
-                <select value={draft.studentBased} onChange={e => upd("studentBased", e.target.value)}><option>No</option><option>Yes</option></select></div>
             </div>
-            {draft.studentBased === "Yes" && <div style={{ fontSize: 12, color: "var(--au-gold-deep)", background: "var(--au-gold-soft)", padding: "8px 12px", borderRadius: "var(--r-md)", margin: "6px 0 12px" }}>Articles derived from a student senior project, thesis, dissertation, or IS may not be eligible for the advisor's publication reward. Final eligibility is determined by IRAS.</div>}
             <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
               <table className="tbl">
-                <thead><tr><th>Author Name</th><th style={{ width: 140 }}>Type</th><th>Affiliation</th><th style={{ width: 100 }}>AU ID</th><th style={{ width: 100, textAlign: "right" }}>Contrib %</th><th style={{ width: 44 }}></th></tr></thead>
+                <thead><tr><th>Author Name</th><th style={{ width: 190 }}>Role</th><th>Author Email Address</th><th style={{ width: 100, textAlign: "right" }}>Contrib %</th><th style={{ width: 100 }}>Action</th></tr></thead>
                 <tbody>
                   {authors.map((a, i) => (
                     <tr key={i}>
                       <td><input value={a.name} onChange={e => setAuthor(i, "name", e.target.value)} placeholder="Full name" style={{ width: "100%", minWidth: 130 }} /></td>
-                      <td><select value={a.type} onChange={e => setAuthor(i, "type", e.target.value)}>{(RA.R4_AUTHOR_TYPES || []).map(t => <option key={t}>{t}</option>)}</select></td>
-                      <td><input value={a.affiliation} onChange={e => setAuthor(i, "affiliation", e.target.value)} placeholder="Institution" style={{ width: "100%", minWidth: 120 }} /></td>
-                      <td><input value={a.auId} onChange={e => setAuthor(i, "auId", e.target.value)} placeholder="ID" style={{ width: "100%", minWidth: 70 }} /></td>
+                      <td><select value={a.type} onChange={e => setAuthor(i, "type", e.target.value)} style={{ width: "100%" }}>{(RA.R4_AUTHOR_TYPES || []).map(t => <option key={t} value={t}>{t}</option>)}</select></td>
+                      <td><input type="email" value={a.email} onChange={e => setAuthor(i, "email", e.target.value)} placeholder="author@example.com" style={{ width: "100%", minWidth: 170 }} /></td>
                       <td style={{ textAlign: "right" }}><input value={a.contribution} onChange={e => setAuthor(i, "contribution", e.target.value)} style={{ width: 64, textAlign: "right" }} /></td>
-                      <td style={{ textAlign: "center" }}><button type="button" className="btn btn-ghost btn-sm" onClick={() => removeAuthor(i)}><Icon name="Trash2" size={13} /></button></td>
+                      <td style={{ textAlign: "center" }}><button type="button" className="btn btn-ghost btn-sm" onClick={() => removeAuthor(i)} disabled={authors.length === 1} aria-label={"Remove author " + (i + 1)}><Icon name="Trash2" size={13} /> Remove</button></td>
                     </tr>
                   ))}
                   <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}>
-                    <td colSpan="4">Total contribution</td>
+                    <td colSpan="3">Total contribution</td>
                     <td style={{ textAlign: "right", color: Math.round(totalContrib) === 100 ? "var(--status-approved)" : "var(--au-crimson)" }}>{totalContrib}%</td>
                     <td></td>
                   </tr>
@@ -1609,64 +1650,76 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
               </table>
             </div>
             <button type="button" className="btn btn-secondary btn-sm mt-1" onClick={addAuthor}><Icon name="Plus" size={13} /> Add author</button>
+            <div className="field full" style={{ marginTop: 14 }}>
+              <label>Author Contribution File *</label>
+              <label className="upload-box" style={{ cursor: "pointer", display: "block" }}>
+                <input type="file" accept="application/pdf,.pdf" style={{ display: "none" }} onChange={e => onTypedFiles(e, "Author Contribution Statement")} />
+                <Icon name="Upload" size={24} className="icon" /><div className="t">Attach author contribution statement</div><div className="s">PDF · max 10 MB</div>
+              </label>
+            </div>
           </div>
         </div>
 
         {/* 4. Researcher Information */}
         <div className="form-section">
           <h4><span className="num">4</span> Researcher Information</h4>
-          <p className="section-sub">Auto-filled from your profile. Identity and faculty fields are read-only.</p>
+          <p className="section-sub">Auto-filled from your profile. Correct any name, ID, faculty, or major information before submitting.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field"><label>Title</label>
                 <select value={draft.title2} onChange={e => upd("title2", e.target.value)}><option value="">Select title…</option>{RA.AU_TITLES.map(t => <option key={t}>{t}</option>)}</select></div>
-              <div className="field"><label>Full Name</label><input value={draft.name} onChange={e => upd("name", e.target.value)} readOnly={!!draft.name} style={draft.name ? roStyle : null} /></div>
-              <div className="field"><label>AU ID</label><input value={draft.auId} onChange={e => upd("auId", e.target.value)} readOnly={!!draft.auId} style={draft.auId ? roStyle : null} placeholder="e.g. 5012345" /></div>
+              <div className="field"><label>Full Name</label><input value={draft.name} onChange={e => upd("name", e.target.value)} /></div>
+              <div className="field"><label>AU ID</label><input value={draft.auId} onChange={e => upd("auId", e.target.value)} placeholder="e.g. 5012345" /></div>
               <div className="field"><label>Email (AU only)</label>
-                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} readOnly={!!draft.email} style={draft.email ? roStyle : (emailBad ? { borderColor: "var(--au-crimson)" } : null)} placeholder="name@au.edu" />
-                {!draft.email && emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}</div>
+                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} style={emailBad ? { borderColor: "var(--au-crimson)" } : null} placeholder="name@au.edu" />
+                {emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}</div>
               <div className="field"><label>Phone</label><input value={draft.phone} onChange={e => upd("phone", e.target.value)} /></div>
               <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} /></div>
+              <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} />
               <div className="field"><label>School / Faculty</label>
-                <select value={facultyLocked ? draft.school : (facultyValid ? draft.school : "")} onChange={e => { upd("school", e.target.value); upd("department", ""); }} disabled={facultyLocked} style={facultyLocked ? roStyle : null}>
+                <select value={facultyValid ? draft.school : ""} onChange={e => { setDraft(d => ({ ...d, school: e.target.value, department: "" })); }}>
                   <option value="">Select your faculty…</option>{RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}</select></div>
-              <div className="field"><label>Department</label>
-                <select value={deptValid ? draft.department : ""} onChange={e => upd("department", e.target.value)} disabled={!facultyValid || deptLocked} style={deptLocked ? roStyle : null}>
-                  <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
+              <div className="field"><label>Major</label>
+                <select value={deptValid ? draft.department : ""} onChange={e => upd("department", e.target.value)} disabled={!facultyValid}>
+                  <option value="">{draft.school ? "Select major…" : "Select a faculty first"}</option>
                   {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d}>{d}</option>)}</select></div>
             </div>
           </div>
         </div>
 
-        {/* 5. Publication Fee and Claim */}
-        <div className="form-section">
-          <h4><span className="num">5</span> Publication Fee and Claim Information</h4>
-          <p className="section-sub">The final eligible amount is decided by IRAS after verification.</p>
-          <div className="section-body">
-            <div className="form-grid">
-              <div className="field"><label>Claim Type *</label>
-                <select value={draft.claimType} onChange={e => upd("claimType", e.target.value)}>{(RA.R4_CLAIM_TYPES || []).map(t => <option key={t}>{t}</option>)}</select></div>
-              <div className="field"><label>Publication Fee Paid (THB)</label><input value={draft.feePaid === "" ? "" : Number(draft.feePaid || 0).toLocaleString()} onChange={e => upd("feePaid", (e.target.value + "").replace(/[^0-9]/g, ""))} placeholder="0" /></div>
-              <div className="field"><label>Payment Date</label><AUDatePicker value={draft.feeDate} onChange={v => upd("feeDate", v)} placeholder="Select date…" /></div>
-              <div className="field"><label>Receipt Number *</label><input value={draft.receiptNo} onChange={e => upd("receiptNo", e.target.value)} /></div>
-              <div className="field"><label>Paid By</label><input value={draft.paidBy} onChange={e => upd("paidBy", e.target.value)} placeholder="Name / department" /></div>
-            </div>
-            <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginTop: 8 }}>
-              <table className="tbl"><tbody>
-                <tr><td>Publication fee paid</td><td style={{ textAlign: "right" }}>{fmtBaht(Number(draft.feePaid) || 0)}</td></tr>
-                <tr><td>Preliminary reward</td><td style={{ textAlign: "right" }}>{prelim > 0 ? fmtBaht(prelim) : "Actual fee / IRAS"}</td></tr>
-                <tr><td>Requested claim amount</td><td style={{ textAlign: "right", fontWeight: 600 }}>{fmtBaht(requested)}</td></tr>
-                <tr><td>Maximum eligible</td><td style={{ textAlign: "right" }}>80,000 THB / article</td></tr>
-                <tr style={{ color: "var(--ink-3)" }}><td>Final IRAS-approved amount</td><td style={{ textAlign: "right" }}>Pending IRAS verification</td></tr>
-              </tbody></table>
+        {/* 5. Publication Fee and Claim Information — shown only after a tier is selected. */}
+        {tierSelected && (
+          <div className="form-section">
+            <h4><span className="num">5</span> Publication Fee and Claim Information</h4>
+            <p className="section-sub">The final eligible amount is decided by the research office after verification.</p>
+            <div className="section-body">
+              <div className="form-grid">
+                <div className="field"><label>Claim Type *</label>
+                  <select value={draft.claimType} onChange={e => upd("claimType", e.target.value)}>{(RA.R4_CLAIM_TYPES || []).map(t => <option key={t} value={t}>{t}</option>)}</select>
+                </div>
+                <div className="field"><label>Publication Fee (THB) *</label>
+                  <input value={draft.feePaid === "" ? "" : Number(draft.feePaid || 0).toLocaleString()} onChange={e => upd("feePaid", (e.target.value + "").replace(/[^0-9]/g, ""))} placeholder="Enter publication fee manually" inputMode="numeric" />
+                </div>
+                <div className="field"><label>Payment Date</label><AUDatePicker value={draft.feeDate} onChange={v => upd("feeDate", v)} placeholder="Select date…" /></div>
+                <div className="field"><label>Paid By</label><input value={draft.paidBy} onChange={e => upd("paidBy", e.target.value)} placeholder="Name / department" /></div>
+              </div>
+              <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginTop: 8 }}>
+                <table className="tbl"><tbody>
+                  <tr><td>Publication fee</td><td style={{ textAlign: "right" }}>{fmtBaht(Number(draft.feePaid) || 0)}</td></tr>
+                  <tr><td>Preliminary reward</td><td style={{ textAlign: "right" }}>{fmtBaht(requested)}</td></tr>
+                  <tr><td>Requested claim amount</td><td style={{ textAlign: "right", fontWeight: 600 }}>{fmtBaht(requested)}</td></tr>
+                  <tr><td>Maximum eligible</td><td style={{ textAlign: "right" }}>{fmtBaht(MAX)} / article</td></tr>
+                  <tr style={{ color: "var(--ink-3)" }}><td>Final research-office-approved amount</td><td style={{ textAlign: "right" }}>Pending verification</td></tr>
+                </tbody></table>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* 6. Required Documents */}
         <div className="form-section">
           <h4><span className="num">6</span> Required Documents</h4>
-          <p className="section-sub">The full article, Turnitin report (≤ 20%), original receipt, and a memo for Dean approval are required.</p>
+          <p className="section-sub">Upload the supporting documents required for Dean, Faculty Committee, and research-office review.</p>
           <div className="section-body">
             <div className="form-grid" style={{ marginBottom: 10 }}>
               <div className="field"><label>Turnitin Similarity % *</label>
@@ -1678,6 +1731,8 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
               <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--ink-2)" }}>Required for an AU-R4 claim:</div>
               <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink-2)", lineHeight: 1.7 }}>
                 <li><b>Full Research Article</b> — the full published article</li>
+                {!published && <li><b>Acceptance Letter</b> — required for an accepted article</li>}
+                <li><b>Author Contribution Statement</b></li>
                 <li><b>Turnitin Report</b> — similarity ≤ 20%</li>
                 <li><b>Original Publication Fee Receipt</b></li>
                 <li><b>Memo for Dean Approval</b></li>
@@ -1729,8 +1784,17 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           <div className="section-body">
             {(RA.R4_DECLARATIONS || []).map((d, i) => (
               <label key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", fontSize: 13, borderBottom: "1px solid var(--line-2)" }}>
-                <input type="checkbox" checked={decls[i] || false} onChange={e => setDecls(s => s.map((v, j) => j === i ? e.target.checked : v))} style={{ accentColor: "var(--au-crimson)", marginTop: 3 }} />
-                <span>{d}</span>
+                {i === 2 ? (
+                  <>
+                    <input type="checkbox" checked={draft.predatory} onChange={e => { upd("predatory", e.target.checked); setDecls(s => s.map((v, j) => j === i ? e.target.checked : v)); }} style={{ accentColor: "var(--au-crimson)", marginTop: 3 }} />
+                    <span>{i + 1}. I confirmed that this journal was not a predatory journal and was not listed in <a href="https://beallslist.net/" target="_blank" rel="noopener noreferrer">Beall's List</a>. *</span>
+                  </>
+                ) : (
+                  <>
+                    <input type="checkbox" checked={decls[i] || false} onChange={e => setDecls(s => s.map((v, j) => j === i ? e.target.checked : v))} style={{ accentColor: "var(--au-crimson)", marginTop: 3 }} />
+                    <span>{i + 1}. {d}</span>
+                  </>
+                )}
               </label>
             ))}
           </div>
@@ -1828,6 +1892,106 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
   );
 }
 
+/* Printable project summary used by the browser's Save as PDF flow. */
+function ProjectPrintSheet({ app, status }) {
+  const sys = grantSystemFor(app.grant_type || "au_r1");
+  const researcher = app.researcher || {};
+  const researcherName = [researcher.name_title, researcher.full_name].filter(Boolean).join(" ") || "-";
+  const payments = (app.payments || []).slice().sort((a, b) => Number(a.instalment) - Number(b.instalment));
+  const show = value => value === 0 || value ? value : "-";
+  const date = value => value ? window.DB.fmtDate(value) : "-";
+  const amount = value => value === 0 || value ? fmtBaht(Number(value)) : "-";
+  const isR1 = (app.grant_type || "au_r1") === "au_r1";
+  const joinedDate = researcherJoinedDate(app);
+  const service = universityServiceEligibility(joinedDate);
+  const paymentRows = isR1
+    ? [1, 2, 3].map(phase => {
+        const payment = payments.find(p => Number(p.instalment) === phase);
+        return {
+          key: "phase-" + phase,
+          label: "Phase " + phase,
+          note: (phase === 2 ? 40 : 30) + "% milestone",
+          amount: payment && payment.amount,
+          paid: !!(payment && payment.status === "paid"),
+          paidAt: payment && payment.paid_at,
+        };
+      })
+    : [{
+        key: "single-payment",
+        label: sys.code + " payment",
+        note: "Single payment",
+        amount: app.approved_amount || app.requested_amount,
+        paid: ["active", "completed"].includes(app.status),
+        paidAt: ["active", "completed"].includes(app.status) ? (app.updated_at || app.decided_at) : null,
+      }];
+  const printDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+  return (
+    <section className="project-print-sheet">
+      <header className="project-print-header">
+        <img src="assets/au-logo.png" alt="Assumption University" />
+        <div>
+          <div className="project-print-university">Assumption University</div>
+          <div className="project-print-office">Office of Research Affairs | Research Grant Management System</div>
+        </div>
+        <div className="project-print-meta"><b>PROJECT SUMMARY</b><span>Printed {printDate}</span></div>
+      </header>
+
+      <div className="project-print-titlebar">
+        <div>
+          <span>Application ID</span>
+          <b>{show(app.code)}</b>
+        </div>
+        <div>
+          <span>Grant</span>
+          <b>{sys.code} - {sys.name}</b>
+        </div>
+        <div>
+          <span>Status</span>
+          <b>{status && status.label ? status.label : show(app.status)}</b>
+        </div>
+      </div>
+
+      <div className="project-print-section">
+        <h2>Researcher and Project</h2>
+        <div className="project-print-grid">
+          <div className="left"><span>Researcher</span><b>{researcherName}</b></div>
+          <div><span>AU ID</span><b>{show(researcher.au_id)}</b></div>
+          <div className="wide"><span>Research title</span><b>{show(app.title)}</b></div>
+          <div className="left"><span>Email</span><b>{show(researcher.email)}</b></div>
+          <div><span>Faculty / Department</span><b>{show(app.faculty)}{app.department ? " - " + app.department : ""}</b></div>
+          <div className="left"><span>Joined Assumption University</span><b>{date(joinedDate)}</b></div>
+          <div><span>Service eligibility</span><b>{joinedDate ? (service.eligible ? "Eligible" : "Not eligible until " + date(service.eligibleOn)) : "Not recorded"}</b></div>
+          <div className="left"><span>Submitted</span><b>{date(app.submitted_at || app.created_at)}</b></div>
+          <div><span>Approved amount</span><b>{amount(app.approved_amount || app.requested_amount)}</b></div>
+        </div>
+      </div>
+
+      <div className="project-print-section project-print-payment">
+        <h2>{isR1 ? "Payment Phases" : "Payment Status"}</h2>
+        <table>
+          <thead><tr><th>Payment</th><th>Amount</th><th>Status</th><th>Payment date</th></tr></thead>
+          <tbody>{paymentRows.map(row => <tr key={row.key}>
+            <td><b>{row.label}</b><small>{row.note}</small></td>
+            <td>{amount(row.amount)}</td>
+            <td>{row.paid ? "Paid" : "Pending"}</td>
+            <td>{date(row.paidAt)}</td>
+          </tr>)}</tbody>
+        </table>
+      </div>
+
+      <div className="project-print-verification">
+        <div><span>Researcher signature</span></div>
+        <div><span>Finance officer</span></div>
+        <div><span>Payment date</span></div>
+      </div>
+      <footer className="project-print-footer">
+        <span>AU-RGMS | {show(app.code)} | Project information</span>
+        <span>Page <i className="project-print-page"></i></span>
+      </footer>
+    </section>
+  );
+}
+
 /* ---------- D. Application Detail ---------- */
 function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
   const [app, setApp] = useState(null);
@@ -1895,14 +2059,38 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
   const budgetRows = Array.isArray(app.budget_breakdown) ? app.budget_breakdown : [];
   const researcherName = app.researcher ? app.researcher.full_name : "Researcher";
   const status = app.statusBadge || window.DB.statusBadge(app.status);
+  const joinedDate = researcherJoinedDate(app);
+  const service = universityServiceEligibility(joinedDate);
+  const isR1 = !app.grant_type || app.grant_type === "au_r1";
+  const payments = app.payments || [];
+  const reports = app.reports || [];
+  const phaseApproved = n => payments.some(p => Number(p.instalment) === n && p.status === "paid");
+  const milestoneReport = kind => reports.find(r => r.kind === kind && r.status === "accepted") || reports.find(r => r.kind === kind && r.status === "submitted");
+  const progressReport = milestoneReport("progress");
+  const finalReport = milestoneReport("final");
+  const progressAccepted = progressReport && progressReport.status === "accepted";
+  const finalAccepted = finalReport && finalReport.status === "accepted";
+  const openProjectReport = kind => navigate(kind === "progress" ? "r-progress" : "r-final", { keepSelection: true });
+  const printProject = () => {
+    const previousTitle = document.title;
+    const safeCode = String(app.code || "AU-Research-Project").replace(/[^a-zA-Z0-9_-]+/g, "-");
+    document.title = safeCode + "-Project-Summary";
+    window.print();
+    document.title = previousTitle;
+  };
   const timelineApp = {
     timeline: {
       submission: { done: true, current: app.status === "submitted", date: window.DB.fmtDate(app.submitted_at || app.created_at), who: researcherName },
-      deanScreen: { current: app.status === "submitted", done: !["draft", "submitted", "returned"].includes(app.status), date: app.status === "submitted" ? "Waiting Dean screening" : "Completed" },
-      committee: { current: app.status === "committee_review", done: ["iras_review", "approved", "active", "completed"].includes(app.status), date: app.status === "committee_review" ? "In committee review" : "Pending" },
-      iras: { current: app.status === "iras_review", done: ["approved", "active", "completed"].includes(app.status), date: app.status === "iras_review" ? "RASSC screening" : "Pending" },
-      contract: { current: app.status === "approved", done: ["active", "completed"].includes(app.status), date: app.status === "approved" ? "Contract pending" : "Pending" },
-      pay1: { current: app.status === "active", done: app.status === "completed", date: app.status === "active" ? "Active grant" : "Pending" },
+      deanScreen: { current: app.status === "submitted", done: !["draft", "submitted", "returned"].includes(app.status), date: app.status === "submitted" ? "Waiting Dean screening" : !["draft", "returned"].includes(app.status) ? "Completed" : "Pending" },
+      committee: { current: app.status === "committee_review", done: ["iras_review", "approved", "active", "completed"].includes(app.status), date: app.status === "committee_review" ? "In committee review" : ["iras_review", "approved", "active", "completed"].includes(app.status) ? "Completed" : "Pending" },
+      iras: { current: app.status === "iras_review", done: ["approved", "active", "completed"].includes(app.status), date: app.status === "iras_review" ? "RASSC screening" : ["approved", "active", "completed"].includes(app.status) ? "Approved" : "Pending" },
+      contract: { current: app.status === "approved", done: ["active", "completed"].includes(app.status), date: app.status === "approved" ? "Contract pending" : ["active", "completed"].includes(app.status) ? "Signed" : "Pending" },
+      pay1: { current: ["approved", "active"].includes(app.status) && !phaseApproved(1), done: phaseApproved(1), date: phaseApproved(1) ? "Paid by Finance" : "Waiting for Finance" },
+      progress: { current: phaseApproved(1) && !progressAccepted, done: !!progressAccepted, date: progressAccepted ? "Accepted by RASSC · click to view" : progressReport ? "At RASSC review · click to view" : phaseApproved(1) ? "Ready to submit · click to open" : "Opens after Phase 1 approval" },
+      pay2: { current: !!progressAccepted && !phaseApproved(2), done: phaseApproved(2), date: phaseApproved(2) ? "Paid by Finance" : progressAccepted ? "Ready at Finance" : "After RASSC accepts progress report" },
+      final: { current: phaseApproved(2) && !finalAccepted, done: !!finalAccepted, date: finalAccepted ? "Accepted by RASSC · click to view" : finalReport ? "At RASSC review · click to view" : phaseApproved(2) ? "Ready to submit · click to open" : "Opens after Phase 2 approval" },
+      pay3: { current: !!finalAccepted && !phaseApproved(3), done: phaseApproved(3), date: phaseApproved(3) ? "Paid by Finance" : finalAccepted ? "Ready at Finance" : "After RASSC accepts final report" },
+      closed: { current: phaseApproved(3) && app.status !== "completed", done: app.status === "completed", date: app.status === "completed" ? "Project completed" : "After Phase 3 approval" },
     },
   };
 
@@ -1913,21 +2101,25 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
         desc={(app.code || "Application") + " - Submitted " + window.DB.fmtDate(app.submitted_at || app.created_at)}
         actions={
           <>
+            <button className="btn btn-secondary" onClick={printProject} title="Open the print dialog, then choose Save as PDF"><Icon name="Printer" size={13} /> Print PDF</button>
             <Badge status={status} />
             {["draft", "returned"].includes(app.status) && <button className="btn btn-secondary" onClick={() => navigate("r-submit", { keepSelection: true })}><Icon name="Edit3" size={13} /> {app.status === "returned" ? "Edit & Resubmit" : "Edit Draft"}</button>}
           </>
         }
       />
 
+      <ProjectPrintSheet app={app} status={status} />
+
       <div className="grid-2">
         <div>
           <div className="card card-pad-0 mb-4">
-            <div className="card-head"><h3>Research Information</h3></div>
+            <div className="card-head"><h3>{app.grant_type === "au_r3" ? "Research Paper Information" : "Research Information"}</h3></div>
             <div className="card-body">
-              <div className="meta-row"><span className="l">Research title</span><span className="r">{app.title}</span></div>
+              <div className="meta-row"><span className="l">{app.grant_type === "au_r3" ? "Paper title" : "Research title"}</span><span className="r">{app.title}</span></div>
               <div className="meta-row"><span className="l">Field / discipline</span><span className="r">{app.field || "-"}</span></div>
+              {app.grant_type === "au_r3" && <><div className="eyebrow mt-4 mb-2">Abstract</div><p style={{ margin: 0, lineHeight: 1.65, color: "var(--ink-2)" }}>{(app.conference_info && app.conference_info.paperAbstract) || "No abstract entered."}</p></>}
               <div className="meta-row"><span className="l">Keywords</span><span className="r">{app.keywords || "-"}</span></div>
-              <div className="meta-row"><span className="l">Duration</span><span className="r">{app.duration_months || 12} months</span></div>
+              {app.grant_type !== "au_r3" && <div className="meta-row"><span className="l">Duration</span><span className="r">{app.duration_months || 12} months</span></div>}
               <div className="eyebrow mt-4 mb-2">Expected outcomes / summary</div>
               <p style={{ margin: 0, lineHeight: 1.65, color: "var(--ink-2)" }}>{app.abstract || "No summary entered."}</p>
             </div>
@@ -1939,7 +2131,9 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
               <div className="meta-row"><span className="l">Principal researcher</span><span className="r">{researcherName}</span></div>
               <div className="meta-row"><span className="l">Email</span><span className="r">{app.researcher ? app.researcher.email : "-"}</span></div>
               <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{app.faculty || "-"}</span></div>
-              <div className="meta-row"><span className="l">Department</span><span className="r">{app.department || "-"}</span></div>
+              <div className="meta-row"><span className="l">{app.grant_type === "au_r4" ? "Major" : "Department"}</span><span className="r">{app.department || "-"}</span></div>
+              <div className="meta-row"><span className="l">Joined Assumption University</span><span className="r">{joinedDate ? window.DB.fmtDate(joinedDate) : "Not recorded"}</span></div>
+              <div className="meta-row"><span className="l">Service eligibility</span><span className="r" style={{ color: joinedDate && service.eligible ? "var(--status-approved)" : "var(--au-crimson)" }}>{joinedDate ? (service.eligible ? "Eligible" : "Not eligible until " + fmtNiceDate(service.eligibleOn)) : "Not recorded"}</span></div>
               <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.requested_amount || 0))}</span></div>
               {Array.isArray(app.co_members) && app.co_members.length > 0 && (
                 <div style={{ marginTop: 8, borderTop: "1px solid var(--line-2)", paddingTop: 8 }}>
@@ -1957,10 +2151,13 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
                   <div className="eyebrow" style={{ marginBottom: 6 }}>Conference (AU-R3)</div>
                   <div className="meta-row"><span className="l">Conference</span><span className="r">{app.conference_info.confName || "-"}</span></div>
                   <div className="meta-row"><span className="l">Organizer</span><span className="r">{app.conference_info.organizer || "-"}</span></div>
-                  <div className="meta-row"><span className="l">Type / Place</span><span className="r">{(app.conference_info.confType || "-") + " · " + (app.conference_info.city || "-") + ", " + (app.conference_info.country || "-")}</span></div>
-                  <div className="meta-row"><span className="l">Dates</span><span className="r">{(app.conference_info.confStart ? fmtNiceDate(app.conference_info.confStart) : "-") + " → " + (app.conference_info.confEnd ? fmtNiceDate(app.conference_info.confEnd) : "-")}</span></div>
+                  <div className="meta-row"><span className="l">Conference type</span><span className="r">{app.conference_info.confType || "-"}</span></div>
+                  <div className="meta-row"><span className="l">Conference location</span><span className="r">{app.conference_info.conferenceLocation || [app.conference_info.city, app.conference_info.country].filter(Boolean).join(", ") || "-"}</span></div>
+                  <div className="meta-row"><span className="l">Presentation date</span><span className="r">{(app.conference_info.presentationDate || app.conference_info.confStart) ? fmtNiceDate(app.conference_info.presentationDate || app.conference_info.confStart) : "-"}</span></div>
                   <div className="meta-row"><span className="l">Presentation</span><span className="r">{app.conference_info.presentation || "Oral Presentation"}</span></div>
                   <div className="meta-row"><span className="l">Corresponding</span><span className="r">{app.conference_info.correspondingAuthor || "-"}</span></div>
+                  <div className="meta-row"><span className="l">Journal Database / Index</span><span className="r">{app.conference_info.journalDb || "-"}</span></div>
+                  <div className="meta-row"><span className="l">Classification</span><span className="r">{app.conference_info.journalClassification || "-"}</span></div>
                 </div>
               )}
               {app.pub_info && (
@@ -1968,18 +2165,23 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
                   <div className="eyebrow" style={{ marginBottom: 6 }}>Publication (AU-R4)</div>
                   <div className="meta-row"><span className="l">Journal</span><span className="r">{app.pub_info.journal || "-"}</span></div>
                   <div className="meta-row"><span className="l">Indexing</span><span className="r">{app.pub_info.indexLabel || app.pub_info.indexType || "-"}{app.pub_info.quartile ? " · " + app.pub_info.quartile : ""}</span></div>
-                  {app.pub_info.doi && <div className="meta-row"><span className="l">DOI / URL</span><span className="r">{app.pub_info.doi}</span></div>}
-                  {app.pub_info.feeAmount ? <div className="meta-row"><span className="l">Publication fee</span><span className="r">{fmtBaht(Number(app.pub_info.feeAmount || 0))}</span></div> : null}
-                  <div className="meta-row"><span className="l">Estimated reward</span><span className="r">{fmtBaht(Number(app.pub_info.reward || app.requested_amount || 0))}</span></div>
+                  <div className="meta-row"><span className="l">Classification</span><span className="r">{app.pub_info.journalClassification || app.pub_info.openAccess || "-"}</span></div>
+                  <div className="meta-row"><span className="l">Status</span><span className="r">{app.pub_info.pubStatus || "-"}</span></div>
+                  <div className="meta-row"><span className="l">Publication fee</span><span className="r">{fmtBaht(Number(app.pub_info.feePaid || app.pub_info.feeAmount || 0))}</span></div>
+                  <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.pub_info.reward || app.requested_amount || 0))}</span></div>
                 </div>
               )}
             </div>
           </div>
 
+          <div className="card mb-4">
+            <ReviewCommentHistory app={app} roles={app.grant_type === "au_r3" ? ["dean", "iras"] : ["dean", "committee", "iras"]} />
+          </div>
+
           <div className="card card-pad-0 mb-4">
-            <div className="card-head"><h3>Budget Breakdown</h3></div>
+            <div className="card-head"><h3>{app.grant_type === "au_r3" ? "Grant Amount" : "Budget Breakdown"}</h3></div>
             <div className="card-body" style={{ padding: 0 }}>
-              {budgetRows.length === 0 && <div style={{ padding: 20, color: "var(--ink-3)" }}>No budget breakdown entered.</div>}
+              {budgetRows.length === 0 && <div style={{ padding: 20, color: "var(--ink-3)" }}>{app.grant_type === "au_r3" ? "Fixed AU-R3 grant: 3,500 THB." : "No budget breakdown entered."}</div>}
               {budgetRows.length > 0 && (
                 <table className="tbl">
                   <thead><tr><th>Item</th><th style={{ textAlign: "right" }}>Amount</th></tr></thead>
@@ -2019,13 +2221,30 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
           </div>
         </div>
 
-        <div className="card card-pad-0" style={{ alignSelf: "start", position: "sticky", top: 116 }}>
-          <div className="card-head"><h3>Approval Timeline</h3><div className="grow"></div><Badge status={status} /></div>
-          <div className="card-body">{app.grant_type === "au_r4"
-            ? <Timeline steps={R4_PIPELINE} app={{ timeline: buildR4Timeline(app.status) }} />
-            : app.grant_type === "au_r3"
-            ? <Timeline steps={R3_PIPELINE} app={{ timeline: buildR3Timeline(app.status) }} />
-            : <Timeline steps={RA.ALL_STAGES} app={timelineApp} />}</div>
+        <div style={{ alignSelf: "start" }}>
+          <div className="card card-pad-0 mb-4">
+            <div className="card-head"><h3>Approval Timeline</h3><div className="grow"></div><Badge status={status} /></div>
+            <div className="card-body">{app.grant_type === "au_r4"
+              ? <Timeline steps={R4_PIPELINE} app={{ timeline: buildR4Timeline(app.status) }} />
+              : app.grant_type === "au_r3"
+              ? <Timeline steps={R3_PIPELINE} app={{ timeline: buildR3Timeline(app.status) }} />
+              : <Timeline steps={RA.ALL_STAGES} app={timelineApp} onStepClick={openProjectReport} />}</div>
+          </div>
+
+          {isR1 && <div className="card card-pad-0">
+            <div className="card-head"><h3>Project Reports</h3></div>
+            <div className="card-body">
+              <p className="text-sm text-muted" style={{ marginTop: 0 }}>Reports here belong only to <b>{app.code}</b> · {app.title}.</p>
+              <button className="btn btn-secondary" style={{ width: "100%", justifyContent: "space-between", marginBottom: 10 }} onClick={() => openProjectReport("progress")}>
+                <span><Icon name="FileText" size={14} /> Progress Report</span>
+                <span>{progressAccepted ? "Accepted" : progressReport ? "At RASSC" : phaseApproved(1) ? "Ready" : "Locked"} →</span>
+              </button>
+              <button className="btn btn-secondary" style={{ width: "100%", justifyContent: "space-between" }} onClick={() => openProjectReport("final")}>
+                <span><Icon name="FileCheck" size={14} /> Final Report</span>
+                <span>{finalAccepted ? "Accepted" : finalReport ? "At RASSC" : phaseApproved(2) ? "Ready" : "Locked"} →</span>
+              </button>
+            </div>
+          </div>}
         </div>
       </div>
     </>
@@ -2033,29 +2252,119 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
 }
 
 /* ---------- E. Progress Report ---------- */
-function ResearcherProgress({ onDownload, onView, toast }) {
+function ResearcherProgress({ applicationId, navigate, onDownload, onView, toast }) {
   const [grant, setGrant] = useState(null);
   const [reports, setReports] = useState(null);
   const [busy, setBusy] = useState(false);
-  const reload = () => {
-    window.DB.myGrant().then(setGrant).catch(() => setGrant(false));
-    window.DB.myReports("progress").then(setReports).catch(() => setReports([]));
+  const [reportingPeriod, setReportingPeriod] = useState("Month 1 — Month 6");
+  const [customPeriod, setCustomPeriod] = useState("");
+  const [progressSummary, setProgressSummary] = useState("");
+  const [budgetUtilisation, setBudgetUtilisation] = useState("");
+  const [reportFile, setReportFile] = useState(null);
+  const [fileError, setFileError] = useState("");
+  const reload = async () => {
+    if (!applicationId) { setGrant(false); setReports([]); return; }
+    try {
+      const project = await window.DB.applicationDetail(applicationId);
+      if (project.grant_type && project.grant_type !== "au_r1") throw new Error("Progress reports are available only for AU-R1 projects.");
+      setGrant(project);
+      setReports(await window.DB.myReports("progress", applicationId));
+    } catch (e) { setGrant(false); setReports([]); }
   };
-  useEffect(() => { reload(); }, []);
+  useEffect(() => { reload(); }, [applicationId]);
+  const chooseReportFile = (event) => {
+    const file = event.target.files && event.target.files[0];
+    setFileError("");
+    if (!file) { setReportFile(null); return; }
+    if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
+      setReportFile(null);
+      setFileError("Please select a PDF file.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setReportFile(null);
+      setFileError("The progress report must be 10 MB or smaller.");
+      event.target.value = "";
+      return;
+    }
+    setReportFile(file);
+  };
   const submit = async () => {
-    if (!grant) { toast("No approved grant found - your application must be approved first."); return; }
+    if (!grant) { toast("Open an AU-R1 project from My Applications first."); return; }
+    if (!reportFile) { toast("Select the progress report PDF before submitting."); return; }
+    const existingReport = (reports || []).find(r => r.status === "submitted" || r.status === "accepted");
+    const existingReportFile = (grant.documents || []).some(d => d.doc_type === "Progress Report");
+    if (existingReport && existingReport.status === "submitted" && !existingReportFile) {
+      setBusy(true);
+      let attachedDocument = null;
+      let attachmentSaved = false;
+      try {
+        attachedDocument = await window.DB.uploadDocument(grant.id, reportFile, "Progress Report");
+        attachmentSaved = true;
+        toast("Progress report PDF attached. RASSC can now review the submitted report.");
+        setReportFile(null);
+        await reload();
+      } catch (e) {
+        if (attachedDocument && !attachmentSaved) {
+          try { await window.DB.deleteDocument(attachedDocument); } catch (_) {}
+        }
+        toast("Error: " + (e.message || e));
+      }
+      setBusy(false);
+      return;
+    }
+    const finalPeriod = reportingPeriod === "custom" ? customPeriod.trim() : reportingPeriod;
+    if (!finalPeriod) { toast("Enter the reporting period."); return; }
     setBusy(true);
-    try { await window.DB.submitReport(grant.id, "progress"); toast("Progress report submitted. RASSC must accept it before the 40% tranche can be paid."); reload(); }
-    catch (e) { toast("Error: " + (e.message || e)); }
+    let uploadedDocument = null;
+    let reportCreated = false;
+    try {
+      uploadedDocument = await window.DB.uploadDocument(grant.id, reportFile, "Progress Report");
+      await window.DB.submitReport(grant.id, "progress", {
+        reporting_period: finalPeriod,
+        summary: progressSummary.trim(),
+        budget_utilisation: budgetUtilisation.trim(),
+        document_id: uploadedDocument.id,
+      });
+      reportCreated = true;
+      toast("Progress report submitted. RASSC must accept it before Finance can approve the 40% phase.");
+      setReportFile(null);
+      setProgressSummary("");
+      setBudgetUtilisation("");
+      await reload();
+    } catch (e) {
+      if (uploadedDocument && !reportCreated) {
+        try { await window.DB.deleteDocument(uploadedDocument); } catch (_) {}
+      }
+      toast("Error: " + (e.message || e));
+    }
     setBusy(false);
   };
+  if (grant === null) return <><PageHeader title="Project Progress Report" desc="Loading the selected AU-R1 project." /><div className="card" style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>Loading project…</div></>;
+  if (!grant) return <><PageHeader title="Project Progress Report" desc="Choose the research project this report belongs to." /><div className="card"><Empty title="No project selected" desc="Open My Applications, choose View or Files, then open Progress Report from that project's timeline." icon="Folder" /><div style={{ textAlign: "center", paddingBottom: 24 }}><button className="btn btn-primary" onClick={() => navigate("r-applications")}><Icon name="ArrowLeft" size={13} /> My Applications</button></div></div></>;
+  const phaseOneApproved = (grant.payments || []).some(p => Number(p.instalment) === 1 && p.status === "paid");
+  const currentReport = (reports || []).find(r => r.status === "submitted" || r.status === "accepted");
+  const hasReportFile = (grant.documents || []).some(d => d.doc_type === "Progress Report");
+  const canAttachMissingFile = currentReport && currentReport.status === "submitted" && !hasReportFile;
+  const canSubmit = phaseOneApproved && !currentReport;
   return (
     <>
       <PageHeader
-        title="Progress Report"
-        desc="Mid-project progress report — required before second disbursement (40%)."
-        actions={<Badge status={RA.STATUS.expert} />}
+        title={"Progress Report · " + grant.title}
+        desc={(grant.code || "AU-R1 project") + " — this report belongs only to this selected research project."}
+        actions={<><button className="btn btn-secondary" onClick={() => navigate("r-detail", { keepSelection: true })}><Icon name="ArrowLeft" size={13} /> Back to Project</button><Badge status={{ label: "Routes to RASSC", cls: "badge-iras" }} /></>}
       />
+
+      <div className="card card-pad-0 mb-4">
+        <div className="card-head"><h3>Selected Research Project</h3><div className="grow"></div><Badge status={window.DB.statusBadge(grant.status)} /></div>
+        <div className="card-body">
+          <div className="meta-row"><span className="l">Application ID</span><span className="r"><b>{grant.code}</b></span></div>
+          <div className="meta-row"><span className="l">Research title</span><span className="r"><b>{grant.title}</b></span></div>
+          <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{grant.faculty || "—"}{grant.department ? " · " + grant.department : ""}</span></div>
+          <div className="meta-row"><span className="l">Report unlock</span><span className="r">{phaseOneApproved ? "Phase 1 approved — report is available" : "Locked until Finance approves Phase 1"}</span></div>
+        </div>
+      </div>
 
       <div className="grid-2">
         <div>
@@ -2064,28 +2373,38 @@ function ResearcherProgress({ onDownload, onView, toast }) {
             <div className="card-body">
               <div className="field">
                 <label>Reporting period</label>
-                <select><option>Month 1 — Month 6</option><option>Month 7 — Month 9</option></select>
+                <select value={reportingPeriod} onChange={e => setReportingPeriod(e.target.value)}>
+                  <option value="Month 1 — Month 6">Month 1 — Month 6</option>
+                  <option value="Month 7 — Month 9">Month 7 — Month 9</option>
+                  <option value="custom">Enter manually</option>
+                </select>
               </div>
+              {reportingPeriod === "custom" && <div className="field">
+                <label>Custom reporting period *</label>
+                <input value={customPeriod} onChange={e => setCustomPeriod(e.target.value)} placeholder="Example: Month 4 — Month 8" />
+              </div>}
               <div className="field">
                 <label>Summary of progress</label>
-                <textarea className="comment-input" style={{minHeight: 120}} placeholder="Enter progress summary for this reporting period."></textarea>
+                <textarea className="comment-input" style={{minHeight: 120}} value={progressSummary} onChange={e => setProgressSummary(e.target.value)} placeholder="Enter progress summary for this reporting period."></textarea>
               </div>
               <div className="field">
                 <label>Budget utilisation</label>
-                <textarea className="comment-input" placeholder="Summarize spending and attach the official report file when available."></textarea>
+                <textarea className="comment-input" value={budgetUtilisation} onChange={e => setBudgetUtilisation(e.target.value)} placeholder="Summarize spending for this reporting period."></textarea>
               </div>
               <div className="field">
-                <label>Upload progress report (PDF)</label>
-                <div className="upload-box">
+                <label>Upload progress report (PDF) *</label>
+                <label className={"upload-box" + (reportFile ? " has-file" : "")} style={{display: "block"}}>
+                  <input key={reportFile ? reportFile.name + reportFile.lastModified : "empty-progress-file"} type="file" accept="application/pdf,.pdf" style={{display: "none"}} onChange={chooseReportFile} />
                   <Icon name="Upload" size={24} className="icon" />
-                  <div className="t">Click to upload Progress_Report.pdf</div>
-                  <div className="s">PDF · max 10 MB</div>
-                </div>
+                  <div className="t">{reportFile ? reportFile.name : hasReportFile ? "Progress report PDF is attached" : "Click to select the progress report"}</div>
+                  <div className="s">{reportFile ? (reportFile.size / 1024 / 1024).toFixed(2) + " MB · Click to replace" : "PDF · max 10 MB"}</div>
+                </label>
+                {fileError && <div className="form-error" style={{marginTop: 7}}>{fileError}</div>}
               </div>
               <div className="flex justify-between items-center mt-4">
-                <span className="text-sm text-muted">Once submitted, the RASSC office and Finance will be notified.</span>
-                <button className="btn btn-primary" onClick={submit} disabled={busy}>
-                  <Icon name="Send" size={13} /> {busy ? "Submitting…" : "Submit Report"}
+                <span className="text-sm text-muted">Submitted first to RASSC. Finance receives Phase 2 only after RASSC accepts the report.</span>
+                <button className="btn btn-primary" onClick={submit} disabled={busy || (!canSubmit && !canAttachMissingFile) || !reportFile || (!currentReport && reportingPeriod === "custom" && !customPeriod.trim())}>
+                  <Icon name="Send" size={13} /> {busy ? "Uploading…" : canAttachMissingFile ? (reportFile ? "Attach PDF to Submitted Report" : "Select PDF to Attach") : currentReport ? (currentReport.status === "accepted" ? "Report Accepted" : "At RASSC Review") : !phaseOneApproved ? "Locked · Phase 1 Required" : !reportFile ? "Select PDF to Submit" : "Submit Report"}
                 </button>
               </div>
             </div>
@@ -2101,10 +2420,10 @@ function ResearcherProgress({ onDownload, onView, toast }) {
               {(reports || []).map(r => (
                 <div key={r.id} className="flex justify-between items-center" style={{padding: "10px 0", borderBottom: "1px solid var(--line-2)"}}>
                   <div>
-                    <div style={{fontWeight: 600}}>{r.application ? r.application.code : "Application"} - Progress Report</div>
+                  <div style={{fontWeight: 600}}>{grant.code} · {grant.title}</div>
                     <div className="text-sm text-muted">Status: {r.status}</div>
                   </div>
-                  <Badge status={r.status === "accepted" ? RA.STATUS.completed : RA.STATUS.submitted} />
+                  <Badge status={r.status === "accepted" ? { label: "Accepted · Sent to Finance", cls: "badge-paid" } : { label: "At RASSC Review", cls: "badge-iras" }} />
                 </div>
               ))}
             </div>
@@ -2117,14 +2436,14 @@ function ResearcherProgress({ onDownload, onView, toast }) {
                 steps={[
                   { key: "k1", label: "Project kickoff" },
                   { key: "p1", label: "Progress Report (Month 6)" },
-                  { key: "p2", label: "Second Disbursement (40%)" },
+                  { key: "p2", label: "Phase 2 Finance Approval (40%)" },
                   { key: "f1", label: "Final Report (Month 12)" },
-                  { key: "f2", label: "Final Disbursement (30%)" },
+                  { key: "f2", label: "Phase 3 Finance Approval (30%)" },
                 ]}
                 app={{ timeline: {
-                  k1: { done: !!grant, date: grant ? "Contract active" : "Pending approval" },
-                  p1: { current: !!grant, date: grant ? "Submit when due" : "Pending approval" },
-                  p2: { date: "After RASSC accepts progress report" },
+                  k1: { done: phaseOneApproved, date: phaseOneApproved ? "Phase 1 approved" : "Waiting for Phase 1" },
+                  p1: { current: phaseOneApproved && !(currentReport && currentReport.status === "accepted"), done: currentReport && currentReport.status === "accepted", date: currentReport ? (currentReport.status === "accepted" ? "Accepted by RASSC" : "At RASSC review") : phaseOneApproved ? "Ready to submit for " + grant.code : "Locked" },
+                  p2: { current: currentReport && currentReport.status === "accepted", date: "After RASSC accepts progress report" },
                   f1: { date: "At project completion" },
                   f2: { date: "After RASSC accepts final report" },
                 }}}
@@ -2138,29 +2457,121 @@ function ResearcherProgress({ onDownload, onView, toast }) {
 }
 
 /* ---------- F. Final Report ---------- */
-function ResearcherFinal({ onDownload, onView, toast }) {
+function ResearcherFinal({ applicationId, navigate, onDownload, onView, toast }) {
   const [grant, setGrant] = useState(null);
   const [reports, setReports] = useState(null);
   const [busy, setBusy] = useState(false);
-  const reload = () => {
-    window.DB.myGrant().then(setGrant).catch(() => setGrant(false));
-    window.DB.myReports("final").then(setReports).catch(() => setReports([]));
+  const [finalFile, setFinalFile] = useState(null);
+  const [fileError, setFileError] = useState("");
+  const [totalSpent, setTotalSpent] = useState("");
+  const [completion, setCompletion] = useState("");
+  const [outcomes, setOutcomes] = useState("");
+  const [lessons, setLessons] = useState("");
+  const reload = async () => {
+    if (!applicationId) { setGrant(false); setReports([]); return; }
+    try {
+      const project = await window.DB.applicationDetail(applicationId);
+      if (project.grant_type && project.grant_type !== "au_r1") throw new Error("Final reports are available only for AU-R1 projects.");
+      setGrant(project);
+      setReports(await window.DB.myReports("final", applicationId));
+    } catch (e) { setGrant(false); setReports([]); }
   };
-  useEffect(() => { reload(); }, []);
+  useEffect(() => { reload(); }, [applicationId]);
+  const chooseFinalFile = (event) => {
+    const file = event.target.files && event.target.files[0];
+    setFileError("");
+    if (!file) { setFinalFile(null); return; }
+    if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
+      setFinalFile(null);
+      setFileError("Please select a PDF file.");
+      event.target.value = "";
+      return;
+    }
+    if (file.size > 15 * 1024 * 1024) {
+      setFinalFile(null);
+      setFileError("The final report must be 15 MB or smaller.");
+      event.target.value = "";
+      return;
+    }
+    setFinalFile(file);
+  };
   const submit = async () => {
-    if (!grant) { toast("No approved grant found - your application must be approved first."); return; }
+    if (!grant) { toast("Open an AU-R1 project from My Applications first."); return; }
+    if (!finalFile) { toast("Select the final report PDF before submitting."); return; }
+    const existingReport = (reports || []).find(r => r.status === "submitted" || r.status === "accepted");
+    const existingReportFile = (grant.documents || []).some(d => d.doc_type === "Final Report");
+    if (existingReport && existingReport.status === "submitted" && !existingReportFile) {
+      setBusy(true);
+      let attachedDocument = null;
+      let attachmentSaved = false;
+      try {
+        attachedDocument = await window.DB.uploadDocument(grant.id, finalFile, "Final Report");
+        attachmentSaved = true;
+        toast("Final report PDF attached. RASSC can now review the submitted report.");
+        setFinalFile(null);
+        await reload();
+      } catch (e) {
+        if (attachedDocument && !attachmentSaved) {
+          try { await window.DB.deleteDocument(attachedDocument); } catch (_) {}
+        }
+        toast("Error: " + (e.message || e));
+      }
+      setBusy(false);
+      return;
+    }
     setBusy(true);
-    try { await window.DB.submitReport(grant.id, "final"); toast("Final report submitted. RASSC must accept it before the final 30% tranche can be paid."); reload(); }
-    catch (e) { toast("Error: " + (e.message || e)); }
+    let uploadedDocument = null;
+    let reportCreated = false;
+    try {
+      uploadedDocument = await window.DB.uploadDocument(grant.id, finalFile, "Final Report");
+      await window.DB.submitReport(grant.id, "final", {
+        summary: [completion && "Completion: " + completion + "%.", outcomes && "Outcomes: " + outcomes.trim(), lessons && "Lessons: " + lessons.trim()].filter(Boolean).join(" "),
+        total_spent: totalSpent,
+        completion: completion,
+        outcomes: outcomes.trim(),
+        lessons: lessons.trim(),
+        document_id: uploadedDocument.id,
+      });
+      reportCreated = true;
+      toast("Final report submitted. RASSC must accept it before Finance can approve the final 30% phase.");
+      setFinalFile(null);
+      setTotalSpent("");
+      setCompletion("");
+      setOutcomes("");
+      setLessons("");
+      await reload();
+    } catch (e) {
+      if (uploadedDocument && !reportCreated) {
+        try { await window.DB.deleteDocument(uploadedDocument); } catch (_) {}
+      }
+      toast("Error: " + (e.message || e));
+    }
     setBusy(false);
   };
+  if (grant === null) return <><PageHeader title="Project Final Report" desc="Loading the selected AU-R1 project." /><div className="card" style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>Loading project…</div></>;
+  if (!grant) return <><PageHeader title="Project Final Report" desc="Choose the research project this report belongs to." /><div className="card"><Empty title="No project selected" desc="Open My Applications, choose View or Files, then open Final Report from that project's timeline." icon="Folder" /><div style={{ textAlign: "center", paddingBottom: 24 }}><button className="btn btn-primary" onClick={() => navigate("r-applications")}><Icon name="ArrowLeft" size={13} /> My Applications</button></div></div></>;
+  const phaseTwoApproved = (grant.payments || []).some(p => Number(p.instalment) === 2 && p.status === "paid");
+  const currentReport = (reports || []).find(r => r.status === "submitted" || r.status === "accepted");
+  const hasReportFile = (grant.documents || []).some(d => d.doc_type === "Final Report");
+  const canAttachMissingFile = currentReport && currentReport.status === "submitted" && !hasReportFile;
+  const canSubmit = phaseTwoApproved && !currentReport;
   return (
     <>
       <PageHeader
-        title="Final Report"
-        desc="End-of-project report — required before third disbursement (30%)."
-        actions={<Badge status={RA.STATUS.expert} />}
+        title={"Final Report · " + grant.title}
+        desc={(grant.code || "AU-R1 project") + " — this report belongs only to this selected research project."}
+        actions={<><button className="btn btn-secondary" onClick={() => navigate("r-detail", { keepSelection: true })}><Icon name="ArrowLeft" size={13} /> Back to Project</button><Badge status={{ label: "Routes to RASSC", cls: "badge-iras" }} /></>}
       />
+
+      <div className="card card-pad-0 mb-4">
+        <div className="card-head"><h3>Selected Research Project</h3><div className="grow"></div><Badge status={window.DB.statusBadge(grant.status)} /></div>
+        <div className="card-body">
+          <div className="meta-row"><span className="l">Application ID</span><span className="r"><b>{grant.code}</b></span></div>
+          <div className="meta-row"><span className="l">Research title</span><span className="r"><b>{grant.title}</b></span></div>
+          <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{grant.faculty || "—"}{grant.department ? " · " + grant.department : ""}</span></div>
+          <div className="meta-row"><span className="l">Report unlock</span><span className="r">{phaseTwoApproved ? "Phase 2 approved — report is available" : "Locked until Finance approves Phase 2"}</span></div>
+        </div>
+      </div>
 
       <div className="grid-2">
         <div>
@@ -2168,35 +2579,37 @@ function ResearcherFinal({ onDownload, onView, toast }) {
             <div className="card-head"><h3>Submit Final Report</h3></div>
             <div className="card-body">
               <div className="field">
-                <label>Final report PDF</label>
-                <div className="upload-box">
+                <label>Final report PDF *</label>
+                <label className={"upload-box" + (finalFile ? " has-file" : "")} style={{display: "block"}}>
+                  <input key={finalFile ? finalFile.name + finalFile.lastModified : "empty-final-file"} type="file" accept="application/pdf,.pdf" style={{display: "none"}} onChange={chooseFinalFile} />
                   <Icon name="Upload" size={24} className="icon" />
-                  <div className="t">Drop Final_Report.pdf here or click to browse</div>
-                  <div className="s">PDF · max 15 MB</div>
-                </div>
+                  <div className="t">{finalFile ? finalFile.name : hasReportFile ? "Final report PDF is attached" : "Click to select the final report"}</div>
+                  <div className="s">{finalFile ? (finalFile.size / 1024 / 1024).toFixed(2) + " MB · Click to replace" : "PDF · max 15 MB"}</div>
+                </label>
+                {fileError && <div className="form-error" style={{marginTop: 7}}>{fileError}</div>}
               </div>
               <div className="form-grid">
                 <div className="field">
                   <label>Total spent (THB)</label>
-                  <input placeholder="Enter total spent" />
+                  <input type="number" min="0" value={totalSpent} onChange={e => setTotalSpent(e.target.value)} placeholder="Enter total spent" />
                 </div>
                 <div className="field">
                   <label>Project completion (%)</label>
-                  <input placeholder="Enter completion percentage" />
+                  <input type="number" min="0" max="100" value={completion} onChange={e => setCompletion(e.target.value)} placeholder="Enter completion percentage" />
                 </div>
                 <div className="field full">
                   <label>Outcomes delivered</label>
-                  <textarea className="comment-input" placeholder="List final outcomes delivered."></textarea>
+                  <textarea className="comment-input" value={outcomes} onChange={e => setOutcomes(e.target.value)} placeholder="List final outcomes delivered."></textarea>
                 </div>
                 <div className="field full">
                   <label>Lessons learned</label>
-                  <textarea className="comment-input" placeholder="Summarize lessons learned, issues, and follow-up actions."></textarea>
+                  <textarea className="comment-input" value={lessons} onChange={e => setLessons(e.target.value)} placeholder="Summarize lessons learned, issues, and follow-up actions."></textarea>
                 </div>
               </div>
               <div className="flex justify-between items-center mt-4">
-                <span className="text-sm text-muted">Once submitted, the file will be routed to RASSC.</span>
-                <button className="btn btn-primary" onClick={submit} disabled={busy}>
-                  <Icon name="Send" size={13} /> {busy ? "Submitting…" : "Submit Final Report"}
+                <span className="text-sm text-muted">Submitted first to RASSC. Finance receives Phase 3 only after RASSC accepts the report.</span>
+                <button className="btn btn-primary" onClick={submit} disabled={busy || (!canSubmit && !canAttachMissingFile) || !finalFile}>
+                  <Icon name="Send" size={13} /> {busy ? "Uploading…" : canAttachMissingFile ? (finalFile ? "Attach PDF to Submitted Report" : "Select PDF to Attach") : currentReport ? (currentReport.status === "accepted" ? "Report Accepted" : "At RASSC Review") : !phaseTwoApproved ? "Locked · Phase 2 Required" : !finalFile ? "Select PDF to Submit" : "Submit Final Report"}
                 </button>
               </div>
             </div>
@@ -2212,10 +2625,10 @@ function ResearcherFinal({ onDownload, onView, toast }) {
               {(reports || []).map(r => (
                 <div key={r.id} className="flex justify-between items-center" style={{padding: "10px 0", borderBottom: "1px solid var(--line-2)"}}>
                   <div>
-                    <div style={{fontWeight: 600}}>{r.application ? r.application.code : "Application"} - Final Report</div>
+                    <div style={{fontWeight: 600}}>{grant.code} · {grant.title}</div>
                     <div className="text-sm text-muted">Status: {r.status}</div>
                   </div>
-                  <Badge status={r.status === "accepted" ? RA.STATUS.completed : RA.STATUS.submitted} />
+                  <Badge status={r.status === "accepted" ? { label: "Accepted · Sent to Finance", cls: "badge-paid" } : { label: "At RASSC Review", cls: "badge-iras" }} />
                 </div>
               ))}
             </div>
@@ -2260,7 +2673,7 @@ function SingleGrantPaymentStatus({ grantType }) {
   const isR4 = grantType === "au_r4";
   const [grant, setGrant] = useState(null);
   useEffect(() => { window.DB.myGrant(grantType).then(g => setGrant(g || false)).catch(() => setGrant(false)); }, [grantType]);
-  const STEPS = ["Not yet approved", "Approved for Payment", "Payment Processing", "Paid", "Completed"];
+  const STEPS = ["Not yet approved", "Approved for Payment", "Finance Processing", "Paid", "Completed"];
   const stepIdx = { approved: 1, active: 3, completed: 4 };
   if (grant === null) {
     return (<><PageHeader title="Payment Status" desc="Your publication reward payment status." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "40px" }}>Loading…</div></>);
@@ -2281,8 +2694,8 @@ function SingleGrantPaymentStatus({ grantType }) {
           {!isR4 && <div className="meta-row"><span className="l">Conference</span><span className="r">{ci.confName || "-"}</span></div>}
           <div className="meta-row"><span className="l">{isR4 ? "Requested claim" : "Requested amount"}</span><span className="r">{fmtBaht(Number(grant.requested_amount || 0))}</span></div>
           <div className="meta-row"><span className="l">{isR4 ? "IRAS-approved amount" : "Approved amount"}</span><span className="r">{grant.approved_amount ? fmtBaht(Number(grant.approved_amount)) : "—"}</span></div>
-          <div className="meta-row"><span className="l">Payment status</span><span className="r">{STEPS[idx]}</span></div>
-          <div className="meta-row"><span className="l">Payment date</span><span className="r">{grant.status === "completed" && grant.decided_at ? window.DB.fmtDate(grant.decided_at) : "—"}</span></div>
+          <div className="meta-row"><span className="l">Payment status</span><span className="r">{grant.status === "approved" ? "Awaiting Finance Payment" : grant.status === "active" ? "Paid" : grant.status === "completed" ? "Completed" : "Not yet approved"}</span></div>
+          <div className="meta-row"><span className="l">Payment date</span><span className="r">{["active", "completed"].includes(grant.status) ? window.DB.fmtDate(grant.updated_at || grant.decided_at) : "—"}</span></div>
         </div>
       </div>
       <div className="card card-pad-0">
@@ -2311,14 +2724,14 @@ function ResearcherPayments({ onDownload, toast, grantType }) {
 function R1PaymentStatus({ onDownload, toast }) {
   const [grant, setGrant] = useState(null);
   useEffect(() => { window.DB.myGrant("au_r1").then(g => setGrant(g || false)).catch(() => setGrant(false)); }, []);
-  const triggers = { 1: "Released once approved", 2: "After Phase 1 + accepted progress report", 3: "After Phase 2 + accepted final report" };
+  const triggers = { 1: "Available after grant approval", 2: "After Phase 1 is paid + accepted progress report", 3: "After Phase 2 is paid + accepted final report" };
   const trName = { 1: "Phase 1 · 30%", 2: "Phase 2 · 40%", 3: "Phase 3 · 30%" };
 
   if (grant === null) {
-    return (<><PageHeader title="Payment Status" desc="Your grant is released in three phases." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "40px" }}>Loading…</div></>);
+    return (<><PageHeader title="Payment Status" desc="Your AU-R1 grant is paid in three phases." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "40px" }}>Loading…</div></>);
   }
   if (!grant) {
-    return (<><PageHeader title="Payment Status" desc="Your grant is released in three phases." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "48px" }}>No approved grant yet. Once your application is approved, your 30 / 40 / 30 payments will appear here.</div></>);
+    return (<><PageHeader title="Payment Status" desc="Your AU-R1 grant is paid in three phases." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "48px" }}>No approved grant yet. Once your application is approved, the 30 / 40 / 30 payment phases will appear here.</div></>);
   }
 
   const pays = grant.payments || [];
@@ -2326,7 +2739,7 @@ function R1PaymentStatus({ onDownload, toast }) {
     <>
       <PageHeader
         title="Payment Status"
-        desc={"Three-phase disbursement for " + grant.code + " · Total grant " + fmtBaht(grant.approved_amount || grant.requested_amount)}
+        desc={"Three-phase payment for " + grant.code + " · Total grant " + fmtBaht(grant.approved_amount || grant.requested_amount)}
       />
 
       <div className="grid-3 mb-6">
@@ -2335,7 +2748,7 @@ function R1PaymentStatus({ onDownload, toast }) {
             <div className="pay-num">{p.pct}%</div>
             <div className="pct">Phase {p.instalment}</div>
             <div className="amt">{fmtBaht(p.amount)}</div>
-            <span className={"badge " + (p.status === "paid" ? "badge-paid" : "badge-pending")}><span className="dot"></span>{p.status === "paid" ? "Paid" : "Pending"}</span>
+            <span className={"badge " + (p.status === "paid" ? "badge-paid" : "badge-pending")}><span className="dot"></span>{p.status === "paid" ? "Paid" : "Pending Payment"}</span>
             <div className="meta-row mt-4"><span className="l">Condition</span><span className="r">{triggers[p.instalment]}</span></div>
             <div className="meta-row"><span className="l">Paid on</span><span className="r">{p.paid_at ? window.DB.fmtDate(p.paid_at) : "—"}</span></div>
           </div>
@@ -2343,7 +2756,7 @@ function R1PaymentStatus({ onDownload, toast }) {
       </div>
 
       <div className="card card-pad-0">
-        <div className="card-head"><h3>Disbursement Log</h3></div>
+        <div className="card-head"><h3>Payment Log</h3></div>
         <table className="tbl">
           <thead>
             <tr><th>Phase</th><th>Amount</th><th>Condition</th><th>Status</th><th>Paid on</th></tr>
@@ -2394,7 +2807,7 @@ function ResearcherPublicationGrants({ toast }) {
     if (!form.article_title.trim()) { setErr("Publication title is required."); return; }
     if (!form.journal_name.trim() && form.publication_type === "journal") { setErr("Journal name is required."); return; }
     if (!saveDraft && !file) { setErr("Attach a PDF evidence file before submitting."); return; }
-    if (needsActual && !Number(form.requested_amount || 0)) { setErr("Enter the actual fee amount for this publication type."); return; }
+    if (needsActual && !Number(form.requested_amount || 0)) { setErr("Enter the publication fee for this publication type."); return; }
     setBusy(true);
     try {
       const g = await window.DB.createPublicationGrant({
@@ -2446,7 +2859,7 @@ function ResearcherPublicationGrants({ toast }) {
               <div className="field"><label>Quartile / tier</label><select value={form.quartile} onChange={e => setField("quartile", e.target.value)} disabled={form.indexing !== "scopus"}><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
               <div className="field"><label>Published date</label><AUDatePicker value={form.published_on} onChange={v => setField("published_on", v)} placeholder="Select published date…" /></div>
             </div>
-            {needsActual && <div className="field"><label>Actual fee amount (THB)</label><input value={form.requested_amount} onChange={e => setField("requested_amount", e.target.value.replace(/[^0-9]/g, ""))} /></div>}
+            {needsActual && <div className="field"><label>Publication Fee (THB)</label><input value={form.requested_amount} onChange={e => setField("requested_amount", e.target.value.replace(/[^0-9]/g, ""))} /></div>}
             <div className="field"><label>Evidence PDF</label><input type="file" accept="application/pdf,.pdf" onChange={e => setFile((e.target.files || [])[0] || null)} /></div>
             <div style={{ padding: 14, border: "1px solid var(--line)", borderRadius: "var(--r-md)", background: "var(--paper-warm)", marginBottom: 12 }}>
               <div className="text-sm text-muted">Estimated AU reward</div>

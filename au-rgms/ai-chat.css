@@ -1,16 +1,6 @@
-/* ===== AU Grant Assistant — floating AI chat ===== */
-.ai-fab {
-  position: fixed; right: 24px; bottom: 24px;
-  width: 56px; height: 56px; border-radius: 50%;
-  background: var(--au-crimson); color: #fff; border: none;
-  display: grid; place-items: center; cursor: pointer;
-  box-shadow: 0 6px 20px rgba(110, 18, 18, .42);
-  z-index: 90; transition: background .15s, transform .15s;
-}
-.ai-fab:hover { background: var(--au-crimson-deep); transform: translateY(-2px); }
-
+/* ===== AU Grant Assistant — opened from the researcher sidebar ===== */
 .ai-panel {
-  position: fixed; right: 24px; bottom: 92px;
+  position: fixed; left: calc(var(--sidebar-w) + 16px); right: auto; bottom: 24px;
   width: 384px; max-width: calc(100vw - 32px);
   height: 540px; max-height: calc(100vh - 140px);
   background: #fff; border: 1px solid var(--line);

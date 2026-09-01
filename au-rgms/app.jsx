@@ -36,7 +36,16 @@ function LoginPage({ onLogin }) {
       onLogin(prof); // routes by the account's real role
     } catch (ex) { setErr((ex && ex.message) || "Sign-in failed."); setBusy(false); }
   }
-  function doLogin(e) { e.preventDefault(); signInWith(email.trim(), pass); }
+  function doLogin(e) {
+    e.preventDefault();
+    const auEmail = email.trim();
+    if (!/^[^@\s]+@au\.edu$/i.test(auEmail)) {
+      setErr("Use your registered AU email ending in @au.edu. Personal Gmail accounts cannot sign in to AU-RGMS.");
+      return;
+    }
+    if (!pass) { setErr("Enter your password."); return; }
+    signInWith(auEmail, pass);
+  }
   function demoLogin(testEmail) { signInWith(testEmail, TEST_PASSWORD); }
 
   return (
@@ -56,26 +65,16 @@ function LoginPage({ onLogin }) {
             Research Grant <em>Management</em> System
           </h1>
           <p>
-            A unified portal for AU researchers, deans, committees, RASSC,
-            the President, and the Office of Financial Management to submit,
-            review, and disburse research grants — across the fourteen-stage
-            workflow.
+            Making research grant applications simpler for AU researchers—from
+            submission to approval, reporting, and payment.
           </p>
-        </div>
-
-        <div className="login-footnote">
-          <span>© 2025 Assumption University</span>
-          <span>·</span>
-          <a href="#" style={{color: "rgba(255,255,255,0.7)"}}>Privacy</a>
-          <a href="#" style={{color: "rgba(255,255,255,0.7)"}}>Terms</a>
-          <a href="#" style={{color: "rgba(255,255,255,0.7)"}}>Help</a>
         </div>
       </div>
 
       <div className="login-right">
         <div className="login-card">
           <div className="eyebrow">Sign in to AU-RGMS</div>
-          <h2>Welcome back</h2>
+          <h2>Welcome</h2>
           <p className="sub">Sign in with your AU credentials to continue.</p>
 
           <form onSubmit={doLogin}>
@@ -88,10 +87,6 @@ function LoginPage({ onLogin }) {
               <input value={pass} onChange={e => setPass(e.target.value)} type="password" autoComplete="current-password" />
             </div>
 
-            <div style={{ fontSize: 11, color: "var(--ink-3)", margin: "-6px 0 4px", lineHeight: 1.5 }}>
-              Your dashboard is decided by your account's role — sign in with your own AU email and password.
-            </div>
-
             {err && <div style={{color: "var(--au-crimson)", fontSize: 12, marginTop: 8}}>{err}</div>}
             <button className="btn btn-primary btn-block mt-4" type="submit" disabled={busy}>
               {busy ? "Signing in…" : <>Sign In <Icon name="ArrowRight" size={14} /></>}
@@ -100,7 +95,6 @@ function LoginPage({ onLogin }) {
 
           <div style={{ borderTop: "1px solid var(--line-2)", margin: "18px 0 12px" }}></div>
           <div className="eyebrow" style={{ marginBottom: 4 }}>Quick demo login</div>
-          <div className="text-sm text-muted" style={{ fontSize: 11, marginBottom: 10 }}>One click signs you in as a built-in test account for that role.</div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
             {APP.ROLES.map(r => (
               <button key={r.key} type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => demoLogin(TEST_EMAIL_FOR[r.key])} style={{ justifyContent: "flex-start", gap: 8 }}>
@@ -109,9 +103,8 @@ function LoginPage({ onLogin }) {
             ))}
           </div>
 
-          <div className="flex justify-between items-center mt-4" style={{fontSize: 12}}>
+          <div className="mt-4" style={{fontSize: 12}}>
             <a href="#" style={{color: "var(--au-crimson)", fontWeight: 600, textDecoration: "none"}}>Forgot password?</a>
-            <span className="text-muted">Need help? <a href="#" style={{color: "var(--ink-1)"}}>Contact RASSC</a></span>
           </div>
         </div>
       </div>
@@ -124,17 +117,18 @@ const CHOOSER_INTRO = "Hi, I'm AU AI. Not sure which grant fits you? Ask me what
 const CHOOSER_CHIPS = [
   "What's the difference between AU-R1, AU-R3 and AU-R4?",
   "Which grant is for presenting a paper at a conference?",
-  "How is my AU-R4 publication reward calculated?",
+  "How do I submit an AU-R4 publication fee application?",
   "Can students apply together with me?",
 ];
 function GrantHelperChat({ profile }) {
   const [msgs, setMsgs] = useState([{ role: "assistant", content: CHOOSER_INTRO }]);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
+  const [open, setOpen] = useState(false);
   const bodyRef = useRef(null);
   const ctx = { role: "researcher", name: profile && profile.full_name, faculty: profile && profile.faculty };
 
-  useEffect(() => { const el = bodyRef.current; if (el) el.scrollTop = el.scrollHeight; }, [msgs, busy]);
+  useEffect(() => { const el = bodyRef.current; if (el) el.scrollTop = el.scrollHeight; }, [msgs, busy, open]);
 
   async function ask(text) {
     const q = (text || input).trim();
@@ -146,7 +140,8 @@ function GrantHelperChat({ profile }) {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next, context: ctx }),
       });
-      const data = await r.json();
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error("AU AI request failed");
       setMsgs(m => [...m, { role: "assistant", content: data.reply || "Sorry, no response." }]);
     } catch (e) {
       setMsgs(m => [...m, { role: "assistant", content: "Sorry, I couldn't reach AU AI right now." }]);
@@ -154,45 +149,34 @@ function GrantHelperChat({ profile }) {
   }
 
   return (
-    <div style={{ background: "var(--paper)", border: "1px solid var(--line)", borderRadius: "var(--r-xl, 16px)", overflow: "hidden", boxShadow: "0 1px 2px rgba(0,0,0,0.04)" }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "14px 18px", borderBottom: "1px solid var(--line-2)", background: "linear-gradient(90deg, var(--au-crimson) 0%, var(--au-crimson-deep, #7a1414) 100%)" }}>
-        <div style={{ width: 34, height: 34, borderRadius: 10, background: "rgba(255,255,255,0.18)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <Icon name="GraduationCap" size={18} />
-        </div>
-        <div style={{ lineHeight: 1.25, color: "#fff" }}>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>Ask AU AI</div>
-          <div style={{ fontSize: 11, opacity: 0.85 }}>Not sure which grant to choose? I can help.</div>
-        </div>
-      </div>
-
-      <div ref={bodyRef} style={{ maxHeight: 260, overflowY: "auto", padding: "16px 18px", display: "flex", flexDirection: "column", gap: 10, background: "var(--paper-warm)" }}>
-        {msgs.map((m, i) => (
-          <div key={i} style={{ alignSelf: m.role === "user" ? "flex-end" : "flex-start", maxWidth: "85%",
-            background: m.role === "user" ? "var(--au-crimson)" : "var(--paper)",
-            color: m.role === "user" ? "#fff" : "var(--ink-1)",
-            border: m.role === "user" ? "none" : "1px solid var(--line)",
-            borderRadius: 12, padding: "9px 13px", fontSize: 13, lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
-            {m.content}
+    <div className="chooser-ai">
+      <button type="button" className="chooser-ai-button" onClick={() => setOpen(v => !v)} title="Ask AU AI" aria-label="Ask AU AI">
+        <Icon name="Bot" size={20} />
+      </button>
+      {open && (
+        <div className="chooser-ai-panel" role="dialog" aria-label="Ask AU AI">
+          <div className="chooser-ai-head">
+            <div className="chooser-ai-mark"><Icon name="Bot" size={18} /></div>
+            <div><b>AU AI</b><span>Grant selection assistant</span></div>
+            <button type="button" onClick={() => setOpen(false)} aria-label="Close AI assistant"><Icon name="X" size={16} /></button>
           </div>
-        ))}
-        {busy && <div style={{ alignSelf: "flex-start", fontSize: 13, color: "var(--ink-3)", fontStyle: "italic" }}>AU AI is thinking…</div>}
-        {msgs.length <= 1 && !busy && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 4 }}>
-            {CHOOSER_CHIPS.map((s, i) => (
-              <button key={i} type="button" onClick={() => ask(s)}
-                style={{ fontSize: 12, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", border: "1px solid transparent", borderRadius: 999, padding: "6px 12px", cursor: "pointer" }}>
-                {s}
-              </button>
+          <div ref={bodyRef} className="chooser-ai-body">
+            {msgs.map((m, i) => (
+              <div key={i} className={`chooser-ai-message ${m.role}`}>{m.content}</div>
             ))}
+            {busy && <div className="chooser-ai-thinking">AU AI is thinking…</div>}
+            {msgs.length <= 1 && !busy && (
+              <div className="chooser-ai-suggestions">
+                {CHOOSER_CHIPS.map((s, i) => <button key={i} type="button" onClick={() => ask(s)}>{s}</button>)}
+              </div>
+            )}
           </div>
-        )}
-      </div>
-
-      <form onSubmit={e => { e.preventDefault(); ask(); }} style={{ display: "flex", gap: 8, padding: "12px 14px", borderTop: "1px solid var(--line-2)", background: "var(--paper)" }}>
-        <input value={input} onChange={e => setInput(e.target.value)} placeholder="Ask about the grants…"
-          style={{ flex: 1, border: "1px solid var(--line)", borderRadius: 10, padding: "9px 12px", fontSize: 13 }} />
-        <button type="submit" className="btn btn-primary" disabled={busy || !input.trim()} aria-label="Send"><Icon name="Send" size={15} /></button>
-      </form>
+          <form className="chooser-ai-input" onSubmit={e => { e.preventDefault(); ask(); }}>
+            <input value={input} onChange={e => setInput(e.target.value)} placeholder="Ask about the grants…" />
+            <button type="submit" className="btn btn-primary" disabled={busy || !input.trim()} aria-label="Send"><Icon name="Send" size={15} /></button>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
@@ -211,6 +195,7 @@ function GrantSystemChooser({ profile, onPick, onLogout }) {
         </div>
         <div style={{ flex: 1 }}></div>
         <span className="text-sm text-muted" style={{ marginRight: 12 }}>{profile ? profile.email : ""}</span>
+        <GrantHelperChat profile={profile} />
         <button className="btn btn-secondary btn-sm" onClick={onLogout}><Icon name="LogOut" size={13} /> Sign out</button>
       </header>
 
@@ -230,7 +215,7 @@ function GrantSystemChooser({ profile, onPick, onLogout }) {
           </p>
         </div>
 
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(272px, 300px))", gap: 22, width: "100%", maxWidth: 980, justifyContent: "center" }}>
+        <div className="grant-choice-grid">
           {systems.map(sys => {
             const disabled = !sys.enabled;
             const accent = sys.accent || "#9E1B1B";
@@ -239,40 +224,24 @@ function GrantSystemChooser({ profile, onPick, onLogout }) {
               <button
                 key={sys.id}
                 type="button"
+                className="grant-choice-card"
                 disabled={disabled}
                 onClick={() => !disabled && onPick(sys.id)}
-                style={{
-                  textAlign: "left", cursor: disabled ? "not-allowed" : "pointer",
-                  background: "var(--paper)", border: "1px solid var(--line)",
-                  borderRadius: "var(--r-xl, 16px)", padding: 0, position: "relative", overflow: "hidden",
-                  opacity: disabled ? 0.66 : 1,
-                  boxShadow: "0 1px 2px rgba(0,0,0,0.04)", transition: "border-color .15s, box-shadow .15s, transform .15s",
-                }}
-                onMouseEnter={e => { if (!disabled) { e.currentTarget.style.borderColor = accent; e.currentTarget.style.boxShadow = "0 10px 30px " + accentSoft; e.currentTarget.style.transform = "translateY(-3px)"; } }}
-                onMouseLeave={e => { e.currentTarget.style.borderColor = "var(--line)"; e.currentTarget.style.boxShadow = "0 1px 2px rgba(0,0,0,0.04)"; e.currentTarget.style.transform = "none"; }}
+                style={{ "--grant-accent": accent, "--grant-soft": accentSoft, opacity: disabled ? 0.66 : 1 }}
               >
-                <div style={{ height: 5, background: accent }}></div>
-                <div style={{ padding: "22px 22px 20px" }}>
+                <div className="grant-choice-bar"></div>
+                <div className="grant-choice-body">
                   {disabled && (
                     <span style={{ position: "absolute", top: 18, right: 16, fontSize: 10, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--ink-3)", background: "var(--paper-warm)", border: "1px solid var(--line)", padding: "3px 8px", borderRadius: 999 }}>Coming soon</span>
                   )}
-                  <div style={{ width: 48, height: 48, borderRadius: 13, background: accentSoft, color: accent, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 16 }}>
+                  <div className="grant-choice-icon">
                     <Icon name={sys.icon} size={24} />
                   </div>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: accent, letterSpacing: 0.6 }}>{sys.code}</div>
-                  <div style={{ fontFamily: "var(--font-serif)", fontSize: 20, fontWeight: 500, margin: "2px 0 8px", lineHeight: 1.2 }}>{sys.name}</div>
-                  <p style={{ fontSize: 13, color: "var(--ink-2)", lineHeight: 1.55, margin: "0 0 14px" }}>{sys.tagline}</p>
-                  <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 16 }}>
-                    {(sys.highlights || []).map((h, i) => (
-                      <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 12.5, color: "var(--ink-2)" }}>
-                        <span style={{ color: accent, marginTop: 1, flexShrink: 0, display: "inline-flex" }}><Icon name="Check" size={14} /></span>
-                        <span>{h}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", borderTop: "1px solid var(--line-2)", paddingTop: 13 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "var(--ink-1)" }}>{sys.maxLabel}</span>
-                    {!disabled && <span style={{ fontSize: 13, fontWeight: 600, color: accent, display: "inline-flex", alignItems: "center", gap: 4 }}>Apply <Icon name="ArrowRight" size={13} /></span>}
+                  <div className="grant-choice-code">{sys.code}</div>
+                  <div className="grant-choice-title">{sys.name}</div>
+                  <p className="grant-choice-desc">{sys.tagline}</p>
+                  <div className="grant-choice-action">
+                    {!disabled && <span>Apply <Icon name="ArrowRight" size={14} /></span>}
                   </div>
                 </div>
               </button>
@@ -280,9 +249,6 @@ function GrantSystemChooser({ profile, onPick, onLogout }) {
           })}
         </div>
 
-        <div style={{ width: "100%", maxWidth: 720, marginTop: 40 }}>
-          <GrantHelperChat profile={profile} />
-        </div>
       </div>
     </div>
   );
@@ -294,10 +260,7 @@ const ROLE_CONFIG = {
     nav: APP.NAV_RESEARCHER,
     homeKey: "r-dashboard",
     crumbRoot: "Researcher",
-    sidebarFooter: {
-      title: "Quick Help",
-      body: "Need to submit a new AU-R1 application? Prepare the proposal format, detailed budget allocation, and AU research submission form as PDFs before you start.",
-    },
+    sidebarFooter: null,
   },
   dean: {
     nav: APP.NAV_DEAN,
@@ -332,7 +295,7 @@ const ROLE_CONFIG = {
     crumbRoot: "OFM / Finance",
     sidebarFooter: {
       title: "OFM Office",
-      body: "Process disbursements only after the relevant milestone document is approved.",
+      body: "Process payments only after the required application or milestone approval is complete.",
     },
   },
   admin: {
@@ -341,7 +304,7 @@ const ROLE_CONFIG = {
     crumbRoot: "Administration",
     sidebarFooter: {
       title: "Administrator",
-      body: "Changes to user roles and reference tables are logged in the audit log.",
+      body: "Account and workflow-setting changes are managed centrally by the administrator.",
     },
   },
 };
@@ -349,12 +312,13 @@ const ROLE_CONFIG = {
 /* ============= APP HEADER ============= */
 // Each grant system has its own set of roles:
 //   AU-R1 → Researcher, Dean, Faculty Committee, RASSC, Finance
-//   AU-R3 / AU-R4 → Researcher, Dean, IRAS, Finance
+//   AU-R3 → Researcher, Dean, IRAS, Finance
+//   AU-R4 → Researcher, Dean, Faculty Committee, IRAS, Finance
 // (Administrator is a system-wide account and is always available.)
 const SYSTEM_ROLE_KEYS = {
   au_r1: ["researcher", "dean", "committee", "iras", "ofm", "admin"],
   au_r3: ["researcher", "dean", "iras", "ofm", "admin"],
-  au_r4: ["researcher", "dean", "iras", "ofm", "admin"],
+  au_r4: ["researcher", "dean", "committee", "iras", "ofm", "admin"],
 };
 function rolesForSystem(sys) {
   const all = APP.ROLES || [];
@@ -393,10 +357,16 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSys
 
   useEffect(() => {
     let alive = true;
-    if (window.DB && window.DB.notifications) {
-      window.DB.notifications().then(items => { if (alive) setNotifItems(items || []); }).catch(() => { if (alive) setNotifItems([]); });
-    }
-    return () => { alive = false; };
+    const refreshNotifications = () => {
+      if (window.DB && window.DB.notifications) {
+        window.DB.notifications().then(items => { if (alive) setNotifItems(items || []); }).catch(() => { if (alive) setNotifItems([]); });
+      }
+    };
+    refreshNotifications();
+    // Finance approvals made in another signed-in session appear without the
+    // researcher needing to reload the application.
+    const timer = window.setInterval(refreshNotifications, 30000);
+    return () => { alive = false; window.clearInterval(timer); };
   }, [role, profile && profile.id]);
 
   return (
@@ -412,13 +382,7 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSys
 
       <div className="grow"></div>
 
-      <div className="app-header-search">
-        <Icon name="Search" size={14} className="icon" />
-        <input placeholder="Search applications, researchers, IDs…" />
-      </div>
-
       <div className="header-actions" ref={wrapRef}>
-        <button className="header-icon-btn" title="Help"><Icon name="HelpCircle" size={18} /></button>
         <div style={{position: "relative"}}>
           <button className="header-icon-btn" title="Notifications" onClick={() => { setNotifOpen(v => !v); setRoleOpen(false); }}>
             <Icon name="Bell" size={18} />
@@ -486,34 +450,89 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSys
 
 /* ============= SIDEBAR ============= */
 function Sidebar({ nav, current, onNavigate, footer }) {
+  const [helpOpen, setHelpOpen] = useState(false);
+  const system = footer && footer.system;
+  const isResearcher = !!system;
+  const helpSteps = system === "au_r1" ? [
+    { icon: "FilePlus", title: "Start an AU-R1 application", body: "Complete the research information and budget, then upload the proposal, budget allocation, and AU submission form." },
+    { icon: "FolderOpen", title: "Track and print the correct project", body: "Open My Applications and choose View or Files. The project page shows its status, documents, comments, payments, and timeline; use Print PDF for a clear project summary." },
+    { icon: "FileText", title: "Submit milestone reports", body: "Inside the selected project's timeline, open Progress Report after Phase 1 or Final Report after Phase 2. Each report is tied to that project's ID and title." },
+    { icon: "Coins", title: "Track each payment", body: "After RASSC accepts the required report, Finance can pay the next phase. The payment date appears in the selected project." },
+  ] : system === "au_r3" ? [
+    { icon: "FilePlus", title: "Prepare the conference request", body: "Enter the conference location and presentation date, paper abstract and keywords, authors, and journal classification. AU-R3 support is fixed at 3,500 THB." },
+    { icon: "FolderOpen", title: "Track and print the project", body: "Use My Applications to open the selected AU-R3 project and see its files, comments, current stage, and printable project summary." },
+    { icon: "Coins", title: "Finance payment", body: "After the research office approves the application, Finance records the approved payment." },
+  ] : system === "au_r4" ? [
+    { icon: "FilePlus", title: "Prepare the publication claim", body: "Enter the article, journal classification, authors, publication fee, and claim information that applies to the selected tier." },
+    { icon: "Upload", title: "Attach the required evidence", body: "Upload the article, author contribution file, Turnitin report, Dean memo, and acceptance letter when the article is accepted for publication." },
+    { icon: "FolderOpen", title: "Track and print the selected claim", body: "Use My Applications to open its files, reviewer comments, approval stage, payment status, and printable project summary." },
+  ] : [
+    { icon: "Inbox", title: "Open your assigned queue", body: "Your dashboard and sidebar show the applications currently waiting for action from your role." },
+    { icon: "MessageSquare", title: "Record a clear review note", body: "Decision notes are stored with the application so the researcher and downstream reviewers can see the review history." },
+    { icon: "Bell", title: "Check notifications", body: "Use the notification icon for newly assigned reviews, accepted reports, and items ready for the next office." },
+  ];
+  const goHelpPage = key => { setHelpOpen(false); onNavigate(key); };
   return (
-    <aside className="sidebar">
-      {nav.map((item, i) => {
-        if (item.section) {
-          return <div key={`s${i}`} className="sidebar-section">{item.section}</div>;
-        }
-        return (
-          <div
-            key={item.key}
-            className={`nav-item ${current === item.key ? "active" : ""}`}
-            onClick={() => onNavigate(item.key)}
-          >
-            <Icon name={item.icon} size={16} />
-            <span>{item.label}</span>
-            {item.badge && <span className="badge-num">{item.badge}</span>}
+    <>
+      <aside className="sidebar">
+        {nav.map((item, i) => {
+          if (item.section) {
+            return <div key={`s${i}`} className="sidebar-section">{item.section}</div>;
+          }
+          return (
+            <div
+              key={item.key}
+              className={`nav-item ${current === item.key ? "active" : ""}`}
+              onClick={() => {
+                if (item.key === "r-ai-assistant") {
+                  window.dispatchEvent(new CustomEvent("au-ai-toggle"));
+                  return;
+                }
+                onNavigate(item.key);
+              }}
+            >
+              <Icon name={item.icon} size={16} />
+              <span>{item.label}</span>
+              {item.badge && <span className="badge-num">{item.badge}</span>}
+            </div>
+          );
+        })}
+        {footer && (
+          <div className="sidebar-bottom">
+            <b>{footer.title}</b>
+            <p>{footer.body}</p>
+            <button className="btn btn-secondary btn-sm" style={{width: "100%", justifyContent: "center"}} onClick={() => setHelpOpen(true)}>
+              <Icon name="HelpCircle" size={12} /> Open Help Centre
+            </button>
           </div>
-        );
-      })}
-      {footer && (
-        <div className="sidebar-bottom">
-          <b>{footer.title}</b>
-          <p>{footer.body}</p>
-          <button className="btn btn-secondary btn-sm" style={{width: "100%", justifyContent: "center"}}>
-            <Icon name="HelpCircle" size={12} /> Open Help Centre
-          </button>
+        )}
+      </aside>
+      <Modal
+        open={helpOpen}
+        onClose={() => setHelpOpen(false)}
+        title={system ? (system.toUpperCase().replace("_", "-") + " Quick Help") : ((footer && footer.title) || "Quick Help")}
+        footer={<>
+          <button className="btn btn-secondary" onClick={() => goHelpPage("forms")}><Icon name="FileText" size={13} /> Forms & Templates</button>
+          {isResearcher && <button className="btn btn-primary" onClick={() => goHelpPage("r-applications")}><Icon name="Folder" size={13} /> My Applications</button>}
+          {!isResearcher && <button className="btn btn-primary" onClick={() => setHelpOpen(false)}>Got It</button>}
+        </>}
+      >
+        <div className="help-guide-intro">
+          <Icon name="Lightbulb" size={18} />
+          <div><b>How to use this workspace</b><p>{footer && footer.body}</p></div>
         </div>
-      )}
-    </aside>
+        <div className="help-guide-list">
+          {helpSteps.map((step, i) => (
+            <div className="help-guide-step" key={step.title}>
+              <div className="help-guide-number">{i + 1}</div>
+              <div className="help-guide-icon"><Icon name={step.icon} size={16} /></div>
+              <div><b>{step.title}</b><p>{step.body}</p></div>
+            </div>
+          ))}
+        </div>
+        <div className="help-guide-note"><Icon name="Info" size={14} /> For account-information or password changes, contact the system administrator.</div>
+      </Modal>
+    </>
   );
 }
 
@@ -553,8 +572,8 @@ function PageRouter({ pageKey, navigate, ctx }) {
                               : <ResearcherSubmit applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} />;
     case "r-applications":  return <ResearcherApplications navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} openDraft={(id) => { c.setSelectedApplicationId(id); navigate("r-submit", { keepSelection: true }); }} openDetail={(id) => { c.setSelectedApplicationId(id); navigate("r-detail"); }} />;
     case "r-detail":        return <ResearcherApplicationDetail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "r-progress":      return <ResearcherProgress onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
-    case "r-final":         return <ResearcherFinal onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
+    case "r-progress":      return <ResearcherProgress applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
+    case "r-final":         return <ResearcherFinal applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
     case "r-payments":      return <ResearcherPayments onDownload={c.onDownload} toast={c.toast} grantType={c.grantType} />;
     case "r-publications":  return <ResearcherPublicationGrants toast={c.toast} />;
 
@@ -566,15 +585,14 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "d-r3-detail":      return <DeanR3Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-r4-screen":      return <DeanR4Queue navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "d-r4-detail":      return <DeanR4Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "d-history":        return <DeanHistory onDownload={c.onDownload} />;
-    case "d-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
+    case "d-history":        return <DeanHistory navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
+    case "d-history-detail": return <DeanDecisionTimeline applicationId={c.selectedApplicationId} navigate={navigate} />;
 
     /* ---- Committee ---- */
     case "c-dashboard":      return <CommitteeDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "c-queue":          return <CommitteeQueue navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "c-review":         return <FacultyAcademic applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "c-history":        return <CommitteeHistory onDownload={c.onDownload} />;
-    case "c-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
 
     /* ---- RASSC ---- */
     case "i-dashboard":      return <RASSCDashboardV2 navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
@@ -584,7 +602,6 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "i-screen":         return <RASSCScreen applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-reports":        return <RASSCReports onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-publications":   return <RASSCPublicationGrants toast={c.toast} />;
-    case "i-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
     case "i-reviewers":      return <RASSCReviewerPool toast={c.toast} />;
 
     /* ---- OFM / Finance ---- */
@@ -596,11 +613,11 @@ function PageRouter({ pageKey, navigate, ctx }) {
 
     /* ---- Administrator ---- */
     case "a-dashboard":      return <AdminDashboard navigate={navigate} />;
-    case "a-users":          return <AdminUsers toast={c.toast} />;
-    case "a-journals":       return <AdminJournals toast={c.toast} />;
-    case "a-analytics":      return <AnalyticsDashboard role={c.profile && c.profile.role} />;
+    case "a-users":          return <AdminUsers toast={c.toast} setConfirm={c.setConfirm} profile={c.profile} />;
+    case "a-analytics":      return c.profile && c.profile.role === "admin"
+      ? <AnalyticsDashboard role="admin" />
+      : <Empty title="Administrator access required" desc="AI Analytics is available only to administrators." icon="Lock" />;
     case "a-audit":          return <AdminAudit />;
-    case "a-settings":       return <AdminSettings toast={c.toast} />;
 
     /* ---- Shared ---- */
     case "forms":            return <FormsLibrary />;
@@ -610,7 +627,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
   }
 }
 
-/* ============= HASH ROUTING (for the Figma-view iframes) ============= */
+/* ============= HASH ROUTING ============= */
 function readHash() {
   try {
     const h = window.location.hash || "";
@@ -737,15 +754,23 @@ function App() {
     })();
   }, []);
 
+  // The sidebar AU AI assistant belongs throughout the three Researcher grant
+  // sections. The separately mounted chat listens for this visibility state.
+  useEffect(() => {
+    const supportedSystem = ["au_r1", "au_r3", "au_r4"].includes(rSystem);
+    const visible = !!(loggedIn && role === "researcher" && supportedSystem);
+    window.AU_AI_VISIBLE = visible;
+    window.AU_AI_GRANT_SYSTEM = visible ? rSystem : null;
+    window.dispatchEvent(new CustomEvent("au-ai-visibility", {
+      detail: { visible, grantSystem: visible ? rSystem : null },
+    }));
+  }, [loggedIn, role, page, rSystem]);
+
   const cfg = ROLE_CONFIG[role];
-  // A researcher in AU-R3 or AU-R4 gets a trimmed sidebar + system-specific Quick Help.
+  // A researcher in AU-R3 or AU-R4 gets a trimmed sidebar.
   const researcherTrimmed = role === "researcher" && (rSystem === "au_r3" || rSystem === "au_r4");
   const navForRole = researcherTrimmed ? (APP.NAV_RESEARCHER_R3 || cfg.nav) : cfg.nav;
-  const footerForRole = rSystem === "au_r4" && role === "researcher"
-    ? { title: "Quick Help", body: "Need to submit an AU-R4 application? Prepare your full published article, Turnitin report, original publication-fee receipt, and memo for Dean approval before submitting." }
-    : researcherTrimmed
-    ? { title: "Quick Help", body: "Need to submit a new AU-R3 application? Prepare your full research article, Turnitin result, peer-review comments if available, and a memo with an estimated budget before you start." }
-    : cfg.sidebarFooter;
+  const footerForRole = role === "researcher" ? null : cfg.sidebarFooter;
 
   const pageLabel = useMemo(() => {
     const navItem = navForRole.find(n => n.key === page);
@@ -753,10 +778,13 @@ function App() {
     // Special pages with no sidebar entry
     const special = {
       "r-detail": "Application Detail",
+      "r-progress": "Project Progress Report",
+      "r-final": "Project Final Report",
       "d-screen-detail": "Screening · Detail",
       "d-sign-detail": "Sign &amp; Forward · Detail",
       "d-r3-detail": "AU-R3 Screening · Detail",
       "d-r4-detail": "AU-R4 Screening · Detail",
+      "d-history-detail": "Decision Timeline",
       "i-r3-verify": "AU-R3 Verification",
       "i-r4-verify": "AU-R4 Verification",
       "forms": "Forms & Templates",
@@ -785,7 +813,7 @@ function App() {
       />
       <Sidebar
         nav={navForRole}
-        current={page}
+        current={page === "d-history-detail" ? "d-history" : page}
         onNavigate={navigate}
         footer={footerForRole}
       />
@@ -796,23 +824,6 @@ function App() {
           ctx={{ onDownload, onView, toast, setConfirm, profile, selectedApplicationId, setSelectedApplicationId, grantType: role === "researcher" ? rSystem : null }}
         />
       </main>
-      <footer className="app-footer">
-        <div className="logo-tiny">
-          <div className="seal-tiny">
-            <img src="assets/au-logo.png" alt="AU" />
-          </div>
-          <span>AU Research Grant Management System</span>
-        </div>
-        <span>·</span>
-        <span>v1.0.0</span>
-        <span>·</span>
-        <a href="#">Privacy</a>
-        <a href="#">Terms</a>
-        <a href="#">User Guide</a>
-        <a href="#">Contact RASSC</a>
-        <span className="right">© 2025 Assumption University · Office of Research Affairs</span>
-      </footer>
-
       {previewDoc && (
         <FilePreviewModal
           doc={previewDoc}

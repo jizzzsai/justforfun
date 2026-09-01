@@ -13,11 +13,11 @@ const ALL_STAGES = [
   { key: "committee",    label: "Faculty Committee Review" },
   { key: "iras",         label: "RASSC Approval" },
   { key: "contract",     label: "Contract Signed" },
-  { key: "pay1",         label: "First Payment 30%" },
+  { key: "pay1",         label: "Phase 1 Approved 30%" },
   { key: "progress",     label: "Progress Report" },
-  { key: "pay2",         label: "Second Payment 40%" },
+  { key: "pay2",         label: "Phase 2 Approved 40%" },
   { key: "final",        label: "Final Report" },
-  { key: "pay3",         label: "Final Payment 30%" },
+  { key: "pay3",         label: "Phase 3 Approved 30%" },
   { key: "closed",       label: "Project Closed" },
 ];
 
@@ -39,11 +39,11 @@ const STATUS = {
   contractPending:   { key: "approved",         label: "Contract Pending",                 cls: "badge-contract" },
   active:            { key: "active",           label: "Active",                           cls: "badge-paid" },
   contractSigned:    { key: "active",           label: "Contract Signed",                  cls: "badge-signed" },
-  pay1:              { key: "active",           label: "First Payment Released",           cls: "badge-paid" },
+  pay1:              { key: "active",           label: "Phase 1 Paid",                    cls: "badge-paid" },
   progressSubmitted: { key: "active",           label: "Progress Report Submitted",        cls: "badge-progress" },
-  pay2:              { key: "active",           label: "Second Payment Released",          cls: "badge-paid" },
+  pay2:              { key: "active",           label: "Phase 2 Paid",                    cls: "badge-paid" },
   finalSubmitted:    { key: "active",           label: "Final Report Submitted",           cls: "badge-final" },
-  pay3:              { key: "completed",        label: "Final Payment Released",           cls: "badge-paid" },
+  pay3:              { key: "completed",        label: "Phase 3 Paid",                    cls: "badge-paid" },
   final:             { key: "completed",        label: "Final Report Completed",           cls: "badge-final" },
   closed:            { key: "completed",        label: "Closed",                           cls: "badge-check" },
   completed:         { key: "completed",        label: "Completed",                        cls: "badge-check" },
@@ -64,7 +64,7 @@ const PAPER_PRESENTATION_DOCS = [
   { id: "r3-article", name: "Full_Research_Article.pdf", role: "AU-R3 requirement: full article only" },
   { id: "r3-turnitin", name: "Turnitin_Result.pdf", role: "AU-R3 requirement: similarity must not exceed 20%" },
   { id: "r3-peer", name: "Peer_Review_Comments.pdf", role: "AU-R3 requirement when available" },
-  { id: "r3-memo", name: "Memo_and_Estimated_Budget.pdf", role: "AU-R3 requirement: memo and estimated budget" },
+  { id: "r3-memo", name: "Dean_Signed_Memo.pdf", role: "AU-R3 requirement: memo signed by the Dean" },
 ];
 
 const PRIMARY_APP = {
@@ -126,9 +126,9 @@ const APPLICATIONS = [PRIMARY_APP];
 const NOTIFS = [];
 
 const PAYMENTS = [
-  { n: 1, pct: 30, amount: 30000, label: "First Disbursement", status: "After contract signing", badge: "badge-pending", date: "Unlocked when the contract is signed", requiredDoc: "Signed Contract", receipt: null },
-  { n: 2, pct: 40, amount: 40000, label: "Second Disbursement", status: "After progress report approval", badge: "badge-draft", date: "Unlocked when RASSC accepts the progress report", requiredDoc: "Accepted Progress Report", receipt: null },
-  { n: 3, pct: 30, amount: 30000, label: "Final Disbursement", status: "After final report approval", badge: "badge-draft", date: "Unlocked when RASSC accepts the final report", requiredDoc: "Accepted Final Report", receipt: null },
+  { n: 1, pct: 30, amount: 30000, label: "Phase 1 Payment", status: "After grant approval", badge: "badge-pending", date: "Finance pays Phase 1", requiredDoc: "Approved Grant", receipt: null },
+  { n: 2, pct: 40, amount: 40000, label: "Phase 2 Payment", status: "After progress report approval", badge: "badge-draft", date: "Finance pays Phase 2 after RASSC accepts the progress report", requiredDoc: "Accepted Progress Report", receipt: null },
+  { n: 3, pct: 30, amount: 30000, label: "Phase 3 Payment", status: "After final report approval", badge: "badge-draft", date: "Finance pays Phase 3 after RASSC accepts the final report", requiredDoc: "Accepted Final Report", receipt: null },
 ];
 
 const ACTIVITY = [
@@ -149,14 +149,11 @@ const NAV_RESEARCHER = [
   { key: "r-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { key: "r-submit", label: "Submit Application", icon: "FilePlus" },
   { key: "r-applications", label: "My Applications", icon: "Folder" },
-  { key: "r-publications", label: "AU-R4 Publication Grant", icon: "FileText" },
-  { section: "REPORTING" },
-  { key: "r-progress", label: "Progress Report", icon: "FileText" },
-  { key: "r-final", label: "Final Report", icon: "FileCheck" },
-  { section: "FINANCE" },
-  { key: "r-payments", label: "Payment Status", icon: "Coins" },
   { section: "GRANT SYSTEM" },
   { key: "r-switch-system", label: "Switch Grant System", icon: "Repeat" },
+  { section: "RESOURCES" },
+  { key: "r-ai-assistant", label: "AI Assistant", icon: "Bot" },
+  { key: "forms", label: "Forms & Templates", icon: "FileText" },
 ];
 
 // Trimmed sidebar for the AU-R3 paper presentation flow (no progress/final
@@ -169,6 +166,7 @@ const NAV_RESEARCHER_R3 = [
   { section: "FINANCE" },
   { key: "r-payments", label: "Payment Status", icon: "Coins" },
   { section: "RESOURCES" },
+  { key: "r-ai-assistant", label: "AI Assistant", icon: "Bot" },
   { key: "forms", label: "Forms & Templates", icon: "FileText" },
   { section: "GRANT SYSTEM" },
   { key: "r-switch-system", label: "Switch Grant System", icon: "Repeat" },
@@ -178,12 +176,11 @@ const NAV_DEAN = [
   { section: "WORKSPACE" },
   { key: "d-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { section: "QUEUES" },
-  { key: "d-screen", label: "Screening Queue", icon: "ClipboardCheck" },
+  { key: "d-screen", label: "AU-R1 Queue", icon: "ClipboardCheck" },
   { key: "d-r3-screen", label: "AU-R3 Queue", icon: "Users" },
   { key: "d-r4-screen", label: "AU-R4 Queue", icon: "Award" },
   { section: "TRACKING" },
   { key: "d-history", label: "Decision History", icon: "Clock" },
-  { key: "d-analytics", label: "AI Analytics", icon: "TrendingUp" },
 ];
 
 const NAV_COMMITTEE = [
@@ -194,7 +191,6 @@ const NAV_COMMITTEE = [
   { key: "c-review", label: "Active Review", icon: "FileSearch" },
   { section: "TRACKING" },
   { key: "c-history", label: "Past Reviews", icon: "Clock" },
-  { key: "c-analytics", label: "AI Analytics", icon: "TrendingUp" },
 ];
 
 const NAV_RASSC = [
@@ -205,7 +201,6 @@ const NAV_RASSC = [
   { key: "i-screen", label: "Office Screening", icon: "ClipboardCheck" },
   { key: "i-reports", label: "Report Review", icon: "FileCheck" },
   { key: "i-publications", label: "Publication Grants", icon: "FileText" },
-  { key: "i-analytics", label: "AI Analytics", icon: "TrendingUp" },
 ];
 
 const NAV_EXPERT = [
@@ -224,13 +219,12 @@ const NAV_PRESIDENT = [
   { section: "CONTRACTS" },
   { key: "p-approve", label: "Issue Contract", icon: "ShieldCheck" },
   { key: "p-contracts", label: "Contract Tracking", icon: "FileSignature" },
-  { key: "p-analytics", label: "AI Analytics", icon: "TrendingUp" },
 ];
 
 const NAV_OFM = [
   { section: "WORKSPACE" },
   { key: "o-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
-  { section: "DISBURSEMENT" },
+  { section: "PAYMENTS" },
   { key: "o-payments", label: "Payment Queue", icon: "Coins" },
   { key: "o-detail", label: "Grant Detail", icon: "FileText" },
   { key: "o-publications", label: "Publication Payments", icon: "Award" },
@@ -242,11 +236,9 @@ const NAV_ADMIN = [
   { section: "ADMIN" },
   { key: "a-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { key: "a-users", label: "User Management", icon: "Users" },
-  { key: "a-journals", label: "Journal Tier Reference", icon: "FileText" },
   { key: "a-analytics", label: "AI Analytics", icon: "TrendingUp" },
   { section: "SYSTEM" },
   { key: "a-audit", label: "Audit Log", icon: "Clock" },
-  { key: "a-settings", label: "System Settings", icon: "Settings" },
 ];
 
 const SYSTEM_USERS = [
@@ -268,8 +260,8 @@ const JOURNAL_TIERS = [
   { code: "SJR-Q3", name: "Scopus SJR Quartile 3", incentive: 50000, count: 0 },
   { code: "SJR-Q4", name: "Scopus SJR Quartile 4", incentive: 40000, count: 0 },
   { code: "WoS", name: "Web of Science SCIE / SSCI / AHCI", incentive: 80000, count: 0 },
-  { code: "TCI1", name: "Thai Citation Index Tier 1", incentive: "Actual fees", count: 0 },
-  { code: "TCI2", name: "Thai Citation Index Tier 2", incentive: "Actual fees", count: 0 },
+  { code: "TCI1", name: "Thai Citation Index Tier 1", incentive: "Publication fee", count: 0 },
+  { code: "TCI2", name: "Thai Citation Index Tier 2", incentive: "Publication fee", count: 0 },
   { code: "CREATE", name: "Creative work at ASEAN / international level", incentive: 25000, count: 0 },
   { code: "PATENT", name: "Patent or new plant/animal registration", incentive: 10000, count: 0 },
   { code: "PETTY", name: "Petty patent", incentive: 3000, count: 0 },
@@ -339,17 +331,6 @@ const DOC_TYPES = [
   "Other supporting document",
 ];
 
-// AU-R3 conference budget categories. "intlOnly" rows apply only to
-// international conferences (hidden/zeroed for domestic ones).
-const R3_BUDGET_ITEMS = [
-  { item: "Registration Fee" },
-  { item: "Flight Ticket" },
-  { item: "Accommodation" },
-  { item: "Transportation" },
-  { item: "Visa", intlOnly: true },
-  { item: "Meals / Daily Allowance" },
-  { item: "Other Expenses" },
-];
 const R3_CONFERENCE_TYPES = ["Domestic", "International"];
 
 // Document types for an AU-R3 Paper Presentation Grant upload.
@@ -357,7 +338,7 @@ const R3_DOC_TYPES = [
   "Full Research Article",
   "Turnitin Result (≤ 20%)",
   "Peer Review Comments",
-  "Dean-signed Memo & Estimated Budget",
+  "Dean-signed Memo",
   "Other supporting document",
 ];
 
@@ -370,23 +351,20 @@ const GRANT_SYSTEMS = [
     tagline: "Research, creative or academic works produced within AU.",
     maxAmount: 100000, maxLabel: "฿100,000 / academic year",
     icon: "FileText", accent: "#9E1B1B", accentSoft: "#F8E8E8",
-    highlights: ["Full research or creative projects", "30 / 40 / 30 milestone payments", "Proposal, budget & final report"],
   },
   {
     id: "au_r3", code: "AU-R3", enabled: true, collaborative: true,
     name: "Paper Presentation Grant",
     tagline: "Present a paper at a domestic or international conference.",
-    maxAmount: 50000, maxLabel: "฿50,000 / academic year",
+    maxAmount: 3500, maxLabel: "฿3,500 fixed grant",
     icon: "Users", accent: "#9E1B1B", accentSoft: "#F8E8E8",
-    highlights: ["Co-apply with researchers & students", "Conference travel & registration", "Full article + Turnitin ≤ 20%"],
   },
   {
     id: "au_r4", code: "AU-R4", enabled: true, collaborative: false,
     name: "Publication Fees & Reward",
-    tagline: "Claim the reward for an article already published in a journal.",
+    tagline: "Submit a published or accepted journal article for publication-fee review.",
     maxAmount: 80000, maxLabel: "฿80,000 / article",
     icon: "Award", accent: "#9E1B1B", accentSoft: "#F8E8E8",
-    highlights: ["Reward by journal quartile / index", "Publication fees reimbursed", "Scopus, WoS, TCI & more"],
   },
 ];
 
@@ -397,8 +375,8 @@ const R4_INDEX_TYPES = [
   { key: "scopus", label: "Scopus (SJR quartile)", quartiles: true },
   { key: "wos", label: "Web of Science (SCIE / SSCI / AHCI)", reward: 80000 },
   { key: "intl_db", label: "Intl. database (ERIC, MathSciNet, PubMed, JSTOR, Project Muse)", reward: 25000 },
-  { key: "tci1", label: "Thai Citation Index — Tier 1 (actual fee)", actual: true },
-  { key: "tci2", label: "Thai Citation Index — Tier 2 (actual fee)", actual: true },
+  { key: "tci1", label: "Thai Citation Index — Tier 1 (publication fee)", actual: true },
+  { key: "tci2", label: "Thai Citation Index — Tier 2 (publication fee)", actual: true },
   { key: "creative", label: "Creative work (ASEAN / international)", reward: 25000 },
   { key: "patent", label: "Patent / registered new plant or animal", reward: 10000 },
   { key: "petty", label: "Petty patent", reward: 3000 },
@@ -417,20 +395,25 @@ function r4EstimateReward(indexKey, quartile, feeAmount) {
 // ---- AU-R4 rich form option sets (per the AU-R4 module spec) ----
 const R4_ARTICLE_TYPES = ["Research Article", "Academic Article"];
 const R4_PUB_STATUS = ["Published", "Accepted for Publication"];
-const R4_JOURNAL_DBS = ["TCI Tier 1", "TCI Tier 2", "ERIC", "MathSciNet", "PubMed", "JSTOR", "Project Muse", "SCOPUS", "Web of Science", "Other"];
+const R4_JOURNAL_DBS = ["SCOPUS", "Web of Science (WoS)", "TCI", "ERIC", "MathSciNet", "PubMed", "JSTOR", "Project MUSE", "Other"];
+const R4_JOURNAL_CLASSIFICATIONS = {
+  SCOPUS: ["Q1", "Q2", "Q3", "Q4"],
+  "Web of Science (WoS)": ["SCIE", "SSCI", "AHCI"],
+  TCI: ["Tier 1", "Tier 2"],
+};
 const R4_WOS_INDEXES = ["SCIE", "SSCI", "AHCI"];
 const R4_OPEN_ACCESS = ["Open Access", "Subscription", "Hybrid"];
-const R4_AUTHOR_TYPES = ["Principal Author", "Co-Author", "Student Author", "External Research Partner"];
-const R4_APPLICANT_ROLES = ["Principal / First Author", "Corresponding Author", "Co-Author"];
+const R4_AUTHOR_TYPES = ["First Author", "Corresponding Author"];
+const R4_APPLICANT_ROLES = ["First Author", "Corresponding Author"];
 const R4_CLAIM_TYPES = ["Publication Fee Reimbursement", "Publication Reward", "Publication Fee and Reward"];
 const R4_DECLARATIONS = [
-  "The article is not part of a senior project, thesis, dissertation, or IS for which I am claiming an ineligible advisor reward.",
-  "Assumption University is identified as the grantor or institutional affiliation where required.",
-  "The journal is not a predatory journal or listed in Beall's List.",
-  "The author names and contribution percentages are accurate.",
-  "The original publication-fee receipt has not been used for another claim.",
-  "This application is being submitted within the eligible academic year.",
-  "All submitted information and documents are true and complete.",
+  "I confirmed that this article was not part of a senior project, thesis, dissertation, or independent study for which I claimed an ineligible advisor reward.",
+  "I agreed that Assumption University would be identified as the grantor or institutional affiliation wherever required.",
+  "I confirmed that this journal was not a predatory journal and was not listed in Beall's List.",
+  "I confirmed that the author names and contribution declarations were accurate.",
+  "I confirmed that the original publication-fee receipt had not been used for another claim.",
+  "I confirmed that this application met the eligible academic-year requirement.",
+  "I confirmed that all submitted information and documents were true, accurate, and complete.",
 ];
 
 // Preliminary AU-R4 reward from the journal database + Scopus quartile / entered fee.
@@ -453,6 +436,8 @@ function r4CategoryLabel(db, quartile, wos) {
 // Document types for an AU-R4 Publication Fees & Reward upload.
 const R4_DOC_TYPES = [
   "Full Research Article",
+  "Acceptance Letter",
+  "Author Contribution Statement",
   "Turnitin Result (≤ 20%)",
   "Receipt of Publication Fee",
   "Dean-signed Memo",
@@ -462,6 +447,7 @@ const R4_DOC_TYPES = [
 // What an AU-R4 applicant must attach (shown as a checklist).
 const R4_REQUIRED_DOCS = [
   { id: "r4-article", name: "Full Research Article", role: "the full published article (not just the abstract)" },
+  { id: "r4-contribution", name: "Author Contribution Statement", role: "the signed author-contribution information" },
   { id: "r4-turnitin", name: "Turnitin Result", role: "similarity must not exceed 20%" },
   { id: "r4-receipt", name: "Receipt of Publication Fee", role: "the original receipt of the fee you paid" },
   { id: "r4-memo", name: "Dean-signed Memo", role: "a memo signed by your Dean" },
@@ -469,9 +455,9 @@ const R4_REQUIRED_DOCS = [
 
 window.AU = {
   ALL_STAGES, STATUS, FACULTIES, REQUIRED_DOCS, PAPER_PRESENTATION_DOCS,
-  AU_TITLES, WORK_TYPES, DEFAULT_BUDGET_CAPS, NECESSARY_DOCS, DOC_TYPES, R3_DOC_TYPES, R3_BUDGET_ITEMS, R3_CONFERENCE_TYPES, GRANT_SYSTEMS, REIMBURSE_CATEGORIES,
+  AU_TITLES, WORK_TYPES, DEFAULT_BUDGET_CAPS, NECESSARY_DOCS, DOC_TYPES, R3_DOC_TYPES, R3_CONFERENCE_TYPES, GRANT_SYSTEMS, REIMBURSE_CATEGORIES,
   R4_INDEX_TYPES, R4_SCOPUS_QUARTILE_REWARD, r4EstimateReward, R4_DOC_TYPES, R4_REQUIRED_DOCS,
-  R4_ARTICLE_TYPES, R4_PUB_STATUS, R4_JOURNAL_DBS, R4_WOS_INDEXES, R4_OPEN_ACCESS, R4_AUTHOR_TYPES,
+  R4_ARTICLE_TYPES, R4_PUB_STATUS, R4_JOURNAL_DBS, R4_JOURNAL_CLASSIFICATIONS, R4_WOS_INDEXES, R4_OPEN_ACCESS, R4_AUTHOR_TYPES,
   R4_APPLICANT_ROLES, R4_CLAIM_TYPES, R4_DECLARATIONS, r4RewardForJournal, r4CategoryLabel,
   PRIMARY_APP, APPLICATIONS,
   NOTIFS, PAYMENTS, ACTIVITY,
@@ -485,7 +471,7 @@ window.AU = {
   RASSC_QUEUE: APPLICATIONS.filter(a => ["iras_review", "expert_review", "president_review", "approved", "active", "completed"].includes(a.status.key)),
 };
 
-[NAV_RESEARCHER, NAV_DEAN, NAV_COMMITTEE, NAV_RASSC, NAV_EXPERT, NAV_PRESIDENT, NAV_OFM, NAV_ADMIN].forEach(function (nav) {
+[NAV_DEAN, NAV_COMMITTEE, NAV_RASSC, NAV_EXPERT, NAV_PRESIDENT, NAV_OFM, NAV_ADMIN].forEach(function (nav) {
   nav.push({ section: "RESOURCES" });
   nav.push({ key: "forms", label: "Forms & Templates", icon: "FileText" });
 });

@@ -19,7 +19,7 @@ function RASSCReceived({ navigate, onDownload, setSelectedApplicationId }) {
     <>
       <PageHeader
         title="Received Applications"
-        desc="AU-R1 proposals recommended by the Faculty Committee, and AU-R3 / AU-R4 applications forwarded by the Dean, awaiting university-level review."
+        desc="AU-R1 and AU-R4 applications recommended by the Faculty Committee, plus AU-R3 applications forwarded by the Dean, awaiting university-level review."
       />
 
       <div className="card card-pad-0">
@@ -246,7 +246,7 @@ function RASSCExpert({ applicationId, navigate, onDownload, onView, toast, setCo
       methodology: a.abstract || "No abstract or methodology summary has been entered for this application.",
       outcomes: [
         "Research output aligned with the submitted proposal.",
-        "Progress and final reports required before gated disbursements.",
+        "Progress and final reports are required before the next Finance approval gate.",
         "Publication or dissemination evidence to be tracked after completion.",
       ],
       budgetTotal: Number(a.requested_amount || 0),
@@ -613,10 +613,14 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
     if (!p) return "—";
     if (p.status === "paid") return <span className="badge badge-paid"><span className="dot"></span>Paid</span>;
     if (!window.DB.payable(app, p.instalment)) {
+      const reason = window.DB.payBlockedReason(app, p.instalment);
+      const previousPaid = (app.payments || []).some(x => x.instalment === p.instalment - 1 && x.status === "paid");
+      const shortLabel = p.instalment > 1 && previousPaid ? "Awaiting report" : p.instalment > 1 ? "Previous phase first" : "Locked";
       return (
-        <span className="badge badge-draft" title={window.DB.payBlockedReason(app, p.instalment)}>
-          <span className="dot"></span>Locked
-        </span>
+        <div title={reason} style={{ display: "inline-flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+          <span className="badge badge-draft"><span className="dot"></span>{shortLabel}</span>
+          <span style={{ fontSize: 9.5, color: "var(--ink-3)", maxWidth: 120, lineHeight: 1.2 }}>{reason}</span>
+        </div>
       );
     }
     return (
@@ -624,9 +628,9 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
         kind: "success",
         title: "Release Phase " + p.instalment + " (" + p.pct + "%)?",
         message: "Pay " + fmtBaht(p.amount) + " for " + app.code + ".",
-        confirmLabel: "Pay " + fmtBaht(p.amount), withReason: true, reasonLabel: "Payment note / reference",
-        onConfirm: async () => {
-          try { await window.DB.markPaid(p.id, p.instalment, app.id); toast("Phase " + p.instalment + " paid for " + app.code); load(); }
+        confirmLabel: "Mark as Paid", withReason: true, reasonLabel: "Payment note / reference",
+        onConfirm: async (reason) => {
+          try { await window.DB.markPaid(p.id, p.instalment, app.id, reason); toast("Phase " + p.instalment + " paid for " + app.code); load(); }
           catch (e) { toast("Error: " + (e.message || e)); }
         },
       })}>Pay {p.pct}%</button>
@@ -637,7 +641,7 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
     <>
       <PageHeader
         title="Finance / OFM Payment"
-        desc="Process disbursements after each milestone: contract, progress report, final report."
+        desc="Process disbursements after each milestone: grant approval, progress report, and final report."
       />
 
       <div className="stats" style={{gridTemplateColumns: "repeat(3, 1fr)"}}>
@@ -648,7 +652,7 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
 
       <div className="card card-pad-0">
         {apps === null && <div style={{ padding: "36px", textAlign: "center", color: "var(--ink-3)" }}>Loading payments…</div>}
-        {apps && apps.length === 0 && <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>No approved grants yet. Approve an application (as President) to set up its 30 / 40 / 30 payments.</div>}
+        {apps && apps.length === 0 && <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>No AU-R1 phases are waiting for Finance approval.</div>}
         {apps && apps.length > 0 && (
           <div style={{ overflowX: "auto" }}>
           <table className="tbl tbl-compact">
@@ -723,10 +727,10 @@ function RASSCReports({ onDownload, onView, toast, setConfirm }) {
   const approve = (r) => setConfirm({
     kind: "success",
     title: "Accept " + r.kind + " report?",
-    message: "This opens the " + (r.kind === "progress" ? "40%" : "final 30%") + " payment gate for " + (r.application ? r.application.code : "this grant") + ".",
+    message: "RASSC acceptance will forward Phase " + (r.kind === "progress" ? "2 (40%)" : "3 (30%)") + " of " + (r.application ? r.application.code : "this grant") + " to the Finance approval queue.",
     confirmLabel: "Accept Report", withReason: true, reasonLabel: "Review note",
     onConfirm: async () => {
-      try { await window.DB.acceptReport(r.id); toast((r.application ? r.application.code : "Report") + " accepted."); load(); }
+      try { await window.DB.acceptReport(r.id); toast((r.application ? r.application.code : "Report") + " accepted and forwarded to Finance."); load(); }
       catch (e) { toast("Error: " + ((e && e.message) || e)); }
     },
   });
@@ -736,8 +740,10 @@ function RASSCReports({ onDownload, onView, toast, setConfirm }) {
     <div>
       {reports === null && <div style={{ padding: "32px", textAlign: "center", color: "var(--ink-3)" }}>Loading reports...</div>}
       {reports && rows.length === 0 && <Empty title={"No " + kind + " reports awaiting review"} desc="Researcher submissions will appear here." icon={kind === "progress" ? "FileText" : "FileCheck"} />}
-      {rows.map((r, i) => (
-        <div key={r.id} style={{ padding: "16px 20px", borderBottom: i < rows.length - 1 ? "1px solid var(--line-2)" : "none" }}>
+      {rows.map((r, i) => {
+        const reportType = kind === "progress" ? "Progress Report" : "Final Report";
+        const reportFiles = r.application && r.application.documents ? r.application.documents.filter(d => d.doc_type === reportType) : [];
+        return <div key={r.id} style={{ padding: "16px 20px", borderBottom: i < rows.length - 1 ? "1px solid var(--line-2)" : "none" }}>
           <div className="flex items-center gap-3 mb-3">
             <div style={{ width: 40, height: 40, borderRadius: "var(--r-sm)", background: kind === "progress" ? "var(--au-crimson-soft)" : "var(--au-gold-soft)", color: kind === "progress" ? "var(--au-crimson)" : "var(--au-gold)", display: "grid", placeItems: "center" }}>
               <Icon name={kind === "progress" ? "FileText" : "FileCheck"} size={18} />
@@ -748,18 +754,23 @@ function RASSCReports({ onDownload, onView, toast, setConfirm }) {
             </div>
             <span className="badge badge-pending"><span className="dot"></span>Submitted</span>
           </div>
+          {r.summary && <div className="text-sm text-muted" style={{ marginBottom: 10 }}>{r.summary}</div>}
+          <div style={{ margin: "0 -20px 12px" }}>
+            {reportFiles.length === 0 && <div className="text-sm" style={{ color: "var(--au-crimson)", padding: "8px 20px" }}>No report PDF is attached.</div>}
+            {reportFiles.map(d => <FileRow key={d.id || d.name} doc={d} onDownload={onDownload} onView={onView} compact />)}
+          </div>
           <div className="flex gap-2">
-            <span className="text-sm text-muted">Report submission record</span>
+            <span className="text-sm text-muted">Review the attached PDF before accepting.</span>
             <div style={{ flex: 1 }}></div>
-            <button className="btn btn-success btn-sm" onClick={() => approve(r)}><Icon name="CheckCircle" size={12} /> Accept</button>
+            <button className="btn btn-success btn-sm" onClick={() => approve(r)} disabled={reportFiles.length === 0}><Icon name="CheckCircle" size={12} /> Accept</button>
           </div>
         </div>
-      ))}
+      })}
     </div>
   );
   return (
     <>
-      <PageHeader title="Report Review" desc="Review submitted progress and final reports before payment release." />
+      <PageHeader title="Report Review" desc="Researcher reports arrive here first. After RASSC acceptance, the related AU-R1 phase is forwarded to Finance for approval." />
       <div className="grid-2eq">
         <div className="card card-pad-0">
           <div className="card-head"><h3>Progress Reports - Awaiting Review</h3></div>
@@ -863,7 +874,7 @@ function OFMPublicationPayments({ toast }) {
   };
   return (
     <>
-      <PageHeader title="Publication Reward Payments" desc="OFM payment queue for approved paper publication grants." />
+      <PageHeader title="Publication Reward Payments" desc="Finance payment queue for approved publication rewards." />
       <div className="card card-pad-0">
         <div className="toolbar">
           <div className="search"><Icon name="Search" size={14} className="icon" /><input placeholder="Search publication grants..." /></div>
@@ -874,7 +885,7 @@ function OFMPublicationPayments({ toast }) {
           <thead><tr><th>ID</th><th>Publication</th><th>Researcher</th><th>Indexing</th><th style={{ textAlign: "right" }}>Amount</th><th style={{ textAlign: "right" }}>Action</th></tr></thead>
           <tbody>
             {rows === null && <tr><td colSpan="6" style={{ textAlign: "center", padding: 32, color: "var(--ink-3)" }}>Loading publication payments...</td></tr>}
-            {rows && rows.length === 0 && <tr><td colSpan="6"><Empty title="No publication rewards ready to pay" desc="RASSC-approved publication grants will appear here." icon="Coins" /></td></tr>}
+            {rows && rows.length === 0 && <tr><td colSpan="6"><Empty title="No publication rewards awaiting approval" desc="RASSC-approved publication grants will appear here." icon="Coins" /></td></tr>}
             {(rows || []).map(g => (
               <tr key={g._uuid}>
                 <td><span className="id">{g.id}</span></td>

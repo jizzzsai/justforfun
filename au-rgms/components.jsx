@@ -58,6 +58,8 @@ const ICONS = {
   ArrowRight: 'M5 12h14 M12 5l7 7-7 7',
   ArrowLeft: 'M19 12H5 M12 19l-7-7 7-7',
   Globe: 'M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z M2 12h20 M12 2a15 15 0 0 1 0 20 M12 2a15 15 0 0 0 0 20',
+  KeyRound: 'M15.5 7.5a5 5 0 1 1-1.4 3.5L22 18.9V22h-3.1l-1.5-1.5-1.8 1.8-2.1-2.1 1.8-1.8-4.7-4.7a5 5 0 0 1-3.1 1.1z M7.5 7.5h.01',
+  Bot: 'M12 8V4H8 M12 2h.01 M4 8h16v12H4z M2 14h2 M20 14h2 M9 13v2 M15 13v2 M8 18h8',
 };
 
 function Icon({ name, size = 16, stroke = 1.75, className = "", style = {} }) {
@@ -180,15 +182,24 @@ function FileRow({ doc, onDownload, onView, missing = false, compact = false }) 
 }
 
 /* ---------- Timeline (vertical) ---------- */
-function Timeline({ steps, app }) {
+function Timeline({ steps, app, onStepClick }) {
   const tl = app.timeline || {};
   return (
     <div className="timeline">
       {steps.map((s, i) => {
         const data = tl[s.key] || {};
         const cls = data.current ? "current" : data.done ? "done" : "upcoming";
+        const clickable = !!onStepClick && (s.key === "progress" || s.key === "final");
         return (
-          <div key={s.key} className={`tl-step ${cls}`}>
+          <div
+            key={s.key}
+            className={`tl-step ${cls}${clickable ? " clickable" : ""}`}
+            role={clickable ? "button" : undefined}
+            tabIndex={clickable ? 0 : undefined}
+            aria-label={clickable ? "Open " + s.label : undefined}
+            onClick={clickable ? () => onStepClick(s.key) : undefined}
+            onKeyDown={clickable ? e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onStepClick(s.key); } } : undefined}
+          >
             <div className="dot"></div>
             <div className="t">{s.label}</div>
             <div className="s">{data.date || "Pending"}</div>
@@ -279,7 +290,7 @@ function FilePreviewModal({ doc, onClose, onDownload }) {
         <div className="page">
           <div className="eyebrow" style={{ color: "var(--au-crimson)", marginBottom: 12 }}>Assumption University</div>
           <h5>{doc.name.replace(/_/g, " ").replace(".pdf", "")}</h5>
-          <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 20 }}>Preview placeholder — no uploaded file is attached yet</div>
+          <div style={{ fontSize: 11, color: "var(--ink-3)", marginBottom: 20 }}>No uploaded file is attached to this record.</div>
           <div className="ln med"></div>
           <div className="ln"></div>
           <div className="ln short"></div>
@@ -292,7 +303,7 @@ function FilePreviewModal({ doc, onClose, onDownload }) {
           <div className="ln"></div>
           <div className="ln short"></div>
         </div>
-        <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 12 }}>Generated preview placeholder</div>
+        <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 12 }}>Document preview is unavailable.</div>
       </div>
     </Modal>
   );
@@ -304,7 +315,7 @@ function FilePreviewModal({ doc, onClose, onDownload }) {
    / Finance forward, return, reject — AU-R1, AU-R3 and AU-R4 alike) passes
    withReason, so they all get the second confirmation automatically.
    Pass finalConfirm={false} to opt a caller out. */
-function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primary", confirmLabel = "Confirm", withReason = false, reasonLabel = "Reason / note", reasonRequired = false, finalConfirm }) {
+function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primary", confirmLabel = "Confirm", withReason = false, reasonLabel = "Reason / note", reasonPlaceholder = "Add a comment for the record — the researcher and next reviewers can see this.", reasonRequired = false, finalConfirm }) {
   const [reason, setReason] = useState("");
   const [step, setStep] = useState(1);
   useEffect(() => { if (open) { setReason(""); setStep(1); } }, [open]);
@@ -325,9 +336,9 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
         <h3>Are you sure?</h3>
         <p><b>{title.replace(/\?$/, "")}</b> — {message}</p>
         <div style={{ textAlign: "left", marginTop: 10, border: "1px solid var(--line)", borderRadius: "var(--r-md)", background: "var(--paper-warm)", padding: "10px 12px" }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--ink-3)", marginBottom: 4 }}>Your note</div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--ink-3)", marginBottom: 4 }}>{reasonLabel}</div>
           <div style={{ fontSize: 13, color: reason.trim() ? "var(--ink-1)" : "var(--ink-3)", lineHeight: 1.55, whiteSpace: "pre-wrap" }}>
-            {reason.trim() || "No note added."}
+            {reason.trim() || "No comment added."}
           </div>
         </div>
         <p style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 10 }}>
@@ -351,7 +362,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
       {withReason && (
         <div className="field" style={{ textAlign: "left", marginTop: 6 }}>
           <label>{reasonLabel}{reasonRequired ? " (required)" : " (optional)"}</label>
-          <textarea className="comment-input" value={reason} onChange={e => setReason(e.target.value)} placeholder="Add a note for the record — the researcher and next reviewers can see this." style={{ minHeight: 70 }} />
+          <textarea className="comment-input" value={reason} onChange={e => setReason(e.target.value)} placeholder={reasonPlaceholder} style={{ minHeight: 70 }} />
         </div>
       )}
       <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8 }}>
@@ -361,6 +372,69 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
         </button>
       </div>
     </Modal>
+  );
+}
+
+/* ---------- Review comment history ---------- */
+function ReviewCommentHistory({ app, roles = ["dean", "committee"] }) {
+  const wantsCommittee = roles.includes("committee");
+  const items = [];
+  const officeName = app && app.grant_type === "au_r1" ? "RASSC" : "IRAS";
+  const eventRoles = {
+    dean: { label: "Dean comment", author: "Dean", initials: "DN" },
+    iras: { label: officeName + " comment", author: officeName, initials: officeName === "RASSC" ? "RS" : "IR" },
+    ofm: { label: "Finance comment", author: "Finance Office", initials: "FN" },
+  };
+
+  roles.filter(role => role !== "committee").forEach(role => {
+    const meta = eventRoles[role] || { label: role + " comment", author: role, initials: role.slice(0, 2).toUpperCase() };
+    (app.events || []).forEach(e => {
+      if (e.actor_role !== role || !e.note || !e.note.trim()) return;
+      items.push({
+        key: role + "-" + e.id,
+        role: meta.label,
+        author: e.actor && e.actor.full_name ? e.actor.full_name : meta.author,
+        body: e.note.trim(),
+        at: e.created_at,
+        initials: meta.initials,
+      });
+    });
+  });
+
+  if (wantsCommittee) {
+    (app.reviews || []).forEach(r => {
+      if (r.kind !== "committee" || !r.comments || !r.comments.trim()) return;
+      items.push({
+        key: "committee-" + r.id,
+        role: "Committee comment",
+        author: r.reviewer && r.reviewer.full_name ? r.reviewer.full_name : "Faculty Committee",
+        body: r.comments.trim(),
+        at: r.submitted_at,
+        initials: "CT",
+      });
+    });
+  }
+
+  items.sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
+  const empty = "No review comments were submitted.";
+
+  return (
+    <div style={{ borderTop: "1px solid var(--line-2)", marginTop: 16, paddingTop: 16 }}>
+      <div className="eyebrow mb-2">Review comments</div>
+      {items.length === 0 && <div className="text-sm text-muted">{empty}</div>}
+      {items.map(item => (
+        <div key={item.key} className="comment">
+          <div className="head">
+            <div className="av">{item.initials}</div>
+            <div>
+              <div className="name">{item.role}</div>
+              <div className="role">{item.author}</div>
+            </div>
+          </div>
+          <div className="body" style={{ whiteSpace: "pre-wrap" }}>{item.body}</div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -380,6 +454,11 @@ function NotifPanel({ items, onClose, onOpen }) {
             <div className="ni"><Icon name={n.icon || "Bell"} size={16} /></div>
             <div className="nm">
               <div className="nt"><b>{n.who}:</b> {n.text}</div>
+              {n.details && (
+                <div style={{ whiteSpace: "pre-wrap", marginTop: 7, padding: "8px 10px", borderRadius: 8, background: "var(--paper-warm)", color: "var(--ink-2)", fontSize: 11.5, lineHeight: 1.55 }}>
+                  {n.details}
+                </div>
+              )}
               <div className="nd">{n.when}</div>
             </div>
           </div>
@@ -521,10 +600,42 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
   );
 }
 
+function researcherJoinedDate(app) {
+  if (!app) return "";
+  return (app.pub_info && app.pub_info.researcherJoinedDate)
+    || (app.conference_info && app.conference_info.researcherJoinedDate)
+    || "";
+}
+
+function universityServiceEligibility(joinedDate, asOf) {
+  if (!joinedDate) return { eligible: false, missing: true, eligibleOn: "" };
+  const joined = new Date(joinedDate + "T00:00:00");
+  if (isNaN(joined)) return { eligible: false, missing: true, eligibleOn: "" };
+  const eligibleOn = new Date(joined.getFullYear() + 1, joined.getMonth(), joined.getDate());
+  const today = asOf ? new Date(asOf) : new Date();
+  today.setHours(0, 0, 0, 0);
+  return {
+    eligible: today >= eligibleOn,
+    missing: false,
+    eligibleOn: audpISO(eligibleOn.getFullYear(), eligibleOn.getMonth(), eligibleOn.getDate()),
+  };
+}
+
+function ResearcherServiceEligibilityRows({ app }) {
+  const joinedDate = researcherJoinedDate(app);
+  const service = universityServiceEligibility(joinedDate);
+  return (
+    <>
+      <div className="meta-row"><span className="l">Joined Assumption University</span><span className="r">{joinedDate ? window.DB.fmtDate(joinedDate) : "Not recorded"}</span></div>
+      <div className="meta-row"><span className="l">Service eligibility</span><span className="r" style={{ color: joinedDate && service.eligible ? "var(--status-approved)" : "var(--au-crimson)" }}>{joinedDate ? (service.eligible ? "Eligible" : "Not eligible until " + window.DB.fmtDate(service.eligibleOn)) : "Not recorded"}</span></div>
+    </>
+  );
+}
+
 /* ---------- Expose ---------- */
 Object.assign(window, {
   Icon, AULogo, Badge, Avatar, Toast, FileRow,
   Timeline, HTimeline, Stat, Modal, FilePreviewModal,
-  ConfirmModal, NotifPanel, PageHeader, Empty, fmtBaht,
-  AUDatePicker,
+  ConfirmModal, ReviewCommentHistory, NotifPanel, PageHeader, Empty, fmtBaht,
+  AUDatePicker, researcherJoinedDate, universityServiceEligibility, ResearcherServiceEligibilityRows,
 });

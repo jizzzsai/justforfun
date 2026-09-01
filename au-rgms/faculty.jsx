@@ -194,23 +194,24 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
     <LiveAppLoader
       status="submitted"
       applicationId={applicationId}
-      title="First Screening"
+      title="AU-R1 Dean Screening"
       desc="Review the live application and uploaded PDF documents before forwarding to the Faculty Committee."
       render={(app, load) => {
         const docs = app.documents || [];
         const budgetRows = Array.isArray(app.budget_breakdown) ? app.budget_breakdown : [];
         const requested = Number(app.requested_amount || 0);
-        const grantCap = app.grant_type === "au_r3" ? 50000 : app.grant_type === "au_r4" ? 80000 : 100000;
-        const grantCode = app.grant_type === "au_r3" ? "AU-R3" : app.grant_type === "au_r4" ? "AU-R4" : "AU-R1";
-        const withinCap = requested > 0 && requested <= grantCap;
         const isR3 = app.grant_type === "au_r3";
+        const grantCap = app.grant_type === "au_r3" ? 3500 : app.grant_type === "au_r4" ? 80000 : 100000;
+        const grantCode = app.grant_type === "au_r3" ? "AU-R3" : app.grant_type === "au_r4" ? "AU-R4" : "AU-R1";
+        const withinCap = isR3 ? requested === 3500 : requested > 0 && requested <= grantCap;
+        const serviceEligible = universityServiceEligibility(researcherJoinedDate(app)).eligible;
         const forward = () => setConfirm({
           kind: "success",
           title: isR3 ? "Forward to RASSC?" : "Forward to Faculty Committee?",
           message: isR3
             ? app.code + " is an AU-R3 paper presentation request — it goes straight to RASSC screening."
             : app.code + " will move to committee review.",
-          confirmLabel: "Forward", withReason: true,
+          confirmLabel: "Forward", withReason: true, reasonLabel: "Dean comment",
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "advance", reason); toast(app.code + (isR3 ? " forwarded to RASSC." : " forwarded to Faculty Committee.")); navigate("d-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -220,7 +221,7 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
           kind: "danger",
           title: "Return to researcher?",
           message: app.code + " will be marked returned for revision.",
-          confirmLabel: "Return", withReason: true, reasonRequired: true,
+          confirmLabel: "Return", withReason: true, reasonLabel: "Dean comment", reasonRequired: true,
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -230,7 +231,7 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
           kind: "danger",
           title: "Reject this application?",
           message: app.code + " will be rejected at Dean screening. This ends the application.",
-          confirmLabel: "Reject", withReason: true, reasonRequired: true,
+          confirmLabel: "Reject", withReason: true, reasonLabel: "Dean comment", reasonRequired: true,
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "reject", reason); toast(app.code + " rejected."); navigate("d-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -239,7 +240,7 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
         return (
           <>
             <PageHeader
-              title={"First Screening - " + app.code}
+              title={"AU-R1 Dean Screening - " + app.code}
               desc={(app.researcher ? app.researcher.full_name : "Researcher") + " - " + (app.department || "Department")}
               actions={<Badge status={window.DB.statusBadge(app.status)} />}
             />
@@ -255,17 +256,18 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
                     <div className="meta-row"><span className="l">Researcher</span><span className="r">{app.researcher ? app.researcher.full_name : "-"}</span></div>
                     <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{app.faculty || "-"}</span></div>
                     <div className="meta-row"><span className="l">Department</span><span className="r">{app.department || "-"}</span></div>
+                    <ResearcherServiceEligibilityRows app={app} />
                     <div className="eyebrow mt-4 mb-2">Expected outcomes / summary</div>
                     <p style={{ margin: 0, lineHeight: 1.65, color: "var(--ink-2)" }}>{app.abstract || "No summary entered."}</p>
                   </div>
                 </div>
 
                 <div className="card card-pad-0 mb-4">
-                  <div className="card-head"><h3>Budget Review</h3></div>
+                  <div className="card-head"><h3>{isR3 ? "Grant Amount" : "Budget Review"}</h3></div>
                   <div className="card-body" style={{ padding: 0 }}>
                     <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line-2)" }}>
                       <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(requested)}</span></div>
-                      <div className="meta-row"><span className="l">AU-R1 ceiling</span><span className="r">100,000 THB</span></div>
+                      <div className="meta-row"><span className="l">{isR3 ? "AU-R3 fixed grant" : grantCode + " ceiling"}</span><span className="r">{grantCap.toLocaleString()} THB</span></div>
                     </div>
                     {budgetRows.length === 0 && <div style={{ padding: 20, color: "var(--ink-3)" }}>No budget breakdown entered.</div>}
                     {budgetRows.length > 0 && (
@@ -301,8 +303,9 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
                 <div className="card-body">
                   {[
                     { label: docs.length + " uploaded PDF document(s)", checked: docs.length > 0 },
-                    { label: "Budget total within " + grantCap.toLocaleString() + " THB " + grantCode + " ceiling", checked: withinCap },
+                    { label: isR3 ? "Fixed AU-R3 grant amount is 3,500 THB" : "Budget total within " + grantCap.toLocaleString() + " THB " + grantCode + " ceiling", checked: withinCap },
                     { label: "Research title, researcher, faculty and department entered", checked: !!(app.title && app.researcher && app.faculty && app.department) },
+                    { label: "At least one year of Assumption University service", checked: serviceEligible },
                     { label: "Expected outcomes / proposal summary entered", checked: !!app.abstract },
                   ].map((item, i, arr) => (
                     <label key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < arr.length - 1 ? "1px solid var(--line-2)" : "none" }}>
@@ -312,7 +315,7 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
                     </label>
                   ))}
                   <div className="flex flex-col gap-2 mt-4">
-                    <button className="btn btn-primary btn-block" disabled={docs.length === 0} onClick={forward}><Icon name="Send" size={14} /> {isR3 ? "Forward to RASSC" : "Forward to Faculty Committee"}</button>
+                    <button className="btn btn-primary btn-block" disabled={docs.length === 0 || !serviceEligible} onClick={forward}><Icon name="Send" size={14} /> {isR3 ? "Forward to RASSC" : "Forward to Faculty Committee"}</button>
                     <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
                     <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
                   </div>
@@ -334,8 +337,8 @@ function r3Badge(status) {
   var labels = {
     submitted: "Pending Dean Review",
     iras_review: "Under IRAS Review",
-    approved: "Approved for Payment",
-    active: "Finance Processing",
+    approved: "Awaiting Finance Approval",
+    active: "Paid",
     completed: "Paid / Completed",
     returned: "Returned for Revision",
     rejected: "Rejected",
@@ -350,33 +353,31 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
       status="submitted"
       applicationId={applicationId}
       title="AU-R3 Screening"
-      desc="Review the conference, paper, documents and estimated budget before forwarding to IRAS."
+      desc="Review the conference, paper, journal classification, and documents before forwarding to IRAS."
       render={(app, load) => {
         const docs = app.documents || [];
         const ci = app.conference_info || {};
-        const budgetRows = Array.isArray(app.budget_breakdown) ? app.budget_breakdown : [];
         const requested = Number(app.requested_amount || 0);
-        const CEILING = 50000;
-        const remaining = Math.max(0, CEILING - requested);
         const r = app.researcher || {};
+        const serviceEligible = universityServiceEligibility(researcherJoinedDate(app)).eligible;
 
         // Match uploads to the four official AU-R3 document categories.
         const hasDoc = (kw) => docs.some(d => ((d.doc_type || "") + " " + (d.name || "")).toLowerCase().includes(kw));
         const docCats = [
           { label: "Full Research Article", required: true, ok: hasDoc("article") },
           { label: "Turnitin Report", required: true, ok: hasDoc("turnitin") },
-          { label: "Memo & Estimated Budget", required: true, ok: hasDoc("memo") },
+          { label: "Dean-signed Memo", required: true, ok: hasDoc("memo") },
           { label: "Peer Review Comments", required: false, ok: hasDoc("peer") },
         ];
 
-        const confComplete = !!(ci.confName && ci.organizer && ci.confType && ci.country && ci.city && ci.confStart && ci.confEnd);
-        const infoComplete = !!(app.title && ci.correspondingAuthor && app.field && app.faculty && app.department);
+        const confComplete = !!(ci.confName && ci.organizer && ci.confType && (ci.conferenceLocation || ci.city) && (ci.presentationDate || ci.confStart));
+        const infoComplete = !!(app.title && ci.correspondingAuthor && ci.paperAbstract && ci.journalDb && ci.journalClassification && app.field && app.faculty && app.department);
 
         const forward = () => setConfirm({
           kind: "success",
           title: "Approve & forward to IRAS?",
           message: app.code + " will be recorded as approved by the Dean and sent to IRAS for eligibility and document verification.",
-          confirmLabel: "Approve & Forward", withReason: true,
+          confirmLabel: "Approve & Forward", withReason: true, reasonLabel: "Dean comment",
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "advance", reason); toast(app.code + " approved — forwarded to IRAS."); navigate("d-r3-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -385,8 +386,8 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
         const ret = () => setConfirm({
           kind: "danger",
           title: "Return for revision?",
-          message: app.code + " will be sent back to the researcher. Explain what needs to be fixed (e.g. a clearer Turnitin report, a revised accommodation budget).",
-          confirmLabel: "Return", withReason: true, reasonRequired: true,
+          message: app.code + " will be sent back to the researcher. Explain what needs to be fixed (for example, a clearer Turnitin report or corrected journal classification).",
+          confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment",
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-r3-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -396,7 +397,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
           kind: "danger",
           title: "Reject this application?",
           message: app.code + " will be rejected at Dean screening. This ends the request.",
-          confirmLabel: "Reject", withReason: true, reasonRequired: true,
+          confirmLabel: "Reject", withReason: true, reasonRequired: true, reasonLabel: "Dean comment",
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "reject", reason); toast(app.code + " rejected."); navigate("d-r3-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -409,9 +410,10 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
           { label: "Turnitin similarity does not exceed 20%", checked: similarityOk, manual: true },
           { label: "Conference information is complete", checked: confComplete },
           { label: "Paper and researcher information is complete", checked: infoComplete },
-          { label: "Estimated budget is attached", checked: budgetRows.length > 0 || docCats[2].ok },
-          { label: "Requested amount within the 50,000 THB AU-R3 limit", checked: requested > 0 && requested <= CEILING },
-          { label: "Memo is ready for Dean approval", checked: docCats[2].ok },
+          { label: "At least one year of Assumption University service", checked: serviceEligible },
+          { label: "Journal database and classification are provided", checked: !!(ci.journalDb && ci.journalClassification) },
+          { label: "Fixed AU-R3 grant amount is 3,500 THB", checked: requested === 3500 },
+          { label: "Dean-signed memo is uploaded", checked: docCats[2].ok },
           { label: "Peer review comments uploaded (optional)", checked: docCats[3].ok, optional: true },
         ];
 
@@ -444,8 +446,8 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                         <div className="meta-row"><span className="l">Conference name</span><span className="r">{ci.confName || "-"}</span></div>
                         <div className="meta-row"><span className="l">Organizer</span><span className="r">{ci.organizer || "-"}</span></div>
                         {ci.website && <div className="meta-row"><span className="l">Website</span><span className="r">{ci.website}</span></div>}
-                        <div className="meta-row"><span className="l">Location</span><span className="r">{(ci.city || "-") + ", " + (ci.country || "-")}</span></div>
-                        <div className="meta-row"><span className="l">Conference dates</span><span className="r">{(ci.confStart ? window.DB.fmtDate(ci.confStart) : "-") + " – " + (ci.confEnd ? window.DB.fmtDate(ci.confEnd) : "-")}</span></div>
+                        <div className="meta-row"><span className="l">Conference location</span><span className="r">{ci.conferenceLocation || [ci.city, ci.country].filter(Boolean).join(", ") || "-"}</span></div>
+                        <div className="meta-row"><span className="l">Presentation date</span><span className="r">{(ci.presentationDate || ci.confStart) ? window.DB.fmtDate(ci.presentationDate || ci.confStart) : "-"}</span></div>
                         <div className="meta-row"><span className="l">Presentation type</span><span className="r">{ci.presentation || "Oral Presentation"}</span></div>
                       </>
                     )}
@@ -457,7 +459,6 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                   <div className="card-body">
                     <div className="meta-row"><span className="l">Paper title</span><span className="r">{app.title}</span></div>
                     <div className="meta-row"><span className="l">Research field</span><span className="r">{app.field || "-"}</span></div>
-                    <div className="meta-row"><span className="l">Keywords</span><span className="r">{app.keywords || "-"}</span></div>
                     <div className="meta-row"><span className="l">Author(s)</span><span className="r">{[r.full_name].concat((app.co_members || []).map(m => m.name + (m.kind === "Student" ? " (Student)" : ""))).filter(Boolean).join(", ")}</span></div>
                     <div className="meta-row"><span className="l">Corresponding author</span><span className="r">{ci.correspondingAuthor || "-"}</span></div>
                     {ci.paperAbstract && (
@@ -466,6 +467,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                         <p style={{ margin: 0, lineHeight: 1.65, color: "var(--ink-2)" }}>{ci.paperAbstract}</p>
                       </>
                     )}
+                    <div className="meta-row" style={{ marginTop: 10 }}><span className="l">Keywords</span><span className="r">{app.keywords || "-"}</span></div>
                     {app.abstract && (
                       <>
                         <div className="eyebrow mt-4 mb-2">Expected outcomes</div>
@@ -485,35 +487,16 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                     <div className="meta-row"><span className="l">Office / Room</span><span className="r">{r.office_room || "-"}</span></div>
                     <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{app.faculty || "-"}</span></div>
                     <div className="meta-row"><span className="l">Department</span><span className="r">{app.department || "-"}</span></div>
+                    <ResearcherServiceEligibilityRows app={app} />
                   </div>
                 </div>
 
                 <div className="card card-pad-0 mb-4">
-                  <div className="card-head"><h3>Conference Budget Review</h3></div>
-                  <div className="card-body" style={{ padding: 0 }}>
-                    <div style={{ padding: "16px 20px", borderBottom: "1px solid var(--line-2)" }}>
-                      <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(requested)}</span></div>
-                      <div className="meta-row"><span className="l">AU-R3 ceiling</span><span className="r">50,000 THB / academic year</span></div>
-                      <div className="meta-row"><span className="l">Remaining eligible</span><span className="r" style={{ color: requested > CEILING ? "var(--au-crimson)" : "inherit" }}>{requested > CEILING ? "Over ceiling by " + fmtBaht(requested - CEILING) : fmtBaht(remaining)}</span></div>
-                    </div>
-                    {budgetRows.length === 0 && <div style={{ padding: 20, color: "var(--ink-3)" }}>No budget breakdown entered.</div>}
-                    {budgetRows.length > 0 && (
-                      <table className="tbl">
-                        <thead><tr><th>Budget Item</th><th style={{ textAlign: "right" }}>Amount</th></tr></thead>
-                        <tbody>
-                          {budgetRows.map((b, i) => (
-                            <tr key={i}>
-                              <td>{b.item}</td>
-                              <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{fmtBaht(Number(b.amount || 0))}</td>
-                            </tr>
-                          ))}
-                          <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}>
-                            <td>Total</td>
-                            <td style={{ textAlign: "right" }}>{fmtBaht(budgetRows.reduce((s, b) => s + Number(b.amount || 0), 0))}</td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    )}
+                  <div className="card-head"><h3>Journal Classification</h3></div>
+                  <div className="card-body">
+                    <div className="meta-row"><span className="l">Journal Database / Index</span><span className="r">{ci.journalDb || "-"}</span></div>
+                    <div className="meta-row"><span className="l">Classification</span><span className="r">{ci.journalClassification || "-"}</span></div>
+                    <div className="meta-row"><span className="l">Fixed AU-R3 grant</span><span className="r">{fmtBaht(3500)}</span></div>
                   </div>
                 </div>
 
@@ -560,7 +543,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                     </label>
                   ))}
                   <div className="flex flex-col gap-2 mt-4">
-                    <button className="btn btn-primary btn-block" disabled={docs.length === 0} onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to IRAS</button>
+                    <button className="btn btn-primary btn-block" disabled={docs.length === 0 || !serviceEligible} onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to IRAS</button>
                     <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
                     <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
                   </div>
@@ -579,8 +562,8 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
 function r4Badge(status) {
   var base = window.DB.statusBadge(status);
   var labels = {
-    submitted: "Pending Dean Review", iras_review: "Under IRAS Verification",
-    approved: "Approved for Payment", active: "Finance Processing", completed: "Paid / Completed",
+    submitted: "Pending Dean Review", committee_review: "Faculty Committee Review", iras_review: "Under IRAS Verification",
+    approved: "Awaiting Finance Payment", active: "Paid", completed: "Paid / Completed",
     returned: "Returned for Revision", rejected: "Rejected",
   };
   return { key: base.key, cls: base.cls, label: labels[status] || base.label };
@@ -594,7 +577,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
       status="submitted"
       applicationId={applicationId}
       title="AU-R4 Screening"
-      desc="Review the publication, journal, author, claim and documents; digitally approve the memo, then forward to IRAS."
+      desc="Review the publication, journal, author, claim and documents; digitally approve the memo, then forward to the Faculty Committee."
       render={(app, load) => {
         const docs = app.documents || [];
         const pi = app.pub_info || {};
@@ -608,29 +591,32 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
           { label: "Turnitin Report", req: true, ok: hasDoc("turnitin") },
           { label: "Original Publication Fee Receipt", req: true, ok: hasDoc("receipt") },
           { label: "Memo for Dean Approval", req: true, ok: hasDoc("memo") },
+          { label: "Author Contribution Statement", req: true, ok: hasDoc("author contribution") },
+          { label: "Acceptance Letter", req: pi.pubStatus !== "Published", ok: pi.pubStatus === "Published" || hasDoc("acceptance") },
         ];
         const turnitin = Number(pi.turnitin || 0);
         const turnitinBad = turnitin > 20;
         const overMax = requested > MAX;
         const totalContrib = Math.round(Number(pi.totalContribution || authors.reduce((s, a) => s + (Number(a.contribution) || 0), 0)));
-        const principal = Math.max.apply(null, authors.map(a => Number(a.contribution) || 0).concat([0]));
+        const principal = Number((authors.find(a => /first|principal/i.test(a.type || "")) || {}).contribution) || 0;
+        const serviceEligible = universityServiceEligibility(researcherJoinedDate(app)).eligible;
 
-        const canApprove = docs.length > 0 && docCats.every(d => d.ok) && !turnitinBad && !overMax && similarityOk && memoApproved && totalContrib === 100;
+        const canApprove = docs.length > 0 && docCats.every(d => d.ok) && !turnitinBad && !overMax && similarityOk && memoApproved && totalContrib === 100 && serviceEligible;
 
         const forward = () => setConfirm({
           kind: "success",
           title: "Confirm AU-R4 Approval",
-          message: "By approving, you confirm the faculty-level screening is complete and the memo is digitally approved. IRAS will perform the final eligibility and amount verification.",
-          confirmLabel: "Confirm & Forward to IRAS", withReason: true,
+          message: "By approving, you confirm the Dean screening is complete and the memo is digitally approved. The Faculty Committee will review the application next.",
+          confirmLabel: "Confirm & Forward to Committee", withReason: true, reasonLabel: "Dean comment",
           onConfirm: async (reason) => {
-            try { await window.DB.transition(app.id, "submitted", "advance", "Dean digitally approved memo. " + (reason || "")); toast(app.code + " approved — forwarded to IRAS."); navigate("d-r4-screen"); }
+            try { await window.DB.transition(app.id, "submitted", "advance", reason || ""); toast(app.code + " approved — forwarded to the Faculty Committee."); navigate("d-r4-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
         const ret = () => setConfirm({
           kind: "danger", title: "Return for Revision?",
           message: app.code + " will be returned to the researcher. State what must be corrected (e.g. upload the original receipt, fix the author contribution percentages).",
-          confirmLabel: "Return", withReason: true, reasonRequired: true,
+          confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment",
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-r4-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -639,7 +625,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
         const rej = () => setConfirm({
           kind: "danger", title: "Reject Application?",
           message: app.code + " will be rejected at Dean screening. This ends the claim.",
-          confirmLabel: "Reject", withReason: true, reasonRequired: true,
+          confirmLabel: "Reject", withReason: true, reasonRequired: true, reasonLabel: "Dean comment",
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "reject", reason); toast(app.code + " rejected."); navigate("d-r4-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -651,11 +637,14 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
           { label: "Article information is complete", checked: !!(app.title && pi.journal && pi.publisher) },
           { label: "Journal classification is provided", checked: !!pi.journalDb },
           { label: "Author contributions total 100%", checked: totalContrib === 100 },
-          { label: "Principal author contribution ≥ 50%", checked: principal >= 50 },
+          { label: "At least one year of Assumption University service", checked: serviceEligible },
+          { label: "First Author contribution ≥ 50%", checked: principal >= 50 },
           { label: "Full research article uploaded", checked: docCats[0].ok },
           { label: "Turnitin report uploaded", checked: docCats[1].ok },
           { label: "Turnitin similarity does not exceed 20%", checked: similarityOk, manual: true },
           { label: "Original publication fee receipt uploaded", checked: docCats[2].ok },
+          { label: "Author contribution statement uploaded", checked: docCats[4].ok },
+          ...(pi.pubStatus !== "Published" ? [{ label: "Acceptance letter uploaded", checked: docCats[5].ok }] : []),
           { label: "Requested claim within 80,000 THB", checked: !overMax },
           { label: "Memo digitally approved by Dean", checked: memoApproved, manual: true },
         ];
@@ -675,12 +664,10 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                     {row("Publication status", pi.pubStatus)}
                     {row("Journal", pi.journal)}
                     {row("Publisher", pi.publisher)}
-                    {pi.doi && row("DOI", pi.doi)}
-                    {pi.articleUrl && row("Article URL", pi.articleUrl)}
                     {pi.pubStatus === "Published"
-                      ? <>{row("Publication date", pi.pubDate ? window.DB.fmtDate(pi.pubDate) : "-")}{row("Volume / Issue", (pi.volume || "-") + " / " + (pi.issue || "-"))}{row("Pages", (pi.startPage || "-") + "–" + (pi.endPage || "-"))}</>
-                      : <>{row("Acceptance date", pi.acceptDate ? window.DB.fmtDate(pi.acceptDate) : "-")}{row("Expected publication", pi.expectedPubDate ? window.DB.fmtDate(pi.expectedPubDate) : "-")}</>}
-                    {row("Academic year", pi.academicYear)}
+                      ? <>{row("Article URL", pi.articleUrl)}{row("DOI", pi.doi)}{row("ISSN / eISSN", pi.issn)}{row("Publication date", pi.pubDate ? window.DB.fmtDate(pi.pubDate) : "-")}{row("Volume / Issue", (pi.volume || "-") + " / " + (pi.issue || "-"))}{row("Page number(s)", pi.pageNumber || [pi.startPage, pi.endPage].filter(Boolean).join("–"))}</>
+                      : <>{row("Acceptance date", pi.acceptDate ? window.DB.fmtDate(pi.acceptDate) : "-")}</>}
+                    {row("Academic year (AD)", pi.academicYear)}
                   </div>
                 </div>
 
@@ -688,14 +675,9 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                   <div className="card-head"><h3>Journal Classification</h3></div>
                   <div className="card-body">
                     {row("Database / index", pi.journalDb)}
-                    {pi.quartile && row("SCOPUS quartile", pi.quartile)}
-                    {pi.wosIndex && row("Web of Science index", pi.wosIndex)}
-                    {row("Open access status", pi.openAccess)}
-                    {row("Hybrid journal", pi.hybrid)}
-                    {pi.hybrid === "Yes" && row("Open access option selected", pi.openAccessSelected)}
+                    {row("Classification", pi.journalClassification || pi.openAccess)}
+                    {row("Publication fee", fmtBaht(Number(pi.feePaid || 0)))}
                     {row("Predatory-journal declaration", pi.predatory ? "Confirmed not predatory" : "Not confirmed")}
-                    {pi.journalDb === "Other" && <div style={{ fontSize: 12, color: "var(--au-gold-deep)", background: "var(--au-gold-soft)", padding: "8px 12px", borderRadius: "var(--r-md)", marginTop: 8 }}>This journal database requires additional verification by IRAS.</div>}
-                    {pi.hybrid === "Yes" && pi.openAccessSelected !== "Yes" && <div style={{ fontSize: 12, color: "var(--au-gold-deep)", background: "var(--au-gold-soft)", padding: "8px 12px", borderRadius: "var(--r-md)", marginTop: 8 }}>Open Access option not selected for a hybrid journal — verify eligibility.</div>}
                   </div>
                 </div>
 
@@ -705,14 +687,11 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                   <div className="card-body" style={{ padding: 0 }}>
                     <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--line-2)", fontSize: 13 }}>
                       {row("Applicant role", pi.applicantRole)}
-                      {row("Corresponding author", pi.isCorresponding)}
-                      {row("Student-based research", pi.studentBased)}
                     </div>
-                    {pi.studentBased === "Yes" && <div style={{ fontSize: 12, color: "var(--au-gold-deep)", background: "var(--au-gold-soft)", padding: "8px 20px" }}>This publication may require additional eligibility review before an advisor reward can be approved.</div>}
                     <table className="tbl">
-                      <thead><tr><th>Author</th><th>Type</th><th>AU ID</th><th style={{ textAlign: "right" }}>Contrib %</th></tr></thead>
+                      <thead><tr><th>Author</th><th>Role</th><th>Email Address</th><th style={{ textAlign: "right" }}>Contrib %</th></tr></thead>
                       <tbody>
-                        {authors.map((a, i) => <tr key={i}><td>{a.name}</td><td style={{ fontSize: 12 }}>{a.type}</td><td style={{ fontSize: 12 }}>{a.auId || "—"}</td><td style={{ textAlign: "right" }}>{a.contribution || 0}%</td></tr>)}
+                        {authors.map((a, i) => <tr key={i}><td>{a.name}</td><td style={{ fontSize: 12 }}>{a.type}</td><td style={{ fontSize: 12 }}>{a.email || "—"}</td><td style={{ textAlign: "right" }}>{a.contribution || 0}%</td></tr>)}
                         <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}><td colSpan="3">Total</td><td style={{ textAlign: "right", color: totalContrib === 100 ? "inherit" : "var(--au-crimson)" }}>{totalContrib}%</td></tr>
                       </tbody>
                     </table>
@@ -722,23 +701,21 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 <div className="card card-pad-0 mb-4">
                   <div className="card-head"><h3>Researcher Information</h3></div>
                   <div className="card-body">
-                    {row("Name", ((r.name_title || r.title) ? (r.name_title || r.title) + " " : "") + (r.full_name || "-"))}
-                    {row("AU ID", r.au_id)}
-                    {row("Email", r.email)}
+                    {row("Name", ((r.name_title || r.title) ? (r.name_title || r.title) + " " : "") + (pi.researcherName || r.full_name || "-"))}
+                    {row("AU ID", pi.researcherAuId || r.au_id)}
+                    {row("Email", pi.contactEmail || r.email)}
                     {row("Phone", r.phone)}
                     {row("School / Faculty", app.faculty)}
-                    {row("Department", app.department)}
+                    {row("Major", app.department)}
+                    <ResearcherServiceEligibilityRows app={app} />
                   </div>
                 </div>
 
                 <div className="card card-pad-0 mb-4">
-                  <div className="card-head"><h3>Publication Fee &amp; Claim Review</h3></div>
+                  <div className="card-head"><h3>Publication Fee</h3></div>
                   <div className="card-body">
-                    {row("Claim type", pi.claimType)}
-                    {row("Publication fee paid", fmtBaht(Number(pi.feePaid || 0)))}
-                    {row("Receipt number", pi.receiptNo)}
-                    {row("Preliminary reward", pi.prelimReward ? fmtBaht(Number(pi.prelimReward)) : "Actual fee / IRAS")}
-                    {row("Requested claim", fmtBaht(requested))}
+                    {row("Publication fee", fmtBaht(Number(pi.feePaid || 0)))}
+                    {row("Requested amount", fmtBaht(requested))}
                     {row("Maximum AU-R4 amount", "80,000 THB per article")}
                     <div className="meta-row"><span className="l">Final IRAS-approved amount</span><span className="r" style={{ color: "var(--ink-3)" }}>Pending IRAS verification</span></div>
                     {overMax && <div style={{ fontSize: 12, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "8px 12px", borderRadius: "var(--r-md)", marginTop: 8 }}>The requested claim exceeds the AU-R4 maximum of 80,000 THB. Return the application for correction.</div>}
@@ -786,7 +763,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                     </label>
                   ))}
                   <div className="flex flex-col gap-2 mt-4">
-                    <button className="btn btn-primary btn-block" disabled={!canApprove} onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to IRAS</button>
+                    <button className="btn btn-primary btn-block" disabled={!canApprove} onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Committee</button>
                     <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
                     <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
                   </div>
@@ -802,7 +779,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
 }
 
 function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
-  const [form, setForm] = useState({ score: "", recommendation: "favorable", comments: "" });
+  const [form, setForm] = useState({ score: "", recommendation: "favorable" });
   const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
   return (
     <LiveAppLoader
@@ -811,16 +788,19 @@ function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, s
       title="Academic Committee Review"
       desc="Submit committee evaluation and recommendation."
       render={(app, load) => {
+        const isR4 = app.grant_type === "au_r4";
+        const pi = app.pub_info || {};
+        const authors = Array.isArray(app.co_members) ? app.co_members : [];
+        const row = (l, v) => <div className="meta-row"><span className="l">{l}</span><span className="r">{v || "-"}</span></div>;
         const recLabel = { favorable: "forwarded to RASSC", revise: "returned to the researcher for revision", unfavorable: "rejected" };
         const submit = () => setConfirm({
           kind: form.recommendation === "favorable" ? "success" : "danger",
           title: "Submit Committee Decision?",
           message: app.code + " will be " + (recLabel[form.recommendation] || "moved") + ".",
-          confirmLabel: "Submit Decision", withReason: true, reasonRequired: form.recommendation !== "favorable",
+          confirmLabel: "Submit Decision", withReason: true, reasonLabel: "Committee comment", reasonRequired: form.recommendation !== "favorable",
           onConfirm: async (reason) => {
             try {
-              const merged = Object.assign({}, form, { comments: [form.comments, reason].filter(function (x) { return x && x.trim(); }).join(" — ") });
-              await window.DB.submitCommitteeReview(app.id, merged);
+              await window.DB.submitCommitteeReview(app.id, Object.assign({}, form, { comments: reason.trim() }));
               toast(app.code + " committee decision submitted.");
               if (navigate) navigate("c-queue"); else load();
             }
@@ -830,21 +810,44 @@ function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, s
         return (
           <>
             <PageHeader
-              title={"Academic Committee Review - " + app.code}
+              title={(isR4 ? "AU-R4 Faculty Committee Review - " : "Academic Committee Review - ") + app.code}
               desc={app.title}
               actions={<><Badge status={window.DB.statusBadge(app.status)} /><button className="btn btn-secondary" onClick={() => navigate && navigate("c-queue")}><Icon name="ArrowLeft" size={13} /> Queue</button></>}
             />
             <div className="grid-2">
               <div>
                 <div className="card card-pad-0 mb-4">
-                  <div className="card-head"><h3>Proposal Summary</h3></div>
+                  <div className="card-head"><h3>{isR4 ? "Publication Summary" : "Proposal Summary"}</h3></div>
                   <div className="card-body">
-                    <div className="eyebrow mb-2">Researcher</div>
-                    <p style={{ margin: "0 0 12px", color: "var(--ink-2)" }}>{app.researcher ? app.researcher.full_name : "-"}</p>
-                    <div className="eyebrow mb-2">Abstract</div>
-                    <p style={{ margin: "0 0 16px", lineHeight: 1.6, color: "var(--ink-2)" }}>{app.abstract || "No abstract entered."}</p>
-                    <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.requested_amount || 0))}</span></div>
-                    <div className="meta-row"><span className="l">Duration</span><span className="r">{app.duration_months || 12} months</span></div>
+                    {isR4 ? (
+                      <>
+                        {row("Researcher", pi.researcherName || (app.researcher && app.researcher.full_name))}
+                        <ResearcherServiceEligibilityRows app={app} />
+                        {row("Article title", app.title)}
+                        {row("Publication status", pi.pubStatus)}
+                        {row("Journal", pi.journal)}
+                        {row("Journal database", pi.journalDb)}
+                        {row("Classification", pi.journalClassification || pi.openAccess)}
+                        {row("Academic year (AD)", pi.academicYear)}
+                        {row("Publication fee", fmtBaht(Number(pi.feePaid || 0)))}
+                        {row("Requested amount", fmtBaht(Number(app.requested_amount || 0)))}
+                        {pi.pubStatus === "Published" && <>{row("Article URL", pi.articleUrl)}{row("DOI", pi.doi)}{row("ISSN / eISSN", pi.issn)}{row("Page number(s)", pi.pageNumber)}</>}
+                        <div className="eyebrow" style={{ marginTop: 16, marginBottom: 6 }}>Authors and contribution</div>
+                        {authors.map((a, i) => <div className="meta-row" key={i}><span className="l">{a.type || "Author"}</span><span className="r">{a.name || "-"}{a.email ? " · " + a.email : ""}{a.contribution ? " · " + a.contribution + "%" : ""}</span></div>)}
+                        {row("Major", app.department)}
+                      </>
+                    ) : (
+                      <>
+                        <div className="eyebrow mb-2">Researcher</div>
+                        <p style={{ margin: "0 0 12px", color: "var(--ink-2)" }}>{app.researcher ? app.researcher.full_name : "-"}</p>
+                        <ResearcherServiceEligibilityRows app={app} />
+                        <div className="eyebrow mb-2">Abstract</div>
+                        <p style={{ margin: "0 0 16px", lineHeight: 1.6, color: "var(--ink-2)" }}>{app.abstract || "No abstract entered."}</p>
+                        <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.requested_amount || 0))}</span></div>
+                        <div className="meta-row"><span className="l">Duration</span><span className="r">{app.duration_months || 12} months</span></div>
+                      </>
+                    )}
+                    <ReviewCommentHistory app={app} roles={["dean"]} />
                   </div>
                 </div>
                 <div className="card card-pad-0">
@@ -858,7 +861,6 @@ function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, s
                 <div className="card-body">
                   <div className="field"><label>Score (0-100)</label><input type="number" min="0" max="100" value={form.score} onChange={e => setField("score", e.target.value)} /></div>
                   <div className="field"><label>Recommendation</label><select value={form.recommendation} onChange={e => setField("recommendation", e.target.value)}><option value="favorable">Recommend</option><option value="revise">Request revision</option><option value="unfavorable">Reject</option></select></div>
-                  <div className="field"><label>Committee comment</label><textarea className="comment-input" value={form.comments} onChange={e => setField("comments", e.target.value)} /></div>
                   <button className="btn btn-primary btn-block" onClick={submit}><Icon name="Send" size={14} /> Submit Decision</button>
                 </div>
               </div>
@@ -898,6 +900,7 @@ function FacultyDean({ onDownload, onView, toast, setConfirm }) {
                   <div className="card-body">
                     <div className="meta-row"><span className="l">Researcher</span><span className="r">{app.researcher ? app.researcher.full_name : "-"}</span></div>
                     <div className="meta-row"><span className="l">Department</span><span className="r">{app.department || "-"}</span></div>
+                    <ResearcherServiceEligibilityRows app={app} />
                     <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.requested_amount || 0))}</span></div>
                   </div>
                 </div>
