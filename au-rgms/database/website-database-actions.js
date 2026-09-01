@@ -1189,7 +1189,7 @@
       var s = await sb.auth.getSession();
       var token = s && s.data && s.data.session && s.data.session.access_token;
       if (!token) throw new Error("You must be signed in as an administrator.");
-      var res = await fetch("/api/admin-create-user", {
+      var res = await fetch("/api/admin-user-management", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify(payload),
@@ -1203,7 +1203,7 @@
       var s = await sb.auth.getSession();
       var token = s && s.data && s.data.session && s.data.session.access_token;
       if (!token) throw new Error("You must be signed in as an administrator.");
-      var res = await fetch("/api/admin-user", {
+      var res = await fetch("/api/admin-user-management", {
         method: "PATCH",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify(payload),
@@ -1217,7 +1217,7 @@
       var s = await sb.auth.getSession();
       var token = s && s.data && s.data.session && s.data.session.access_token;
       if (!token) throw new Error("You must be signed in as an administrator.");
-      var res = await fetch("/api/admin-user", {
+      var res = await fetch("/api/admin-user-management", {
         method: "DELETE",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify({ id: id }),

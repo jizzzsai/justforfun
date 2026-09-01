@@ -92,7 +92,7 @@ function AIChat() {
     setInput("");
     setBusy(true);
     try {
-      const r = await fetch("/api/chat", {
+      const r = await fetch("/api/ai-chat-response", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: next, context: ctx }),
