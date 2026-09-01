@@ -490,44 +490,6 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 }
 .nav-item.active .badge-num { background: var(--au-crimson); color: #fff; }
 
-.sidebar-bottom {
-  margin-top: 24px;
-  padding: 12px;
-  background: linear-gradient(180deg, var(--au-gold-soft) 0%, #fff 100%);
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  font-size: 12px;
-}
-.sidebar-bottom b { font-family: var(--font-serif); font-weight: 500; display: block; font-size: 13px; }
-.sidebar-bottom p { color: var(--ink-3); margin: 4px 0 8px; font-size: 11px; line-height: 1.45; }
-
-.help-guide-intro {
-  display: flex; gap: 12px; align-items: flex-start; padding: 14px;
-  color: var(--ink-1); background: var(--au-gold-soft); border: 1px solid var(--line);
-  border-radius: var(--r-md); margin-bottom: 16px;
-}
-.help-guide-intro > svg { color: var(--au-crimson); flex: 0 0 auto; margin-top: 2px; }
-.help-guide-intro p { margin: 4px 0 0; color: var(--ink-3); font-size: 12px; line-height: 1.5; }
-.help-guide-list { display: grid; gap: 10px; }
-.help-guide-step {
-  display: grid; grid-template-columns: 24px 34px 1fr; gap: 10px; align-items: start;
-  padding: 12px; border: 1px solid var(--line-2); border-radius: var(--r-md); background: #fff;
-}
-.help-guide-number {
-  width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%;
-  color: #fff; background: var(--au-crimson); font-size: 10px; font-weight: 700;
-}
-.help-guide-icon {
-  width: 30px; height: 30px; display: grid; place-items: center; border-radius: 8px;
-  color: var(--au-crimson); background: var(--au-crimson-soft);
-}
-.help-guide-step b { display: block; color: var(--ink-1); font-size: 13px; }
-.help-guide-step p { margin: 4px 0 0; color: var(--ink-3); font-size: 12px; line-height: 1.5; }
-.help-guide-note {
-  display: flex; gap: 8px; align-items: center; margin-top: 14px; padding: 10px 12px;
-  color: var(--ink-3); background: var(--paper-warm); border-radius: var(--r-sm); font-size: 11px;
-}
-
 /* Main */
 .main {
   grid-area: main;

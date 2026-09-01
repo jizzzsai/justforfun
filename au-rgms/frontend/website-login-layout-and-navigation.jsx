@@ -260,52 +260,31 @@ const ROLE_CONFIG = {
     nav: APP.NAV_RESEARCHER,
     homeKey: "r-dashboard",
     crumbRoot: "Researcher",
-    sidebarFooter: null,
   },
   dean: {
     nav: APP.NAV_DEAN,
     homeKey: "d-dashboard",
     crumbRoot: "Dean's Office",
-    sidebarFooter: {
-      title: "Dean's Office",
-      body: "Forward eligible applications to the RASSC once the Faculty Academic Committee approves.",
-    },
   },
   committee: {
     nav: APP.NAV_COMMITTEE,
     homeKey: "c-dashboard",
     crumbRoot: "Faculty Committee",
-    sidebarFooter: {
-      title: "Faculty Committee",
-      body: "Complete reviews within 10 working days to maintain throughput.",
-    },
   },
   iras: {
     nav: APP.NAV_RASSC,
     homeKey: "i-dashboard",
     crumbRoot: "RASSC",
-    sidebarFooter: {
-      title: "RASSC",
-      body: "Screen committee-recommended AU-R1 proposals and verify AU-R3 / AU-R4 applications, then approve eligible ones for the Finance Office.",
-    },
   },
   ofm: {
     nav: APP.NAV_OFM,
     homeKey: "o-dashboard",
     crumbRoot: "OFM / Finance",
-    sidebarFooter: {
-      title: "OFM Office",
-      body: "Process payments only after the required application or milestone approval is complete.",
-    },
   },
   admin: {
     nav: APP.NAV_ADMIN,
     homeKey: "a-dashboard",
     crumbRoot: "Administration",
-    sidebarFooter: {
-      title: "Administrator",
-      body: "Account and workflow-setting changes are managed centrally by the administrator.",
-    },
   },
 };
 
@@ -449,90 +428,32 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSys
 }
 
 /* ============= SIDEBAR ============= */
-function Sidebar({ nav, current, onNavigate, footer }) {
-  const [helpOpen, setHelpOpen] = useState(false);
-  const system = footer && footer.system;
-  const isResearcher = !!system;
-  const helpSteps = system === "au_r1" ? [
-    { icon: "FilePlus", title: "Start an AU-R1 application", body: "Complete the research information and budget, then upload the proposal, budget allocation, and AU submission form." },
-    { icon: "FolderOpen", title: "Track and print the correct project", body: "Open My Applications and choose View or Files. The project page shows its status, documents, comments, payments, and timeline; use Print PDF for a clear project summary." },
-    { icon: "FileText", title: "Submit milestone reports", body: "Inside the selected project's timeline, open Progress Report after Phase 1 or Final Report after Phase 2. Each report is tied to that project's ID and title." },
-    { icon: "Coins", title: "Track each payment", body: "After RASSC accepts the required report, Finance can pay the next phase. The payment date appears in the selected project." },
-  ] : system === "au_r3" ? [
-    { icon: "FilePlus", title: "Prepare the conference request", body: "Enter the conference location and presentation date, paper abstract and keywords, authors, and journal classification. AU-R3 support is fixed at 3,500 THB." },
-    { icon: "FolderOpen", title: "Track and print the project", body: "Use My Applications to open the selected AU-R3 project and see its files, comments, current stage, and printable project summary." },
-    { icon: "Coins", title: "Finance payment", body: "After the research office approves the application, Finance records the approved payment." },
-  ] : system === "au_r4" ? [
-    { icon: "FilePlus", title: "Prepare the publication claim", body: "Enter the article, journal classification, authors, publication fee, and claim information that applies to the selected tier." },
-    { icon: "Upload", title: "Attach the required evidence", body: "Upload the article, author contribution file, Turnitin report, Dean memo, and acceptance letter when the article is accepted for publication." },
-    { icon: "FolderOpen", title: "Track and print the selected claim", body: "Use My Applications to open its files, reviewer comments, approval stage, payment status, and printable project summary." },
-  ] : [
-    { icon: "Inbox", title: "Open your assigned queue", body: "Your dashboard and sidebar show the applications currently waiting for action from your role." },
-    { icon: "MessageSquare", title: "Record a clear review note", body: "Decision notes are stored with the application so the researcher and downstream reviewers can see the review history." },
-    { icon: "Bell", title: "Check notifications", body: "Use the notification icon for newly assigned reviews, accepted reports, and items ready for the next office." },
-  ];
-  const goHelpPage = key => { setHelpOpen(false); onNavigate(key); };
+function Sidebar({ nav, current, onNavigate }) {
   return (
-    <>
-      <aside className="sidebar">
-        {nav.map((item, i) => {
-          if (item.section) {
-            return <div key={`s${i}`} className="sidebar-section">{item.section}</div>;
-          }
-          return (
-            <div
-              key={item.key}
-              className={`nav-item ${current === item.key ? "active" : ""}`}
-              onClick={() => {
-                if (item.key === "r-ai-assistant") {
-                  window.dispatchEvent(new CustomEvent("au-ai-toggle"));
-                  return;
-                }
-                onNavigate(item.key);
-              }}
-            >
-              <Icon name={item.icon} size={16} />
-              <span>{item.label}</span>
-              {item.badge && <span className="badge-num">{item.badge}</span>}
-            </div>
-          );
-        })}
-        {footer && (
-          <div className="sidebar-bottom">
-            <b>{footer.title}</b>
-            <p>{footer.body}</p>
-            <button className="btn btn-secondary btn-sm" style={{width: "100%", justifyContent: "center"}} onClick={() => setHelpOpen(true)}>
-              <Icon name="HelpCircle" size={12} /> Open Help Centre
-            </button>
+    <aside className="sidebar">
+      {nav.map((item, i) => {
+        if (item.section) {
+          return <div key={`s${i}`} className="sidebar-section">{item.section}</div>;
+        }
+        return (
+          <div
+            key={item.key}
+            className={`nav-item ${current === item.key ? "active" : ""}`}
+            onClick={() => {
+              if (item.key === "r-ai-assistant") {
+                window.dispatchEvent(new CustomEvent("au-ai-toggle"));
+                return;
+              }
+              onNavigate(item.key);
+            }}
+          >
+            <Icon name={item.icon} size={16} />
+            <span>{item.label}</span>
+            {item.badge && <span className="badge-num">{item.badge}</span>}
           </div>
-        )}
-      </aside>
-      <Modal
-        open={helpOpen}
-        onClose={() => setHelpOpen(false)}
-        title={system ? (system.toUpperCase().replace("_", "-") + " Quick Help") : ((footer && footer.title) || "Quick Help")}
-        footer={<>
-          <button className="btn btn-secondary" onClick={() => goHelpPage("forms")}><Icon name="FileText" size={13} /> Forms & Templates</button>
-          {isResearcher && <button className="btn btn-primary" onClick={() => goHelpPage("r-applications")}><Icon name="Folder" size={13} /> My Applications</button>}
-          {!isResearcher && <button className="btn btn-primary" onClick={() => setHelpOpen(false)}>Got It</button>}
-        </>}
-      >
-        <div className="help-guide-intro">
-          <Icon name="Lightbulb" size={18} />
-          <div><b>How to use this workspace</b><p>{footer && footer.body}</p></div>
-        </div>
-        <div className="help-guide-list">
-          {helpSteps.map((step, i) => (
-            <div className="help-guide-step" key={step.title}>
-              <div className="help-guide-number">{i + 1}</div>
-              <div className="help-guide-icon"><Icon name={step.icon} size={16} /></div>
-              <div><b>{step.title}</b><p>{step.body}</p></div>
-            </div>
-          ))}
-        </div>
-        <div className="help-guide-note"><Icon name="Info" size={14} /> For account-information or password changes, contact the system administrator.</div>
-      </Modal>
-    </>
+        );
+      })}
+    </aside>
   );
 }
 
@@ -770,7 +691,6 @@ function App() {
   // A researcher in AU-R3 or AU-R4 gets a trimmed sidebar.
   const researcherTrimmed = role === "researcher" && (rSystem === "au_r3" || rSystem === "au_r4");
   const navForRole = researcherTrimmed ? (APP.NAV_RESEARCHER_R3 || cfg.nav) : cfg.nav;
-  const footerForRole = role === "researcher" ? null : cfg.sidebarFooter;
 
   const pageLabel = useMemo(() => {
     const navItem = navForRole.find(n => n.key === page);
@@ -815,7 +735,6 @@ function App() {
         nav={navForRole}
         current={page === "d-history-detail" ? "d-history" : page}
         onNavigate={navigate}
-        footer={footerForRole}
       />
       <main className="main">
         <PageRouter
