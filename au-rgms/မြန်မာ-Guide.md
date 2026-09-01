@@ -1,6 +1,6 @@
-# AU-RGMS မြန်မာဖိုင်လမ်းညွှန်
+# AU-RGMS 
 
-ဒီ folder ထဲက code file တစ်ခုချင်းစီဟာ website ရဲ့ ဘယ်နေရာနဲ့ဆိုင်သလဲ၊ ဘာအတွက်အသုံးပြုသလဲဆိုတာ အောက်မှာရှင်းပြထားပါတယ်။
+
 
 | Code file name | Website နေရာ / အလုပ် |
 | --- | --- |
@@ -25,9 +25,9 @@
 | `vercel.json` | Vercel hosting နှင့် website security settings |
 | `.env.example` | API key နှင့် database setting အမည်များအတွက် နမူနာ file |
 
-## File တစ်ခုချင်းစီထဲမှာ ဘာတွေရေးထားသလဲ
+#
 
-| Code file name | File ထဲမှာရေးထားသော အဓိကအကြောင်းအရာများ |
+| Code file name | File ထဲ အဓိကအကြောင်းအရာများ |
 | --- | --- |
 | `index.html` | Website title၊ fonts၊ React/Babel/Supabase libraries၊ `root` နှင့် `ai-root` နေရာများ၊ project files အားလုံးကို load လုပ်သည့်အစီအစဉ် |
 | `website-login-layout-and-navigation.jsx` | Login form၊ grant system ရွေးချယ်မှု၊ role သတ်မှတ်မှု၊ header၊ sidebar menu၊ notification၊ hash route အလိုက် page ပြောင်းပေးသော `PageRouter` နှင့် main `App` |
