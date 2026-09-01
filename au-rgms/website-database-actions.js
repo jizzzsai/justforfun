@@ -1,5 +1,5 @@
 /* AU-RGMS data layer — real Supabase reads/writes + workflow engine.
-   Loaded after supabase.js (window.sb) and before the React app. */
+   Loaded after login-and-database-connection.js (window.sb) and before the React app. */
 (function () {
   var sb = window.sb;
   if (!sb) { console.error("[AU] window.sb not ready for DB layer"); return; }
@@ -1178,7 +1178,7 @@
       if (res.error || !res.data) return fallback;
       return res.data.value;
     },
-    // Budget category caps (% of total). Admin-configurable; defaults from data.js.
+    // Budget category caps (% of total). Admin-configurable; defaults from roles-menus-and-status-data.js.
     async budgetCaps() {
       var def = (window.AU && window.AU.DEFAULT_BUDGET_CAPS) || { remuneration: 30, equipment: 50, travel: 40, misc: 20 };
       var v = await this.getSetting("budget_caps", def);
@@ -1189,7 +1189,7 @@
       var s = await sb.auth.getSession();
       var token = s && s.data && s.data.session && s.data.session.access_token;
       if (!token) throw new Error("You must be signed in as an administrator.");
-      var res = await fetch("/api/admin-user", {
+      var res = await fetch("/api/admin-create-user", {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: "Bearer " + token },
         body: JSON.stringify(payload),
