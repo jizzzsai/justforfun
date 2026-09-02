@@ -33,7 +33,7 @@ function LoginPage({ onLogin }) {
     try {
       const prof = await window.AUTH.signIn(em, pw);
       if (!prof) throw new Error("No profile found for this account.");
-      onLogin(prof); // routes by the account's real role
+      onLogin(prof);
     } catch (ex) { setErr((ex && ex.message) || "Sign-in failed."); setBusy(false); }
   }
   function doLogin(e) {
@@ -289,11 +289,6 @@ const ROLE_CONFIG = {
 };
 
 /* ============= APP HEADER ============= */
-// Each grant system has its own set of roles:
-//   AU-R1 → Researcher, Dean, Faculty Committee, RASSC, Finance
-//   AU-R3 → Researcher, Dean, IRAS, Finance
-//   AU-R4 → Researcher, Dean, Faculty Committee, IRAS, Finance
-// (Administrator is a system-wide account and is always available.)
 const SYSTEM_ROLE_KEYS = {
   au_r1: ["researcher", "dean", "committee", "iras", "ofm", "admin"],
   au_r3: ["researcher", "dean", "iras", "ofm", "admin"],
@@ -303,7 +298,6 @@ function rolesForSystem(sys) {
   const all = APP.ROLES || [];
   const keys = SYSTEM_ROLE_KEYS[sys];
   const list = keys ? keys.map(k => all.find(r => r.key === k)).filter(Boolean) : all;
-  // The research office is called RASSC on AU-R1 and IRAS on AU-R3 / AU-R4.
   if (sys === "au_r3" || sys === "au_r4") {
     return list.map(r => r.key === "iras"
       ? { ...r, name: "IRAS", full: "IRAS Test", subtitle: "IRAS - Test Account", initials: "IR" }
@@ -342,8 +336,6 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSys
       }
     };
     refreshNotifications();
-    // Finance approvals made in another signed-in session appear without the
-    // researcher needing to reload the application.
     const timer = window.setInterval(refreshNotifications, 30000);
     return () => { alive = false; window.clearInterval(timer); };
   }, [role, profile && profile.id]);
@@ -573,20 +565,15 @@ function App() {
   const [page, setPage] = useState(startingPage);
   const [profile, setProfile] = useState(null);
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
-  // Which grant system a researcher is working in (au_r1 / au_r3). null → show chooser.
   const [rSystem, setRSystem] = useState(() => { try { return localStorage.getItem("au-rgms-r-system") || null; } catch (e) { return null; } });
   const chooseSystem = (sys) => { try { localStorage.setItem("au-rgms-r-system", sys); } catch (e) {} setSelectedApplicationId(null); setRSystem(sys); setPage("r-dashboard"); };
   const switchSystem = () => { try { localStorage.removeItem("au-rgms-r-system"); } catch (e) {} setRSystem(null); };
-  // Central navigation: the "Switch Grant System" pseudo-page returns to the chooser.
   const navigate = (key, opts) => {
     if (key === "r-switch-system") { switchSystem(); return; }
-    // "Submit Application" from the sidebar starts a blank form, but opening an
-    // existing draft / returned application must keep the selected id.
     if (key === "r-submit" && !(opts && opts.keepSelection)) setSelectedApplicationId(null);
     setPage(key);
   };
 
-  // shared UI state
   const [previewDoc, setPreviewDoc] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -675,8 +662,6 @@ function App() {
     })();
   }, []);
 
-  // The sidebar AU AI assistant belongs throughout the three Researcher grant
-  // sections. The separately mounted chat listens for this visibility state.
   useEffect(() => {
     const supportedSystem = ["au_r1", "au_r3", "au_r4"].includes(rSystem);
     const visible = !!(loggedIn && role === "researcher" && supportedSystem);
@@ -688,14 +673,12 @@ function App() {
   }, [loggedIn, role, page, rSystem]);
 
   const cfg = ROLE_CONFIG[role];
-  // A researcher in AU-R3 or AU-R4 gets a trimmed sidebar.
   const researcherTrimmed = role === "researcher" && (rSystem === "au_r3" || rSystem === "au_r4");
   const navForRole = researcherTrimmed ? (APP.NAV_RESEARCHER_R3 || cfg.nav) : cfg.nav;
 
   const pageLabel = useMemo(() => {
     const navItem = navForRole.find(n => n.key === page);
     if (navItem) return navItem.label;
-    // Special pages with no sidebar entry
     const special = {
       "r-detail": "Application Detail",
       "r-progress": "Project Progress Report",
@@ -718,7 +701,6 @@ function App() {
     return <LoginPage onLogin={onLogin} />;
   }
 
-  // Researchers pick a grant system first; every other role goes straight to its shell.
   if (role === "researcher" && !rSystem) {
     return <GrantSystemChooser profile={profile} onPick={chooseSystem} onLogout={onLogout} />;
   }

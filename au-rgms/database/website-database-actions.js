@@ -4,7 +4,6 @@
   var sb = window.sb;
   if (!sb) { console.error("[AU] window.sb not ready for DB layer"); return; }
 
-  // app_status enum -> badge { label, cls }
   var STATUS_MAP = {
     draft:            { label: "Draft",               cls: "badge-draft" },
     submitted:        { label: "Submitted",           cls: "badge-submitted" },
@@ -20,8 +19,6 @@
     returned:         { label: "Returned",            cls: "badge-revision" },
   };
 
-  // forward workflow: current status -> { to, verb }
-  // AU-R1 chain: Researcher -> Dean -> Faculty Committee -> RASSC -> Finance.
   var NEXT = {
     submitted:        { to: "committee_review", verb: "Dean approved — sent to Faculty Committee" },
     committee_review: { to: "iras_review",      verb: "Committee recommended — forwarded to RASSC" },
@@ -111,7 +108,6 @@
       doc_type: d.doc_type,
     };
   }
-  // map a DB application row -> the shape the QueueTable / tables expect
   function mapRow(a) {
     var requested = a.grant_type === "au_r3" ? 3500 : a.requested_amount;
     var approved = a.grant_type === "au_r3" && a.approved_amount != null ? 3500 : a.approved_amount;
@@ -230,8 +226,6 @@
         row.budget_breakdown = [{ item: "Fixed AU-R3 Grant", amount: 3500 }];
       }
       if (!existing) {
-        // code is assigned server-side by the set_application_code trigger,
-        // which sees every row (RLS-exempt) so it can't collide across researchers.
         row.researcher_id = me;
       }
       var res = existing
@@ -294,8 +288,6 @@
       return res.data || [];
     },
 
-    // generic role queue: applications at a given status, with researcher name.
-    // Optional grantType filter: "au_r3" keeps only that system, "!au_r3" excludes it.
     async queue(status, grantType) {
       var q = sb.from("applications")
         .select("*, researcher:profiles(full_name)")
@@ -435,7 +427,6 @@
       return res.data;
     },
 
-    // advance / return / reject an application
     async transition(appId, fromStatus, kind, note, requestedLabel) {
       var me = await uid();
       var role = await myRole();
@@ -444,8 +435,6 @@
       else if (kind === "reject") to = "rejected";
       else {
         var n = NEXT[fromStatus]; if (!n) throw new Error("No next step from " + fromStatus); to = n.to;
-        // AU-R3 (paper presentation) skips the Faculty Committee. AU-R4 follows
-        // the AU-R1 review path: Dean -> Faculty Committee -> research office.
         if (fromStatus === "submitted") {
           try {
             var gt = await sb.from("applications").select("grant_type").eq("id", appId).single();
@@ -490,13 +479,11 @@
       return app;
     },
 
-    // IRAS records the final eligible amount before approving (AU-R3 / AU-R4).
     async setApprovedAmount(appId, amount) {
       var res = await sb.from("applications").update({ approved_amount: Number(amount) || 0 }).eq("id", appId).select();
       if (res.error) throw res.error;
       return res.data && res.data[0];
     },
-    // Finance single-payment progression for AU-R3 / AU-R4 (approved → active "paid" → completed).
     async payGrantOnce(appId, fromStatus, note) {
       var kind = "advance";
       var label = fromStatus === "approved" ? "Finance marked payment as paid" : "Finance completed payment record";
@@ -575,7 +562,6 @@
       return app;
     },
 
-    // ---- Layer 4: contracts, payments (30/40/30), reports ----
     async contractQueue() {
       var res = await sb.from("applications")
         .select("*, researcher:profiles(full_name), contracts(*)")
@@ -600,8 +586,6 @@
       } catch (e) {}
       return upd.data[0];
     },
-    // Most recent "returned to researcher" event for an application, so the edit
-    // form can show the reviewer's reason and who asked for the revision.
     async lastReturnReason(appId) {
       var res = await sb.from("application_events")
         .select("action, note, actor_role, created_at, actor:profiles(full_name)")
@@ -614,8 +598,6 @@
     async ofmPayments() {
       var res = await sb.from("applications")
         .select("*, researcher:profiles(full_name), payments(*), reports(kind,status), contracts(contract_no,status), events:application_events(action,note,created_at)")
-        // AU-R1 alone uses the 30 / 40 / 30 milestone schedule. AU-R3 and
-        // AU-R4 use their own single-payment queues.
         .in("status", ["approved", "active", "completed"])
         .or("grant_type.eq.au_r1,grant_type.is.null")
         .order("decided_at", { ascending: false });
@@ -633,8 +615,6 @@
           ]).select();
           a.payments = ins.data || [];
         }
-        // Older test records may contain duplicate rows from repeated setup
-        // calls. Show one authoritative row per phase, preferring a paid row.
         var uniquePayments = {};
         (a.payments || []).forEach(function (payment) {
           var previous = uniquePayments[payment.instalment];
@@ -645,22 +625,15 @@
       }
       return apps;
     },
-    // Can this instalment be paid yet?
-    // The three AU-R1 payments run strictly in order: Phase 2 only opens after
-    // Phase 1 is paid AND the progress report is accepted; Phase 3 opens only
-    // after Phase 2 is paid AND the final report is accepted.
     payable: function (app, inst) {
       if (!app) return false;
       var reps = app.reports || [];
       var paid = function (i) { return (app.payments || []).some(function (p) { return p.instalment === i && p.status === "paid"; }); };
-      // Phase 1 opens as soon as RASSC/IRAS approves (contract issued, sent to
-      // Finance). Paying it moves the application to "active".
       if (inst === 1) return app.status === "approved" || app.status === "active" || app.status === "completed";
       if (inst === 2) return paid(1) && reps.some(function (r) { return r.kind === "progress" && r.status === "accepted"; });
       if (inst === 3) return paid(2) && reps.some(function (r) { return r.kind === "final" && r.status === "accepted"; });
       return false;
     },
-    // Why a phase isn't payable yet — shown as a tooltip on the "Not due" chip.
     payBlockedReason: function (app, inst) {
       if (!app) return "";
       var reps = app.reports || [];
@@ -811,7 +784,6 @@
       return a;
     },
 
-    // dashboard counts (RLS-scoped: staff see all, researcher sees own)
     async createPublicationGrant(payload, submit, grantId) {
       var me = await uid();
       if (!me) throw new Error("You must be signed in.");
@@ -932,7 +904,6 @@
       return out;
     },
 
-    // ---- Reimbursement claims (spend-first, claim-back): Dean -> RASSC -> OFM ----
     async createReimbursement(payload, submit, id) {
       var me = await uid();
       if (!me) throw new Error("You must be signed in.");
@@ -991,7 +962,6 @@
       if (res.error) throw res.error;
       return (res.data || []).map(mapReimbursement);
     },
-    // stage: "dean" (submitted -> rassc_review) or "rassc" (rassc_review -> payment_pending)
     async reviewReimbursement(id, stage, decision, note, amount) {
       var row = { updated_at: new Date().toISOString() };
       if (decision === "return") row.status = "returned";
@@ -1037,7 +1007,6 @@
         } else if (role === "dean") {
           var s = await this.queue("submitted"); if (s.length) push("dean-screen", "ClipboardCheck", "Dean queue", s.length + " proposal(s) awaiting first screening.", "d-screen", true);
           var ds = await this.queue("dean_sign"); if (ds.length) push("dean-sign", "FileSignature", "Dean sign", ds.length + " proposal(s) awaiting sign and forward.", "d-sign", true);
-          // Downstream progress on this faculty's proposals (counts are RLS-scoped to the dean's faculty).
           var dsc = await this.statusCounts();
           var atRassc = dsc.iras_review || 0;
           if (atRassc) push("dean-rassc", "Send", "Now at RASSC", atRassc + " proposal(s) from your faculty passed committee and are with RASSC.", "d-history", true);
@@ -1047,7 +1016,6 @@
           if (deanRejected) push("dean-rejected", "AlertCircle", "Rejected", deanRejected + " proposal(s) from your faculty were rejected.", "d-history", false);
         } else if (role === "committee") {
           var cq = await this.queue("committee_review"); if (cq.length) push("committee", "Users", "Committee", cq.length + " proposal(s) awaiting review.", "c-queue", true);
-          // RASSC outcomes on proposals this member recommended to RASSC.
           var mine = await this.myReviews();
           var cseen = {}, cdecided = 0;
           (mine || []).forEach(function (r) {
@@ -1104,7 +1072,6 @@
       c._approved = (c.approved || 0) + (c.active || 0) + (c.completed || 0);
       return c;
     },
-    // Per-faculty analytics follow the normal Supabase role policies.
     async facultyStats() {
       var r = await sb.from("applications").select("faculty,status,requested_amount,approved_amount,grant_type");
       if (r.error) throw r.error;
@@ -1128,7 +1095,6 @@
       if (r.error) throw r.error;
       return r.count || 0;
     },
-    // history: applications in any of the given statuses (mapped for tables)
     async byStatuses(arr) {
       var res = await sb.from("applications").select("*, researcher:profiles(full_name)")
         .in("status", arr).order("decided_at", { ascending: false, nullsFirst: false });
@@ -1178,13 +1144,11 @@
       if (res.error || !res.data) return fallback;
       return res.data.value;
     },
-    // Budget category caps (% of total). Admin-configurable; defaults from roles-menus-and-status-data.js.
     async budgetCaps() {
       var def = (window.AU && window.AU.DEFAULT_BUDGET_CAPS) || { remuneration: 30, equipment: 50, travel: 40, misc: 20 };
       var v = await this.getSetting("budget_caps", def);
       return Object.assign({}, def, v || {});
     },
-    // Admin-only: create a login + scoped profile via the secure serverless fn.
     async adminCreateUser(payload) {
       var s = await sb.auth.getSession();
       var token = s && s.data && s.data.session && s.data.session.access_token;
@@ -1198,7 +1162,6 @@
       if (!res.ok || !data.ok) throw new Error(data.error || "Could not create the account.");
       return data;
     },
-    // Admin-only: update a login and its scoped profile through the serverless fn.
     async adminUpdateUser(payload) {
       var s = await sb.auth.getSession();
       var token = s && s.data && s.data.session && s.data.session.access_token;
@@ -1212,7 +1175,6 @@
       if (!res.ok || !data.ok) throw new Error(data.error || "Could not update the account.");
       return data;
     },
-    // Admin-only: delete an auth account and its profile through the serverless fn.
     async adminDeleteUser(id) {
       var s = await sb.auth.getSession();
       var token = s && s.data && s.data.session && s.data.session.access_token;
@@ -1226,8 +1188,6 @@
       if (!res.ok || !data.ok) throw new Error(data.error || "Could not delete the account.");
       return data;
     },
-    // Save the signed-in user's own applicant details to their profile.
-    // (role/faculty/email are locked server-side by the profiles_guard trigger.)
     async updateMyProfile(fields) {
       var me = await uid();
       if (!me) throw new Error("You must be signed in.");

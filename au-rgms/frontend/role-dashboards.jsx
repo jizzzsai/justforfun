@@ -77,8 +77,6 @@ function WiredQueue({ status, openLabel, confirmTitle, confirmLabel, onDownload,
    DEAN — Dashboard
    ----------------------------------------------------------- */
 function DeanDashboard({ navigate }) {
-  // The Dean handles three pipelines: AU-R1 and AU-R4 go through the Faculty
-  // Committee; AU-R3 goes straight to IRAS. Toggle between them.
   const [sys, setSys] = useState("au_r1");
   const isR3 = sys === "au_r3";
   const isR4 = sys === "au_r4";
@@ -253,7 +251,7 @@ function DeanR4Queue({ navigate, setSelectedApplicationId }) {
   const open = (row) => { if (setSelectedApplicationId) setSelectedApplicationId(row._uuid); navigate("d-r4-detail"); };
   const filtered = (rows || []).filter(a => {
     if (!q.trim()) return true;
-    const pi = a.conference_info; // n/a
+    const pi = a.conference_info;
     const hay = [a.id, a.title, a.researcher && a.researcher.name, a.department].join(" ").toLowerCase();
     return hay.indexOf(q.toLowerCase()) >= 0;
   });
@@ -304,7 +302,6 @@ function DeanR4Queue({ navigate, setSelectedApplicationId }) {
    ----------------------------------------------------------- */
 function DeanScreenQueue({ navigate, onDownload, toast, setConfirm, setSelectedApplicationId }) {
   const [rows, setRows] = useState(null);
-  // AU-R3 and AU-R4 have their own queues; the R1 queue shows only au_r1.
   const load = () => window.DB.queue("submitted", "au_r1").then(setRows).catch(() => setRows([]));
   useEffect(() => { load(); }, []);
   const openDetail = (row) => {
@@ -952,7 +949,6 @@ function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setC
         const authors = Array.isArray(app.co_members) ? app.co_members : [];
         const requested = Number(app.requested_amount || 0);
         const MAX = 80000;
-        // Blank input defaults to the requested claim when forwarding.
         const finalNum = finalAmt === "" ? requested : (Number(finalAmt) || 0);
         const overMax = finalNum > MAX;
         const row = (l, v) => <div className="meta-row"><span className="l">{l}</span><span className="r">{v || "-"}</span></div>;
@@ -2110,7 +2106,6 @@ function AdminAudit() {
   );
 }
 
-// Universal account/profile settings — available to every role via the header gear.
 function AccountSettings({ toast }) {
   const SPLIT_DEFAULT = { remuneration: 30, equipment: 40, travel: 18, misc: 12 };
   const SPLIT_FIELDS = [

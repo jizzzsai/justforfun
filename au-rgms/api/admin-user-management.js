@@ -1,5 +1,3 @@
-// Secure admin-only user management. The caller must be a signed-in ADMIN;
-// the service-role key stays server-side. Supports create, edit, and delete.
 const ROLES = ["researcher", "dean", "committee", "iras", "expert", "president", "ofm", "admin"];
 const PROTECTED_DEMO_EMAILS = [
   "somchai.r@au.edu", "dean.sci@au.edu", "comm.chair@au.edu", "iras.office@au.edu",
@@ -191,9 +189,6 @@ module.exports = async (req, res) => {
       res.status(400).json({ error: "You cannot delete the account you are currently using." }); return;
     }
 
-    // The profile is referenced by historical uploader/reviewer/audit rows whose
-    // foreign keys intentionally do not cascade. Preserve those records by
-    // clearing the nullable actor reference before Auth deletes the profile.
     await detachProfileReferences(targetId);
 
     const deleteRes = await fetch(sb("/auth/v1/admin/users/" + encodeURIComponent(targetId)), {

@@ -331,7 +331,6 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
 }
 
 /* ---------- C2. AU-R3 Dean Screening (paper presentation) ---------- */
-// AU-R3 status labels shown on the Dean side.
 function r3Badge(status) {
   var base = window.DB.statusBadge(status);
   var labels = {
@@ -361,7 +360,6 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
         const r = app.researcher || {};
         const serviceEligible = universityServiceEligibility(researcherJoinedDate(app)).eligible;
 
-        // Match uploads to the four official AU-R3 document categories.
         const hasDoc = (kw) => docs.some(d => ((d.doc_type || "") + " " + (d.name || "")).toLowerCase().includes(kw));
         const docCats = [
           { label: "Full Research Article", required: true, ok: hasDoc("article") },

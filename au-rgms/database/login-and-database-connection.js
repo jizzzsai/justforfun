@@ -14,7 +14,6 @@
   });
   window.sb = sb;
 
-  // ---- Auth ----
   window.AUTH = {
     async signIn(email, password) {
       var res = await sb.auth.signInWithPassword({ email: (email || "").trim(), password: password });
@@ -33,7 +32,7 @@
       if (!u.data || !u.data.user) return null;
       var r = await sb.from("profiles").select("*").eq("id", u.data.user.id).single();
       if (r.error) throw r.error;
-      return r.data; // { id, email, full_name, role, title, faculty, department, ... }
+      return r.data;
     },
   };
 })();

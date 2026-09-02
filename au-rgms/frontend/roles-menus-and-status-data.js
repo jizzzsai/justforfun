@@ -156,8 +156,6 @@ const NAV_RESEARCHER = [
   { key: "forms", label: "Forms & Templates", icon: "FileText" },
 ];
 
-// Trimmed sidebar for the AU-R3 paper presentation flow (no progress/final
-// report or other grant flows — the AU-R3 summary doesn't require them).
 const NAV_RESEARCHER_R3 = [
   { section: "WORKSPACE" },
   { key: "r-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
@@ -289,8 +287,6 @@ const FACULTIES = [
   { code: "MUSIC", name: "School of Music", departments: ["Music Performance", "Music Business"] },
 ];
 
-// Academic / personal title prefixes used at Assumption University (Brothers of
-// St. Gabriel + Thai academic ranks). Used by the applicant title dropdown.
 const AU_TITLES = [
   "Mr.", "Mrs.", "Ms.",
   "Dr.",
@@ -301,14 +297,10 @@ const AU_TITLES = [
   "Rev. Bro.", "Rev. Bro. Dr.",
 ];
 
-// Work type of the proposed grant (was "Research Type").
 const WORK_TYPES = ["Individual Research", "Collaborative Research", "Creative Work"];
 
-// Default budget category caps (% of total). Admin can override these in
-// Settings (stored in app_settings.budget_caps); the form falls back to these.
 const DEFAULT_BUDGET_CAPS = { remuneration: 30, equipment: 50, travel: 40, misc: 20 };
 
-// Blank AU-R1 forms a researcher may need to download (open in a new tab).
 const NECESSARY_DOCS = [
   { name: "AU-R1-4 Research/Creative Grant Submission Form", file: "forms/AU-R1-4-Research-Creative-Grant-Submission-Form-1.pdf" },
   { name: "AU-R1-3 Contract for Research Grant", file: "forms/AU-R1-3-Contract-for-Research-Grant.pdf" },
@@ -316,13 +308,11 @@ const NECESSARY_DOCS = [
   { name: "AU-R1-6 Final Report Format", file: "forms/AU-R1-6-Final-Report-Format.pdf" },
 ];
 
-// Reimbursement claim categories (spend-first, claim-back).
 const REIMBURSE_CATEGORIES = [
   "Travel & transport", "Materials & supplies", "Equipment", "Software & subscriptions",
   "Publication / page fees", "Participant / data-collection costs", "Other",
 ];
 
-// Document types selectable when uploading a file.
 const DOC_TYPES = [
   "Research Proposal",
   "Project Budget Allocation",
@@ -333,7 +323,6 @@ const DOC_TYPES = [
 
 const R3_CONFERENCE_TYPES = ["Domestic", "International"];
 
-// Document types for an AU-R3 Paper Presentation Grant upload.
 const R3_DOC_TYPES = [
   "Full Research Article",
   "Turnitin Result (≤ 20%)",
@@ -342,8 +331,6 @@ const R3_DOC_TYPES = [
   "Other supporting document",
 ];
 
-// The three AU research grant systems a researcher can apply to. Each tags its
-// applications with grant_type and shares the same Dean → RASSC → OFM workflow.
 const GRANT_SYSTEMS = [
   {
     id: "au_r1", code: "AU-R1", enabled: true, collaborative: false,
@@ -368,9 +355,6 @@ const GRANT_SYSTEMS = [
   },
 ];
 
-// AU-R4 publication reward — indexing types and their reward (THB).
-// "quartiles" → reward depends on the Scopus SJR quartile; "actual" → the reward
-// equals the actual publication fee the researcher paid (enter the receipt amount).
 const R4_INDEX_TYPES = [
   { key: "scopus", label: "Scopus (SJR quartile)", quartiles: true },
   { key: "wos", label: "Web of Science (SCIE / SSCI / AHCI)", reward: 80000 },
@@ -383,7 +367,6 @@ const R4_INDEX_TYPES = [
 ];
 const R4_SCOPUS_QUARTILE_REWARD = { Q1: 80000, Q2: 60000, Q3: 50000, Q4: 40000 };
 
-// Estimated AU-R4 reward for a chosen index type + quartile + entered fee.
 function r4EstimateReward(indexKey, quartile, feeAmount) {
   const t = R4_INDEX_TYPES.find(x => x.key === indexKey);
   if (!t) return 0;
@@ -392,7 +375,6 @@ function r4EstimateReward(indexKey, quartile, feeAmount) {
   return t.reward || 0;
 }
 
-// ---- AU-R4 rich form option sets (per the AU-R4 module spec) ----
 const R4_ARTICLE_TYPES = ["Research Article", "Academic Article"];
 const R4_PUB_STATUS = ["Published", "Accepted for Publication"];
 const R4_JOURNAL_DBS = ["SCOPUS", "Web of Science (WoS)", "TCI", "ERIC", "MathSciNet", "PubMed", "JSTOR", "Project MUSE", "Other"];
@@ -416,16 +398,13 @@ const R4_DECLARATIONS = [
   "I confirmed that all submitted information and documents were true, accurate, and complete.",
 ];
 
-// Preliminary AU-R4 reward from the journal database + Scopus quartile / entered fee.
-// TCI tiers and "Other" are actual-fee / IRAS-verified; publication fees are included
-// in the indexed rewards.
 function r4RewardForJournal(db, quartile, feeAmount) {
   var fee = Math.max(0, Number(feeAmount) || 0);
   if (db === "SCOPUS") return ({ Q1: 80000, Q2: 60000, Q3: 50000, Q4: 40000 })[quartile] || 0;
   if (db === "Web of Science") return 80000;
   if (["ERIC", "MathSciNet", "PubMed", "JSTOR", "Project Muse"].indexOf(db) >= 0) return 25000;
-  if (db === "TCI Tier 1" || db === "TCI Tier 2") return fee; // actual eligible fee
-  return 0; // Other → IRAS decides
+  if (db === "TCI Tier 1" || db === "TCI Tier 2") return fee;
+  return 0;
 }
 function r4CategoryLabel(db, quartile, wos) {
   if (db === "SCOPUS") return "SCOPUS " + (quartile || "");
@@ -433,7 +412,6 @@ function r4CategoryLabel(db, quartile, wos) {
   return db || "";
 }
 
-// Document types for an AU-R4 Publication Fees & Reward upload.
 const R4_DOC_TYPES = [
   "Full Research Article",
   "Acceptance Letter",
@@ -444,7 +422,6 @@ const R4_DOC_TYPES = [
   "Other supporting document",
 ];
 
-// What an AU-R4 applicant must attach (shown as a checklist).
 const R4_REQUIRED_DOCS = [
   { id: "r4-article", name: "Full Research Article", role: "the full published article (not just the abstract)" },
   { id: "r4-contribution", name: "Author Contribution Statement", role: "the signed author-contribution information" },

@@ -6,7 +6,6 @@ const RA = window.AU;
 
 /* ---------- A. Dashboard Overview ---------- */
 function buildResearcherTimeline(statusKey) {
-  // AU-R1: Researcher → Dean → Faculty Committee → RASSC → Finance (no expert stage).
   const order = ["submission", "deanScreen", "committee", "iras", "contract", "pay1"];
   const idxMap = { draft: 0, submitted: 1, committee_review: 2, iras_review: 3, approved: 4, active: 5, completed: 6, returned: 0, rejected: 0 };
   let idx = idxMap[statusKey]; if (idx === undefined) idx = 0;
@@ -15,7 +14,6 @@ function buildResearcherTimeline(statusKey) {
   return tl;
 }
 
-// AU-R3 has its own short pipeline (no Faculty Committee, no 30/40/30 tranches).
 const R3_PIPELINE = [
   { key: "submission", label: "Submitted" },
   { key: "dean", label: "Dean Review" },
@@ -33,7 +31,6 @@ function buildR3Timeline(statusKey) {
   return tl;
 }
 
-// AU-R4 follows the AU-R1 review handoff through the Faculty Committee.
 const R4_PIPELINE = [
   { key: "submission", label: "Submitted" },
   { key: "dean", label: "Dean Review" },
@@ -66,7 +63,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
   }, [grantType]);
   const isR3 = grantType === "au_r3";
   const isR4 = grantType === "au_r4";
-  const isSingle = isR3 || isR4; // AU-R3/AU-R4 use a single payment, not 30/40/30 tranches
+  const isSingle = isR3 || isR4;
   const n = (k) => (c ? (c[k] || 0) : "…");
   const latest = apps && apps.length ? apps[0] : null;
   const singleGrant = isSingle && grant && grant.grant_type === grantType ? grant : null;
@@ -241,7 +238,6 @@ const RESEARCHER_BUDGET_LABELS = [
   "Travel for off-campus data collection",
   "Miscellaneous (postage, photocopying, binding)",
 ];
-// Default budget rows scaled so the four categories sum to `total`.
 function scaledBudgetRows(total, split) {
   const t = Number(total) || 0;
   const s = split || RESEARCHER_DEFAULT_SPLIT;
@@ -253,7 +249,6 @@ function scaledBudgetRows(total, split) {
 }
 const RESEARCHER_DEFAULT_BUDGET_ROWS = scaledBudgetRows(100000, RESEARCHER_DEFAULT_SPLIT);
 
-// Style for identity fields auto-filled from the profile (shown read-only).
 const roStyle = { background: "var(--paper-warm)", color: "var(--ink-2)", cursor: "not-allowed" };
 
 /* Upload every pending file at once instead of one after another (a sequential
@@ -292,13 +287,11 @@ function ReturnNotice({ info }) {
   );
 }
 
-// Resolve the grant system (au_r1 / au_r3 / au_r4) for a given id.
 function grantSystemFor(id) {
   const list = (RA && RA.GRANT_SYSTEMS) || [];
   return list.find(s => s.id === id) || list[0] || { id: "au_r1", code: "AU-R1", name: "Research Grant", maxAmount: 100000, collaborative: false };
 }
 
-// Human-friendly date label, e.g. "Sat, 18 Sep 2026", from an ISO yyyy-mm-dd.
 function fmtNiceDate(iso) {
   if (!iso) return "";
   var d = new Date(iso + "T00:00:00");
@@ -306,13 +299,12 @@ function fmtNiceDate(iso) {
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
 }
 
-// Whole months between two ISO dates (min 1). Used to auto-derive duration.
 function monthsBetween(startISO, endISO) {
   if (!startISO || !endISO) return 0;
   var s = new Date(startISO), e = new Date(endISO);
   if (isNaN(s) || isNaN(e) || e < s) return 0;
   var m = (e.getFullYear() - s.getFullYear()) * 12 + (e.getMonth() - s.getMonth());
-  if (e.getDate() >= s.getDate()) m += 1; // count the final partial month
+  if (e.getDate() >= s.getDate()) m += 1;
   return Math.max(1, m);
 }
 
@@ -347,7 +339,6 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   const [draft, setDraft] = useState({ ...RESEARCHER_DEFAULT_DRAFT });
   const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
 
-  // Collaborative co-members (AU-R3): other researchers + students on the paper.
   const [coMembers, setCoMembers] = useState([]);
   const addMember = () => setCoMembers(m => m.concat([{ name: "", kind: "Researcher", auId: "", email: "" }]));
   const setMember = (i, k, v) => setCoMembers(m => m.map((r, j) => j === i ? { ...r, [k]: v } : r));
@@ -357,14 +348,12 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   const total = budgetRows.reduce((s, b) => s + (Number(b.amount) || 0), 0);
   const [reqTotal, setReqTotal] = useState(String(maxAmount));
   const setAmt = (i, v) => setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, amount: (v + "").replace(/[^0-9]/g, "") } : r));
-  // Editable "% of total" — type a percentage and derive the amount from the requested total.
   const setPct = (i, v) => {
     const pct = Math.max(0, Math.min(100, Number((v + "").replace(/[^0-9.]/g, "")) || 0));
     const t = Number(reqTotal) || 0;
     setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, amount: Math.round(t * pct / 100) } : r));
   };
 
-  // Separate itemized budget breakdown — free-form Purpose + Amount lines.
   const [items, setItems] = useState([{ purpose: "", amount: "" }]);
   const itemsTotal = items.reduce((s, it) => s + (Number(it.amount) || 0), 0);
   const setItem = (i, k, v) => setItems(rows => rows.map((r, j) => j === i ? { ...r, [k]: k === "amount" ? (v + "").replace(/[^0-9]/g, "") : v } : r));
@@ -378,7 +367,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
   const [returnInfo, setReturnInfo] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [busyKind, setBusyKind] = useState(null); // "submit" | "draft" — drives the button label
+  const [busyKind, setBusyKind] = useState(null);
   const [err, setErr] = useState("");
   const docTypeOptions = isR3 ? (RA.R3_DOC_TYPES || RA.DOC_TYPES) : RA.DOC_TYPES;
   const [docType, setDocType] = useState(isR3 ? "Full Research Article" : "Research Proposal");
@@ -508,7 +497,6 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
     }
     setBusy(true); setBusyKind(submit ? "submit" : "draft");
     try {
-      // Persist the applicant's own details to their profile (enter once, reused).
       try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
       const app = await window.DB.createApplication({
         title: draft.title, abstract: draft.outcome, field: draft.field,
@@ -898,7 +886,6 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
   const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
   const classificationOptions = (RA.R4_JOURNAL_CLASSIFICATIONS || {})[draft.journalDb] || null;
 
-  // Paper authors (co-members): the other researchers + students on the paper.
   const [authors, setAuthors] = useState([]);
   const addAuthor = () => setAuthors(m => m.concat([{ name: "", kind: "Researcher", auId: "", email: "" }]));
   const setAuthor = (i, k, v) => setAuthors(m => m.map((r, j) => j === i ? { ...r, [k]: v } : r));
@@ -912,7 +899,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
   const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
   const [returnInfo, setReturnInfo] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [busyKind, setBusyKind] = useState(null); // "submit" | "draft" — drives the button label
+  const [busyKind, setBusyKind] = useState(null);
   const [err, setErr] = useState("");
 
   useEffect(() => {
@@ -1307,17 +1294,12 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
 
 /* ---------- B2. Submit AU-R4 Publication Fees & Reward ---------- */
 const R4_DEFAULT_DRAFT = {
-  // Publication information
   title: "", articleType: "Research Article", pubStatus: "Published",
   journal: "", publisher: "", website: "", articleUrl: "", doi: "", issn: "",
   acceptDate: "", pubDate: "", volume: "", issue: "", pageNumber: "", academicYear: "2025",
-  // Journal classification
   journalDb: "", journalClassification: "", predatory: false,
-  // Author & contribution
   applicantRole: "First Author",
-  // Researcher
   name: "", title2: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
-  // Fee & claim
   claimType: "Publication Reward", feePaid: "", feeDate: "", paidBy: "",
   turnitin: "",
 };
@@ -1327,7 +1309,6 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const [draft, setDraft] = useState({ ...R4_DEFAULT_DRAFT });
   const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
 
-  // Author & contribution table.
   const [authors, setAuthors] = useState([{ name: "", type: "First Author", email: "", contribution: "100" }]);
   const addAuthor = () => setAuthors(a => a.concat([{ name: "", type: "Corresponding Author", email: "", contribution: "" }]));
   const setAuthor = (i, k, v) => setAuthors(list => {
@@ -1355,7 +1336,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
   const [returnInfo, setReturnInfo] = useState(null);
   const [busy, setBusy] = useState(false);
-  const [busyKind, setBusyKind] = useState(null); // "submit" | "draft" — drives the button label
+  const [busyKind, setBusyKind] = useState(null);
   const [err, setErr] = useState("");
 
   const published = draft.pubStatus === "Published";
@@ -2668,7 +2649,6 @@ function ResearcherFinal({ applicationId, navigate, onDownload, onView, toast })
 }
 
 /* ---------- G. Payment Status ---------- */
-// AU-R3 / AU-R4 single-payment status page (no 30/40/30 tranches).
 function SingleGrantPaymentStatus({ grantType }) {
   const isR4 = grantType === "au_r4";
   const [grant, setGrant] = useState(null);

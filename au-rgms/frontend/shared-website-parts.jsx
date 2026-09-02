@@ -324,7 +324,6 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
   const iconCls = { primary: "", success: "green", danger: "red" }[kind];
   const btnCls = { primary: "btn-primary", success: "btn-success", danger: "btn-primary" }[kind];
   const blocked = withReason && reasonRequired && !reason.trim();
-  // Major decisions (anything that asks for a reason) get the extra step.
   const twoStep = finalConfirm === undefined ? withReason : finalConfirm;
 
   if (step === 2) {
@@ -542,7 +541,6 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
   const pick = (iso) => { if (onChange) onChange(iso); setOpen(false); };
   const inRange = (iso) => (!min || iso >= min) && (!max || iso <= max);
 
-  // 6x7 grid starting on the Sunday on/before the 1st of the viewed month.
   const first = new Date(view.y, view.m, 1);
   const start = new Date(view.y, view.m, 1 - first.getDay());
   const cells = [];
