@@ -87,7 +87,6 @@ function LoginPage({ onLogin }) {
           </header>
           <div className="au-login-story-content">
             <div className="au-login-story-heading">
-              <p className="au-login-label">Office of Research Affairs</p>
               <h1 className="au-login-title" id="au-login-system-title">Research Grant <em>Management</em> System</h1>
             </div>
             <p className="au-login-story-note">Making research grant applications simpler for AU researchers—from submission to approval, reporting, and payment.</p>
@@ -137,14 +136,6 @@ function LoginPage({ onLogin }) {
               </div>
             </details>
           </div>
-          <footer className="au-login-footer">
-            <nav aria-label="Login footer links">
-              <button type="button" onClick={() => setHelpTopic("privacy")}>Privacy</button>
-              <button type="button" onClick={() => setHelpTopic("help")}>Help</button>
-              <button type="button" onClick={() => setHelpTopic("access")}>IT Support</button>
-            </nav>
-            <p>Research Grant Management System</p>
-          </footer>
         </section>
       </main>
       <LoginHelpDialog topic={helpTopic} onClose={() => setHelpTopic(null)} />

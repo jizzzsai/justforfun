@@ -45,8 +45,6 @@
 .au-login-university { margin: 0 0 4px; color: var(--au-crimson-deep); font: 500 23px/1.1 var(--font-serif); }
 .au-login-meta { margin: 0; color: var(--ink-3); font-size: 10px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; }
 .au-login-story-content { display: flex; flex: 1; flex-direction: column; justify-content: center; padding: 60px 0 74px; }
-.au-login-label { display: flex; align-items: center; gap: 12px; margin: 0 0 22px; color: var(--au-gold-deep); font-size: 10px; font-weight: 700; letter-spacing: .15em; text-transform: uppercase; }
-.au-login-label::before { content: ""; flex: 0 0 26px; height: 1px; background: var(--au-gold); }
 .au-login-title { max-width: 490px; margin: 0; color: var(--au-crimson-deep); font: 500 clamp(42px, 4.2vw, 58px)/1.04 var(--font-serif); letter-spacing: -.025em; }
 .au-login-title em { display: block; color: var(--au-gold-deep); font-weight: 400; }
 .au-login-story-note { max-width: 360px; margin: 27px 0 0; color: var(--ink-2); font-size: 14px; line-height: 1.8; }
@@ -94,11 +92,6 @@
 .au-login-demo-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
 .au-login-demo-grid button { min-height: 36px; padding: 7px; color: var(--paper); border: 1px solid rgba(255, 255, 255, .2); border-radius: 5px; background: rgba(255, 255, 255, .06); font-size: 10px; font-weight: 500; }
 .au-login-demo-grid button:hover:not(:disabled) { color: var(--au-crimson-deep); border-color: var(--au-gold-soft); background: var(--au-gold-soft); }
-.au-login-footer { width: min(360px, 100%); margin: 34px auto 0; color: rgba(255, 255, 255, .56); font-size: 9px; text-align: center; }
-.au-login-footer nav { display: flex; align-items: center; justify-content: center; gap: 24px; margin-bottom: 11px; }
-.au-login-footer button { padding: 2px 0; color: var(--au-cream); border: 0; background: transparent; font-size: 10px; }
-.au-login-footer button:hover { color: var(--paper); text-decoration: underline; text-underline-offset: 3px; }
-.au-login-footer p { margin: 0; }
 .au-login-dialog { width: min(480px, calc(100% - 36px)); max-height: calc(100svh - 40px); margin: auto; padding: 28px; color: var(--ink-1); border: 1px solid var(--line); border-top: 4px solid var(--au-crimson); border-radius: 12px; background: var(--paper); box-shadow: var(--sh-pop); }
 .au-login-dialog::backdrop { background: rgba(40, 4, 4, .65); }
 .au-login-dialog h2 { margin: 0 0 18px; font: 500 28px/1.15 var(--font-serif); }
@@ -125,7 +118,6 @@
   .au-login-surface { display: none; }
   .au-login-story { padding: 27px 34px 29px; border-radius: 0 0 48% 5% / 0 0 30px 10px; background: var(--paper-warm); }
   .au-login-story-content { padding: 35px 0 10px; }
-  .au-login-label { margin-bottom: 15px; font-size: 9px; }
   .au-login-title { max-width: 440px; font-size: 38px; }
   .au-login-title em { display: inline; }
   .au-login-story-note { max-width: 440px; margin-top: 16px; font-size: 12px; line-height: 1.7; }
@@ -136,7 +128,6 @@
   .au-login-welcome { font-size: 34px; }
   .au-login-intro { margin-bottom: 25px; }
   .au-login-field input { font-size: 16px; }
-  .au-login-footer { margin-top: 29px; }
 }
 @media (max-width: 480px) {
   .au-login { padding: 14px 12px; }
@@ -147,8 +138,6 @@
   .au-login-university { font-size: 19px; }
   .au-login-meta { font-size: 8px; letter-spacing: .09em; }
   .au-login-story-content { padding-top: 28px; }
-  .au-login-label { gap: 8px; font-size: 8px; letter-spacing: .12em; }
-  .au-login-label::before { flex-basis: 18px; }
   .au-login-title { max-width: 320px; font-size: 32px; line-height: 1.06; }
   .au-login-story-note { margin-top: 14px; font-size: 11px; }
   .au-login-access { padding: 30px 24px 24px; }
