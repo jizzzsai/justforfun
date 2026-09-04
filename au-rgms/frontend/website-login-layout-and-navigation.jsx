@@ -714,13 +714,13 @@ function App() {
 
   useEffect(() => {
     const supportedSystem = ["au_r1", "au_r3", "au_r4"].includes(rSystem);
-    const visible = !!(loggedIn && role === "researcher" && supportedSystem);
+    const visible = !!(loggedIn && profile && profile.role === "researcher" && role === "researcher" && supportedSystem);
     window.AU_AI_VISIBLE = visible;
     window.AU_AI_GRANT_SYSTEM = visible ? rSystem : null;
     window.dispatchEvent(new CustomEvent("au-ai-visibility", {
       detail: { visible, grantSystem: visible ? rSystem : null },
     }));
-  }, [loggedIn, role, page, rSystem]);
+  }, [loggedIn, profile, role, page, rSystem]);
 
   const cfg = ROLE_CONFIG[role];
   const researcherTrimmed = role === "researcher" && (rSystem === "au_r3" || rSystem === "au_r4");

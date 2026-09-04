@@ -55,17 +55,26 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
   const [me, setMe] = useState(null);
   const [grant, setGrant] = useState(null);
   const [apps, setApps] = useState(null);
+  const [appsError, setAppsError] = useState(false);
   useEffect(() => {
+    let active = true;
+    setApps(null);
+    setAppsError(false);
     window.DB.statusCounts(grantType || undefined).then(setC).catch(() => setC({}));
     window.AUTH.profile().then(setMe).catch(() => {});
     window.DB.myGrant(grantType || "au_r1").then(g => setGrant(g || false)).catch(() => setGrant(false));
-    window.DB.myApplications(grantType || undefined).then(setApps).catch(() => setApps([]));
+    window.DB.myApplications(grantType || undefined)
+      .then(items => { if (active) setApps(items || []); })
+      .catch(() => { if (active) setAppsError(true); });
+    return () => { active = false; };
   }, [grantType]);
   const isR3 = grantType === "au_r3";
   const isR4 = grantType === "au_r4";
   const isSingle = isR3 || isR4;
   const n = (k) => (c ? (c[k] || 0) : "…");
   const latest = apps && apps.length ? apps[0] : null;
+  const exampleSteps = isR4 ? R4_PIPELINE : isR3 ? R3_PIPELINE : RA.ALL_STAGES;
+  const showExample = !!(apps && !apps.length);
   const singleGrant = isSingle && grant && grant.grant_type === grantType ? grant : null;
   const r3PayLabel = { approved: "Awaiting Finance Payment", active: "Paid", completed: "Completed" };
   const approvedLabel = isR4 ? "Approved Publication Claims" : isR3 ? "Approved Conference Grants" : "Approved Projects";
@@ -104,12 +113,24 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
         <div className="card-head">
           <h3>{sys.code} Application Pipeline{latest ? " · " + latest.code : ""}</h3>
           <div className="grow"></div>
-          <button className="btn btn-ghost btn-sm" onClick={() => navigate("r-applications")}>
+          {showExample && <span className="badge badge-draft">Example workflow</span>}
+          {latest && <button className="btn btn-ghost btn-sm" onClick={() => navigate("r-applications")}>
             Open detail <Icon name="ArrowRight" size={12} />
-          </button>
+          </button>}
         </div>
         <div className="card-body">
-          {!latest && <Empty title="No application to track yet" desc={"Your latest " + sys.code + " application's progress will appear here."} icon="Folder" />}
+          {appsError && <p className="text-sm text-muted" role="status">Could not load your application pipeline. Please refresh to try again.</p>}
+          {apps === null && !appsError && <p className="text-sm text-muted" role="status">Loading pipeline…</p>}
+          {showExample && <div className="researcher-pipeline-example">
+            <p className="text-sm text-muted">Your {sys.code} application will follow these steps.</p>
+            <ol className="researcher-pipeline-steps" aria-label={sys.code + " example workflow"}>
+              {exampleSteps.map((step, index) => <li key={step.key}>
+                <span className="researcher-pipeline-number" aria-hidden="true">{index + 1}</span>
+                <span>{step.label}</span>
+                {index < exampleSteps.length - 1 && <span className="researcher-pipeline-arrow" aria-hidden="true"><Icon name="ArrowRight" size={14} /></span>}
+              </li>)}
+            </ol>
+          </div>}
           {latest && isR4 && <HTimeline steps={R4_PIPELINE} app={{ timeline: buildR4Timeline(latest.status) }} />}
           {latest && isR3 && <HTimeline steps={R3_PIPELINE} app={{ timeline: buildR3Timeline(latest.status) }} />}
           {latest && !isSingle && <HTimeline steps={RA.ALL_STAGES.slice(0, 9)} app={{ timeline: buildResearcherTimeline(latest.status) }} />}
@@ -126,7 +147,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
               {singleGrant && <Badge status={window.DB.statusBadge(singleGrant.status)} />}
             </div>
             <div className="card-body">
-              {apps === null && <div className="text-sm text-muted">Loading…</div>}
+              {apps === null && !appsError && <div className="text-sm text-muted">Loading…</div>}
               {apps && !singleGrant && <Empty title={isR4 ? "No approved claim yet" : "No approved conference grant yet"} desc={isR4 ? "Once IRAS approves your publication claim, its payment status appears here." : "Once your paper presentation grant is approved, its payment status appears here."} icon="Coins" />}
               {singleGrant && (
                 <>
@@ -198,7 +219,8 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
             <h3>My Applications</h3>
           </div>
           <div style={{ padding: "8px 0" }}>
-            {apps === null && <div style={{ padding: "12px 20px", color: "var(--ink-3)", fontSize: 12 }}>Loading…</div>}
+            {appsError && <div className="text-sm text-muted" role="status" style={{ padding: "12px 20px" }}>Could not load applications. Please refresh to try again.</div>}
+            {apps === null && !appsError && <div style={{ padding: "12px 20px", color: "var(--ink-3)", fontSize: 12 }}>Loading…</div>}
             {apps && apps.length === 0 && <div style={{ padding: "16px 20px" }}><Empty title="No applications yet" desc={isR4 ? "Submit your first publication reward application to get started." : isR3 ? "Submit your first paper presentation grant application to get started." : "Submit your first research grant application to get started."} icon="FilePlus" /></div>}
             {(apps || []).slice(0, 6).map((a, i) => (
               <div key={a.id} style={{

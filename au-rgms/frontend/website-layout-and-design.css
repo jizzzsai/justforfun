@@ -855,6 +855,23 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .tl-h-step.upcoming .t { color: var(--ink-3); font-weight: 500; }
 .tl-h-step .s { font-size: 10px; color: var(--ink-3); margin-top: 2px; }
 
+.researcher-pipeline-example > p { margin: 0 0 20px; }
+.researcher-pipeline-steps {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 24px 8px; margin: 0; padding: 0; list-style: none;
+}
+.researcher-pipeline-steps li {
+  position: relative; display: flex; flex-direction: column; align-items: center;
+  gap: 10px; padding: 0 16px; text-align: center;
+  font-size: 12px; font-weight: 500; line-height: 1.4; color: var(--ink-2);
+}
+.researcher-pipeline-number {
+  display: grid; place-items: center; width: 32px; height: 32px;
+  color: var(--au-crimson); background: var(--au-crimson-soft);
+  border: 1px solid #e9c9c9; border-radius: 50%; font-size: 12px; font-weight: 600;
+}
+.researcher-pipeline-arrow { position: absolute; right: -10px; top: 8px; color: var(--ink-3); }
+
 /* File row */
 .file-list { display: flex; flex-direction: column; gap: 0; }
 .file-row {

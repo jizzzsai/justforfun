@@ -113,8 +113,11 @@ function AIChat() {
 
   return (
     <>
+      <button type="button" className="ai-launcher" onClick={() => setOpen(v => !v)} title="Ask AU AI" aria-label="Ask AU AI" aria-expanded={open} aria-controls={open ? "researcher-ai-dialog" : undefined}>
+        <Icon name="Bot" size={20} />
+      </button>
       {open && (
-        <div className="ai-panel" role="dialog" aria-label="AU AI assistant">
+        <div className="ai-panel" id="researcher-ai-dialog" role="dialog" aria-label="AU AI assistant">
           <div className="ai-head">
             <div className="ai-bot-ic">
               <Icon name="Bot" size={18} />
