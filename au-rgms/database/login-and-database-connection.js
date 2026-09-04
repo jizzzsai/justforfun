@@ -9,19 +9,69 @@
     console.error("[AU] supabase-js failed to load");
     return;
   }
+  var authKey = "au-rgms-auth";
+  var preferenceKey = "au-rgms-remember";
+  var memoryStorage = {};
+  function readStorage(store, key) {
+    try { return window[store].getItem(key); } catch (e) { return null; }
+  }
+  function removeStorage(store, key) {
+    try { window[store].removeItem(key); } catch (e) {}
+  }
+  var preference = readStorage("localStorage", preferenceKey);
+  var rememberSession = preference === "true" || (preference === null && !!readStorage("localStorage", authKey));
+  var authStorage = {
+    getItem: function (key) {
+      return readStorage(rememberSession ? "localStorage" : "sessionStorage", key) || memoryStorage[key] || null;
+    },
+    setItem: function (key, value) {
+      try {
+        window[rememberSession ? "localStorage" : "sessionStorage"].setItem(key, value);
+        delete memoryStorage[key];
+      } catch (e) { memoryStorage[key] = value; }
+    },
+    removeItem: function (key) {
+      delete memoryStorage[key];
+      removeStorage("localStorage", key);
+      removeStorage("sessionStorage", key);
+    },
+  };
+  function setRememberSession(remember) {
+    var keys = [authKey, authKey + "-user", authKey + "-code-verifier"];
+    var values = keys.map(function (key) { return authStorage.getItem(key); });
+    rememberSession = !!remember;
+    try { window.localStorage.setItem(preferenceKey, String(rememberSession)); } catch (e) {}
+    keys.forEach(function (key, index) {
+      authStorage.removeItem(key);
+      if (values[index] !== null) authStorage.setItem(key, values[index]);
+    });
+  }
   var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON, {
-    auth: { persistSession: true, autoRefreshToken: true, storageKey: "au-rgms-auth" },
+    auth: { persistSession: true, autoRefreshToken: true, storageKey: authKey, storage: authStorage },
   });
   window.sb = sb;
 
   window.AUTH = {
-    async signIn(email, password) {
+    remembersSession: function () { return rememberSession; },
+    async signIn(email, password, remember) {
+      if (typeof remember === "boolean") setRememberSession(remember);
       var res = await sb.auth.signInWithPassword({ email: (email || "").trim(), password: password });
       if (res.error) throw res.error;
-      return await window.AUTH.profile();
+      try {
+        var profile = await window.AUTH.profile();
+        if (!profile) throw new Error("No profile found for this account. Contact your administrator.");
+        return profile;
+      } catch (error) {
+        try { await sb.auth.signOut({ scope: "local" }); } catch (e) {}
+        [authKey, authKey + "-user", authKey + "-code-verifier"].forEach(function (key) { authStorage.removeItem(key); });
+        throw error;
+      }
     },
     async signOut() {
-      try { await sb.auth.signOut(); } catch (e) {}
+      try { await sb.auth.signOut(); }
+      finally {
+        [authKey, authKey + "-user", authKey + "-code-verifier"].forEach(function (key) { authStorage.removeItem(key); });
+      }
     },
     async session() {
       var r = await sb.auth.getSession();

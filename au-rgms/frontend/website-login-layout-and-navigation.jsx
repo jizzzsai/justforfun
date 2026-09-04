@@ -27,88 +27,159 @@ function LoginPage({ onLogin }) {
   const [pass, setPass] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [remember, setRemember] = useState(() => !!(window.AUTH && window.AUTH.remembersSession()));
+  const [helpTopic, setHelpTopic] = useState(null);
+  const loginPending = useRef(false);
+  const emailInput = useRef(null);
+  const passwordInput = useRef(null);
+
+  useEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) return;
+    const previous = viewport.getAttribute("content");
+    viewport.setAttribute("content", "width=device-width, initial-scale=1");
+    return () => viewport.setAttribute("content", previous || "width=1280");
+  }, []);
 
   async function signInWith(em, pw) {
+    if (loginPending.current) return;
+    loginPending.current = true;
     setErr(""); setBusy(true);
     try {
-      const prof = await window.AUTH.signIn(em, pw);
+      const prof = await window.AUTH.signIn(em, pw, remember);
       if (!prof) throw new Error("No profile found for this account.");
       onLogin(prof);
-    } catch (ex) { setErr((ex && ex.message) || "Sign-in failed."); setBusy(false); }
+    } catch (ex) {
+      setErr((ex && ex.message) || "Sign-in failed. Please try again.");
+    } finally {
+      loginPending.current = false;
+      setBusy(false);
+    }
   }
   function doLogin(e) {
     e.preventDefault();
+    if (loginPending.current) return;
     const auEmail = email.trim();
     if (!/^[^@\s]+@au\.edu$/i.test(auEmail)) {
-      setErr("Use your registered AU email ending in @au.edu. Personal Gmail accounts cannot sign in to AU-RGMS.");
+      setErr("Use your registered AU email ending in @au.edu.");
+      emailInput.current.focus();
       return;
     }
-    if (!pass) { setErr("Enter your password."); return; }
+    if (!pass) { setErr("Enter your password."); passwordInput.current.focus(); return; }
     signInWith(auEmail, pass);
   }
   function demoLogin(testEmail) { signInWith(testEmail, TEST_PASSWORD); }
 
   return (
-    <div className="login-shell">
-      <div className="login-left">
-        <div className="au-mark">
-          <AULogo size={60} />
-          <div className="seal-text">
-            <b>Assumption University</b>
-            <span>of Thailand · Est. 1969</span>
-          </div>
-        </div>
-
-        <div className="login-hero">
-          <div className="eyebrow" style={{color: "var(--au-gold)", marginBottom: 16}}>Office of Research Affairs</div>
-          <h1>
-            Research Grant <em>Management</em> System
-          </h1>
-          <p>
-            Making research grant applications simpler for AU researchers—from
-            submission to approval, reporting, and payment.
-          </p>
-        </div>
-      </div>
-
-      <div className="login-right">
-        <div className="login-card">
-          <div className="eyebrow">Sign in to AU-RGMS</div>
-          <h2>Welcome</h2>
-          <p className="sub">Sign in with your AU credentials to continue.</p>
-
-          <form onSubmit={doLogin}>
-            <div className="field">
-              <label>AU Email</label>
-              <input value={email} onChange={e => setEmail(e.target.value)} type="email" autoComplete="email" />
+    <div className="au-login">
+      <main className="au-login-shell" aria-labelledby="au-login-system-title">
+        <svg className="au-login-surface" viewBox="0 0 1200 760" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M0 0H540C545 105 651 157 672 272C705 431 553 493 550 616C548 678 580 730 612 760H0Z" />
+        </svg>
+        <section className="au-login-story" aria-label="Assumption University Research Affairs">
+          <header className="au-login-identity">
+            <div className="au-login-seal"><img src="assets/au-logo.png" alt="Assumption University crest" width="58" height="58" /></div>
+            <div>
+              <p className="au-login-university">Assumption University</p>
+              <p className="au-login-meta">of Thailand · Est. 1969</p>
             </div>
-            <div className="field">
-              <label>Password</label>
-              <input value={pass} onChange={e => setPass(e.target.value)} type="password" autoComplete="current-password" />
+          </header>
+          <div className="au-login-story-content">
+            <div className="au-login-story-heading">
+              <p className="au-login-label">Office of Research Affairs</p>
+              <h1 className="au-login-title" id="au-login-system-title">Research Grant <em>Management</em> System</h1>
             </div>
-
-            {err && <div style={{color: "var(--au-crimson)", fontSize: 12, marginTop: 8}}>{err}</div>}
-            <button className="btn btn-primary btn-block mt-4" type="submit" disabled={busy}>
-              {busy ? "Signing in…" : <>Sign In <Icon name="ArrowRight" size={14} /></>}
-            </button>
-          </form>
-
-          <div style={{ borderTop: "1px solid var(--line-2)", margin: "18px 0 12px" }}></div>
-          <div className="eyebrow" style={{ marginBottom: 4 }}>Quick demo login</div>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8 }}>
-            {APP.ROLES.map(r => (
-              <button key={r.key} type="button" className="btn btn-secondary btn-sm" disabled={busy} onClick={() => demoLogin(TEST_EMAIL_FOR[r.key])} style={{ justifyContent: "flex-start", gap: 8 }}>
-                <Icon name={r.iconName} size={14} /> {r.name}
-              </button>
-            ))}
+            <p className="au-login-story-note">Making research grant applications simpler for AU researchers—from submission to approval, reporting, and payment.</p>
           </div>
-
-          <div className="mt-4" style={{fontSize: 12}}>
-            <a href="#" style={{color: "var(--au-crimson)", fontWeight: 600, textDecoration: "none"}}>Forgot password?</a>
+          <p className="au-login-copyright">© {new Date().getFullYear()} Assumption University of Thailand</p>
+        </section>
+        <section className="au-login-access" aria-labelledby="au-login-welcome">
+          <div className="au-login-form-panel">
+            <p className="au-login-form-label"><span aria-hidden="true"></span> AU-RGMS · University portal</p>
+            <h2 className="au-login-welcome" id="au-login-welcome">Login</h2>
+            <p className="au-login-intro">Welcome. Sign in with your AU account.</p>
+            <form onSubmit={doLogin} noValidate aria-busy={busy}>
+              <div className="au-login-field">
+                <label htmlFor="au-login-email">AU Email</label>
+                <input id="au-login-email" ref={emailInput} name="email" value={email} onChange={e => setEmail(e.target.value)} type="email" placeholder="name@au.edu" autoComplete="username" autoCapitalize="none" spellCheck={false} required disabled={busy} aria-describedby={err ? "au-login-error" : undefined} />
+              </div>
+              <div className="au-login-field">
+                <label htmlFor="au-login-password">Password</label>
+                <div className="au-login-password-wrap">
+                  <input id="au-login-password" ref={passwordInput} name="password" value={pass} onChange={e => setPass(e.target.value)} type={showPassword ? "text" : "password"} placeholder="Enter your password" autoComplete="current-password" required disabled={busy} aria-describedby={err ? "au-login-error" : undefined} />
+                  <button className="au-login-password-toggle" type="button" disabled={busy} aria-label={showPassword ? "Hide password" : "Show password"} aria-pressed={showPassword} aria-controls="au-login-password" onClick={() => { setShowPassword(v => !v); passwordInput.current.focus(); }}>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      {showPassword ? <><path d="m3 3 18 18" /><path d="M10.6 6.2A10 10 0 0 1 12 6c6 0 9.5 6 9.5 6a15 15 0 0 1-2.2 2.9M6.6 6.7C4 8.4 2.5 12 2.5 12s3.5 6 9.5 6c1 0 1.9-.2 2.8-.5" /></> : <><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" /><circle cx="12" cy="12" r="2.6" /></>}
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div className="au-login-options">
+                <label className="au-login-remember"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} disabled={busy} aria-describedby="au-login-remember-note" /> Remember me</label>
+                <button className="au-login-text-button" type="button" onClick={() => setHelpTopic("access")}>Forgot password?</button>
+              </div>
+              <span className="au-login-sr-only" id="au-login-remember-note">Remember your login on this device. Leave unchecked on shared computers to keep the session in this tab only.</span>
+              {err && <p className="au-login-error" id="au-login-error" role="alert">{err}</p>}
+              <button className="au-login-submit" type="submit" disabled={busy}>{busy ? "Signing in…" : <>Sign In <Icon name="ArrowRight" size={16} /></>}</button>
+            </form>
+            <div className="au-login-support">
+              <span>Having trouble signing in?</span>
+              <button type="button" onClick={() => setHelpTopic("access")}>Contact Research Affairs / IT Support</button>
+            </div>
+            <details className="au-login-demo">
+              <summary>Developer Demo Access <Icon name="ChevronDown" size={12} /></summary>
+              <div className="au-login-demo-panel">
+                <p>Shared test accounts. Use your own university account for real applications.</p>
+                <div className="au-login-demo-grid">
+                  {APP.ROLES.map(r => <button key={r.key} type="button" disabled={busy} onClick={() => demoLogin(TEST_EMAIL_FOR[r.key])}>{r.name}</button>)}
+                </div>
+              </div>
+            </details>
           </div>
-        </div>
-      </div>
+          <footer className="au-login-footer">
+            <nav aria-label="Login footer links">
+              <button type="button" onClick={() => setHelpTopic("privacy")}>Privacy</button>
+              <button type="button" onClick={() => setHelpTopic("help")}>Help</button>
+              <button type="button" onClick={() => setHelpTopic("access")}>IT Support</button>
+            </nav>
+            <p>Research Grant Management System</p>
+          </footer>
+        </section>
+      </main>
+      <LoginHelpDialog topic={helpTopic} onClose={() => setHelpTopic(null)} />
     </div>
+  );
+}
+
+function LoginHelpDialog({ topic, onClose }) {
+  const dialog = useRef(null);
+  useEffect(() => {
+    const element = dialog.current;
+    if (topic && !element.open) element.showModal();
+    else if (!topic && element.open) element.close();
+  }, [topic]);
+  const titles = { access: "Account and password help", privacy: "Sign-in privacy", help: "Signing in to AU-RGMS" };
+  return (
+    <dialog ref={dialog} className="au-login-dialog" aria-labelledby="au-login-help-title" onClose={onClose} onClick={e => { if (e.target === e.currentTarget) dialog.current.close(); }}>
+      <h2 id="au-login-help-title">{titles[topic] || "Login help"}</h2>
+      {topic === "access" && <>
+        <p>Only the system administrator can change account details or reset a password.</p>
+        <p>Contact your Research Affairs (RASSC/IRAS) administrator, or use your usual AU IT support channel. Have your full name, registered AU email, and AU ID ready so they can identify your account.</p>
+        <p>Do not send anyone your password. This page does not send password-reset emails.</p>
+      </>}
+      {topic === "help" && <>
+        <p>Enter your registered email ending in @au.edu and your password. Your account determines which role and workspace you can access.</p>
+        <p>Researchers can select AU-R1, AU-R3, or AU-R4 after signing in. Developer Demo Access opens shared test accounts and is separate from your personal account.</p>
+        <p>Select Remember me only on your own device. Leave it unchecked on shared computers and sign out when you finish.</p>
+      </>}
+      {topic === "privacy" && <>
+        <p>AU-RGMS uses your signed-in account to load your profile and the applications available to your role.</p>
+        <p>Remember me saves a login session in this browser. Without it, the session is kept in the current tab. Signing out clears the saved session from this browser; the checkbox never saves your password.</p>
+        <p>For the university's official privacy policy or questions about your research data, contact Research Affairs.</p>
+      </>}
+      <button className="au-login-submit" type="button" autoFocus onClick={() => dialog.current.close()}>Close</button>
+    </dialog>
   );
 }
 

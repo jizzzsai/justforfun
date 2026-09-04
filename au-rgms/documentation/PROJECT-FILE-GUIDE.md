@@ -30,6 +30,7 @@ au-rgms/
 | Forms & Templates page | `frontend/forms-and-templates-page.jsx` |
 | Roles, sidebar menus, statuses, grant types, journal options | `frontend/roles-menus-and-status-data.js` |
 | Main website layout, colors, cards, tables, forms, print design | `frontend/website-layout-and-design.css` |
+| University login design, mobile layout, password/help controls | `frontend/login-page-design.css` and `frontend/website-login-layout-and-navigation.jsx` |
 | Researcher AI chat panel and role-scoped AI context | `frontend/researcher-ai-assistant.jsx` |
 | AI panel design | `frontend/ai-assistant-design.css` |
 | Supabase connection, sign in, sign out, session, current profile | `database/login-and-database-connection.js` |
@@ -53,6 +54,7 @@ au-rgms/
 | `frontend/forms-and-templates-page.jsx` | Official forms list and download actions. |
 | `frontend/roles-menus-and-status-data.js` | Shared roles, menus, status labels, grant configuration, and option lists. |
 | `frontend/website-layout-and-design.css` | Main visual system and responsive/print layout. |
+| `frontend/login-page-design.css` | Curved, text-only university login layout, responsive form, demo access, and help dialogs. |
 | `frontend/researcher-ai-assistant.jsx` | AI Assistant shown in the researcher sections. |
 | `frontend/ai-assistant-design.css` | AI Assistant visual styling. |
 
@@ -71,7 +73,7 @@ Backend secrets are read from Vercel environment variables. They must never be p
 
 | File | Main responsibility |
 | --- | --- |
-| `database/login-and-database-connection.js` | Creates the Supabase browser client and manages authentication/session/profile operations. |
+| `database/login-and-database-connection.js` | Creates the Supabase browser client and manages sign-in, Remember me persistence, session cleanup, and profile operations. |
 | `database/website-database-actions.js` | Contains browser-side database calls for applications, uploads, queues, reviews, reports, payments, notifications, and admin actions. |
 
 ## Other folders

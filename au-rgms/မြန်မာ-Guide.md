@@ -29,6 +29,7 @@
 | `frontend/forms-and-templates-page.jsx` | Forms & Templates စာမျက်နှာနှင့် PDF download လုပ်ဆောင်ချက်များ |
 | `frontend/roles-menus-and-status-data.js` | User roles၊ sidebar menus၊ grant systems၊ journal options နှင့် application status သတ်မှတ်ချက်များ |
 | `frontend/website-layout-and-design.css` | Website layout၊ AU အနီ/ရွှေရောင် theme၊ cards၊ tables၊ forms၊ print နှင့် responsive design |
+| `frontend/login-page-design.css` | Login စာမျက်နှာ၏ university header၊ login form၊ mobile layout နှင့် help dialog design |
 | `frontend/researcher-ai-assistant.jsx` | Researcher AU-R1/AU-R3/AU-R4 အတွက် AI Assistant chat |
 | `frontend/ai-assistant-design.css` | AI Assistant button နှင့် chat window design |
 
@@ -36,7 +37,7 @@
 
 | Code file name | အဓိကအလုပ် |
 | --- | --- |
-| `database/login-and-database-connection.js` | Supabase ချိတ်ဆက်မှု၊ sign in၊ sign out၊ session နှင့် user profile |
+| `database/login-and-database-connection.js` | Supabase ချိတ်ဆက်မှု၊ sign in၊ sign out၊ Remember me session သိမ်းဆည်းမှုနှင့် user profile |
 | `database/website-database-actions.js` | Applications၊ documents၊ reviews၊ payments၊ reports၊ notifications နှင့် admin database actions |
 
 ## Backend API files
@@ -60,4 +61,3 @@ Backend secret key များကို frontend code သို့မဟုတ�
 - Application၊ payment သို့မဟုတ် report database action ကိုမေးလျှင် `database/website-database-actions.js` ကိုရှာပါ။
 - AI backend ကိုမေးလျှင် `api/ai-chat-response.js` ကိုရှာပါ။
 - Admin user management backend ကိုမေးလျှင် `api/admin-user-management.js` ကိုရှာပါ။
-
