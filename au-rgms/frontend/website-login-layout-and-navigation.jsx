@@ -212,11 +212,11 @@ function GrantHelperChat({ profile }) {
 
   return (
     <div className="chooser-ai">
-      <button type="button" className="chooser-ai-button" onClick={() => setOpen(v => !v)} title="Ask AU AI" aria-label="Ask AU AI">
+      <button type="button" className="chooser-ai-button" onClick={() => setOpen(v => !v)} title="Ask AU AI" aria-label="Ask AU AI" aria-expanded={open} aria-controls={open ? "chooser-ai-dialog" : undefined}>
         <Icon name="Bot" size={20} />
       </button>
       {open && (
-        <div className="chooser-ai-panel" role="dialog" aria-label="Ask AU AI">
+        <div className="chooser-ai-panel" id="chooser-ai-dialog" role="dialog" aria-label="Ask AU AI">
           <div className="chooser-ai-head">
             <div className="chooser-ai-mark"><Icon name="Bot" size={18} /></div>
             <div><b>AU AI</b><span>Grant selection assistant</span></div>
@@ -246,72 +246,60 @@ function GrantHelperChat({ profile }) {
 /* ============= GRANT SYSTEM CHOOSER (researcher landing) ============= */
 function GrantSystemChooser({ profile, onPick, onLogout }) {
   const systems = APP.GRANT_SYSTEMS || [];
-  const firstName = profile && profile.full_name ? profile.full_name.split(" ")[0] : "";
+  const summaries = {
+    au_r1: "Research and creative work at AU.",
+    au_r3: "Present your paper at a conference.",
+    au_r4: "Journal publication fees and rewards.",
+  };
+  useEffect(() => {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (!viewport) return;
+    const previous = viewport.getAttribute("content");
+    viewport.setAttribute("content", "width=device-width, initial-scale=1");
+    return () => viewport.setAttribute("content", previous || "width=1280");
+  }, []);
   return (
-    <div className="chooser-shell" style={{ minHeight: "100vh", background: "radial-gradient(1200px 480px at 50% -8%, var(--au-crimson-soft) 0%, rgba(0,0,0,0) 60%), var(--paper-warm)", display: "flex", flexDirection: "column" }}>
-      <header style={{ display: "flex", alignItems: "center", gap: 12, padding: "16px 28px", borderBottom: "1px solid var(--line)", background: "var(--paper)" }}>
-        <AULogo size={34} />
-        <div style={{ lineHeight: 1.2 }}>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>Assumption University</div>
-          <div style={{ fontSize: 11, color: "var(--ink-3)" }}>RGMS · Office of Research Affairs</div>
+    <div className="chooser-shell">
+      <header className="chooser-header">
+        <div className="chooser-brand">
+          <AULogo size={38} />
+          <div>
+            <strong>Assumption University</strong>
+            <span>Research Grant Management System</span>
+          </div>
         </div>
-        <div style={{ flex: 1 }}></div>
-        <span className="text-sm text-muted" style={{ marginRight: 12 }}>{profile ? profile.email : ""}</span>
-        <GrantHelperChat profile={profile} />
-        <button className="btn btn-secondary btn-sm" onClick={onLogout}><Icon name="LogOut" size={13} /> Sign out</button>
+        <div className="chooser-account">
+          <span className="chooser-email">{profile ? profile.email : ""}</span>
+          <button type="button" className="chooser-signout" onClick={onLogout}><Icon name="LogOut" size={14} /> Sign out</button>
+        </div>
       </header>
 
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", padding: "48px 20px 56px" }}>
-        <div style={{ textAlign: "center", marginBottom: 34, maxWidth: 660 }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, marginBottom: 14 }}>
-            <span style={{ height: 1, width: 30, background: "var(--au-gold)" }}></span>
-            <span className="eyebrow" style={{ color: "var(--au-crimson)" }}>Choose a grant to apply for</span>
-            <span style={{ height: 1, width: 30, background: "var(--au-gold)" }}></span>
-          </div>
-          <h1 style={{ fontFamily: "var(--font-serif)", fontSize: 34, fontWeight: 500, margin: "0 0 10px", letterSpacing: "-0.01em" }}>
-            Welcome{firstName ? ", " + firstName : ""}
-          </h1>
-          <p style={{ color: "var(--ink-2)", margin: 0, lineHeight: 1.65, fontSize: 15 }}>
-            Pick the AU research grant you want to work in. Each has its own form and documents —
-            the review workflow and payments are handled the same way. You can switch anytime.
-          </p>
+      <main className="chooser-main" aria-labelledby="grant-chooser-title">
+        <div className="chooser-intro">
+          <h1 id="grant-chooser-title">Choose your grant</h1>
+          <p>Research. Present. Publish.</p>
         </div>
 
-        <div className="grant-choice-grid">
+        <div className="grant-choice-grid" aria-label="Available research grants">
           {systems.map(sys => {
             const disabled = !sys.enabled;
-            const accent = sys.accent || "#9E1B1B";
-            const accentSoft = sys.accentSoft || "var(--au-crimson-soft)";
             return (
-              <button
-                key={sys.id}
-                type="button"
-                className="grant-choice-card"
-                disabled={disabled}
-                onClick={() => !disabled && onPick(sys.id)}
-                style={{ "--grant-accent": accent, "--grant-soft": accentSoft, opacity: disabled ? 0.66 : 1 }}
-              >
-                <div className="grant-choice-bar"></div>
-                <div className="grant-choice-body">
-                  {disabled && (
-                    <span style={{ position: "absolute", top: 18, right: 16, fontSize: 10, fontWeight: 700, letterSpacing: 0.4, textTransform: "uppercase", color: "var(--ink-3)", background: "var(--paper-warm)", border: "1px solid var(--line)", padding: "3px 8px", borderRadius: 999 }}>Coming soon</span>
-                  )}
-                  <div className="grant-choice-icon">
-                    <Icon name={sys.icon} size={24} />
-                  </div>
-                  <div className="grant-choice-code">{sys.code}</div>
-                  <div className="grant-choice-title">{sys.name}</div>
-                  <p className="grant-choice-desc">{sys.tagline}</p>
-                  <div className="grant-choice-action">
-                    {!disabled && <span>Apply <Icon name="ArrowRight" size={14} /></span>}
-                  </div>
+              <section key={sys.id} className={`grant-choice-card${sys.id === "au_r3" ? " grant-choice-card-center" : ""}${disabled ? " is-disabled" : ""}`} aria-labelledby={`grant-title-${sys.id}`}>
+                <div className="grant-choice-icon" aria-hidden="true">
+                  <Icon name={sys.icon} size={48} />
                 </div>
-              </button>
+                <p className="grant-choice-code">{sys.code}</p>
+                <h2 className="grant-choice-title" id={`grant-title-${sys.id}`}>{sys.name}</h2>
+                <p className="grant-choice-desc">{summaries[sys.id] || sys.tagline}</p>
+                <button type="button" className="grant-choice-action" disabled={disabled} onClick={() => !disabled && onPick(sys.id)} aria-label={`${disabled ? "Coming soon" : "Continue to"} ${sys.code}`}>
+                  {disabled ? "Coming soon" : <>Continue <Icon name="ArrowRight" size={16} /></>}
+                </button>
+              </section>
             );
           })}
         </div>
-
-      </div>
+      </main>
+      <GrantHelperChat profile={profile} />
     </div>
   );
 }
