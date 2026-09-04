@@ -4,6 +4,12 @@
 
 const RA = window.AU;
 
+const R1_EXAMPLE_PHASES = [
+  { key: "phase1", number: 1, label: "Phase 1" },
+  { key: "phase2", number: 2, label: "Phase 2" },
+  { key: "phase4", number: 4, label: "Phase 4" },
+];
+
 /* ---------- A. Dashboard Overview ---------- */
 function buildResearcherTimeline(statusKey) {
   const order = ["submission", "deanScreen", "committee", "iras", "contract", "pay1"];
@@ -73,7 +79,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
   const isSingle = isR3 || isR4;
   const n = (k) => (c ? (c[k] || 0) : "…");
   const latest = apps && apps.length ? apps[0] : null;
-  const exampleSteps = isR4 ? R4_PIPELINE : isR3 ? R3_PIPELINE : RA.ALL_STAGES;
+  const exampleSteps = isR4 ? R4_PIPELINE : isR3 ? R3_PIPELINE : R1_EXAMPLE_PHASES;
   const showExample = !!(apps && !apps.length);
   const singleGrant = isSingle && grant && grant.grant_type === grantType ? grant : null;
   const r3PayLabel = { approved: "Awaiting Finance Payment", active: "Paid", completed: "Completed" };
@@ -122,10 +128,10 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
           {appsError && <p className="text-sm text-muted" role="status">Could not load your application pipeline. Please refresh to try again.</p>}
           {apps === null && !appsError && <p className="text-sm text-muted" role="status">Loading pipeline…</p>}
           {showExample && <div className="researcher-pipeline-example">
-            <p className="text-sm text-muted">Your {sys.code} application will follow these steps.</p>
+            <p className="text-sm text-muted">{isSingle ? "Your " + sys.code + " application will follow these steps." : "AU-R1 phase overview."}</p>
             <ol className="researcher-pipeline-steps" aria-label={sys.code + " example workflow"}>
               {exampleSteps.map((step, index) => <li key={step.key}>
-                <span className="researcher-pipeline-number" aria-hidden="true">{index + 1}</span>
+                <span className="researcher-pipeline-number" aria-hidden="true">{step.number || index + 1}</span>
                 <span>{step.label}</span>
                 {index < exampleSteps.length - 1 && <span className="researcher-pipeline-arrow" aria-hidden="true"><Icon name="ArrowRight" size={14} /></span>}
               </li>)}
