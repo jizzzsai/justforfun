@@ -1,7 +1,7 @@
-/* ============================================================
-   AU RGMS · App shell
-   8 roles · single login · in-app role switcher
-   ============================================================ */
+
+
+
+
 
 const APP = window.AU;
 const TEST_PASSWORD = "AuResearch#2026";
@@ -21,7 +21,7 @@ const TEST_EXPERT_ACCOUNTS = [
   { label: "Expert 3", email: "expert.ds@au.edu" },
 ];
 
-/* ============= LOGIN PAGE ============= */
+
 function LoginPage({ onLogin }) {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
@@ -174,7 +174,7 @@ function LoginHelpDialog({ topic, onClose }) {
   );
 }
 
-/* ============= EMBEDDED AU AI HELPER (grant chooser) ============= */
+
 const CHOOSER_INTRO = "Hi, I'm AU AI. Not sure which grant fits you? Ask me what each one is for, how they differ, the amounts, or what documents you'll need — I'll help you pick.";
 const CHOOSER_CHIPS = [
   "What's the difference between AU-R1, AU-R3 and AU-R4?",
@@ -243,7 +243,7 @@ function GrantHelperChat({ profile }) {
   );
 }
 
-/* ============= GRANT SYSTEM CHOOSER (researcher landing) ============= */
+
 function GrantSystemChooser({ profile, onPick, onLogout }) {
   const systems = APP.GRANT_SYSTEMS || [];
   const summaries = {
@@ -304,7 +304,7 @@ function GrantSystemChooser({ profile, onPick, onLogout }) {
   );
 }
 
-/* ============= ROLE-SCOPED CONFIG ============= */
+
 const ROLE_CONFIG = {
   researcher: {
     nav: APP.NAV_RESEARCHER,
@@ -338,7 +338,7 @@ const ROLE_CONFIG = {
   },
 };
 
-/* ============= APP HEADER ============= */
+
 const SYSTEM_ROLE_KEYS = {
   au_r1: ["researcher", "dean", "committee", "iras", "ofm", "admin"],
   au_r3: ["researcher", "dean", "iras", "ofm", "admin"],
@@ -469,7 +469,7 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSys
   );
 }
 
-/* ============= SIDEBAR ============= */
+
 function Sidebar({ nav, current, onNavigate }) {
   return (
     <aside className="sidebar">
@@ -499,7 +499,7 @@ function Sidebar({ nav, current, onNavigate }) {
   );
 }
 
-/* ============= SUBBAR / BREADCRUMBS ============= */
+
 function SubBar({ crumbs, onHome, onCrumb }) {
   return (
     <div className="subbar">
@@ -522,11 +522,11 @@ function SubBar({ crumbs, onHome, onCrumb }) {
   );
 }
 
-/* ============= ROUTER ============= */
+
 function PageRouter({ pageKey, navigate, ctx }) {
   const c = ctx;
   switch (pageKey) {
-    /* ---- Researcher ---- */
+
     case "r-dashboard":     return <ResearcherDashboard navigate={navigate} onDownload={c.onDownload} onView={c.onView} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} />;
     case "r-submit":        return c.grantType === "au_r4"
                               ? <ResearcherSubmitR4 applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} />
@@ -540,7 +540,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "r-payments":      return <ResearcherPayments onDownload={c.onDownload} toast={c.toast} grantType={c.grantType} />;
     case "r-publications":  return <ResearcherPublicationGrants toast={c.toast} />;
 
-    /* ---- Dean ---- */
+
     case "d-dashboard":      return <DeanDashboard navigate={navigate} />;
     case "d-screen":         return <DeanScreenQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "d-screen-detail":  return <FacultyChecklist applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
@@ -551,13 +551,13 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "d-history":        return <DeanHistory navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "d-history-detail": return <DeanDecisionTimeline applicationId={c.selectedApplicationId} navigate={navigate} />;
 
-    /* ---- Committee ---- */
+
     case "c-dashboard":      return <CommitteeDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "c-queue":          return <CommitteeQueue navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "c-review":         return <FacultyAcademic applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "c-history":        return <CommitteeHistory onDownload={c.onDownload} />;
 
-    /* ---- RASSC ---- */
+
     case "i-dashboard":      return <RASSCDashboardV2 navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "i-r3-verify":      return <IRASr3Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-r4-verify":      return <IRASr4Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
@@ -567,14 +567,14 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "i-publications":   return <RASSCPublicationGrants toast={c.toast} />;
     case "i-reviewers":      return <RASSCReviewerPool toast={c.toast} />;
 
-    /* ---- OFM / Finance ---- */
+
     case "o-dashboard":      return <OFMDashboard navigate={navigate} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-payments":       return <RASSCPayment onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-detail":         return <OFMDetail onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-publications":   return <OFMPublicationPayments toast={c.toast} />;
     case "o-history":        return <OFMHistory onDownload={c.onDownload} />;
 
-    /* ---- Administrator ---- */
+
     case "a-dashboard":      return <AdminDashboard navigate={navigate} />;
     case "a-users":          return <AdminUsers toast={c.toast} setConfirm={c.setConfirm} profile={c.profile} />;
     case "a-analytics":      return c.profile && c.profile.role === "admin"
@@ -582,7 +582,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
       : <Empty title="Administrator access required" desc="AI Analytics is available only to administrators." icon="Lock" />;
     case "a-audit":          return <AdminAudit />;
 
-    /* ---- Shared ---- */
+
     case "forms":            return <FormsLibrary />;
     case "account":          return <AccountSettings toast={c.toast} />;
 
@@ -590,7 +590,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
   }
 }
 
-/* ============= HASH ROUTING ============= */
+
 function readHash() {
   try {
     const h = window.location.hash || "";
@@ -604,7 +604,7 @@ function readHash() {
   } catch (e) { return {}; }
 }
 
-/* ============= MAIN APP ============= */
+
 function App() {
   const initial = readHash();
   const startingRole = initial.role && ROLE_CONFIG[initial.role] ? initial.role : "researcher";
@@ -804,6 +804,6 @@ function App() {
   );
 }
 
-/* Mount */
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<App />);

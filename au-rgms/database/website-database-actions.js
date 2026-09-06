@@ -1,5 +1,5 @@
-/* AU-RGMS data layer — real Supabase reads/writes + workflow engine.
-   Loaded after login-and-database-connection.js (window.sb) and before the React app. */
+
+
 (function () {
   var sb = window.sb;
   if (!sb) { console.error("[AU] window.sb not ready for DB layer"); return; }

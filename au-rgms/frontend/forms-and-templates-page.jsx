@@ -1,5 +1,5 @@
-/* Forms & Templates — official AU research-grant documents, real PDF downloads.
-   Shared page available to every role (researcher fills them; others reference them). */
+
+
 function FormsLibrary() {
   const FORMS = [
     {

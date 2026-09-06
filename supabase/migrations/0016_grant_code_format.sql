@@ -1,7 +1,7 @@
--- 0016_grant_code_format.sql
--- Grant-type-specific application codes: AU-R3-YYYY-NNN and AU-R4-YYYY-NNN so the
--- grant type is obvious from the ID; AU-R1 keeps RG-YYYY-NNN. Numbering is per
--- prefix + year. Existing rows keep their old codes.
+
+
+
+
 create or replace function public.set_application_code()
 returns trigger
 language plpgsql

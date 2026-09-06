@@ -1,10 +1,10 @@
-/* ============================================================
-   IRAS / Research Support Committee / President / Finance pages
-   ============================================================ */
+
+
+
 
 const IR = window.AU;
 
-/* ---------- A. Dashboard Overview ---------- */
+
 function IRASDashboard({ navigate }) {
   return (
     <>
@@ -111,7 +111,7 @@ function IRASDashboard({ navigate }) {
   );
 }
 
-/* ---------- B. Received Applications ---------- */
+
 function IRASReceived({ navigate, onDownload }) {
   return (
     <>
@@ -167,7 +167,7 @@ function IRASReceived({ navigate, onDownload }) {
   );
 }
 
-/* ---------- C. Assign Expert Reviewers ---------- */
+
 function IRASAssign({ toast, setConfirm }) {
   return (
     <>
@@ -292,7 +292,7 @@ function IRASAssign({ toast, setConfirm }) {
   );
 }
 
-/* ---------- D. Expert Review ---------- */
+
 function IRASExpert({ onDownload, onView, toast, setConfirm }) {
   const app = IR.PRIMARY_APP;
   return (
@@ -427,7 +427,7 @@ function IRASExpert({ onDownload, onView, toast, setConfirm }) {
   );
 }
 
-/* ---------- E. Committee Decision ---------- */
+
 function IRASCommittee({ onDownload, toast, setConfirm }) {
   const app = IR.PRIMARY_APP;
   const submitted = app.experts.filter(e => e.score !== null);
@@ -581,7 +581,7 @@ function IRASCommittee({ onDownload, toast, setConfirm }) {
   );
 }
 
-/* ---------- F. President Approval ---------- */
+
 function IRASPresident({ onDownload, toast, setConfirm }) {
   const app = IR.PRIMARY_APP;
   return (
@@ -720,7 +720,7 @@ function IRASPresident({ onDownload, toast, setConfirm }) {
   );
 }
 
-/* ---------- G. Contract Management ---------- */
+
 function IRASContract({ onDownload, toast, setConfirm }) {
   return (
     <>
@@ -866,7 +866,7 @@ function IRASContract({ onDownload, toast, setConfirm }) {
   );
 }
 
-/* ---------- H. Finance / OFM Payment ---------- */
+
 function IRASPayment({ onDownload, toast, setConfirm }) {
   const rows = [
     { id: "RG-2025-001", title: "AI-Based Research Grant Tracking System", who: "Dr. Phyo Min Tun",         total: 100000, p1: "pending", p2: "draft", p3: "draft", clearance: "Awaiting contract" },
@@ -964,7 +964,7 @@ function IRASPayment({ onDownload, toast, setConfirm }) {
   );
 }
 
-/* ---------- I. Report Review ---------- */
+
 function IRASReports({ onDownload, onView, toast, setConfirm }) {
   return (
     <>
@@ -1078,7 +1078,7 @@ function IRASReports({ onDownload, onView, toast, setConfirm }) {
   );
 }
 
-/* ---------- J. Full Application Timeline ---------- */
+
 function IRASFullTimeline() {
   const app = IR.PRIMARY_APP;
   return (

@@ -1,8 +1,8 @@
 import { type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
-// Next.js 16 "proxy" convention (formerly middleware). Refreshes the
-// Supabase auth cookie and guards authenticated routes.
+
+
 export async function proxy(request: NextRequest) {
   return await updateSession(request);
 }

@@ -1,6 +1,6 @@
-/* AU-RGMS — Supabase client + auth helpers (real backend).
-   Loaded after the supabase-js UMD bundle, before the React app.
-   The anon key is public/safe in the browser; Row-Level Security protects data. */
+
+
+
 (function () {
   var SUPABASE_URL = "https://kmseaoipvjhgznswbmlt.supabase.co";
   var SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imttc2Vhb2lwdmpoZ3puc3dibWx0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODA0NjI2NjEsImV4cCI6MjA5NjAzODY2MX0.KgQSB0tVH3Qj2C5pT_l6z6FKLS8S1KYdfDli-eq46xw";

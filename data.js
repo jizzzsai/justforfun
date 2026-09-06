@@ -1,15 +1,15 @@
-/* ============================================================
-   AU Research Grant Management System
-   Mock data + role configuration
 
-   8 roles · 14-step workflow:
-   Submitted → Dean Screening → Faculty Committee Review →
-   Dean Sign & Forward → IRAS → Expert Review → President →
-   Contract Signed → Payment 30% → Progress Report →
-   Payment 40% → Final Report → Payment 30% → Closed
-   ============================================================ */
 
-/* --- Canonical workflow stages (for timelines) ---------------- */
+
+
+
+
+
+
+
+
+
+
 const ALL_STAGES = [
   { key: "submission",   label: "Researcher Submission" },
   { key: "deanScreen",   label: "Dean Screening" },
@@ -27,7 +27,7 @@ const ALL_STAGES = [
   { key: "closed",       label: "Project Closed" },
 ];
 
-/* --- Status badge dictionary --------------------------------- */
+
 const STATUS = {
   draft:            { key: "draft",            label: "Draft",                       cls: "badge-draft" },
   submitted:        { key: "submitted",        label: "Submitted",                   cls: "badge-submitted" },
@@ -50,7 +50,7 @@ const STATUS = {
   paymentPending:   { key: "paymentPending",   label: "Payment Pending",             cls: "badge-pending" },
 };
 
-/* --- Required documents --------------------------------------- */
+
 const REQUIRED_DOCS = [
   { id: "doc1", name: "Recommendation_Form.pdf",                     size: "248 KB", uploaded: true, uploadedAt: "Oct 18, 2025", role: "Form 1 · Recommendation by Dept Head" },
   { id: "doc2", name: "Application_Form.pdf",                        size: "512 KB", uploaded: true, uploadedAt: "Oct 18, 2025", role: "Form 2 · Application for Research Grant" },
@@ -58,7 +58,7 @@ const REQUIRED_DOCS = [
   { id: "doc4", name: "Research_Creative_Grant_Submission_Form.pdf", size: "320 KB", uploaded: true, uploadedAt: "Oct 18, 2025", role: "Form 4 · Research / Creative Grant Submission" },
 ];
 
-/* --- Primary application (RG-2025-001) ------------------------ */
+
 const PRIMARY_APP = {
   id: "RG-2025-001",
   title: "AI-Based Research Grant Tracking System for Assumption University",
@@ -121,7 +121,7 @@ const PRIMARY_APP = {
   },
 };
 
-/* --- Application pool for all role tables -------------------- */
+
 const APPLICATIONS = [
   PRIMARY_APP,
   {
@@ -269,7 +269,7 @@ const APPLICATIONS = [
   },
 ];
 
-/* --- Notifications ------------------------------------------- */
+
 const NOTIFS = [
   { id: 1, unread: true,  icon: "Bell",      who: "IRAS Office",    text: "Your application <b>RG-2025-001</b> has been assigned to three expert reviewers.", when: "2 hours ago" },
   { id: 2, unread: true,  icon: "FileCheck", who: "Faculty Committee", text: "Comments added to <b>RG-2025-001</b> by Assoc. Prof. Dr. Watcharee.", when: "Yesterday, 4:12 PM" },
@@ -278,14 +278,14 @@ const NOTIFS = [
   { id: 5, unread: false, icon: "FileText",  who: "Faculty Office", text: "Document check completed for <b>RG-2025-001</b>.", when: "Oct 20, 2025" },
 ];
 
-/* --- Payments for primary app -------------------------------- */
+
 const PAYMENTS = [
   { n: 1, pct: 30, amount: 30000, label: "First Disbursement",  status: "Pending Contract",         badge: "badge-pending", date: "Scheduled after contract signing",       requiredDoc: "Signed Contract",            receipt: null },
   { n: 2, pct: 40, amount: 40000, label: "Second Disbursement", status: "Awaiting Progress Report", badge: "badge-draft",   date: "Scheduled after progress report approval", requiredDoc: "Approved Progress Report", receipt: null },
   { n: 3, pct: 30, amount: 30000, label: "Final Disbursement",  status: "Awaiting Final Report",    badge: "badge-draft",   date: "Scheduled after final report approval",    requiredDoc: "Approved Final Report",   receipt: null },
 ];
 
-/* --- Activity feed ------------------------------------------- */
+
 const ACTIVITY = [
   { t: "2h ago",       text: "Expert review submitted by <b>Assoc. Prof. Dr. Suthep Lertsiri</b>",          kind: "expert" },
   { t: "Yesterday",    text: "Dean forwarded <b>RG-2025-001</b> to IRAS",                                   kind: "approval" },
@@ -294,7 +294,7 @@ const ACTIVITY = [
   { t: "Oct 18, 2025", text: "Initial submission of <b>RG-2025-001</b>",                                    kind: "submit" },
 ];
 
-/* --- 8 roles in the system ------------------------------------ */
+
 const ROLES = [
   { key: "researcher", name: "Researcher",            full: "Dr. Phyo Min Tun",                 subtitle: "Asst. Professor · IT",                initials: "PT", iconName: "GraduationCap" },
   { key: "dean",       name: "Dean",                  full: "Assoc. Prof. Dr. Surasak Chamnongpol", subtitle: "Dean · VMS-EST",                  initials: "SC", iconName: "Building2" },
@@ -306,7 +306,7 @@ const ROLES = [
   { key: "admin",      name: "Administrator",         full: "K. Tanapong Wisetphan",            subtitle: "System Administrator",                initials: "TW", iconName: "Settings" },
 ];
 
-/* --- Per-role sidebar navigation ----------------------------- */
+
 const NAV_RESEARCHER = [
   { section: "WORKSPACE" },
   { key: "r-dashboard",   label: "Dashboard",          icon: "LayoutDashboard" },
@@ -388,7 +388,7 @@ const NAV_ADMIN = [
   { key: "a-settings",    label: "System Settings",            icon: "Settings" },
 ];
 
-/* --- System users (for Admin dashboard) ---------------------- */
+
 const SYSTEM_USERS = [
   { id: "U001", name: "Dr. Phyo Min Tun",                       email: "phyomintun@au.edu",      role: "Researcher",         dept: "Information Technology",     status: "Active",   lastLogin: "Today, 09:42" },
   { id: "U002", name: "Assoc. Prof. Dr. Surasak Chamnongpol",   email: "surasak.c@au.edu",       role: "Dean",               dept: "VMS-EST",                    status: "Active",   lastLogin: "Today, 08:11" },
@@ -406,7 +406,7 @@ const SYSTEM_USERS = [
   { id: "U014", name: "Dr. Nisachon Charoenwong",               email: "nisachon.c@au.edu",      role: "Researcher",         dept: "Visual Communication",       status: "Active",   lastLogin: "Today, 10:48" },
 ];
 
-/* --- Journal tier reference (Admin) -------------------------- */
+
 const JOURNAL_TIERS = [
   { code: "Q1", name: "Tier 1 · International (Scopus Q1 / WoS top quartile)",   incentive: 50000, count: 142 },
   { code: "Q2", name: "Tier 2 · International (Scopus Q2 / WoS mid quartile)",   incentive: 35000, count: 218 },
@@ -417,7 +417,7 @@ const JOURNAL_TIERS = [
   { code: "CONF", name: "International Conference Proceedings",                   incentive:  6000, count: 119 },
 ];
 
-/* --- Audit log (Admin) --------------------------------------- */
+
 const AUDIT_LOG = [
   { t: "Today, 10:48", who: "Dr. Nisachon Charoenwong",     act: "Logged in",                                ip: "192.168.4.21" },
   { t: "Today, 10:42", who: "Prof. Dr. Sirilak Khempila",   act: "Assigned experts to RG-2025-001",          ip: "10.0.12.4"  },
@@ -429,7 +429,7 @@ const AUDIT_LOG = [
   { t: "Yesterday",    who: "Assoc. Prof. Dr. Watcharee",   act: "Submitted committee review for RG-2025-002", ip: "10.0.9.3" },
 ];
 
-/* --- Helper queues for each role ----------------------------- */
+
 const Q_DEAN_SCREEN  = APPLICATIONS.filter(a => ["submitted", "deanScreen"].includes(a.status.key));
 const Q_DEAN_SIGN    = APPLICATIONS.filter(a => a.status.key === "deanSign");
 const Q_COMMITTEE    = APPLICATIONS.filter(a => a.status.key === "committee");
@@ -438,7 +438,7 @@ const Q_EXPERT       = APPLICATIONS.filter(a => a.status.key === "expertReview")
 const Q_PRESIDENT    = APPLICATIONS.filter(a => a.status.key === "presidentApproval");
 const Q_OFM          = APPLICATIONS.filter(a => ["contractSigned", "pay1", "progressSubmitted", "pay2", "finalSubmitted", "pay3"].includes(a.status.key));
 
-/* --- Expose all ---------------------------------------------- */
+
 window.AU = {
   ALL_STAGES, STATUS, REQUIRED_DOCS,
   PRIMARY_APP, APPLICATIONS,
@@ -448,7 +448,7 @@ window.AU = {
   NAV_EXPERT, NAV_PRESIDENT, NAV_OFM, NAV_ADMIN,
   SYSTEM_USERS, JOURNAL_TIERS, AUDIT_LOG,
   Q_DEAN_SCREEN, Q_DEAN_SIGN, Q_COMMITTEE, Q_IRAS, Q_EXPERT, Q_PRESIDENT, Q_OFM,
-  // Legacy aliases used by existing pages
+
   MOCK_DOCS: REQUIRED_DOCS,
   FACULTY_QUEUE: APPLICATIONS.filter(a => ["submitted", "deanScreen", "committee", "deanSign", "revision"].includes(a.status.key)),
   IRAS_QUEUE: APPLICATIONS.filter(a => ["iras", "expertReview", "presidentApproval", "contractSigned", "pay1", "progressSubmitted", "pay2", "finalSubmitted", "pay3"].includes(a.status.key)),

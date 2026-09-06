@@ -1,6 +1,6 @@
--- ============================================================
--- Reference data: journal tiers + system settings (idempotent)
--- ============================================================
+
+
+
 
 insert into journal_tiers (code, name, indexing, description, max_amount, sort_order) values
   ('Q1',   'Quartile 1',         'Scopus / Web of Science (Q1)',  'Top-quartile international journal',          150000, 1),

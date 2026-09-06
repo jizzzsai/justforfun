@@ -10,7 +10,7 @@ export default async function LoginPage() {
 
   return (
     <div className="grid min-h-screen lg:grid-cols-2">
-      {/* Brand panel */}
+      {                 }
       <div className="relative hidden flex-col justify-between bg-gold p-12 text-white lg:flex">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15">
@@ -54,7 +54,7 @@ export default async function LoginPage() {
         </div>
       </div>
 
-      {/* Form panel */}
+      {                }
       <div className="flex items-center justify-center bg-cream px-6 py-12">
         <div className="w-full max-w-sm">
           <div className="mb-8 lg:hidden">

@@ -19,9 +19,9 @@ export type Tone = "neutral" | "info" | "ok" | "warn" | "danger" | "gold";
 export interface StatusMeta {
   label: string;
   tone: Tone;
-  /** Which role's queue this application currently sits in (if any). */
+
   owner: Role | null;
-  /** Short description of what happens at this stage. */
+
   stage: string;
 }
 
@@ -40,7 +40,7 @@ export const STATUS: Record<AppStatus, StatusMeta> = {
   returned: { label: "Returned", tone: "warn", owner: "researcher", stage: "Returned for revision" },
 };
 
-/** Linear pipeline used for progress indicators / timelines. */
+
 export const PIPELINE: AppStatus[] = [
   "submitted",
   "committee_review",
@@ -61,7 +61,7 @@ export function statusLabel(status: AppStatus): string {
   return STATUS[status]?.label ?? status;
 }
 
-/** Applications that currently sit in a given role's work queue. */
+
 export const QUEUE_STATUS: Partial<Record<Role, AppStatus[]>> = {
   dean: ["submitted", "dean_sign"],
   committee: ["committee_review"],
@@ -71,7 +71,7 @@ export const QUEUE_STATUS: Partial<Record<Role, AppStatus[]>> = {
   ofm: ["approved", "active"],
 };
 
-/** Payment instalment plan (AU 30 / 40 / 30). */
+
 export const PAYMENT_PLAN = [
   { n: 1, pct: 30, trigger: "On contract signing" },
   { n: 2, pct: 40, trigger: "On approved progress report" },

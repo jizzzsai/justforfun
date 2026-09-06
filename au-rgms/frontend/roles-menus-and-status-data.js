@@ -1,11 +1,11 @@
-/* ============================================================
-   AU Research Grant Management System
-   Policy-aligned local data and role configuration
 
-   Source rules used here:
-   - AU Announcement No.12/2024, Research Grant (AU-R1 process & required documents)
-   - AU Announcement No.16/2024, Paper Publication Grant
-   ============================================================ */
+
+
+
+
+
+
+
 
 const ALL_STAGES = [
   { key: "submission",   label: "Researcher Submission" },

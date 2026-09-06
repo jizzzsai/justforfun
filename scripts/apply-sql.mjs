@@ -1,5 +1,5 @@
-// Applies every supabase/migrations/*.sql file in order over a direct
-// Postgres connection. Run: npm run db:push
+
+
 import { readFileSync, readdirSync } from "node:fs";
 import path from "node:path";
 import pg from "pg";

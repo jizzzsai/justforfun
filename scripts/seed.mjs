@@ -1,6 +1,6 @@
-// Seeds demo users (one per role) + sample applications across every
-// workflow stage. Uses the service-role key (bypasses RLS).
-// Run AFTER db:push.  ->  npm run db:seed
+
+
+
 import { createClient } from "@supabase/supabase-js";
 import dotenv from "dotenv";
 
@@ -27,7 +27,7 @@ const must = (error, where) => {
   }
 };
 
-// ---------------- users ----------------
+
 const USERS = [
   { key: "res1", email: "somchai.r@au.edu",    full_name: "Dr. Somchai Rattana",     role: "researcher", title: "Dr.",          faculty: "Science & Technology", department: "Computer Science" },
   { key: "res2", email: "niran.p@au.edu",      full_name: "Asst. Prof. Niran Phong",  role: "researcher", title: "Asst. Prof.",  faculty: "Engineering",          department: "Electrical Engineering" },
@@ -56,13 +56,13 @@ for (const u of USERS) {
   if (error && !/already|registered|exists/i.test(error.message)) must(error, `createUser ${u.email}`);
 }
 
-// map email -> id
+
 const { data: list, error: listErr } = await db.auth.admin.listUsers({ page: 1, perPage: 1000 });
 must(listErr, "listUsers");
 const idByEmail = Object.fromEntries(list.users.map((u) => [u.email, u.id]));
 const id = (key) => idByEmail[USERS.find((u) => u.key === key).email];
 
-// upsert full profile data (role/expertise) — authoritative over the trigger
+
 const profileRows = USERS.map((u) => ({
   id: id(u.key), email: u.email, full_name: u.full_name, role: u.role,
   title: u.title || null, faculty: u.faculty, department: u.department,
@@ -71,16 +71,16 @@ const profileRows = USERS.map((u) => ({
 must((await db.from("profiles").upsert(profileRows, { onConflict: "id" })).error, "upsert profiles");
 console.log(`  ${USERS.length} users ready (password: ${DEMO_PASSWORD})`);
 
-// journal tier ids
+
 const { data: tiers, error: tierErr } = await db.from("journal_tiers").select("id, code");
 must(tierErr, "load tiers");
 const tier = (code) => tiers.find((t) => t.code === code)?.id ?? null;
 
-// ---------------- reset sample applications ----------------
+
 console.log("→ resetting sample applications …");
 must((await db.from("applications").delete().like("code", "AU-2026-%")).error, "clear applications");
 
-// ---------------- applications ----------------
+
 const APPS = [
   { code: "AU-2026-001", who: "res1", status: "submitted",        tier: "Q1",   amount: 150000, dur: 12, sub: 2,  title: "Deep Learning for Thai Medical Text Extraction", field: "Artificial Intelligence",
     abstract: "A transformer-based pipeline for extracting structured clinical entities from Thai-language medical records, targeting hospital information systems." },
@@ -122,7 +122,7 @@ must(appErr, "insert applications");
 const appId = Object.fromEntries(inserted.map((r) => [r.code, r.id]));
 console.log(`  ${inserted.length} applications inserted`);
 
-// ---------------- events / screenings / reviews / assignments / approvals / contracts / payments / reports ----------------
+
 const events = [];
 const ev = (code, role, action, to, n, note) =>
   events.push({ application_id: appId[code], actor_id: id(role), actor_role: USERS.find((u) => u.key === role)?.role ?? null, action, to_status: to, note: note ?? null, created_at: daysAgo(n) });

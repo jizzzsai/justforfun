@@ -1,11 +1,11 @@
-/* ============================================================
-   RASSC / President / Finance pages
-   ============================================================ */
+
+
+
 
 const IR = window.AU;
 
-/* ---------- A. Dashboard Overview ---------- */
-/* ---------- B. Received Applications ---------- */
+
+
 function RASSCReceived({ navigate, onDownload, setSelectedApplicationId }) {
   const [rows, setRows] = useState(null);
   useEffect(() => {
@@ -41,7 +41,7 @@ function RASSCReceived({ navigate, onDownload, setSelectedApplicationId }) {
   );
 }
 
-/* ---------- C. Assign Expert Reviewers ---------- */
+
 function RASSCAssign({ applicationId, setSelectedApplicationId, toast, setConfirm }) {
   const requiredExperts = 3;
   const [apps, setApps] = useState(null);
@@ -217,8 +217,8 @@ function RASSCAssign({ applicationId, setSelectedApplicationId, toast, setConfir
   );
 }
 
-/* ---------- D. Expert Review ---------- */
-/* ---------- D. Expert Review (live) ---------- */
+
+
 function RASSCExpert({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -455,9 +455,9 @@ function RASSCExpert({ applicationId, navigate, onDownload, onView, toast, setCo
   );
 }
 
-/* ---------- E. Committee Decision ---------- */
-/* ---------- F. President Approval ---------- */
-/* ---------- G. Contract Management ---------- */
+
+
+
 function RASSCPresident({ onDownload, toast, setConfirm }) {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -600,7 +600,7 @@ function RASSCContract({ onDownload, toast, setConfirm }) {
   );
 }
 
-/* ---------- H. Finance / OFM Payment ---------- */
+
 function RASSCPayment({ onDownload, toast, setConfirm }) {
   const [apps, setApps] = useState(null);
   const load = () => window.DB.ofmPayments().then(setApps).catch(() => setApps([]));
@@ -679,7 +679,7 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
                 const requested = Number(a.requested_amount || 0);
                 return (
                   <tr key={a.id}>
-                    {/* Application: id + system badge on one line, title beneath */}
+                    {                                                               }
                     <td style={{ maxWidth: 230 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <span className="id" style={{ fontSize: 11 }}>{a.code}</span>
@@ -687,7 +687,7 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
                       </div>
                       <div style={{ fontSize: 12.5, fontWeight: 600, marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }} title={a.title}>{a.title}</div>
                     </td>
-                    {/* Researcher: name + faculty·dept beneath */}
+                    {                                             }
                     <td style={{ maxWidth: 150 }}>
                       <div style={{ fontSize: 12 }}>{a.researcher ? a.researcher.full_name : "—"}</div>
                       <div style={{ fontSize: 10.5, color: "var(--ink-3)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
@@ -695,7 +695,7 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
                         {(a.faculty || "—")}{a.department ? " · " + a.department : ""}
                       </div>
                     </td>
-                    {/* Approved (with requested beneath when they differ) */}
+                    {                                                        }
                     <td style={{ textAlign: "right" }}>
                       <div style={{ fontWeight: 600, fontFamily: "ui-monospace, monospace", fontSize: 12.5 }}>{approved ? fmtBaht(approved) : "—"}</div>
                       {approved !== requested && requested > 0 && (
@@ -719,7 +719,7 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
   );
 }
 
-/* ---------- I. Report Review ---------- */
+
 function RASSCReports({ onDownload, onView, toast, setConfirm }) {
   const [reports, setReports] = useState(null);
   const load = () => window.DB.reportQueue().then(setReports).catch(() => setReports([]));
@@ -904,7 +904,7 @@ function OFMPublicationPayments({ toast }) {
   );
 }
 
-/* ---------- Reimbursement claims: Dean -> RASSC -> OFM ---------- */
+
 function ReimbursementReview({ title, desc, statuses, stage, toast }) {
   const [rows, setRows] = useState(null);
   const [selected, setSelected] = useState(null);
@@ -1015,7 +1015,7 @@ function OFMReimbursements({ toast }) {
   );
 }
 
-/* ---------- J. Full Application Timeline ---------- */
+
 Object.assign(window, { RASSCReceived, RASSCAssign, RASSCExpert, RASSCPresident, RASSCContract, RASSCPayment,
   RASSCReports, RASSCPublicationGrants, OFMPublicationPayments,
   DeanReimbursements, RASSCReimbursements, OFMReimbursements,

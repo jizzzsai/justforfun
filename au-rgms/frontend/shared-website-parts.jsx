@@ -1,10 +1,4 @@
-/* ============================================================
-   Shared UI components for the AU Research Grant Portal
-   ============================================================ */
-
 const { useState, useEffect, useRef, useMemo } = React;
-
-/* ---------- Icon: small inline SVG library (Lucide-styled) ---------- */
 const ICONS = {
   LayoutDashboard: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z',
   FilePlus: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6 M12 12v6 M9 15h6',
@@ -81,10 +75,6 @@ function Icon({ name, size = 16, stroke = 1.75, className = "", style = {} }) {
     </svg>
   );
 }
-
-/* ---------- AU Logo: real seal on a white circular plate ----------
-   The image preserves the original AU crest detail; the white plate
-   makes it readable against the maroon header / login backdrop. */
 function AULogo({ size = 56, ringColor = "var(--au-gold)", ringWidth = 3, plateColor = "#fff", className = "" }) {
   return (
     <div
@@ -106,8 +96,6 @@ function AULogo({ size = 56, ringColor = "var(--au-gold)", ringWidth = 3, plateC
     </div>
   );
 }
-
-/* ---------- Badge ---------- */
 function Badge({ status, children, dot = true, className = "" }) {
   const cls = status ? status.cls : className;
   const label = status ? status.label : children;
@@ -118,8 +106,6 @@ function Badge({ status, children, dot = true, className = "" }) {
     </span>
   );
 }
-
-/* ---------- Avatar ---------- */
 function Avatar({ initials, size = 32, color = "var(--au-navy)" }) {
   return (
     <div style={{
@@ -133,8 +119,6 @@ function Avatar({ initials, size = 32, color = "var(--au-navy)" }) {
     </div>
   );
 }
-
-/* ---------- Toast ---------- */
 function Toast({ message, onClose }) {
   useEffect(() => {
     const t = setTimeout(onClose, 2400);
@@ -147,8 +131,6 @@ function Toast({ message, onClose }) {
     </div>
   );
 }
-
-/* ---------- FileRow: a downloadable document ---------- */
 function FileRow({ doc, onDownload, onView, missing = false, compact = false }) {
   return (
     <div className="file-row">
@@ -180,8 +162,6 @@ function FileRow({ doc, onDownload, onView, missing = false, compact = false }) 
     </div>
   );
 }
-
-/* ---------- Timeline (vertical) ---------- */
 function Timeline({ steps, app, onStepClick }) {
   const tl = app.timeline || {};
   return (
@@ -211,8 +191,6 @@ function Timeline({ steps, app, onStepClick }) {
     </div>
   );
 }
-
-/* ---------- Horizontal timeline ---------- */
 function HTimeline({ steps, app }) {
   const tl = app.timeline || {};
   return (
@@ -231,8 +209,6 @@ function HTimeline({ steps, app }) {
     </div>
   );
 }
-
-/* ---------- Stat card ---------- */
 function Stat({ label, value, icon, tone = "", delta, deltaTone }) {
   return (
     <div className={`stat ${tone}`}>
@@ -249,8 +225,6 @@ function Stat({ label, value, icon, tone = "", delta, deltaTone }) {
     </div>
   );
 }
-
-/* ---------- Modal ---------- */
 function Modal({ open, onClose, title, children, footer, size }) {
   if (!open) return null;
   return (
@@ -268,8 +242,6 @@ function Modal({ open, onClose, title, children, footer, size }) {
     </div>
   );
 }
-
-/* ---------- File Preview Modal ---------- */
 function FilePreviewModal({ doc, onClose, onDownload }) {
   if (!doc) return null;
   return (
@@ -308,13 +280,6 @@ function FilePreviewModal({ doc, onClose, onDownload }) {
     </Modal>
   );
 }
-
-/* ---------- Confirm Modal ---------- */
-/* Two-step confirm: step 1 collects the decision + reason, step 2 is a final
-   "are you sure" check. Every workflow decision (Dean / Committee / RASSC / IRAS
-   / Finance forward, return, reject — AU-R1, AU-R3 and AU-R4 alike) passes
-   withReason, so they all get the second confirmation automatically.
-   Pass finalConfirm={false} to opt a caller out. */
 function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primary", confirmLabel = "Confirm", withReason = false, reasonLabel = "Reason / note", reasonPlaceholder = "Add a comment for the record — the researcher and next reviewers can see this.", reasonRequired = false, finalConfirm }) {
   const [reason, setReason] = useState("");
   const [step, setStep] = useState(1);
@@ -325,7 +290,6 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
   const btnCls = { primary: "btn-primary", success: "btn-success", danger: "btn-primary" }[kind];
   const blocked = withReason && reasonRequired && !reason.trim();
   const twoStep = finalConfirm === undefined ? withReason : finalConfirm;
-
   if (step === 2) {
     return (
       <Modal open={true} onClose={onClose} size="sm">
@@ -350,7 +314,6 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
       </Modal>
     );
   }
-
   return (
     <Modal open={true} onClose={onClose} size="sm">
       <div className={`conf-icon ${iconCls}`}>
@@ -374,7 +337,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
   );
 }
 
-/* ---------- Review comment history ---------- */
+
 function ReviewCommentHistory({ app, roles = ["dean", "committee"] }) {
   const wantsCommittee = roles.includes("committee");
   const items = [];
@@ -437,7 +400,6 @@ function ReviewCommentHistory({ app, roles = ["dean", "committee"] }) {
   );
 }
 
-/* ---------- Notification panel ---------- */
 function NotifPanel({ items, onClose, onOpen }) {
   const unread = items.filter(n => n.unread).length;
   return (
@@ -467,8 +429,6 @@ function NotifPanel({ items, onClose, onOpen }) {
     </div>
   );
 }
-
-/* ---------- Page Header ---------- */
 function PageHeader({ title, desc, actions }) {
   return (
     <div className="page-header">
@@ -480,8 +440,6 @@ function PageHeader({ title, desc, actions }) {
     </div>
   );
 }
-
-/* ---------- Empty state ---------- */
 function Empty({ title, desc, icon = "Folder" }) {
   return (
     <div style={{ padding: "48px 20px", textAlign: "center", color: "var(--ink-3)" }}>
@@ -497,16 +455,9 @@ function Empty({ title, desc, icon = "Folder" }) {
     </div>
   );
 }
-
-/* ---------- Currency formatter ---------- */
 function fmtBaht(n) {
   return new Intl.NumberFormat("en-US").format(n) + " THB";
 }
-
-/* ---------- AU Date Picker ---------- */
-/* Replaces the browser-default <input type="date"> popup with an AU-branded
-   calendar (crimson header, gold accents, cream hovers). value is ISO
-   yyyy-mm-dd; min/max are ISO strings too. */
 const AUDP_MONTHS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const AUDP_DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 function audpPad(n) { return (n < 10 ? "0" : "") + n; }
@@ -517,7 +468,6 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
   const sel = value ? new Date(value + "T00:00:00") : null;
   const [view, setView] = useState({ y: (sel || today).getFullYear(), m: (sel || today).getMonth() });
   const wrapRef = useRef(null);
-
   useEffect(() => {
     if (!open) return;
     const onDoc = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
@@ -526,7 +476,6 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
     document.addEventListener("keydown", onEsc);
     return () => { document.removeEventListener("mousedown", onDoc); document.removeEventListener("keydown", onEsc); };
   }, [open]);
-
   const toggle = () => {
     if (!open) {
       const base = value ? new Date(value + "T00:00:00") : today;
@@ -540,7 +489,6 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
   });
   const pick = (iso) => { if (onChange) onChange(iso); setOpen(false); };
   const inRange = (iso) => (!min || iso >= min) && (!max || iso <= max);
-
   const first = new Date(view.y, view.m, 1);
   const start = new Date(view.y, view.m, 1 - first.getDay());
   const cells = [];
@@ -552,7 +500,6 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
   const nice = sel && !isNaN(sel)
     ? sel.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" })
     : "";
-
   return (
     <div className={"audp" + (open ? " open" : "")} ref={wrapRef}>
       <button type="button" className="audp-input" onClick={toggle} aria-haspopup="dialog" aria-expanded={open}>
@@ -630,7 +577,7 @@ function ResearcherServiceEligibilityRows({ app }) {
   );
 }
 
-/* ---------- Expose ---------- */
+
 Object.assign(window, {
   Icon, AULogo, Badge, Avatar, Toast, FileRow,
   Timeline, HTimeline, Stat, Modal, FilePreviewModal,

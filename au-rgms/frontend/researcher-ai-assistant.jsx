@@ -1,5 +1,5 @@
-/* AU research-grant assistant. Application data remains limited by the
-   signed-in researcher's normal database access. */
+
+
 const { useState, useRef, useEffect } = React;
 
 const ROLE_INTRO = {

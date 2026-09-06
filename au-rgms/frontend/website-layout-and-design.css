@@ -1,34 +1,34 @@
-/* =========================================================
-   Assumption University Research Grant Management System
-   Visual system: formal university portal
-   Palette: AU Crimson, AU Gold, Navy, Ink, Paper, Line
-   ========================================================= */
+
+
+
+
+
 
 :root {
-  /* AU brand palette — refined per design brief */
-  --au-crimson: #9E1B1B;      /* primary maroon */
-  --au-crimson-deep: #6E1212; /* dark maroon, for depth */
-  --au-crimson-soft: #F8E8E8; /* soft maroon wash */
-  --au-gold: #C9A227;         /* AU gold accent */
+
+  --au-crimson: #9E1B1B;
+  --au-crimson-deep: #6E1212;
+  --au-crimson-soft: #F8E8E8;
+  --au-gold: #C9A227;
   --au-gold-deep: #8E6F12;
   --au-gold-soft: #FAF1D6;
-  --au-cream: #EFE7D8;        /* cream surface */
+  --au-cream: #EFE7D8;
   --au-cream-deep: #E2D6BD;
-  --au-navy: #2D2A4A;         /* muted plum-navy for secondary states */
+  --au-navy: #2D2A4A;
   --au-navy-deep: #1B1933;
 
-  /* Neutrals — warm dark grey text on cream/white */
-  --ink-1: #3A2A2A;           /* primary text */
+
+  --ink-1: #3A2A2A;
   --ink-2: #5A4848;
   --ink-3: #8A7B7B;
   --ink-4: #B5A8A8;
-  --line: #E8DFD0;            /* warm hairlines */
+  --line: #E8DFD0;
   --line-2: #F1EADC;
   --paper: #FFFFFF;
-  --paper-warm: #FBF7EE;      /* tinted-warm app bg */
+  --paper-warm: #FBF7EE;
   --paper-2: #F7F1E2;
 
-  /* Status colors */
+
   --status-draft: #6B7280;
   --status-submitted: #2563EB;
   --status-review: #B8860B;
@@ -37,22 +37,22 @@
   --status-paid: #047857;
   --status-pending: #C2410C;
 
-  /* Type */
+
   --font-serif: "Newsreader", "Source Serif Pro", Georgia, serif;
   --font-ui: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 
-  /* Radii */
+
   --r-sm: 6px;
   --r-md: 8px;
   --r-lg: 12px;
   --r-xl: 16px;
 
-  /* Shadows */
+
   --sh-soft: 0 1px 2px rgba(15,30,71,.04), 0 4px 12px rgba(15,30,71,.05);
   --sh-pop: 0 8px 28px rgba(15,30,71,.12);
   --sh-line: 0 0 0 1px var(--line);
 
-  /* Layout */
+
   --header-h: 64px;
   --bar-h: 36px;
   --sidebar-w: 248px;
@@ -75,7 +75,7 @@ html, body {
 button { font-family: inherit; cursor: pointer; }
 input, textarea, select { font-family: inherit; font-size: 14px; }
 
-/* Grant-system chooser */
+
 .chooser-shell {
   min-height: 100vh;
   min-height: 100svh;
@@ -228,14 +228,14 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   .chooser-shell .grant-choice-action, .chooser-shell .chooser-ai-button { transition: none; }
 }
 
-/* ============= UTILITY ============= */
+
 .serif { font-family: var(--font-serif); font-weight: 500; letter-spacing: -0.01em; }
 .eyebrow {
   font-size: 11px; font-weight: 600; letter-spacing: 0.12em;
   text-transform: uppercase; color: var(--ink-3);
 }
 
-/* ============= LOGIN ============= */
+
 .login-shell {
   min-height: 100vh;
   display: grid;
@@ -263,7 +263,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .au-mark {
   display: flex; align-items: center; gap: 14px;
 }
-/* Circular white plate behind the logo so its fine detail reads on maroon */
+
 .au-mark .seal {
   width: 56px; height: 56px; border-radius: 50%;
   background: #fff;
@@ -374,7 +374,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .btn-icon { padding: 8px; }
 .btn[disabled] { opacity: 0.45; cursor: not-allowed; }
 
-/* ============= APP SHELL ============= */
+
 .app {
   min-height: 100vh;
   display: grid;
@@ -496,7 +496,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .dropdown-item .meta .s { font-size: 11px; color: var(--ink-3); font-weight: 400; }
 .dropdown-divider { height: 1px; background: var(--line); margin: 6px 0; }
 
-/* Subbar (breadcrumbs) */
+
 .subbar {
   grid-area: subbar;
   background: #fff;
@@ -513,7 +513,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .crumb .current { color: var(--ink-1); font-weight: 600; }
 .subbar .right { margin-left: auto; display: flex; gap: 6px; align-items: center; font-size: 11px; color: var(--ink-3);}
 
-/* Sidebar */
+
 .sidebar {
   grid-area: side;
   background: #fff;
@@ -553,7 +553,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 }
 .nav-item.active .badge-num { background: var(--au-crimson); color: #fff; }
 
-/* Main */
+
 .main {
   grid-area: main;
   padding: 28px 32px 48px;
@@ -572,7 +572,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .page-header .desc { color: var(--ink-3); font-size: 13px; margin: 0; }
 .page-actions { display: flex; gap: 8px; }
 
-/* Cards */
+
 .card {
   background: #fff;
   border: 1px solid var(--line);
@@ -591,7 +591,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .card-head .grow { flex: 1; }
 .card-body { padding: 20px; }
 
-/* Stat cards */
+
 .stats {
   display: grid; gap: 16px;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -622,12 +622,12 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .stat.navy .icon-bg { background: #E9ECF4; color: var(--au-navy); }
 .stat.green .icon-bg { background: #E7F5EE; color: var(--status-approved); }
 
-/* Grid helpers */
+
 .grid-2 { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
 .grid-2eq { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 
-/* Tables */
+
 .tbl {
   width: 100%; border-collapse: separate; border-spacing: 0;
   font-size: 13px;
@@ -650,7 +650,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .tbl .title-cell .s { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
 .tbl .actions { display: flex; gap: 4px; justify-content: flex-end; }
 
-/* Toolbar */
+
 .toolbar {
   display: flex; align-items: center; gap: 10px;
   padding: 14px 20px; border-bottom: 1px solid var(--line);
@@ -676,7 +676,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .toolbar .filter:hover { border-color: var(--ink-3); }
 .toolbar .filter.active { border-color: var(--au-crimson); color: var(--au-crimson); background: var(--au-crimson-soft); }
 
-/* Status badges */
+
 .badge {
   display: inline-flex; align-items: center; gap: 6px;
   padding: 3px 9px; border-radius: 999px;
@@ -706,7 +706,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .badge-check     { background: #DCFCE7; color: #166534; }
 .badge-missing   { background: #FEE2E2; color: #991B1B; }
 
-/* Progress bar */
+
 .progress {
   height: 6px; background: var(--line); border-radius: 999px; overflow: hidden;
 }
@@ -715,7 +715,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   border-radius: 999px;
 }
 
-/* Timeline */
+
 .timeline { position: relative; padding-left: 4px; }
 .tl-step {
   position: relative;
@@ -768,7 +768,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   color: var(--au-crimson); font-size: 10px; font-weight: 700;
 }
 
-/* Project detail print sheet: hidden in the app, shown alone for Print / Save PDF. */
+
 .project-print-sheet { display: none; }
 
 @media print {
@@ -830,7 +830,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   .project-print-page::after { content: counter(page); font-style: normal; }
 }
 
-/* Horizontal timeline */
+
 .tl-h { display: flex; gap: 0; overflow-x: auto; padding: 8px 0; }
 .tl-h-step {
   flex: 1; min-width: 130px; position: relative;
@@ -872,7 +872,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 }
 .researcher-pipeline-arrow { position: absolute; right: -10px; top: 8px; color: var(--ink-3); }
 
-/* File row */
+
 .file-list { display: flex; flex-direction: column; gap: 0; }
 .file-row {
   display: flex; align-items: center; gap: 12px;
@@ -912,7 +912,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   overflow-wrap: anywhere;
 }
 
-/* Upload */
+
 .upload-box {
   border: 2px dashed var(--line);
   border-radius: var(--r-md);
@@ -968,7 +968,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   .r4-reward-estimate-amount { font-size: 22px; }
 }
 
-/* Form sections */
+
 .form-section {
   padding: 24px;
   border-bottom: 1px solid var(--line);
@@ -994,7 +994,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 }
 .form-grid .full { grid-column: 1 / -1; }
 
-/* Payment card */
+
 .pay-card {
   background: #fff; border: 1px solid var(--line);
   border-radius: var(--r-lg); padding: 20px;
@@ -1011,7 +1011,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .pay-card .meta-row .l { color: var(--ink-3); }
 .pay-card .meta-row .r { color: var(--ink-1); font-weight: 500; }
 
-/* Modal */
+
 .modal-backdrop {
   position: fixed; inset: 0;
   background: rgba(15,30,71,0.4);
@@ -1050,7 +1050,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   background: var(--paper-warm);
 }
 
-/* Confirm modal smaller */
+
 .modal-sm { max-width: 440px; }
 .modal-sm .modal-body { text-align: center; padding: 32px 24px 16px; }
 .modal-sm .conf-icon {
@@ -1064,7 +1064,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .modal-sm h3 { font-family: var(--font-serif); font-size: 22px; margin: 0 0 8px; font-weight: 500; }
 .modal-sm p { color: var(--ink-3); margin: 0 0 16px; font-size: 13px; }
 
-/* File preview */
+
 .pdf-preview {
   background: #f3f4f6; border-radius: var(--r-md);
   padding: 20px; min-height: 360px;
@@ -1085,7 +1085,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .pdf-preview .page .ln.short { width: 60%; }
 .pdf-preview .page .ln.med { width: 85%; }
 
-/* Notif panel */
+
 .notif-panel {
   position: absolute; top: calc(100% + 8px); right: 0;
   width: 380px; max-height: 480px;
@@ -1128,7 +1128,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   font-size: 12px; color: var(--au-crimson); font-weight: 600; cursor: pointer;
 }
 
-/* Comment */
+
 .comment {
   padding: 12px 14px; background: var(--paper-warm);
   border-radius: var(--r-md); margin-bottom: 10px;
@@ -1152,7 +1152,7 @@ textarea.comment-input {
 }
 textarea.comment-input:focus { outline: none; border-color: var(--au-crimson); box-shadow: 0 0 0 3px var(--au-crimson-soft); }
 
-/* Helpers */
+
 .flex { display: flex; }
 .flex-col { display: flex; flex-direction: column; }
 .gap-2 { gap: 8px; } .gap-3 { gap: 12px; } .gap-4 { gap: 16px; }
@@ -1166,7 +1166,7 @@ textarea.comment-input:focus { outline: none; border-color: var(--au-crimson); b
 .font-serif { font-family: var(--font-serif); }
 .font-semi { font-weight: 600; }
 
-/* Toast */
+
 .toast {
   position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
   background: var(--ink-1); color: #fff;
@@ -1183,7 +1183,7 @@ textarea.comment-input:focus { outline: none; border-color: var(--au-crimson); b
 }
 .toast .icon { color: var(--au-gold); }
 
-/* ---------- Inputs inside tables (collaborators, budget, itemized) ---------- */
+
 .tbl input, .tbl select {
   padding: 8px 10px; border: 1px solid var(--line);
   border-radius: var(--r-sm); background: #fff; color: var(--ink-1);
@@ -1195,7 +1195,7 @@ textarea.comment-input:focus { outline: none; border-color: var(--au-crimson); b
 }
 .tbl input::placeholder { color: var(--ink-4); }
 
-/* ---------- AU Date Picker ---------- */
+
 .audp { position: relative; }
 .audp-input {
   display: flex; align-items: center; gap: 10px; width: 100%;
@@ -1260,7 +1260,7 @@ textarea.comment-input:focus { outline: none; border-color: var(--au-crimson); b
 }
 .audp-foot button:hover { background: var(--au-crimson-soft); }
 
-/* ---------- Compact data table (wide queues like Finance payments) ---------- */
+
 .tbl.tbl-compact th,
 .tbl.tbl-compact td { padding: 9px 8px; }
 .tbl.tbl-compact th { font-size: 10px; letter-spacing: 0.04em; white-space: nowrap; }

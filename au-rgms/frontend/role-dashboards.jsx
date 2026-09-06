@@ -1,6 +1,6 @@
-/* ============================================================
-   AU RGMS role-specific dashboards and workflow pages
-   ============================================================ */
+
+
+
 
 const D = window.AU;
 
@@ -11,9 +11,9 @@ function initialsFromName(name, fallback = "U") {
   return (parts.length ? parts : [fallback]).map(p => p[0]).join("").slice(0, 2).toUpperCase();
 }
 
-/* -----------------------------------------------------------
-   Helper · small reusable queue table
-   ----------------------------------------------------------- */
+
+
+
 function QueueTable({ rows, openLabel = "Review", onOpen, columns = "full", showGrant = false }) {
   return (
     <table className="tbl">
@@ -53,7 +53,7 @@ function QueueTable({ rows, openLabel = "Review", onOpen, columns = "full", show
   );
 }
 
-/* Shared queue wired to live Supabase data + a forward action. */
+
 function WiredQueue({ status, openLabel, confirmTitle, confirmLabel, onDownload, setConfirm, toast }) {
   const [rows, setRows] = useState(null);
   const load = () => window.DB.queue(status).then(setRows).catch(() => setRows([]));
@@ -73,9 +73,9 @@ function WiredQueue({ status, openLabel, confirmTitle, confirmLabel, onDownload,
   return <QueueTable rows={rows} openLabel={openLabel} onOpen={act} onDownload={onDownload} />;
 }
 
-/* -----------------------------------------------------------
-   DEAN — Dashboard
-   ----------------------------------------------------------- */
+
+
+
 function DeanDashboard({ navigate }) {
   const [sys, setSys] = useState("au_r1");
   const isR3 = sys === "au_r3";
@@ -172,9 +172,9 @@ function DeanDashboard({ navigate }) {
   );
 }
 
-/* -----------------------------------------------------------
-   DEAN — AU-R3 Screening Queue (paper presentation requests)
-   ----------------------------------------------------------- */
+
+
+
 function DeanR3Queue({ navigate, setSelectedApplicationId }) {
   const [rows, setRows] = useState(null);
   useEffect(() => { window.DB.queue("submitted", "au_r3").then(setRows).catch(() => setRows([])); }, []);
@@ -241,9 +241,9 @@ function DeanR3Queue({ navigate, setSelectedApplicationId }) {
   );
 }
 
-/* -----------------------------------------------------------
-   DEAN — AU-R4 Screening Queue (publication fee & reward)
-   ----------------------------------------------------------- */
+
+
+
 function DeanR4Queue({ navigate, setSelectedApplicationId }) {
   const [rows, setRows] = useState(null);
   const [q, setQ] = useState("");
@@ -297,9 +297,9 @@ function DeanR4Queue({ navigate, setSelectedApplicationId }) {
   );
 }
 
-/* -----------------------------------------------------------
-   DEAN — First Screening Queue
-   ----------------------------------------------------------- */
+
+
+
 function DeanScreenQueue({ navigate, onDownload, toast, setConfirm, setSelectedApplicationId }) {
   const [rows, setRows] = useState(null);
   const load = () => window.DB.queue("submitted", "au_r1").then(setRows).catch(() => setRows([]));
@@ -333,9 +333,9 @@ function DeanScreenQueue({ navigate, onDownload, toast, setConfirm, setSelectedA
   );
 }
 
-/* -----------------------------------------------------------
-   DEAN — Sign & Forward Queue
-   ----------------------------------------------------------- */
+
+
+
 function DeanSignQueue({ navigate, onDownload, toast, setConfirm }) {
   return (
     <>
@@ -361,9 +361,9 @@ function DeanSignQueue({ navigate, onDownload, toast, setConfirm }) {
   );
 }
 
-/* -----------------------------------------------------------
-   DEAN — Decision History (read-only)
-   ----------------------------------------------------------- */
+
+
+
 function DeanHistory({ navigate, setSelectedApplicationId }) {
   const [rows, setRows] = useState(null);
   useEffect(() => { window.DB.byStatuses(["committee_review", "dean_sign", "iras_review", "expert_review", "president_review", "approved", "active", "completed", "rejected", "returned"]).then(setRows).catch(() => setRows([])); }, []);
@@ -383,9 +383,9 @@ function DeanHistory({ navigate, setSelectedApplicationId }) {
   );
 }
 
-/* -----------------------------------------------------------
-   DEAN - Decision Timeline (read-only; Dean activity only)
-   ----------------------------------------------------------- */
+
+
+
 function DeanDecisionTimeline({ applicationId, navigate }) {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -475,9 +475,9 @@ function DeanDecisionTimeline({ applicationId, navigate }) {
   );
 }
 
-/* -----------------------------------------------------------
-   COMMITTEE — Dashboard
-   ----------------------------------------------------------- */
+
+
+
 function CommitteeDashboard({ navigate, setSelectedApplicationId }) {
   const [c, setC] = useState(null);
   const [rows, setRows] = useState(null);
@@ -555,7 +555,7 @@ function CommitteeDashboard({ navigate, setSelectedApplicationId }) {
   );
 }
 
-/* COMMITTEE — Queue */
+
 function CommitteeQueue({ navigate, setSelectedApplicationId }) {
   const [rows, setRows] = useState(null);
   useEffect(() => { window.DB.queue("committee_review").then(setRows).catch(() => setRows([])); }, []);
@@ -599,9 +599,9 @@ function CommitteeHistory({ onDownload }) {
   );
 }
 
-/* -----------------------------------------------------------
-   RASSC — Dashboard (refreshed for 8-role flow)
-   ----------------------------------------------------------- */
+
+
+
 function IRASGrantDashboard({ navigate, setSelectedApplicationId, sys }) {
   const isR4 = sys === "au_r4";
   const [c, setC] = useState(null);
@@ -732,7 +732,7 @@ function RASSCDashboardV2({ navigate, setSelectedApplicationId }) {
   );
 }
 
-/* RASSC — Office Screening */
+
 function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDownload, onView, toast, setConfirm }) {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -877,8 +877,8 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
   );
 }
 
-/* RASSC — Reviewer Pool */
-/* IRAS — AU-R3 Verification Detail */
+
+
 function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
   return (
     <LiveAppLoader status="iras_review" applicationId={applicationId}
@@ -938,7 +938,7 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
   );
 }
 
-/* IRAS — AU-R4 Verification Detail (enters the Final Approved Amount) */
+
 function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
   const [finalAmt, setFinalAmt] = useState("");
   return (
@@ -1084,9 +1084,9 @@ function RASSCReviewerPool({ toast }) {
   );
 }
 
-/* -----------------------------------------------------------
-   EXPERT REVIEWER — Dashboard
-   ----------------------------------------------------------- */
+
+
+
 function ExpertDashboard({ navigate, setSelectedApplicationId, profile }) {
   const [c, setC] = useState(null);
   const [rows, setRows] = useState(null);
@@ -1166,7 +1166,7 @@ function ExpertDashboard({ navigate, setSelectedApplicationId, profile }) {
   );
 }
 
-/* EXPERT — Assignments list */
+
 function ExpertAssignments({ navigate, onDownload, setSelectedApplicationId, profile }) {
   const [rows, setRows] = useState(null);
   useEffect(() => {
@@ -1188,7 +1188,7 @@ function ExpertAssignments({ navigate, onDownload, setSelectedApplicationId, pro
   );
 }
 
-/* EXPERT — Submitted reviews history */
+
 function ExpertHistory({ onDownload, profile }) {
   const [history, setHistory] = useState(null);
   useEffect(() => {
@@ -1232,9 +1232,9 @@ function ExpertHistory({ onDownload, profile }) {
   );
 }
 
-/* -----------------------------------------------------------
-   PRESIDENT — Dashboard
-   ----------------------------------------------------------- */
+
+
+
 function PresidentDashboard({ navigate }) {
   const [c, setC] = useState(null);
   const [queueRows, setQueueRows] = useState(null);
@@ -1331,8 +1331,8 @@ function PresidentDashboard({ navigate }) {
   );
 }
 
-/* PRESIDENT — Approval queue */
-/* President opens a proposal to read the file + expert scores before deciding. */
+
+
 function PresidentReviewDetail({ app, onBack, onDownload, onView, toast, setConfirm, afterDecision }) {
   const [conditions, setConditions] = useState("Approved subject to the standard AU progress and final reporting requirements.");
   const expertReviews = (app.reviews || []).filter(r => r.kind === "expert");
@@ -1468,9 +1468,9 @@ function PresidentQueue({ navigate, onDownload, onView, toast, setConfirm }) {
   );
 }
 
-/* -----------------------------------------------------------
-   OFM / FINANCE — AU-R3 / AU-R4 single-payment queue
-   ----------------------------------------------------------- */
+
+
+
 function OFMGrantPayments({ sys, toast, setConfirm }) {
   const isR4 = sys === "au_r4";
   const [rows, setRows] = useState(null);
@@ -1524,9 +1524,9 @@ function OFMGrantPayments({ sys, toast, setConfirm }) {
   );
 }
 
-/* -----------------------------------------------------------
-   OFM / FINANCE — Dashboard
-   ----------------------------------------------------------- */
+
+
+
 function OFMDashboard({ navigate, toast, setConfirm }) {
   const [sys, setSys] = useState("au_r1");
   const isR3 = sys === "au_r3", isR4 = sys === "au_r4";
@@ -1668,7 +1668,7 @@ function OFMDashboardR1({ navigate, sysToggle }) {
   );
 }
 
-/* OFM — Grant detail (single grant's three tranches) */
+
 function OFMDetail({ onDownload, toast, setConfirm }) {
   const [apps, setApps] = useState(null);
   const load = () => window.DB.ofmPayments().then(setApps).catch(() => setApps([]));
@@ -1722,7 +1722,7 @@ function OFMDetail({ onDownload, toast, setConfirm }) {
   );
 }
 
-/* OFM — Payment history */
+
 function OFMHistory({ onDownload }) {
   const [rows, setRows] = useState(null);
   useEffect(() => {
@@ -1762,9 +1762,9 @@ function OFMHistory({ onDownload }) {
   );
 }
 
-/* -----------------------------------------------------------
-   ADMINISTRATOR — Dashboard + Users + Audit + Settings
-   ----------------------------------------------------------- */
+
+
+
 const ADMIN_R4_ROLES = ["researcher", "dean", "committee", "iras", "ofm", "admin"];
 function AdminDashboard({ navigate }) {
   const [sys, setSys] = useState("all");
@@ -1869,8 +1869,8 @@ function AdminDashboard({ navigate }) {
   );
 }
 
-/* ADMIN — Audit log */
-/* ADMIN — System settings */
+
+
 const ADMIN_ROLE_OPTIONS = [
   { key: "researcher", label: "Researcher" }, { key: "dean", label: "Dean" },
   { key: "committee", label: "Faculty Committee" }, { key: "iras", label: "RASSC" },
@@ -2357,7 +2357,7 @@ function AnalyticsDashboard({ role }) {
   );
 }
 
-/* Tiny toggle */
+
 function Toggle({ defaultOn = false }) {
   const [on, setOn] = useState(defaultOn);
   return (

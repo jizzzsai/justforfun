@@ -39,7 +39,7 @@ function num(v: FormDataEntryValue | null, fallback = 0): number {
   return Number.isFinite(n) ? n : fallback;
 }
 
-/* ----------------------- researcher ----------------------- */
+
 export async function submitApplication(formData: FormData) {
   const { supabase, profile } = await ctx();
   const intent = String(formData.get("intent") ?? "submit");
@@ -98,7 +98,7 @@ export async function submitReport(formData: FormData) {
   redirect(kind === "final" ? "/researcher/final" : "/researcher/progress");
 }
 
-/* -------------------------- dean -------------------------- */
+
 export async function deanFirstScreen(formData: FormData) {
   const { supabase, profile } = await ctx();
   const appId = String(formData.get("application_id"));
@@ -141,7 +141,7 @@ export async function deanSignForward(formData: FormData) {
   redirect("/dean/sign");
 }
 
-/* ------------------------ committee ----------------------- */
+
 export async function committeeRecommend(formData: FormData) {
   const { supabase, profile } = await ctx();
   const appId = String(formData.get("application_id"));
@@ -171,7 +171,7 @@ export async function committeeRecommend(formData: FormData) {
   redirect("/committee/queue");
 }
 
-/* -------------------------- iras -------------------------- */
+
 export async function irasScreen(formData: FormData) {
   const { supabase, profile } = await ctx();
   const appId = String(formData.get("application_id"));
@@ -224,7 +224,7 @@ export async function assignExperts(formData: FormData) {
   redirect("/iras/assign");
 }
 
-/* ------------------------- expert ------------------------- */
+
 export async function expertSubmitReview(formData: FormData) {
   const { supabase, profile } = await ctx();
   const appId = String(formData.get("application_id"));
@@ -266,7 +266,7 @@ export async function expertSubmitReview(formData: FormData) {
   redirect("/expert/assignments");
 }
 
-/* ------------------------ president ----------------------- */
+
 export async function presidentDecide(formData: FormData) {
   const { supabase, profile } = await ctx();
   const appId = String(formData.get("application_id"));
@@ -332,7 +332,7 @@ export async function presidentDecide(formData: FormData) {
   redirect("/president/queue");
 }
 
-/* --------------------------- ofm -------------------------- */
+
 export async function markPaymentPaid(formData: FormData) {
   const { supabase, profile } = await ctx();
   const paymentId = String(formData.get("payment_id"));

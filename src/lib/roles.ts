@@ -157,7 +157,7 @@ export const NAV: Record<Role, NavItem[]> = {
   ],
 };
 
-/** Landing route for a role after login (its dashboard). */
+
 export function homeFor(role: Role): string {
   return NAV[role][0].href;
 }

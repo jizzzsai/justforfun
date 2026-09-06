@@ -1,10 +1,10 @@
-/* ============================================================
-   Shared UI components for the AU Research Grant Portal
-   ============================================================ */
+
+
+
 
 const { useState, useEffect, useRef, useMemo } = React;
 
-/* ---------- Icon: small inline SVG library (Lucide-styled) ---------- */
+
 const ICONS = {
   LayoutDashboard: 'M3 3h7v9H3zM14 3h7v5h-7zM14 12h7v9h-7zM3 16h7v5H3z',
   FilePlus: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6 M12 12v6 M9 15h6',
@@ -80,9 +80,9 @@ function Icon({ name, size = 16, stroke = 1.75, className = "", style = {} }) {
   );
 }
 
-/* ---------- AU Logo: real seal on a white circular plate ----------
-   The image preserves the original AU crest detail; the white plate
-   makes it readable against the maroon header / login backdrop. */
+
+
+
 function AULogo({ size = 56, ringColor = "var(--au-gold)", ringWidth = 3, plateColor = "#fff", className = "" }) {
   return (
     <div
@@ -105,7 +105,7 @@ function AULogo({ size = 56, ringColor = "var(--au-gold)", ringWidth = 3, plateC
   );
 }
 
-/* ---------- Badge ---------- */
+
 function Badge({ status, children, dot = true, className = "" }) {
   const cls = status ? status.cls : className;
   const label = status ? status.label : children;
@@ -117,7 +117,7 @@ function Badge({ status, children, dot = true, className = "" }) {
   );
 }
 
-/* ---------- Avatar ---------- */
+
 function Avatar({ initials, size = 32, color = "var(--au-navy)" }) {
   return (
     <div style={{
@@ -132,7 +132,7 @@ function Avatar({ initials, size = 32, color = "var(--au-navy)" }) {
   );
 }
 
-/* ---------- Toast ---------- */
+
 function Toast({ message, onClose }) {
   useEffect(() => {
     const t = setTimeout(onClose, 2400);
@@ -146,7 +146,7 @@ function Toast({ message, onClose }) {
   );
 }
 
-/* ---------- FileRow: a downloadable document ---------- */
+
 function FileRow({ doc, onDownload, onView, missing = false, compact = false }) {
   return (
     <div className="file-row">
@@ -179,7 +179,7 @@ function FileRow({ doc, onDownload, onView, missing = false, compact = false }) 
   );
 }
 
-/* ---------- Timeline (vertical) ---------- */
+
 function Timeline({ steps, app }) {
   const tl = app.timeline || {};
   return (
@@ -201,7 +201,7 @@ function Timeline({ steps, app }) {
   );
 }
 
-/* ---------- Horizontal timeline ---------- */
+
 function HTimeline({ steps, app }) {
   const tl = app.timeline || {};
   return (
@@ -221,7 +221,7 @@ function HTimeline({ steps, app }) {
   );
 }
 
-/* ---------- Stat card ---------- */
+
 function Stat({ label, value, icon, tone = "", delta, deltaTone }) {
   return (
     <div className={`stat ${tone}`}>
@@ -239,7 +239,7 @@ function Stat({ label, value, icon, tone = "", delta, deltaTone }) {
   );
 }
 
-/* ---------- Modal ---------- */
+
 function Modal({ open, onClose, title, children, footer, size }) {
   if (!open) return null;
   return (
@@ -258,7 +258,7 @@ function Modal({ open, onClose, title, children, footer, size }) {
   );
 }
 
-/* ---------- File Preview Modal ---------- */
+
 function FilePreviewModal({ doc, onClose, onDownload }) {
   if (!doc) return null;
   return (
@@ -298,7 +298,7 @@ function FilePreviewModal({ doc, onClose, onDownload }) {
   );
 }
 
-/* ---------- Confirm Modal ---------- */
+
 function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primary", confirmLabel = "Confirm" }) {
   if (!open) return null;
   const icons = { primary: "Info", success: "CheckCircle", danger: "AlertCircle" };
@@ -319,7 +319,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
   );
 }
 
-/* ---------- Notification panel ---------- */
+
 function NotifPanel({ items, onClose }) {
   const unread = items.filter(n => n.unread).length;
   return (
@@ -345,7 +345,7 @@ function NotifPanel({ items, onClose }) {
   );
 }
 
-/* ---------- Page Header ---------- */
+
 function PageHeader({ title, desc, actions }) {
   return (
     <div className="page-header">
@@ -358,7 +358,7 @@ function PageHeader({ title, desc, actions }) {
   );
 }
 
-/* ---------- Empty state ---------- */
+
 function Empty({ title, desc, icon = "Folder" }) {
   return (
     <div style={{ padding: "48px 20px", textAlign: "center", color: "var(--ink-3)" }}>
@@ -375,12 +375,12 @@ function Empty({ title, desc, icon = "Folder" }) {
   );
 }
 
-/* ---------- Currency formatter ---------- */
+
 function fmtBaht(n) {
   return new Intl.NumberFormat("en-US").format(n) + " THB";
 }
 
-/* ---------- Expose ---------- */
+
 Object.assign(window, {
   Icon, AULogo, Badge, Avatar, Toast, FileRow,
   Timeline, HTimeline, Stat, Modal, FilePreviewModal,

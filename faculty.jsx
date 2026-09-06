@@ -1,10 +1,10 @@
-/* ============================================================
-   Faculty / Academic Office / Dean Dashboard pages
-   ============================================================ */
+
+
+
 
 const FA = window.AU;
 
-/* ---------- A. Dashboard Overview ---------- */
+
 function FacultyDashboard({ navigate }) {
   return (
     <>
@@ -73,7 +73,7 @@ function FacultyDashboard({ navigate }) {
               </div>
             </div>
 
-            {/* mini bar chart */}
+            {                    }
             <div style={{display: "flex", alignItems: "flex-end", gap: 6, height: 100, marginTop: 16, padding: "0 4px"}}>
               {[3, 5, 4, 7, 6, 8, 5, 9, 7, 11, 9, 11].map((v, i) => (
                 <div key={i} style={{
@@ -110,7 +110,7 @@ function FacultyDashboard({ navigate }) {
   );
 }
 
-/* ---------- B. Incoming Applications ---------- */
+
 function FacultyIncoming({ navigate, onDownload }) {
   return (
     <>
@@ -171,7 +171,7 @@ function FacultyIncoming({ navigate, onDownload }) {
   );
 }
 
-/* ---------- C. Document Checklist ---------- */
+
 function FacultyChecklist({ navigate, onDownload, onView, toast, setConfirm }) {
   const [checks, setChecks] = useState({ doc1: true, doc2: true, doc3: true, doc4: true });
   return (
@@ -300,7 +300,7 @@ function FacultyChecklist({ navigate, onDownload, onView, toast, setConfirm }) {
   );
 }
 
-/* ---------- D. Academic Committee Review ---------- */
+
 function FacultyAcademic({ onDownload, onView, toast, setConfirm }) {
   const app = FA.PRIMARY_APP;
   return (
@@ -452,7 +452,7 @@ function FacultyAcademic({ onDownload, onView, toast, setConfirm }) {
   );
 }
 
-/* ---------- E. Dean Approval ---------- */
+
 function FacultyDean({ onDownload, onView, toast, setConfirm }) {
   const app = FA.PRIMARY_APP;
   return (
@@ -609,7 +609,7 @@ function FacultyDean({ onDownload, onView, toast, setConfirm }) {
   );
 }
 
-/* ---------- F. Faculty Timeline ---------- */
+
 function FacultyTimeline() {
   const app = FA.PRIMARY_APP;
   return (

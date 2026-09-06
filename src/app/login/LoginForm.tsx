@@ -67,7 +67,7 @@ export function LoginForm() {
         </button>
       </form>
 
-      {/* Demo accounts — quick fill */}
+      {                                }
       <div className="mt-8 rounded-xl border border-line bg-parchment p-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-gold">
           Demo accounts

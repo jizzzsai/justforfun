@@ -1,10 +1,10 @@
--- 0012_application_code_trigger.sql
--- Assign the RG-YYYY-NNN application code on the server. The old client-side
--- genCode() counted rows visible under RLS, so a researcher who could only see
--- their own applications generated a code from their personal count — colliding
--- with another researcher's existing code (unique constraint on applications.code).
--- A SECURITY DEFINER trigger sees every row, so it always derives the true next
--- number for the year and new submissions no longer collide.
+
+
+
+
+
+
+
 
 create or replace function public.set_application_code()
 returns trigger

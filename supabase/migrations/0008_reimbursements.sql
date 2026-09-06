@@ -1,6 +1,6 @@
--- 0008_reimbursements.sql
--- Third grant type: REIMBURSEMENT ("spend first, claim money back after with
--- receipts"). Flow: researcher submit -> Dean review -> RASSC review -> OFM pay.
+
+
+
 create table if not exists public.reimbursements (
   id uuid primary key default gen_random_uuid(),
   code text not null unique,
@@ -59,7 +59,7 @@ with check (
                   and coalesce(p.faculty,'') = coalesce(reimbursements.faculty,'') )))
 );
 
--- Extend storage access to reimbursement receipts ('reimbursements/<id>/...').
+
 create or replace function public.can_access_doc(path text)
 returns boolean language plpgsql stable security definer set search_path = public as $fn$
 declare seg text; appid uuid; gid uuid;

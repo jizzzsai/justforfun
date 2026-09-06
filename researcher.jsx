@@ -1,10 +1,10 @@
-/* ============================================================
-   Researcher Dashboard pages
-   ============================================================ */
+
+
+
 
 const RA = window.AU;
 
-/* ---------- A. Dashboard Overview ---------- */
+
 function ResearcherDashboard({ navigate, onDownload, onView }) {
   const app = RA.PRIMARY_APP;
   return (
@@ -30,7 +30,7 @@ function ResearcherDashboard({ navigate, onDownload, onView }) {
       </div>
 
       <div className="grid-2">
-        {/* Left: payment progress for primary app */}
+        {                                            }
         <div className="card card-pad-0">
           <div className="card-head">
             <h3>Payment Progress · {app.id}</h3>
@@ -72,7 +72,7 @@ function ResearcherDashboard({ navigate, onDownload, onView }) {
           </div>
         </div>
 
-        {/* Right: recent activity */}
+        {                            }
         <div className="card card-pad-0">
           <div className="card-head">
             <h3>Recent Activity</h3>
@@ -105,7 +105,7 @@ function ResearcherDashboard({ navigate, onDownload, onView }) {
         </div>
       </div>
 
-      {/* Quick application snapshot */}
+      {                                }
       <div className="card card-pad-0 mt-6">
         <div className="card-head">
           <h3>Application Pipeline · {app.id}</h3>
@@ -122,7 +122,7 @@ function ResearcherDashboard({ navigate, onDownload, onView }) {
   );
 }
 
-/* ---------- B. Submit Application ---------- */
+
 function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
   const [draft, setDraft] = useState({
     title: "AI-Based Research Grant Tracking System for Assumption University",
@@ -318,7 +318,7 @@ function ResearcherSubmit({ navigate, onDownload, onView, toast }) {
   );
 }
 
-/* ---------- C. My Applications ---------- */
+
 function ResearcherApplications({ navigate, onDownload, openDetail }) {
   const myApps = [
     { ...RA.PRIMARY_APP, stage: "Expert Review" },
@@ -389,7 +389,7 @@ function ResearcherApplications({ navigate, onDownload, openDetail }) {
   );
 }
 
-/* ---------- D. Application Detail ---------- */
+
 function ResearcherApplicationDetail({ navigate, onDownload, onView }) {
   const app = RA.PRIMARY_APP;
   return (
@@ -407,7 +407,7 @@ function ResearcherApplicationDetail({ navigate, onDownload, onView }) {
 
       <div className="grid-2">
         <div>
-          {/* Summary */}
+          {             }
           <div className="card card-pad-0 mb-4">
             <div className="card-head"><h3>Research Summary</h3></div>
             <div className="card-body">
@@ -441,7 +441,7 @@ function ResearcherApplicationDetail({ navigate, onDownload, onView }) {
             </div>
           </div>
 
-          {/* Documents */}
+          {               }
           <div className="card card-pad-0 mb-4">
             <div className="card-head"><h3>Submitted Documents</h3>
               <div className="grow"></div>
@@ -454,7 +454,7 @@ function ResearcherApplicationDetail({ navigate, onDownload, onView }) {
             </div>
           </div>
 
-          {/* Comments */}
+          {              }
           <div className="card card-pad-0">
             <div className="card-head"><h3>Reviewer Comments</h3></div>
             <div className="card-body">
@@ -493,7 +493,7 @@ function ResearcherApplicationDetail({ navigate, onDownload, onView }) {
           </div>
         </div>
 
-        {/* Right: timeline */}
+        {                     }
         <div className="card card-pad-0" style={{ alignSelf: "start", position: "sticky", top: 116 }}>
           <div className="card-head">
             <h3>Approval Timeline</h3>
@@ -509,7 +509,7 @@ function ResearcherApplicationDetail({ navigate, onDownload, onView }) {
   );
 }
 
-/* ---------- E. Progress Report ---------- */
+
 function ResearcherProgress({ onDownload, onView, toast }) {
   return (
     <>
@@ -596,7 +596,7 @@ function ResearcherProgress({ onDownload, onView, toast }) {
   );
 }
 
-/* ---------- F. Final Report ---------- */
+
 function ResearcherFinal({ onDownload, onView, toast }) {
   return (
     <>
@@ -692,7 +692,7 @@ function ResearcherFinal({ onDownload, onView, toast }) {
   );
 }
 
-/* ---------- G. Payment Status ---------- */
+
 function ResearcherPayments({ onDownload, toast }) {
   return (
     <>

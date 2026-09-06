@@ -15,7 +15,7 @@ export default async function ResearcherPayments() {
   const total = payments.reduce((s, p) => s + p.amount, 0);
   const received = payments.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0);
 
-  // group by application
+
   const groups = new Map<string, { title: string; items: Payment[] }>();
   for (const p of payments) {
     const key = p.application_id;

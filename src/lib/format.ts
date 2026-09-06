@@ -1,4 +1,4 @@
-/** ฿ Thai Baht, no decimals. */
+
 export function thb(amount: number | null | undefined): string {
   if (amount == null) return "—";
   return new Intl.NumberFormat("en-US", {
@@ -8,7 +8,7 @@ export function thb(amount: number | null | undefined): string {
   }).format(amount);
 }
 
-/** Compact baht: ฿1.2M, ฿850K. */
+
 export function thbCompact(amount: number | null | undefined): string {
   if (amount == null) return "—";
   return "฿" +

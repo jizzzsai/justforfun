@@ -2,7 +2,7 @@ import { Card, CardHeader, Field, Textarea, buttonClass } from "@/components/ui"
 
 type Action = (formData: FormData) => void | Promise<void>;
 
-/** Pass / Return / Reject screening panel (Dean first screening, IRAS office). */
+
 export function ScreeningPanel({
   action,
   appId,
@@ -36,7 +36,7 @@ export function ScreeningPanel({
   );
 }
 
-/** Single-action "sign & forward" style panel with a note. */
+
 export function ForwardPanel({
   action,
   appId,

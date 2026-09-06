@@ -4,7 +4,7 @@ import { cn } from "@/lib/cn";
 import { initials } from "@/lib/format";
 import { STATUS, type AppStatus, type Tone } from "@/lib/workflow";
 
-/* ----------------------------- tones ----------------------------- */
+
 const TONE: Record<Tone, string> = {
   neutral: "bg-line-soft text-ink-soft",
   info: "bg-info-wash text-info",
@@ -36,7 +36,7 @@ export function StatusBadge({ status }: { status: AppStatus }) {
   );
 }
 
-/* ----------------------------- card ----------------------------- */
+
 export function Card({
   children,
   className,
@@ -78,7 +78,7 @@ export function CardHeader({
   );
 }
 
-/* --------------------------- stat card --------------------------- */
+
 export function StatCard({
   label,
   value,
@@ -108,7 +108,7 @@ export function StatCard({
   );
 }
 
-/* -------------------------- page header -------------------------- */
+
 export function PageHeader({
   title,
   subtitle,
@@ -129,7 +129,7 @@ export function PageHeader({
   );
 }
 
-/* ---------------------------- avatar ----------------------------- */
+
 export function Avatar({
   name,
   className,
@@ -150,7 +150,7 @@ export function Avatar({
   );
 }
 
-/* -------------------------- empty state -------------------------- */
+
 export function EmptyState({
   icon: Icon,
   title,
@@ -176,7 +176,7 @@ export function EmptyState({
   );
 }
 
-/* --------------------------- buttons ----------------------------- */
+
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md";
 
@@ -196,7 +196,7 @@ export function buttonClass(variant: Variant = "primary", size: Size = "md"): st
   return cn(base, sizes[size], variants[variant]);
 }
 
-/* ----------------------------- table ----------------------------- */
+
 export interface Column<T> {
   header: ReactNode;
   cell: (row: T) => ReactNode;
@@ -252,7 +252,7 @@ export function DataTable<T>({
   );
 }
 
-/* ------------------------- form controls ------------------------- */
+
 export function Field({
   label,
   hint,

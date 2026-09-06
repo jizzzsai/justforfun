@@ -1,11 +1,11 @@
-/* ============================================================
-   AU RGMS · App shell
-   8 roles · single login · in-app role switcher
-   ============================================================ */
+
+
+
+
 
 const APP = window.AU;
 
-/* ============= LOGIN PAGE ============= */
+
 function LoginPage({ onLogin }) {
   const [role, setRole] = useState("researcher");
   const [email, setEmail] = useState("phyomintun@au.edu");
@@ -98,7 +98,7 @@ function LoginPage({ onLogin }) {
   );
 }
 
-/* ============= ROLE-SCOPED CONFIG ============= */
+
 const ROLE_CONFIG = {
   researcher: {
     nav: APP.NAV_RESEARCHER,
@@ -174,7 +174,7 @@ const ROLE_CONFIG = {
   },
 };
 
-/* ============= APP HEADER ============= */
+
 function AppHeader({ role, onSwitchRole, onLogout }) {
   const [roleOpen, setRoleOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
@@ -275,7 +275,7 @@ function AppHeader({ role, onSwitchRole, onLogout }) {
   );
 }
 
-/* ============= SIDEBAR ============= */
+
 function Sidebar({ nav, current, onNavigate, footer }) {
   return (
     <aside className="sidebar">
@@ -308,7 +308,7 @@ function Sidebar({ nav, current, onNavigate, footer }) {
   );
 }
 
-/* ============= SUBBAR / BREADCRUMBS ============= */
+
 function SubBar({ crumbs, onHome, onCrumb }) {
   return (
     <div className="subbar">
@@ -331,11 +331,11 @@ function SubBar({ crumbs, onHome, onCrumb }) {
   );
 }
 
-/* ============= ROUTER ============= */
+
 function PageRouter({ pageKey, navigate, ctx }) {
   const c = ctx;
   switch (pageKey) {
-    /* ---- Researcher ---- */
+
     case "r-dashboard":     return <ResearcherDashboard navigate={navigate} onDownload={c.onDownload} onView={c.onView} />;
     case "r-submit":        return <ResearcherSubmit navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
     case "r-applications":  return <ResearcherApplications navigate={navigate} onDownload={c.onDownload} openDetail={() => navigate("r-detail")} />;
@@ -344,7 +344,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "r-final":         return <ResearcherFinal onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
     case "r-payments":      return <ResearcherPayments onDownload={c.onDownload} toast={c.toast} />;
 
-    /* ---- Dean ---- */
+
     case "d-dashboard":      return <DeanDashboard navigate={navigate} />;
     case "d-screen":         return <DeanScreenQueue navigate={navigate} onDownload={c.onDownload} />;
     case "d-screen-detail":  return <FacultyChecklist navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
@@ -352,38 +352,38 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "d-sign-detail":    return <FacultyDean onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-history":        return <DeanHistory onDownload={c.onDownload} />;
 
-    /* ---- Committee ---- */
+
     case "c-dashboard":      return <CommitteeDashboard navigate={navigate} />;
     case "c-queue":          return <CommitteeQueue navigate={navigate} onDownload={c.onDownload} />;
     case "c-review":         return <FacultyAcademic onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "c-history":        return <CommitteeHistory onDownload={c.onDownload} />;
 
-    /* ---- IRAS ---- */
+
     case "i-dashboard":      return <IRASDashboardV2 navigate={navigate} />;
     case "i-received":       return <IRASReceived navigate={navigate} onDownload={c.onDownload} />;
     case "i-screen":         return <IRASScreen navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-assign":         return <IRASAssign toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-reviewers":      return <IRASReviewerPool toast={c.toast} />;
 
-    /* ---- Expert Reviewer ---- */
+
     case "e-dashboard":      return <ExpertDashboard navigate={navigate} />;
     case "e-assignments":    return <ExpertAssignments navigate={navigate} onDownload={c.onDownload} />;
     case "e-evaluate":       return <IRASExpert onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "e-history":        return <ExpertHistory onDownload={c.onDownload} />;
 
-    /* ---- President ---- */
+
     case "p-dashboard":      return <PresidentDashboard navigate={navigate} />;
     case "p-queue":          return <PresidentQueue navigate={navigate} onDownload={c.onDownload} />;
     case "p-approve":        return <IRASPresident onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "p-contracts":      return <IRASContract onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
 
-    /* ---- OFM / Finance ---- */
+
     case "o-dashboard":      return <OFMDashboard navigate={navigate} />;
     case "o-payments":       return <IRASPayment onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-detail":         return <OFMDetail onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-history":        return <OFMHistory onDownload={c.onDownload} />;
 
-    /* ---- Administrator ---- */
+
     case "a-dashboard":      return <AdminDashboard navigate={navigate} />;
     case "a-users":          return <AdminUsers toast={c.toast} />;
     case "a-journals":       return <AdminJournals toast={c.toast} />;
@@ -394,7 +394,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
   }
 }
 
-/* ============= HASH ROUTING (for the Figma-view iframes) ============= */
+
 function readHash() {
   try {
     const h = window.location.hash || "";
@@ -408,7 +408,7 @@ function readHash() {
   } catch (e) { return {}; }
 }
 
-/* ============= MAIN APP ============= */
+
 function App() {
   const initial = readHash();
   const startingRole = initial.role && ROLE_CONFIG[initial.role] ? initial.role : "researcher";
@@ -418,7 +418,7 @@ function App() {
   const [role, setRole] = useState(startingRole);
   const [page, setPage] = useState(startingPage);
 
-  // shared UI state
+
   const [previewDoc, setPreviewDoc] = useState(null);
   const [toastMsg, setToastMsg] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -446,7 +446,7 @@ function App() {
   const pageLabel = useMemo(() => {
     const navItem = cfg.nav.find(n => n.key === page);
     if (navItem) return navItem.label;
-    // Special pages with no sidebar entry
+
     const special = {
       "r-detail": "Application Detail",
       "d-screen-detail": "Screening · Detail",
@@ -524,6 +524,6 @@ function App() {
   );
 }
 
-/* Mount */
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(<App />);

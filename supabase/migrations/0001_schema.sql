@@ -1,9 +1,9 @@
--- ============================================================
--- AU Research Grant Management System — schema
--- Project: kmseaoipvjhgznswbmlt
--- ============================================================
 
--- ---------- enums ----------
+
+
+
+
+
 do $$ begin
   create type user_role as enum
     ('researcher','dean','committee','iras','expert','president','ofm','admin');
@@ -52,7 +52,7 @@ do $$ begin
   create type contract_status as enum ('issued','active','completed','terminated');
 exception when duplicate_object then null; end $$;
 
--- ---------- profiles ----------
+
 create table if not exists profiles (
   id          uuid primary key references auth.users(id) on delete cascade,
   email       text not null,
@@ -67,7 +67,7 @@ create table if not exists profiles (
   created_at  timestamptz not null default now()
 );
 
--- ---------- journal tiers (reference) ----------
+
 create table if not exists journal_tiers (
   id          uuid primary key default gen_random_uuid(),
   code        text not null unique,
@@ -79,7 +79,7 @@ create table if not exists journal_tiers (
   created_at  timestamptz not null default now()
 );
 
--- ---------- applications ----------
+
 create table if not exists applications (
   id               uuid primary key default gen_random_uuid(),
   code             text not null unique,
@@ -104,7 +104,7 @@ create table if not exists applications (
 create index if not exists idx_applications_researcher on applications(researcher_id);
 create index if not exists idx_applications_status on applications(status);
 
--- ---------- documents ----------
+
 create table if not exists application_documents (
   id             uuid primary key default gen_random_uuid(),
   application_id uuid not null references applications(id) on delete cascade,
@@ -115,7 +115,7 @@ create table if not exists application_documents (
   created_at     timestamptz not null default now()
 );
 
--- ---------- screenings (dean first / dean sign / iras office) ----------
+
 create table if not exists screenings (
   id             uuid primary key default gen_random_uuid(),
   application_id uuid not null references applications(id) on delete cascade,
@@ -127,7 +127,7 @@ create table if not exists screenings (
 );
 create index if not exists idx_screenings_app on screenings(application_id);
 
--- ---------- reviews (committee + expert) ----------
+
 create table if not exists reviews (
   id             uuid primary key default gen_random_uuid(),
   application_id uuid not null references applications(id) on delete cascade,
@@ -142,7 +142,7 @@ create table if not exists reviews (
 );
 create index if not exists idx_reviews_app on reviews(application_id);
 
--- ---------- expert assignments ----------
+
 create table if not exists expert_assignments (
   id             uuid primary key default gen_random_uuid(),
   application_id uuid not null references applications(id) on delete cascade,
@@ -155,7 +155,7 @@ create table if not exists expert_assignments (
 );
 create index if not exists idx_assignments_expert on expert_assignments(expert_id, status);
 
--- ---------- approvals (president) ----------
+
 create table if not exists approvals (
   id              uuid primary key default gen_random_uuid(),
   application_id  uuid not null references applications(id) on delete cascade,
@@ -166,7 +166,7 @@ create table if not exists approvals (
   created_at      timestamptz not null default now()
 );
 
--- ---------- contracts ----------
+
 create table if not exists contracts (
   id             uuid primary key default gen_random_uuid(),
   application_id uuid not null unique references applications(id) on delete cascade,
@@ -179,7 +179,7 @@ create table if not exists contracts (
   issued_at      timestamptz not null default now()
 );
 
--- ---------- payments (30 / 40 / 30) ----------
+
 create table if not exists payments (
   id             uuid primary key default gen_random_uuid(),
   application_id uuid not null references applications(id) on delete cascade,
@@ -197,7 +197,7 @@ create table if not exists payments (
 create index if not exists idx_payments_app on payments(application_id);
 create index if not exists idx_payments_status on payments(status);
 
--- ---------- reports (progress / final) ----------
+
 create table if not exists reports (
   id             uuid primary key default gen_random_uuid(),
   application_id uuid not null references applications(id) on delete cascade,
@@ -210,7 +210,7 @@ create table if not exists reports (
   reviewed_at    timestamptz
 );
 
--- ---------- application events (timeline) ----------
+
 create table if not exists application_events (
   id             uuid primary key default gen_random_uuid(),
   application_id uuid not null references applications(id) on delete cascade,
@@ -224,7 +224,7 @@ create table if not exists application_events (
 );
 create index if not exists idx_events_app on application_events(application_id, created_at);
 
--- ---------- audit log ----------
+
 create table if not exists audit_log (
   id         bigint generated always as identity primary key,
   actor_id   uuid references profiles(id),
@@ -237,7 +237,7 @@ create table if not exists audit_log (
 );
 create index if not exists idx_audit_created on audit_log(created_at desc);
 
--- ---------- settings ----------
+
 create table if not exists app_settings (
   key        text primary key,
   value      jsonb not null,
@@ -246,9 +246,9 @@ create table if not exists app_settings (
   updated_by uuid references profiles(id)
 );
 
--- ============================================================
--- helper functions
--- ============================================================
+
+
+
 create or replace function public.app_role()
 returns user_role language sql stable security definer set search_path = public as $$
   select role from public.profiles where id = auth.uid();
@@ -269,7 +269,7 @@ returns boolean language sql stable security definer set search_path = public as
   select exists (select 1 from public.applications a where a.id = app and a.researcher_id = auth.uid());
 $$;
 
--- updated_at trigger
+
 create or replace function public.touch_updated_at()
 returns trigger language plpgsql as $$
 begin new.updated_at = now(); return new; end $$;
@@ -278,7 +278,7 @@ drop trigger if exists applications_touch on applications;
 create trigger applications_touch before update on applications
   for each row execute function public.touch_updated_at();
 
--- auto-provision a profile when an auth user is created
+
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin

@@ -1,13 +1,13 @@
--- 0004_security_hardening.sql
--- Closes privilege-escalation, faculty-spoofing, PII-leak and storage-access
--- holes confirmed against the live database. Idempotent: safe to re-run.
 
--- ------------------------------------------------------------
--- 1 & 2. Lock privileged profile columns (role / faculty / email / is_active).
---        Previously profiles_write let a user UPDATE their own row with no
---        column guard, so a researcher could set role='admin' or change their
---        faculty to read another faculty's data. Only admins may change these.
--- ------------------------------------------------------------
+
+
+
+
+
+
+
+
+
 create or replace function public.profiles_guard()
 returns trigger language plpgsql security definer set search_path = public as $fn$
 begin
@@ -29,21 +29,21 @@ create trigger profiles_guard_trg
   before update on public.profiles
   for each row execute function public.profiles_guard();
 
--- ------------------------------------------------------------
--- 4. profiles_read was USING (true) -> any authenticated user could read every
---    user's email/phone/role (PDPA exposure). Restrict to self; staff (any
---    non-researcher role) keep full read for queues and researcher-name joins.
--- ------------------------------------------------------------
+
+
+
+
+
 drop policy if exists profiles_read on public.profiles;
 create policy profiles_read on public.profiles
   for select to authenticated
   using ( id = auth.uid() or public.is_staff() );
 
--- ------------------------------------------------------------
--- 3. applications UPDATE had USING but NO WITH CHECK, so a researcher could
---    push their own row straight to status='approved'. Add WITH CHECK so a
---    researcher's resulting row stays theirs and only at draft/submitted.
--- ------------------------------------------------------------
+
+
+
+
+
 drop policy if exists apps_update on public.applications;
 create policy apps_update on public.applications
   for update to public
@@ -60,7 +60,7 @@ create policy apps_update on public.applications
         and (faculty = (select p.faculty from public.profiles p where p.id = auth.uid())))
   );
 
--- 3b. Same missing-status-guard on publication_grants.
+
 drop policy if exists publication_grants_update on public.publication_grants;
 create policy publication_grants_update on public.publication_grants
   for update to authenticated
@@ -79,12 +79,12 @@ create policy publication_grants_update on public.publication_grants
                           and coalesce(p.faculty,'') = coalesce(publication_grants.faculty,'') )))
   );
 
--- ------------------------------------------------------------
--- 5. Storage bucket 'documents' policies were USING (bucket_id='documents')
---    with no ownership check -> any authenticated user could read or overwrite
---    every uploaded file. Restrict to the owning researcher or staff.
---    Paths: '<appId>/...' for proposals, 'publication_grants/<grantId>/...'
--- ------------------------------------------------------------
+
+
+
+
+
+
 create or replace function public.can_access_doc(path text)
 returns boolean language plpgsql stable security definer set search_path = public as $fn$
 declare seg text; appid uuid; gid uuid;

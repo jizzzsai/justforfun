@@ -1,10 +1,10 @@
-/* ============================================================
-   Faculty / Academic Office / Dean Dashboard pages
-   ============================================================ */
+
+
+
 
 const FA = window.AU;
 
-/* ---------- A. Dashboard Overview ---------- */
+
 function FacultyDashboard({ navigate }) {
   return (
     <>
@@ -73,7 +73,7 @@ function FacultyDashboard({ navigate }) {
               </div>
             </div>
 
-            {/* mini bar chart */}
+            {                    }
             <div style={{display: "flex", alignItems: "flex-end", gap: 6, height: 100, marginTop: 16, padding: "0 4px"}}>
               {[3, 5, 4, 7, 6, 8, 5, 9, 7, 11, 9, 11].map((v, i) => (
                 <div key={i} style={{
@@ -110,7 +110,7 @@ function FacultyDashboard({ navigate }) {
   );
 }
 
-/* ---------- B. Incoming Applications ---------- */
+
 function FacultyIncoming({ navigate, onDownload }) {
   return (
     <>
@@ -168,9 +168,9 @@ function FacultyIncoming({ navigate, onDownload }) {
   );
 }
 
-/* ---------- C. Document Checklist ---------- */
-/* ---------- D. Academic Committee Review ---------- */
-/* ---------- E. Dean Approval ---------- */
+
+
+
 function LiveAppLoader({ status, applicationId, title, desc, render }) {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -330,7 +330,7 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
   );
 }
 
-/* ---------- C2. AU-R3 Dean Screening (paper presentation) ---------- */
+
 function r3Badge(status) {
   var base = window.DB.statusBadge(status);
   var labels = {
@@ -556,7 +556,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
   );
 }
 
-/* ---------- C3. AU-R4 Dean Screening (publication fee & reward) ---------- */
+
 function r4Badge(status) {
   var base = window.DB.statusBadge(status);
   var labels = {

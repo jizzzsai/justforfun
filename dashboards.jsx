@@ -1,17 +1,17 @@
-/* ============================================================
-   AU RGMS · Role-specific dashboards (8 roles)
-   Plus genuinely new pages for Expert Reviewer and Administrator.
 
-   Existing detail components (FacultyAcademic, FacultyDean,
-   IRASExpert, IRASPresident, IRASContract, IRASPayment) are
-   reused by the router for workflow screens.
-   ============================================================ */
+
+
+
+
+
+
+
 
 const D = window.AU;
 
-/* -----------------------------------------------------------
-   Helper · small reusable queue table
-   ----------------------------------------------------------- */
+
+
+
 function QueueTable({ rows, openLabel = "Review", onOpen, onDownload, columns = "full" }) {
   return (
     <table className="tbl">
@@ -52,9 +52,9 @@ function QueueTable({ rows, openLabel = "Review", onOpen, onDownload, columns = 
   );
 }
 
-/* -----------------------------------------------------------
-   DEAN — Dashboard
-   ----------------------------------------------------------- */
+
+
+
 function DeanDashboard({ navigate }) {
   return (
     <>
@@ -132,9 +132,9 @@ function DeanDashboard({ navigate }) {
   );
 }
 
-/* -----------------------------------------------------------
-   DEAN — First Screening Queue
-   ----------------------------------------------------------- */
+
+
+
 function DeanScreenQueue({ navigate, onDownload }) {
   return (
     <>
@@ -164,9 +164,9 @@ function DeanScreenQueue({ navigate, onDownload }) {
   );
 }
 
-/* -----------------------------------------------------------
-   DEAN — Sign & Forward Queue
-   ----------------------------------------------------------- */
+
+
+
 function DeanSignQueue({ navigate, onDownload }) {
   return (
     <>
@@ -195,9 +195,9 @@ function DeanSignQueue({ navigate, onDownload }) {
   );
 }
 
-/* -----------------------------------------------------------
-   DEAN — Decision History (read-only)
-   ----------------------------------------------------------- */
+
+
+
 function DeanHistory({ onDownload }) {
   const history = D.APPLICATIONS.filter(a =>
     !["draft", "submitted", "deanScreen"].includes(a.status.key)
@@ -212,9 +212,9 @@ function DeanHistory({ onDownload }) {
   );
 }
 
-/* -----------------------------------------------------------
-   COMMITTEE — Dashboard
-   ----------------------------------------------------------- */
+
+
+
 function CommitteeDashboard({ navigate }) {
   return (
     <>
@@ -285,7 +285,7 @@ function CommitteeDashboard({ navigate }) {
   );
 }
 
-/* COMMITTEE — Queue */
+
 function CommitteeQueue({ navigate, onDownload }) {
   return (
     <>
@@ -320,9 +320,9 @@ function CommitteeHistory({ onDownload }) {
   );
 }
 
-/* -----------------------------------------------------------
-   IRAS — Dashboard (refreshed for 8-role flow)
-   ----------------------------------------------------------- */
+
+
+
 function IRASDashboardV2({ navigate }) {
   return (
     <>
@@ -397,7 +397,7 @@ function IRASDashboardV2({ navigate }) {
   );
 }
 
-/* IRAS — Office Screening */
+
 function IRASScreen({ navigate, onDownload, onView, toast, setConfirm }) {
   return (
     <>
@@ -461,7 +461,7 @@ function IRASScreen({ navigate, onDownload, onView, toast, setConfirm }) {
   );
 }
 
-/* IRAS — Reviewer Pool */
+
 function IRASReviewerPool({ toast }) {
   const pool = [
     { n: "Assoc. Prof. Dr. Suthep Lertsiri",   a: "Chulalongkorn University",  t: "External", expertise: "AI · ML · NLP",         status: "Active",   load: 2 },
@@ -529,9 +529,9 @@ function IRASReviewerPool({ toast }) {
   );
 }
 
-/* -----------------------------------------------------------
-   EXPERT REVIEWER — Dashboard
-   ----------------------------------------------------------- */
+
+
+
 function ExpertDashboard({ navigate }) {
   return (
     <>
@@ -625,7 +625,7 @@ function ExpertDashboard({ navigate }) {
   );
 }
 
-/* EXPERT — Assignments list */
+
 function ExpertAssignments({ navigate, onDownload }) {
   const assignments = [
     { id: "RG-2025-001", title: "AI-Based Research Grant Tracking System for Assumption University", researcher: "Dr. Phyo Min Tun",          deadline: "Nov 25, 2025", status: "In Progress" },
@@ -665,7 +665,7 @@ function ExpertAssignments({ navigate, onDownload }) {
   );
 }
 
-/* EXPERT — Submitted reviews history */
+
 function ExpertHistory({ onDownload }) {
   const history = [
     { id: "RG-2024-114", title: "Federated Plagiarism Detection across Thai Universities",     date: "Jul 22, 2024", score: 78, verdict: "Favorable" },
@@ -705,9 +705,9 @@ function ExpertHistory({ onDownload }) {
   );
 }
 
-/* -----------------------------------------------------------
-   PRESIDENT — Dashboard
-   ----------------------------------------------------------- */
+
+
+
 function PresidentDashboard({ navigate }) {
   return (
     <>
@@ -797,7 +797,7 @@ function PresidentDashboard({ navigate }) {
   );
 }
 
-/* PRESIDENT — Approval queue */
+
 function PresidentQueue({ navigate, onDownload }) {
   return (
     <>
@@ -809,9 +809,9 @@ function PresidentQueue({ navigate, onDownload }) {
   );
 }
 
-/* -----------------------------------------------------------
-   OFM / FINANCE — Dashboard
-   ----------------------------------------------------------- */
+
+
+
 function OFMDashboard({ navigate }) {
   return (
     <>
@@ -903,7 +903,7 @@ function OFMDashboard({ navigate }) {
   );
 }
 
-/* OFM — Grant detail (single grant's three tranches) */
+
 function OFMDetail({ onDownload, toast, setConfirm }) {
   return (
     <>
@@ -956,7 +956,7 @@ function OFMDetail({ onDownload, toast, setConfirm }) {
   );
 }
 
-/* OFM — Payment history */
+
 function OFMHistory({ onDownload }) {
   const rows = [
     { id: "RG-2024-114", who: "Dr. Phyo Min Tun",         stage: "Final 30%", amount: 24000, date: "Jul 28, 2024", ref: "OFM-2024-0331" },
@@ -994,9 +994,9 @@ function OFMHistory({ onDownload }) {
   );
 }
 
-/* -----------------------------------------------------------
-   ADMINISTRATOR — Dashboard + Users + Journals + Audit + Settings
-   ----------------------------------------------------------- */
+
+
+
 function AdminDashboard({ navigate }) {
   return (
     <>
@@ -1061,7 +1061,7 @@ function AdminDashboard({ navigate }) {
   );
 }
 
-/* ADMIN — User management */
+
 function AdminUsers({ toast }) {
   const [search, setSearch] = useState("");
   const filtered = D.SYSTEM_USERS.filter(u =>
@@ -1131,7 +1131,7 @@ function AdminUsers({ toast }) {
   );
 }
 
-/* ADMIN — Journal tier reference */
+
 function AdminJournals({ toast }) {
   return (
     <>
@@ -1184,7 +1184,7 @@ function AdminJournals({ toast }) {
   );
 }
 
-/* ADMIN — Audit log */
+
 function AdminAudit() {
   return (
     <>
@@ -1218,7 +1218,7 @@ function AdminAudit() {
   );
 }
 
-/* ADMIN — System settings */
+
 function AdminSettings({ toast }) {
   const settings = [
     { section: "Application Workflow", items: [
@@ -1276,7 +1276,7 @@ function AdminSettings({ toast }) {
   );
 }
 
-/* Tiny toggle */
+
 function Toggle({ defaultOn = false }) {
   const [on, setOn] = useState(defaultOn);
   return (

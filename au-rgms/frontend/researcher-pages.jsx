@@ -1,6 +1,6 @@
-/* ============================================================
-   Researcher Dashboard pages
-   ============================================================ */
+
+
+
 
 const RA = window.AU;
 
@@ -10,7 +10,7 @@ const R1_EXAMPLE_PHASES = [
   { key: "phase4", number: 4, label: "Phase 4" },
 ];
 
-/* ---------- A. Dashboard Overview ---------- */
+
 function buildResearcherTimeline(statusKey) {
   const order = ["submission", "deanScreen", "committee", "iras", "contract", "pay1"];
   const idxMap = { draft: 0, submitted: 1, committee_review: 2, iras_review: 3, approved: 4, active: 5, completed: 6, returned: 0, rejected: 0 };
@@ -144,7 +144,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
       </div>
 
       <div className={isSingle ? "grid-2" : ""}>
-        {/* Left: payment status */}
+        {                          }
         {isSingle ? (
           <div className="card card-pad-0">
             <div className="card-head">
@@ -219,7 +219,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
         </div>
         )}
 
-        {/* Right: my applications (live). AU-R1 keeps this on its dedicated page. */}
+        {                                                                            }
         {isSingle && <div className="card card-pad-0">
           <div className="card-head">
             <h3>My Applications</h3>
@@ -279,9 +279,9 @@ const RESEARCHER_DEFAULT_BUDGET_ROWS = scaledBudgetRows(100000, RESEARCHER_DEFAU
 
 const roStyle = { background: "var(--paper-warm)", color: "var(--ink-2)", cursor: "not-allowed" };
 
-/* Upload every pending file at once instead of one after another (a sequential
-   loop made submitting with several PDFs feel frozen) and report any that fail
-   instead of silently dropping them. Returns the names that did not upload. */
+
+
+
 async function uploadAllDocuments(appId, files) {
   const results = await Promise.all((files || []).map(it =>
     window.DB.uploadDocument(appId, it.file, it.docType || null)
@@ -291,9 +291,9 @@ async function uploadAllDocuments(appId, files) {
   return results.filter(Boolean);
 }
 
-/* Banner shown when a researcher re-opens an application that a reviewer sent
-   back. Everything they already filled in is still loaded — this tells them what
-   still needs fixing before they resubmit. */
+
+
+
 function ReturnNotice({ info }) {
   if (!info) return null;
   const who = (info.actor && info.actor.full_name) || ({ dean: "The Dean", committee: "The Faculty Committee", iras: "The research office" }[info.actor_role] || "A reviewer");
@@ -358,7 +358,7 @@ function UniversityJoinedDateField({ value, onChange }) {
   );
 }
 
-/* ---------- B. Submit Application ---------- */
+
 function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId, grantType }) {
   const sys = grantSystemFor(grantType || "au_r1");
   const isR3 = !!sys.collaborative;
@@ -900,7 +900,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   );
 }
 
-/* ---------- B1. Submit AU-R3 Paper Presentation (conference) ---------- */
+
 const R3_DEFAULT_DRAFT = {
   confName: "", organizer: "", website: "", confType: "International", conferenceLocation: "",
   presentationDate: "", presentation: "Oral Presentation", journalDb: "", journalClassification: "",
@@ -1320,7 +1320,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
   );
 }
 
-/* ---------- B2. Submit AU-R4 Publication Fees & Reward ---------- */
+
 const R4_DEFAULT_DRAFT = {
   title: "", articleType: "Research Article", pubStatus: "Published",
   journal: "", publisher: "", website: "", articleUrl: "", doi: "", issn: "",
@@ -1551,7 +1551,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       <ReturnNotice info={returnInfo} />
 
       <div className="card card-pad-0">
-        {/* 1. Publication Information */}
+        {                                }
         <div className="form-section">
           <h4><span className="num">1</span> Publication Information</h4>
           <p className="section-sub">The published (or accepted) article you are claiming for.</p>
@@ -1592,7 +1592,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           </div>
         </div>
 
-        {/* 2. Journal Classification */}
+        {                               }
         <div className="form-section">
           <h4><span className="num">2</span> Journal Classification</h4>
           <p className="section-sub">Select the journal database / index and its matching classification. The research office makes the final verification.</p>
@@ -1628,7 +1628,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           </div>
         </div>
 
-        {/* 3. Author & Contribution */}
+        {                              }
         <div className="form-section">
           <h4><span className="num">3</span> Author and Contribution Information</h4>
           <p className="section-sub">Provide the First Author and Corresponding Author. Contributions must total 100%; the First Author needs ≥ 50%. With two authors, changing one percentage automatically balances the other.</p>
@@ -1669,7 +1669,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           </div>
         </div>
 
-        {/* 4. Researcher Information */}
+        {                               }
         <div className="form-section">
           <h4><span className="num">4</span> Researcher Information</h4>
           <p className="section-sub">Auto-filled from your profile. Correct any name, ID, faculty, or major information before submitting.</p>
@@ -1696,7 +1696,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           </div>
         </div>
 
-        {/* 5. Publication Fee and Claim Information — shown only after a tier is selected. */}
+        {                                                                                     }
         {tierSelected && (
           <div className="form-section">
             <h4><span className="num">5</span> Publication Fee and Claim Information</h4>
@@ -1725,7 +1725,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           </div>
         )}
 
-        {/* 6. Required Documents */}
+        {                           }
         <div className="form-section">
           <h4><span className="num">6</span> Required Documents</h4>
           <p className="section-sub">Upload the supporting documents required for Dean, Faculty Committee, and research-office review.</p>
@@ -1786,7 +1786,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           </div>
         </div>
 
-        {/* 7. Eligibility Declaration */}
+        {                                }
         <div className="form-section">
           <h4><span className="num">7</span> Eligibility Declaration</h4>
           <p className="section-sub">You must accept all declarations before you can submit.</p>
@@ -1821,7 +1821,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   );
 }
 
-/* ---------- C. My Applications ---------- */
+
 function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, setSelectedApplicationId, grantType }) {
   const sys = grantSystemFor(grantType || "au_r1");
   const [myApps, setMyApps] = useState(null);
@@ -1901,7 +1901,7 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
   );
 }
 
-/* Printable project summary used by the browser's Save as PDF flow. */
+
 function ProjectPrintSheet({ app, status }) {
   const sys = grantSystemFor(app.grant_type || "au_r1");
   const researcher = app.researcher || {};
@@ -2001,7 +2001,7 @@ function ProjectPrintSheet({ app, status }) {
   );
 }
 
-/* ---------- D. Application Detail ---------- */
+
 function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -2260,7 +2260,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
   );
 }
 
-/* ---------- E. Progress Report ---------- */
+
 function ResearcherProgress({ applicationId, navigate, onDownload, onView, toast }) {
   const [grant, setGrant] = useState(null);
   const [reports, setReports] = useState(null);
@@ -2465,7 +2465,7 @@ function ResearcherProgress({ applicationId, navigate, onDownload, onView, toast
   );
 }
 
-/* ---------- F. Final Report ---------- */
+
 function ResearcherFinal({ applicationId, navigate, onDownload, onView, toast }) {
   const [grant, setGrant] = useState(null);
   const [reports, setReports] = useState(null);
@@ -2676,7 +2676,7 @@ function ResearcherFinal({ applicationId, navigate, onDownload, onView, toast })
   );
 }
 
-/* ---------- G. Payment Status ---------- */
+
 function SingleGrantPaymentStatus({ grantType }) {
   const isR4 = grantType === "au_r4";
   const [grant, setGrant] = useState(null);

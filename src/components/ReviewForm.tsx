@@ -2,7 +2,7 @@ import { Card, CardHeader, Field, Input, Textarea, buttonClass } from "@/compone
 
 type Action = (formData: FormData) => void | Promise<void>;
 
-/** Shared review form for committee & expert evaluations. */
+
 export function ReviewForm({
   action,
   appId,

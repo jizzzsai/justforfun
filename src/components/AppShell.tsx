@@ -27,14 +27,14 @@ export function AppShell({
 
   return (
     <div className="flex min-h-screen bg-cream">
-      {/* Sidebar */}
+      {             }
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-40 flex w-64 flex-col border-r border-line bg-parchment transition-transform md:static md:translate-x-0",
           open ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        {/* Brand */}
+        {           }
         <div className="flex items-center justify-between gap-2 border-b border-line px-5 py-4">
           <Link href={nav[0].href} className="flex items-center gap-2.5">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gold text-white">
@@ -56,14 +56,14 @@ export function AppShell({
           </button>
         </div>
 
-        {/* Role label */}
+        {                }
         <div className="px-5 pt-4 pb-2">
           <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-gold">
             {meta.label}
           </p>
         </div>
 
-        {/* Nav */}
+        {         }
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 pb-4">
           {nav.map((item) => {
             const active = current?.href === item.href;
@@ -87,7 +87,7 @@ export function AppShell({
           })}
         </nav>
 
-        {/* User */}
+        {          }
         <div className="border-t border-line p-3">
           <div className="flex items-center gap-3 rounded-lg px-2 py-2">
             <Avatar name={profile.full_name} />
@@ -110,7 +110,7 @@ export function AppShell({
         </div>
       </aside>
 
-      {/* Mobile overlay */}
+      {                    }
       {open && (
         <div
           className="fixed inset-0 z-30 bg-ink/30 md:hidden"
@@ -118,7 +118,7 @@ export function AppShell({
         />
       )}
 
-      {/* Main column */}
+      {                 }
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b border-line bg-cream/90 px-4 backdrop-blur md:px-8">
           <button

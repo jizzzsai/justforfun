@@ -1,8 +1,8 @@
--- 0007_profiles_guard_backend.sql
--- profiles_guard blocked the admin Add-User server function: service-role writes
--- have no auth.uid(), so is_admin() was false and role/faculty changes were
--- rejected. Allow backend (null auth.uid()) and admins; normal authenticated
--- users are still blocked from changing role/faculty/email/is_active.
+
+
+
+
+
 create or replace function public.profiles_guard()
 returns trigger language plpgsql security definer set search_path = public as $fn$
 begin
