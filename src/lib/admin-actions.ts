@@ -17,7 +17,7 @@ const s = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 export async function adminCreateUser(formData: FormData) {
   await ensureAdmin();
   const email = s(formData, "email");
-  const password = s(formData, "password") || "AuResearch#2026";
+  const password = s(formData, "password") || "123456789";
   const admin = createAdminClient();
 
   const { data, error } = await admin.auth.admin.createUser({

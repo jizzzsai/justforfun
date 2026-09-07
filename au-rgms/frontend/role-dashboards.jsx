@@ -107,10 +107,10 @@ function DeanDashboard({ navigate }) {
       <PageHeader
         title={isR4 ? "AU-R4 · Dean's Dashboard" : isR3 ? "AU-R3 · Dean's Dashboard" : "Dean's Dashboard"}
         desc={isR4
-          ? "Review AU-R4 applications before forwarding eligible claims to the Faculty Committee."
+          ? "Review your faculty's AU-R4 applications before forwarding eligible claims to the Faculty Committee."
           : isR3
-          ? "Review paper presentation grant applications from every AU faculty and forward eligible applications to IRAS for verification."
-          : "Screen new proposals from every AU faculty, then forward them to the shared Faculty Committee account."}
+          ? "Review your faculty's paper presentation grant applications and forward eligible applications to RASSC for verification."
+          : "Screen new proposals from your faculty, then forward them to your Faculty Committee."}
         actions={
           <>
             {sysToggle}
@@ -186,7 +186,7 @@ function DeanR3Queue({ navigate, setSelectedApplicationId }) {
     <>
       <PageHeader
         title="AU-R3 Screening Queue"
-        desc="Paper presentation grant requests from every AU faculty awaiting review in this shared Dean account before IRAS."
+        desc="Paper presentation grant requests from your faculty awaiting Dean review before RASSC."
       />
       <div className="card card-pad-0">
         <div className="toolbar">
@@ -257,7 +257,7 @@ function DeanR4Queue({ navigate, setSelectedApplicationId }) {
   });
   return (
     <>
-      <PageHeader title="AU-R4 Screening Queue" desc="Review submitted publication fee and reward applications from every AU faculty in this shared Dean queue." />
+      <PageHeader title="AU-R4 Screening Queue" desc="Review submitted publication fee and reward applications from your faculty." />
       <div className="card card-pad-0">
         <div className="toolbar">
           <div className="search">
@@ -312,7 +312,7 @@ function DeanScreenQueue({ navigate, onDownload, toast, setConfirm, setSelectedA
     <>
       <PageHeader
         title="AU-R1 Screening Queue"
-        desc="New submissions from every AU faculty awaiting screening in this shared Dean account before they are sent to the shared Faculty Committee account."
+        desc="New submissions from your faculty awaiting screening before they are sent to your Faculty Committee."
       />
       <div className="card card-pad-0">
         <div className="toolbar">
@@ -490,7 +490,7 @@ function CommitteeDashboard({ navigate, setSelectedApplicationId }) {
     <>
       <PageHeader
         title="Faculty Committee Dashboard"
-        desc="Review proposals from every AU faculty forwarded by the shared Dean account and record recommendations."
+        desc="Review proposals from your faculty forwarded by the Dean and record recommendations."
         actions={
           <button className="btn btn-primary" onClick={() => navigate("c-queue")}>
             <Icon name="Inbox" size={14} /> Open Review Queue
@@ -565,7 +565,7 @@ function CommitteeQueue({ navigate, setSelectedApplicationId }) {
   };
   return (
     <>
-      <PageHeader title="Review Queue" desc="Proposals from every AU faculty awaiting review in this shared Committee account." />
+      <PageHeader title="Review Queue" desc="Proposals from your faculty awaiting committee review." />
       <div className="card card-pad-0">
         <div className="toolbar">
           <div className="search">
@@ -1876,13 +1876,17 @@ const ADMIN_ROLE_OPTIONS = [
   { key: "committee", label: "Faculty Committee" }, { key: "iras", label: "RASSC" },
   { key: "ofm", label: "OFM / Finance" }, { key: "admin", label: "Administrator" },
 ];
-const ADMIN_PROTECTED_DEMO_EMAILS = [
+const ADMIN_PROTECTED_DEMO_EMAILS = (D.FACULTIES || []).reduce((emails, faculty) => {
+  const code = String(faculty.code || "").toLowerCase();
+  return emails.concat(code + "researcher@au.edu", code + "dean@au.edu", code + "committee@au.edu");
+}, []).concat([
+  "rassc@au.edu", "finance@au.edu", "admin@au.edu",
   "researcher.test@au.edu", "dean.sci@au.edu", "comm.chair@au.edu", "iras.office@au.edu",
-  "expert.ml@au.edu", "president@au.edu", "finance@au.edu", "admin@au.edu",
-];
+  "expert.ml@au.edu", "president@au.edu",
+]);
 
 function AdminAddUserForm({ onCreated, onClose, toast }) {
-  const blank = { name_title: "", full_name: "", email: "", au_id: "", role: "dean", faculty: "", department: "", password: "AuResearch#2026" };
+  const blank = { name_title: "", full_name: "", email: "", au_id: "", role: "dean", faculty: "", department: "", password: "123456789" };
   const [f, setF] = useState(blank);
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setF(s => Object.assign({}, s, k === "faculty" ? { faculty: v, department: "" } : { [k]: v }));

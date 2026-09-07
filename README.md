@@ -54,22 +54,25 @@ npm run db:seed     # creates demo users + sample applications across every stag
 npm run dev         # http://localhost:3000
 ```
 
-## Demo accounts
+## Test accounts
 
-All demo accounts use the password **`AuResearch#2026`**:
+All test accounts use password **`123456789`**. The login accepts either the username or the complete `@au.edu` email.
 
-| Role        | Email                |
-|-------------|----------------------|
-| Researcher  | `researcher.test@au.edu` |
-| Dean        | `dean.sci@au.edu`    |
-| Committee   | `comm.chair@au.edu`  |
-| IRAS        | `iras.office@au.edu` |
-| Expert      | `expert.ml@au.edu`   |
-| President   | `president@au.edu`   |
-| OFM         | `finance@au.edu`     |
-| Admin       | `admin@au.edu`       |
+| Faculty | Researcher | Dean | Committee |
+|---------|------------|------|-----------|
+| VMES | `vmesresearcher` | `vmesdean` | `vmescommittee` |
+| MSME | `msmeresearcher` | `msmedean` | `msmecommittee` |
+| ARTS | `artsresearcher` | `artsdean` | `artscommittee` |
+| COMM | `commresearcher` | `commdean` | `commcommittee` |
+| ARCH | `archresearcher` | `archdean` | `archcommittee` |
+| NURSE | `nurseresearcher` | `nursedean` | `nursecommittee` |
+| LAW | `lawresearcher` | `lawdean` | `lawcommittee` |
+| BIOTECH | `biotechresearcher` | `biotechdean` | `biotechcommittee` |
+| MUSIC | `musicresearcher` | `musicdean` | `musiccommittee` |
 
-The login screen has one-click quick-fill buttons for each role.
+University-wide accounts: `rassc`, `finance`, and `admin`.
+
+The login screen includes a faculty selector and one-click test-account buttons.
 
 ## Scripts
 
@@ -79,6 +82,7 @@ The login screen has one-click quick-fill buttons for each role.
 | `npm run build`  | Production build                                       |
 | `npm run db:push`| Apply SQL migrations over a direct Postgres connection |
 | `npm run db:seed`| Seed demo users + sample data (service role)           |
+| `npm run db:test-accounts` | Create or refresh faculty test accounts without changing application data |
 
 ## Project structure
 

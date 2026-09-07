@@ -37,6 +37,13 @@
     var r = await sb.from("profiles").select("role").eq("id", id).single();
     return r.data ? r.data.role : null;
   }
+  async function currentFacultyScope() {
+    var id = await uid();
+    if (!id) return null;
+    var r = await sb.from("profiles").select("role,faculty").eq("id", id).single();
+    if (!r.data || ["dean", "committee"].indexOf(r.data.role) === -1) return null;
+    return r.data.faculty || null;
+  }
   async function genPublicationCode() {
     var year = new Date().getFullYear();
     var r = await sb.from("publication_grants").select("id", { count: "exact", head: true });
@@ -292,6 +299,8 @@
       var q = sb.from("applications")
         .select("*, researcher:profiles(full_name)")
         .eq("status", status);
+      var faculty = await currentFacultyScope();
+      if (faculty) q = q.eq("faculty", faculty);
       if (grantType) {
         if (grantType.charAt(0) === "!") q = q.neq("grant_type", grantType.slice(1));
         else q = q.eq("grant_type", grantType);
@@ -313,9 +322,12 @@
 
     async applicationDetail(appId) {
       var isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appId || "");
-      var res = await sb.from("applications")
+      var q = sb.from("applications")
         .select("*, researcher:profiles(full_name,email,name_title,title,au_id,phone,office_room), documents:application_documents(*), reviews(*, reviewer:profiles(full_name,email,title,faculty,department)), events:application_events(*, actor:profiles(full_name)), payments(*), reports(*)")
-        .eq(isUuid ? "id" : "code", appId).single();
+        .eq(isUuid ? "id" : "code", appId);
+      var faculty = await currentFacultyScope();
+      if (faculty) q = q.eq("faculty", faculty);
+      var res = await q.single();
       if (res.error) throw res.error;
       var a = res.data;
       if (a.grant_type === "au_r3") {
@@ -335,15 +347,20 @@
     },
 
     async firstApplicationForStatus(status) {
-      var res = await sb.from("applications")
-        .select("id").eq("status", status).order("submitted_at", { ascending: true }).limit(1);
+      var q = sb.from("applications").select("id").eq("status", status);
+      var faculty = await currentFacultyScope();
+      if (faculty) q = q.eq("faculty", faculty);
+      var res = await q.order("submitted_at", { ascending: true }).limit(1);
       if (res.error) throw res.error;
       var first = res.data && res.data[0];
       return first ? this.applicationDetail(first.id) : null;
     },
 
     async profilesByRole(role) {
-      var res = await sb.from("profiles").select("*").eq("role", role).order("full_name", { ascending: true });
+      var q = sb.from("profiles").select("*").eq("role", role);
+      var faculty = await currentFacultyScope();
+      if (faculty) q = q.eq("faculty", faculty);
+      var res = await q.order("full_name", { ascending: true });
       if (res.error) throw res.error;
       return res.data || [];
     },
@@ -1060,6 +1077,8 @@
 
     async statusCounts(grantType) {
       var q = sb.from("applications").select("status");
+      var faculty = await currentFacultyScope();
+      if (faculty) q = q.eq("faculty", faculty);
       if (grantType) {
         if (grantType.charAt(0) === "!") q = q.neq("grant_type", grantType.slice(1));
         else q = q.eq("grant_type", grantType);
@@ -1096,8 +1115,10 @@
       return r.count || 0;
     },
     async byStatuses(arr) {
-      var res = await sb.from("applications").select("*, researcher:profiles(full_name)")
-        .in("status", arr).order("decided_at", { ascending: false, nullsFirst: false });
+      var q = sb.from("applications").select("*, researcher:profiles(full_name)").in("status", arr);
+      var faculty = await currentFacultyScope();
+      if (faculty) q = q.eq("faculty", faculty);
+      var res = await q.order("decided_at", { ascending: false, nullsFirst: false });
       if (res.error) throw res.error;
       return (res.data || []).map(mapRow);
     },

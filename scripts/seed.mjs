@@ -14,7 +14,7 @@ if (!URL || !KEY) {
 }
 
 const db = createClient(URL, KEY, { auth: { autoRefreshToken: false, persistSession: false } });
-const DEMO_PASSWORD = "AuResearch#2026";
+const DEMO_PASSWORD = "123456789";
 
 const day = 86_400_000;
 const daysAgo = (n) => new Date(Date.now() - n * day).toISOString();

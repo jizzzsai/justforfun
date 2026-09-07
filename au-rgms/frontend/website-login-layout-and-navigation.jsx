@@ -4,24 +4,25 @@
 
 
 const APP = window.AU;
-const TEST_PASSWORD = "AuResearch#2026";
+const TEST_PASSWORD = "123456789";
+const FACULTY_TEST_ROLES = [
+  { key: "researcher", label: "Researcher" },
+  { key: "dean", label: "Dean" },
+  { key: "committee", label: "Committee" },
+];
+function facultyTestEmail(code, role) {
+  return String(code || "VMES").toLowerCase() + role + "@au.edu";
+}
 const TEST_EMAIL_FOR = {
-  researcher: "researcher.test@au.edu",
-  dean: "dean.sci@au.edu",
-  committee: "comm.chair@au.edu",
-  iras: "iras.office@au.edu",
+  researcher: "vmesresearcher@au.edu",
+  dean: "vmesdean@au.edu",
+  committee: "vmescommittee@au.edu",
+  iras: "rassc@au.edu",
   expert: "expert.ml@au.edu",
   president: "president@au.edu",
   ofm: "finance@au.edu",
   admin: "admin@au.edu",
 };
-const TEST_EXPERT_ACCOUNTS = [
-  { label: "Expert 1", email: "expert.ml@au.edu" },
-  { label: "Expert 2", email: "expert.bio@au.edu" },
-  { label: "Expert 3", email: "expert.ds@au.edu" },
-];
-
-
 function LoginPage({ onLogin }) {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
@@ -30,6 +31,7 @@ function LoginPage({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(() => !!(window.AUTH && window.AUTH.remembersSession()));
   const [helpTopic, setHelpTopic] = useState(null);
+  const [demoFaculty, setDemoFaculty] = useState("VMES");
   const loginPending = useRef(false);
   const emailInput = useRef(null);
   const passwordInput = useRef(null);
@@ -129,9 +131,24 @@ function LoginPage({ onLogin }) {
             <details className="au-login-demo">
               <summary>Developer Demo Access <Icon name="ChevronDown" size={12} /></summary>
               <div className="au-login-demo-panel">
-                <p>Shared test accounts. Use your own university account for real applications.</p>
+                <p>Select a faculty account. Every test account uses password <strong>{TEST_PASSWORD}</strong>.</p>
+                <label className="au-login-demo-select">
+                  <span>Faculty</span>
+                  <select value={demoFaculty} onChange={e => setDemoFaculty(e.target.value)} disabled={busy}>
+                    {APP.FACULTIES.map(f => <option key={f.code} value={f.code}>{f.code} · {f.name}</option>)}
+                  </select>
+                </label>
                 <div className="au-login-demo-grid">
-                  {APP.ROLES.map(r => <button key={r.key} type="button" disabled={busy} onClick={() => demoLogin(TEST_EMAIL_FOR[r.key])}>{r.name}</button>)}
+                  {FACULTY_TEST_ROLES.map(r => {
+                    const username = demoFaculty.toLowerCase() + r.key;
+                    return <button key={r.key} type="button" disabled={busy} title={username + "@au.edu"} onClick={() => demoLogin(facultyTestEmail(demoFaculty, r.key))}><strong>{username}</strong><span>{r.label}</span></button>;
+                  })}
+                </div>
+                <div className="au-login-demo-section">University-wide</div>
+                <div className="au-login-demo-grid au-login-demo-grid-wide">
+                  <button type="button" disabled={busy} title="rassc@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.iras)}><strong>rassc</strong><span>RASSC / IRAS</span></button>
+                  <button type="button" disabled={busy} title="finance@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.ofm)}><strong>finance</strong><span>OFM / Finance</span></button>
+                  <button type="button" disabled={busy} title="admin@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.admin)}><strong>admin</strong><span>Administrator</span></button>
                 </div>
               </div>
             </details>
@@ -679,7 +696,11 @@ function App() {
 
   const onSwitchRole = (newRole, email) => {
     if (!ROLE_CONFIG[newRole]) return;
-    switchToTestRole(newRole, { email });
+    const faculty = profile && (APP.FACULTIES || []).find(f => f.name === profile.faculty);
+    const facultyEmail = faculty && FACULTY_TEST_ROLES.some(r => r.key === newRole)
+      ? facultyTestEmail(faculty.code, newRole)
+      : null;
+    switchToTestRole(newRole, { email: email || facultyEmail || TEST_EMAIL_FOR[newRole] });
   };
 
   const onLogout = async () => {

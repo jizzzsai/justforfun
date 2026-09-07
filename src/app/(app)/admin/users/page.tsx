@@ -76,8 +76,8 @@ export default async function AdminUsers() {
               ))}
             </Select>
           </Field>
-          <Field label="Temporary password" hint="Defaults to AuResearch#2026">
-            <Input name="password" placeholder="AuResearch#2026" />
+          <Field label="Temporary password" hint="Defaults to 123456789">
+            <Input name="password" placeholder="123456789" />
           </Field>
           <Field label="Title">
             <Input name="title" placeholder="Dr. / Assoc. Prof." />

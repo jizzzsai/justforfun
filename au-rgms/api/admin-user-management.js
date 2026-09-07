@@ -1,8 +1,12 @@
 const ROLES = ["researcher", "dean", "committee", "iras", "expert", "president", "ofm", "admin"];
-const PROTECTED_DEMO_EMAILS = [
+const FACULTY_TEST_CODES = ["vmes", "msme", "arts", "comm", "arch", "nurse", "law", "biotech", "music"];
+const PROTECTED_DEMO_EMAILS = FACULTY_TEST_CODES.reduce((emails, code) => emails.concat(
+  code + "researcher@au.edu", code + "dean@au.edu", code + "committee@au.edu"
+), []).concat([
+  "rassc@au.edu", "finance@au.edu", "admin@au.edu",
   "researcher.test@au.edu", "dean.sci@au.edu", "comm.chair@au.edu", "iras.office@au.edu",
-  "expert.ml@au.edu", "president@au.edu", "finance@au.edu", "admin@au.edu",
-];
+  "expert.ml@au.edu", "president@au.edu",
+]);
 const NULLABLE_PROFILE_REFERENCES = [
   ["app_settings", "updated_by"],
   ["application_documents", "uploaded_by"],

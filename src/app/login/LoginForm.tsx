@@ -5,14 +5,12 @@ import { Loader2 } from "lucide-react";
 import { signInAction, type SignInState } from "@/lib/auth-actions";
 import { Field, Input, buttonClass } from "@/components/ui";
 
-const DEMO_PASSWORD = "AuResearch#2026";
+const DEMO_PASSWORD = "123456789";
 const DEMO_ACCOUNTS: { role: string; email: string }[] = [
-  { role: "Researcher", email: "researcher.test@au.edu" },
-  { role: "Dean", email: "dean.sci@au.edu" },
-  { role: "Committee", email: "comm.chair@au.edu" },
-  { role: "IRAS", email: "iras.office@au.edu" },
-  { role: "Expert", email: "expert.ml@au.edu" },
-  { role: "President", email: "president@au.edu" },
+  { role: "Researcher", email: "vmesresearcher@au.edu" },
+  { role: "Dean", email: "vmesdean@au.edu" },
+  { role: "Committee", email: "vmescommittee@au.edu" },
+  { role: "RASSC", email: "rassc@au.edu" },
   { role: "OFM", email: "finance@au.edu" },
   { role: "Admin", email: "admin@au.edu" },
 ];
