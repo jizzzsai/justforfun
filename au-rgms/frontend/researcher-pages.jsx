@@ -135,19 +135,9 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
         <div className="card-body">
           {appsError && <p className="text-sm text-muted" role="status">Could not load your application pipeline. Please refresh to try again.</p>}
           {apps === null && !appsError && <p className="text-sm text-muted" role="status">Loading pipeline…</p>}
-          {showExample && !isSingle && <div className="researcher-pipeline-example">
-            <p className="text-sm text-muted">AU-R1 application steps.</p>
-            <HTimeline steps={R1_DASHBOARD_PIPELINE} app={{ timeline: buildResearcherTimeline("submitted") }} />
-          </div>}
-          {showExample && isSingle && <div className="researcher-pipeline-example">
-            <p className="text-sm text-muted">{isSingle ? "Your " + sys.code + " application will follow these steps." : "AU-R1 phase overview."}</p>
-            <ol className="researcher-pipeline-steps" aria-label={sys.code + " example workflow"}>
-              {exampleSteps.map((step, index) => <li key={step.key}>
-                <span className="researcher-pipeline-number" aria-hidden="true">{step.number || index + 1}</span>
-                <span>{step.label}</span>
-                {index < exampleSteps.length - 1 && <span className="researcher-pipeline-arrow" aria-hidden="true"><Icon name="ArrowRight" size={14} /></span>}
-              </li>)}
-            </ol>
+          {showExample && <div className="researcher-pipeline-example">
+            <p className="text-sm text-muted">{sys.code} application steps.</p>
+            <HTimeline steps={exampleSteps} app={{ timeline: {} }} />
           </div>}
           {latest && isR4 && <HTimeline steps={R4_PIPELINE} app={{ timeline: buildR4Timeline(latest.status) }} />}
           {latest && isR3 && <HTimeline steps={R3_PIPELINE} app={{ timeline: buildR3Timeline(latest.status) }} />}
