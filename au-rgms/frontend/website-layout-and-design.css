@@ -119,7 +119,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   gap: 16px;
   width: 100%;
   padding: 28px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--au-crimson);
   border-radius: 28px;
   background: #fff;
   box-shadow: 0 24px 60px rgba(62, 42, 36, .09);
@@ -140,7 +140,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .grant-choice-card-center {
   color: inherit;
   background: #fff;
-  border-color: var(--au-crimson);
+  border-color: var(--line);
   box-shadow: none;
 }
 .grant-choice-card.is-disabled { opacity: .65; }
