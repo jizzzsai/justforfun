@@ -78,7 +78,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
     window.AUTH.profile().then(setMe).catch(() => {});
     window.DB.myGrant(grantType || "au_r1").then(g => setGrant(g || false)).catch(() => setGrant(false));
     window.DB.myApplications(grantType || undefined)
-      .then(items => { if (active) setApps(items || []); })
+      .then(items => { if (active) setApps((items || []).filter(app => !app.collaboration || app.collaboration.status === "accepted")); })
       .catch(() => { if (active) setAppsError(true); });
     return () => { active = false; };
   }, [grantType]);
@@ -1827,21 +1827,46 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
 }
 
 
-function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, setSelectedApplicationId, grantType }) {
+function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, setSelectedApplicationId, grantType, toast, setConfirm }) {
   const sys = grantSystemFor(grantType || "au_r1");
   const [myApps, setMyApps] = useState(null);
-  useEffect(() => {
-    (async () => {
+  const [invitationBusy, setInvitationBusy] = useState(null);
+  const loadApplications = async () => {
+    try {
+      const apps = await window.DB.myApplications(grantType || undefined);
+      setMyApps(apps.map(a => ({
+        id: a.code, _uuid: a.id, title: a.title, faculty: a.faculty, department: a.department,
+        submittedAt: a.submitted_at ? window.DB.fmtDate(a.submitted_at) : "—",
+        stage: window.DB.statusBadge(a.status).label, status: window.DB.statusBadge(a.status), statusKey: a.status,
+        isOwner: a.is_owner !== false,
+        collaboration: a.collaboration || null,
+        invitedBy: (a.conference_info && a.conference_info.researcherName) || (a.pub_info && a.pub_info.researcherName) || "Principal researcher",
+      })));
+    } catch (e) { setMyApps([]); }
+  };
+  useEffect(() => { setMyApps(null); loadApplications(); }, [grantType]);
+
+  const answerInvitation = (application, accept) => {
+    const run = async () => {
+      setInvitationBusy(application.collaboration.id);
       try {
-        const apps = await window.DB.myApplications(grantType || undefined);
-        setMyApps(apps.map(a => ({
-          id: a.code, _uuid: a.id, title: a.title, faculty: a.faculty, department: a.department,
-          submittedAt: a.submitted_at ? window.DB.fmtDate(a.submitted_at) : "—",
-          stage: window.DB.statusBadge(a.status).label, status: window.DB.statusBadge(a.status), statusKey: a.status,
-        })));
-      } catch (e) { setMyApps([]); }
-    })();
-  }, [grantType]);
+        await window.DB.respondToCollaboration(application.collaboration.id, accept);
+        if (toast) toast(accept ? "Co-author invitation accepted." : "Co-author invitation declined.");
+        await loadApplications();
+      } catch (e) {
+        if (toast) toast("Invitation error: " + ((e && e.message) || e));
+      } finally { setInvitationBusy(null); }
+    };
+    if (!accept && setConfirm) {
+      setConfirm({
+        kind: "danger",
+        title: "Decline co-author invitation?",
+        message: "This application will be removed from your My Applications list.",
+        confirmLabel: "Decline Invitation",
+        onConfirm: run,
+      });
+    } else run();
+  };
 
   return (
     <>
@@ -1884,18 +1909,23 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
                 <td><span className="id">{a.id}</span></td>
                 <td className="title-cell">
                   <div className="t">{a.title}</div>
-                  <div className="s">{a.faculty || "—"}{a.department ? " · " + a.department : ""}</div>
+                  <div className="s">{a.isOwner ? (a.faculty || "—") + (a.department ? " · " + a.department : "") : (a.collaboration.status === "pending" ? "Co-author invitation from " : "Co-author · added by ") + a.invitedBy}</div>
                 </td>
                 <td>{a.submittedAt}</td>
-                <td>{a.stage}</td>
-                <td><Badge status={a.status} /></td>
+                <td>{!a.isOwner && a.collaboration.status === "pending" ? "Invitation" : a.stage}</td>
+                <td>{!a.isOwner && a.collaboration.status === "pending" ? <span className="badge badge-pending"><span className="dot"></span>Awaiting your acceptance</span> : !a.isOwner ? <span className="badge badge-check"><span className="dot"></span>Accepted co-author</span> : <Badge status={a.status} />}</td>
                 <td className="actions">
-                  <button className="btn btn-ghost btn-sm" onClick={() => (a.statusKey === "draft" || a.statusKey === "returned") ? (openDraft && openDraft(a._uuid)) : (openDetail && openDetail(a._uuid))}>
-                    <Icon name={(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit3" : "Eye"} size={13} /> {(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit" : "View"}
-                  </button>
-                  <button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}>
-                    <Icon name="FolderOpen" size={13} /> Files
-                  </button>
+                  {!a.isOwner && a.collaboration.status === "pending" ? <>
+                    <button className="btn btn-primary btn-sm" disabled={invitationBusy === a.collaboration.id} onClick={() => answerInvitation(a, true)}><Icon name="Check" size={13} /> {invitationBusy === a.collaboration.id ? "Accepting…" : "Accept"}</button>
+                    <button className="btn btn-ghost btn-sm" disabled={invitationBusy === a.collaboration.id} onClick={() => answerInvitation(a, false)}><Icon name="X" size={13} /> Decline</button>
+                  </> : !a.isOwner ? (
+                    <button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}><Icon name="Eye" size={13} /> View &amp; Timeline</button>
+                  ) : <>
+                    <button className="btn btn-ghost btn-sm" onClick={() => (a.statusKey === "draft" || a.statusKey === "returned") ? (openDraft && openDraft(a._uuid)) : (openDetail && openDetail(a._uuid))}>
+                      <Icon name={(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit3" : "Eye"} size={13} /> {(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit" : "View"}
+                    </button>
+                    <button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}><Icon name="FolderOpen" size={13} /> Files</button>
+                  </>}
                 </td>
               </tr>
             ))}
@@ -1910,13 +1940,11 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
 function ProjectPrintSheet({ app, status }) {
   const sys = grantSystemFor(app.grant_type || "au_r1");
   const researcher = app.researcher || {};
-  const applicationContact = app.conference_info || {};
-  const researcherName = app.grant_type === "au_r3" && applicationContact.researcherName
+  const applicationContact = app.grant_type === "au_r3" ? (app.conference_info || {}) : (app.pub_info || {});
+  const researcherName = applicationContact.researcherName
     ? applicationContact.researcherName
     : ([researcher.name_title, researcher.full_name].filter(Boolean).join(" ") || "-");
-  const researcherEmail = app.grant_type === "au_r3" && applicationContact.researcherEmail
-    ? applicationContact.researcherEmail
-    : researcher.email;
+  const researcherEmail = applicationContact.researcherEmail || applicationContact.contactEmail || researcher.email;
   const payments = (app.payments || []).slice().sort((a, b) => Number(a.instalment) - Number(b.instalment));
   const show = value => value === 0 || value ? value : "-";
   const date = value => value ? window.DB.fmtDate(value) : "-";
@@ -2017,7 +2045,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
-  const canEditDocs = app && ["draft", "submitted", "returned"].includes(app.status);
+  const canEditDocs = app && app.is_owner !== false && ["draft", "submitted", "returned"].includes(app.status);
 
   const load = async () => {
     setLoading(true);
@@ -2077,12 +2105,12 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
 
   const docs = app.documents || [];
   const budgetRows = Array.isArray(app.budget_breakdown) ? app.budget_breakdown : [];
-  const applicationContact = app.conference_info || {};
-  const researcherName = app.grant_type === "au_r3" && applicationContact.researcherName
+  const applicationContact = app.grant_type === "au_r3" ? (app.conference_info || {}) : (app.pub_info || {});
+  const researcherName = applicationContact.researcherName
     ? applicationContact.researcherName
     : (app.researcher ? app.researcher.full_name : "Researcher");
-  const researcherEmail = app.grant_type === "au_r3" && applicationContact.researcherEmail
-    ? applicationContact.researcherEmail
+  const researcherEmail = applicationContact.researcherEmail || applicationContact.contactEmail
+    ? (applicationContact.researcherEmail || applicationContact.contactEmail)
     : (app.researcher ? app.researcher.email : "-");
   const status = app.statusBadge || window.DB.statusBadge(app.status);
   const joinedDate = researcherJoinedDate(app);
@@ -2128,8 +2156,9 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
         actions={
           <>
             <button className="btn btn-secondary" onClick={printProject} title="Open the print dialog, then choose Save as PDF"><Icon name="Printer" size={13} /> Print PDF</button>
+            {app.is_owner === false && <span className="badge badge-academic"><span className="dot"></span>Co-author · View only</span>}
             <Badge status={status} />
-            {["draft", "returned"].includes(app.status) && <button className="btn btn-secondary" onClick={() => navigate("r-submit", { keepSelection: true })}><Icon name="Edit3" size={13} /> {app.status === "returned" ? "Edit & Resubmit" : "Edit Draft"}</button>}
+            {app.is_owner !== false && ["draft", "returned"].includes(app.status) && <button className="btn btn-secondary" onClick={() => navigate("r-submit", { keepSelection: true })}><Icon name="Edit3" size={13} /> {app.status === "returned" ? "Edit & Resubmit" : "Edit Draft"}</button>}
           </>
         }
       />

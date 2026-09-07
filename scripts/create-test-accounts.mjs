@@ -26,10 +26,20 @@ const accounts = faculties.flatMap(faculty => [
   { email: faculty.code + "dean@au.edu", full_name: faculty.code.toUpperCase() + " Dean Test", role: "dean", faculty: faculty.name, department: "Dean's Office", name_title: "Prof." },
   { email: faculty.code + "committee@au.edu", full_name: faculty.code.toUpperCase() + " Committee Test", role: "committee", faculty: faculty.name, department: "Faculty Committee", name_title: "Assoc. Prof." },
 ]).concat([
+  { email: "felix@au.edu", full_name: "Felix Researcher", role: "researcher", faculty: "Vincent Mary School of Engineering, Science and Technology", department: "Information Technology", name_title: "Mr." },
+  { email: "james@au.edu", full_name: "James Researcher", role: "researcher", faculty: "Vincent Mary School of Engineering, Science and Technology", department: "Information Technology", name_title: "Mr." },
   { email: "rassc@au.edu", full_name: "RASSC Test", role: "iras", faculty: "Research Affairs", department: "RASSC", name_title: "" },
   { email: "finance@au.edu", full_name: "Finance Test", role: "ofm", faculty: "Office of Financial Management", department: "Finance", name_title: "" },
   { email: "admin@au.edu", full_name: "Administrator Test", role: "admin", faculty: "Information Technology", department: "Administration", name_title: "" },
 ]);
+
+const requestedEmails = new Set(process.argv.slice(2).map(email => email.trim().toLowerCase()).filter(Boolean));
+const selectedAccounts = requestedEmails.size
+  ? accounts.filter(account => requestedEmails.has(account.email.toLowerCase()))
+  : accounts;
+if (requestedEmails.size && selectedAccounts.length !== requestedEmails.size) {
+  throw new Error("One or more requested test-account emails are not defined in this script.");
+}
 
 const listed = await db.auth.admin.listUsers({ page: 1, perPage: 1000 });
 if (listed.error) throw listed.error;
@@ -37,7 +47,7 @@ const existing = new Map(listed.data.users.map(user => [String(user.email || "")
 let created = 0;
 let updated = 0;
 
-for (const account of accounts) {
+for (const account of selectedAccounts) {
   let user = existing.get(account.email);
   const metadata = { full_name: account.full_name, role: account.role, faculty: account.faculty, department: account.department, name_title: account.name_title };
   if (user) {
@@ -66,4 +76,4 @@ for (const account of accounts) {
   if (profile.error) throw profile.error;
 }
 
-console.log(JSON.stringify({ total: accounts.length, created, updated, password }));
+console.log(JSON.stringify({ total: selectedAccounts.length, created, updated }));
