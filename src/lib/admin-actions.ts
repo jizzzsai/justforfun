@@ -20,7 +20,7 @@ export async function adminCreateUser(formData: FormData) {
   const password = s(formData, "password") || "123456789";
   const admin = createAdminClient();
 
-  const { data, error } = await admin.auth.admin.createUser({
+  await admin.auth.admin.createUser({
     email,
     password,
     email_confirm: true,
@@ -33,10 +33,6 @@ export async function adminCreateUser(formData: FormData) {
     },
   });
 
-  if (!error && data?.user) {
-    const expertise = s(formData, "expertise");
-    if (expertise) await admin.from("profiles").update({ expertise }).eq("id", data.user.id);
-  }
   revalidatePath("/admin/users");
 }
 

@@ -1876,14 +1876,6 @@ const ADMIN_ROLE_OPTIONS = [
   { key: "committee", label: "Faculty Committee" }, { key: "iras", label: "RASSC" },
   { key: "ofm", label: "OFM / Finance" }, { key: "admin", label: "Administrator" },
 ];
-const ADMIN_PROTECTED_DEMO_EMAILS = (D.FACULTIES || []).reduce((emails, faculty) => {
-  const code = String(faculty.code || "").toLowerCase();
-  return emails.concat(code + "researcher@au.edu", code + "dean@au.edu", code + "committee@au.edu");
-}, []).concat([
-  "rassc@au.edu", "finance@au.edu", "admin@au.edu",
-  "researcher.test@au.edu", "dean.sci@au.edu", "comm.chair@au.edu", "iras.office@au.edu",
-  "expert.ml@au.edu", "president@au.edu",
-]);
 
 function AdminAddUserForm({ onCreated, onClose, toast }) {
   const blank = { name_title: "", full_name: "", email: "", au_id: "", role: "dean", faculty: "", department: "", password: "123456789" };
@@ -2023,7 +2015,6 @@ function AdminUsers({ toast, setConfirm, profile }) {
   const filtered = (users || []).filter(u => !search || (u.full_name + u.email + u.role + (u.department || "")).toLowerCase().includes(search.toLowerCase()));
   const editUser = (u) => { setAdding(false); setEditing(u); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const deleteUser = (u) => {
-    if (ADMIN_PROTECTED_DEMO_EMAILS.includes(String(u.email || "").toLowerCase())) return toast("Built-in demo accounts cannot be deleted because Quick Demo Login depends on them.");
     if (profile && u.id === profile.id) return toast("You cannot delete the account you are currently using.");
     const runDelete = async () => {
       try {
@@ -2059,8 +2050,7 @@ function AdminUsers({ toast, setConfirm, profile }) {
             {users === null && <tr><td colSpan="8" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading users...</td></tr>}
             {users && filtered.length === 0 && <tr><td colSpan="8"><Empty title="No users found" desc="Try another search." icon="Users" /></td></tr>}
             {filtered.map(u => {
-              const grantAccess = (u.role === "committee" || u.role === "expert") ? "AU-R1" : "All Grants";
-              const protectedDemo = ADMIN_PROTECTED_DEMO_EMAILS.includes(String(u.email || "").toLowerCase());
+              const grantAccess = u.role === "committee" ? "AU-R1" : "All Grants";
               return (
               <tr key={u.id}>
                 <td><div style={{display: "flex", alignItems: "center", gap: 8}}><Avatar initials={(u.full_name || "U").split(" ").map(p => p[0]).join("").slice(0,2).toUpperCase()} size={28} color="var(--au-navy)" /><div><div style={{fontSize: 13, fontWeight: 600}}>{u.full_name}</div><div style={{fontSize: 11, color: "var(--ink-3)"}} className="id">{String(u.id).slice(0, 8)}</div></div></div></td>
@@ -2071,8 +2061,8 @@ function AdminUsers({ toast, setConfirm, profile }) {
                 <td><span className={"badge " + (u.is_active === false ? "badge-draft" : "badge-check")}><span className="dot"></span>{u.is_active === false ? "Inactive" : "Active"}</span></td>
                 <td style={{fontSize: 11, color: "var(--ink-3)"}}>{window.DB.fmtDate(u.created_at)}</td>
                 <td className="actions">
-                  <button className="btn btn-ghost btn-sm" aria-label={"Edit " + u.full_name} title={protectedDemo ? "Built-in demo account is protected" : "Edit user"} disabled={protectedDemo} onClick={() => editUser(u)}><Icon name="Edit" size={13} /></button>
-                  <button className="btn btn-ghost btn-sm" aria-label={"Delete " + u.full_name} title={protectedDemo ? "Built-in demo account is protected" : profile && u.id === profile.id ? "Current account cannot be deleted" : "Delete user"} disabled={protectedDemo || (profile && u.id === profile.id)} onClick={() => deleteUser(u)}><Icon name="Trash" size={13} /></button>
+                  <button className="btn btn-ghost btn-sm" aria-label={"Edit " + u.full_name} title="Edit user" onClick={() => editUser(u)}><Icon name="Edit" size={13} /></button>
+                  <button className="btn btn-ghost btn-sm" aria-label={"Delete " + u.full_name} title={profile && u.id === profile.id ? "Current account cannot be deleted" : "Delete user"} disabled={profile && u.id === profile.id} onClick={() => deleteUser(u)}><Icon name="Trash" size={13} /></button>
                 </td>
               </tr>
             ); })}
@@ -2388,9 +2378,7 @@ function Toggle({ defaultOn = false }) {
 Object.assign(window, {
   DeanDashboard, DeanScreenQueue, DeanSignQueue, DeanHistory, DeanR3Queue, DeanR4Queue,
   CommitteeDashboard, CommitteeQueue, CommitteeHistory,
-  RASSCDashboardV2, RASSCScreen, RASSCReviewerPool, IRASr3Detail, IRASr4Detail,
-  ExpertDashboard, ExpertAssignments, ExpertHistory,
-  PresidentDashboard, PresidentQueue,
+  RASSCDashboardV2, RASSCScreen, IRASr3Detail, IRASr4Detail,
   OFMDashboard, OFMDetail, OFMHistory,
   AdminDashboard, AdminUsers, AdminAudit,
   AnalyticsDashboard, AccountSettings,

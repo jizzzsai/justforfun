@@ -189,7 +189,42 @@ export async function irasScreen(formData: FormData) {
     await supabase.from("applications").update({ status: to }).eq("id", appId);
     await logEvent(supabase, appId, profile, `Office screening: ${decision}`, to, notes);
   } else {
-    await logEvent(supabase, appId, profile, "Office screening passed", undefined, notes);
+    const { data: app } = await supabase
+      .from("applications")
+      .select("code, requested_amount, duration_months")
+      .eq("id", appId)
+      .single();
+    const amount = Number(app?.requested_amount ?? 0);
+    await supabase
+      .from("applications")
+      .update({ status: "approved", approved_amount: amount, decided_at: new Date().toISOString() })
+      .eq("id", appId);
+
+    const start = new Date();
+    const end = new Date();
+    end.setMonth(end.getMonth() + (app?.duration_months ?? 12));
+    const { data: contract } = await supabase
+      .from("contracts")
+      .insert({
+        application_id: appId,
+        contract_no: `AU-CT-${(app?.code ?? "AU-2026-000").replace("AU-", "")}`,
+        amount,
+        start_date: start.toISOString().slice(0, 10),
+        end_date: end.toISOString().slice(0, 10),
+        status: "issued",
+        issued_by: profile.id,
+      })
+      .select("id")
+      .single();
+
+    const phase1 = Math.round(amount * 0.3);
+    const phase2 = Math.round(amount * 0.4);
+    await supabase.from("payments").insert([
+      { application_id: appId, contract_id: contract?.id, instalment: 1, pct: 30, amount: phase1, trigger: "On contract signing", status: "scheduled", due_date: start.toISOString().slice(0, 10) },
+      { application_id: appId, contract_id: contract?.id, instalment: 2, pct: 40, amount: phase2, trigger: "On approved progress report", status: "pending" },
+      { application_id: appId, contract_id: contract?.id, instalment: 3, pct: 30, amount: amount - phase1 - phase2, trigger: "On approved final report", status: "pending" },
+    ]);
+    await logEvent(supabase, appId, profile, "Approved by RASSC and sent to Finance", "approved", notes);
   }
   revalidatePath("/iras/screen");
   redirect("/iras/screen");

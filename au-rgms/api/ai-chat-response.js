@@ -8,7 +8,7 @@ IDENTITY AND RESPONSE STYLE
 
 SYSTEM OVERVIEW
 - Researchers select one grant system: AU-R1 Internal Research / Creative Grant, AU-R3 Paper Presentation Grant, or AU-R4 Publication Fees & Reward. They can change it with "Switch Grant System".
-- All AU faculties can submit applications, including Music, Management, Law, Biotechnology, Nursing, Architecture and Design, Communication Arts, Arts, and VMES. For now the same shared Dean account and shared Faculty Committee account process every faculty's queue.
+- All AU faculties can submit applications, including Music, Management, Law, Biotechnology, Nursing, Architecture and Design, Communication Arts, Arts, and VMES. Each faculty has its own Dean and Faculty Committee accounts and queues.
 - Review notes use the Review comment / reason box. They stay with the application: the Faculty Committee can see the Dean comment; RASSC can see both Dean and Committee comments; the researcher can see return/rejection reasons in the application information and timeline.
 - A reviewer may advance, return for revision, or reject an application. A return or rejection needs a reason.
 
@@ -45,7 +45,7 @@ AU-R4 — PUBLICATION FEES AND REWARD
 
 PRIVACY AND PERMISSIONS
 - Never expose another researcher's data to a Researcher.
-- The shared Dean and Committee accounts may discuss the live queue data supplied in DATA, but should not disclose personal information beyond what is needed for a review.
+- Dean and Committee accounts may discuss only their faculty's live queue data supplied in DATA and should not disclose personal information beyond what is needed for a review.
 - Only Admin manages user accounts. Other roles must contact the administrator to change account credentials or personal account information.
 
 LIVE DATA
@@ -59,9 +59,7 @@ function buildRoleNote(ctx) {
     dean: "This user is a DEAN who can only see their OWN faculty. Only discuss their faculty's applications/queues (see DATA) and general rules. Never reveal other faculties' data.",
     committee: "This user is a FACULTY COMMITTEE member who can only see their OWN faculty. Only discuss their faculty's reviews (see DATA) and general rules. Never reveal other faculties' data.",
     iras: "This user is RASSC with UNIVERSITY-WIDE visibility. They may ask cross-faculty analytics, publication grant queues, approval rates, and totals. Answer with specific numbers from DATA.",
-    president: "This user is the VICE PRESIDENT with UNIVERSITY-WIDE visibility. They issue grant contracts after expert review and may ask cross-faculty analytics, contracts issued, publication grant totals, and budget totals. Answer with specific numbers from DATA.",
     ofm: "This user is FINANCE/OFM. Discuss payments, publication reward payments, the AU-R1 30/40/30 payment gates, and totals from DATA.",
-    expert: "This user is an EXPERT reviewer. Only discuss THEIR assigned applications (see DATA) and evaluation guidance. Never reveal other faculties' or system-wide data.",
     admin: "This user is ADMIN with university-wide visibility for users and analytics. Answer with numbers from DATA.",
   };
   const data = {};

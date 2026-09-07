@@ -88,9 +88,6 @@ export default async function AdminUsers() {
           <Field label="Department">
             <Input name="department" placeholder="Computer Science" />
           </Field>
-          <Field label="Expertise (experts)">
-            <Input name="expertise" placeholder="Machine Learning, NLP" />
-          </Field>
           <div className="sm:col-span-2">
             <button type="submit" className={buttonClass("primary")}>
               Create user

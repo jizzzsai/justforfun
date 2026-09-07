@@ -30,10 +30,6 @@ const STATUS = {
   dean:              { key: "dean_sign",        label: "Dean Sign & Forward",              cls: "badge-dean" },
   deanSign:          { key: "dean_sign",        label: "Dean Sign & Forward",              cls: "badge-dean" },
   iras:              { key: "iras_review",      label: "RASSC Screening",                  cls: "badge-iras" },
-  expert:            { key: "expert_review",    label: "Under Expert Review",              cls: "badge-expert" },
-  expertReview:      { key: "expert_review",    label: "Under Expert Review",              cls: "badge-expert" },
-  president:         { key: "president_review", label: "President Approval",               cls: "badge-president" },
-  presidentApproval: { key: "president_review", label: "President Approval",               cls: "badge-president" },
   approved:          { key: "approved",         label: "Approved",                         cls: "badge-signed" },
   contractP:         { key: "approved",         label: "Contract Pending",                 cls: "badge-contract" },
   contractPending:   { key: "approved",         label: "Contract Pending",                 cls: "badge-contract" },
@@ -76,7 +72,7 @@ const PRIMARY_APP = {
     "Confirm that every queue uses live records from Supabase.",
     "Validate PDF-based document and grant rules in the role dashboards.",
   ],
-  methodology: "Functional system testing across the researcher, dean, committee, RASSC, expert, president, finance, and admin roles.",
+  methodology: "Functional system testing across the researcher, dean, committee, RASSC, finance, and admin roles.",
   outcomes: [
     "A complete test run through the AU-RGMS workflow.",
     "Verified queue movement and payment gates.",
@@ -102,15 +98,12 @@ const PRIMARY_APP = {
   submittedAt: "Jun 08, 2026",
   currentStage: "iras",
   status: STATUS.iras,
-  experts: [],
   timeline: {
     submission: { done: true, date: "Jun 08, 2026", who: "Researcher Test", note: "Initial test submission." },
     deanScreen: { done: true, date: "Jun 08, 2026", who: "Dean Test", note: "Forwarded to Faculty Academic Committee." },
     committee: { done: true, date: "Jun 08, 2026", who: "Committee Test", note: "Recommended back to Dean." },
     deanSign: { done: true, date: "Jun 08, 2026", who: "Dean Test", note: "Signed and forwarded to RASSC." },
     iras: { current: true, date: "Pending RASSC screening", who: "RASSC Test" },
-    expert: { done: false, date: "Pending" },
-    president: { done: false, date: "Pending" },
     contract: { done: false, date: "Pending" },
     pay1: { done: false, date: "Pending" },
     progress: { done: false, date: "Pending" },
@@ -201,24 +194,6 @@ const NAV_RASSC = [
   { key: "i-publications", label: "Publication Grants", icon: "FileText" },
 ];
 
-const NAV_EXPERT = [
-  { section: "WORKSPACE" },
-  { key: "e-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
-  { key: "e-assignments", label: "My Assignments", icon: "Folder" },
-  { section: "REVIEW" },
-  { key: "e-evaluate", label: "Evaluation Form", icon: "FileSearch" },
-  { key: "e-history", label: "Submitted Reviews", icon: "Clock" },
-];
-
-const NAV_PRESIDENT = [
-  { section: "WORKSPACE" },
-  { key: "p-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
-  { key: "p-queue", label: "Contract Queue", icon: "FileSignature" },
-  { section: "CONTRACTS" },
-  { key: "p-approve", label: "Issue Contract", icon: "ShieldCheck" },
-  { key: "p-contracts", label: "Contract Tracking", icon: "FileSignature" },
-];
-
 const NAV_OFM = [
   { section: "WORKSPACE" },
   { key: "o-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
@@ -244,10 +219,6 @@ const SYSTEM_USERS = [
   { id: "U002", name: "Dean Test", email: "dean.sci@au.edu", role: "Dean", dept: "Computer Science", status: "Active", lastLogin: "Test account" },
   { id: "U003", name: "Committee Test", email: "comm.chair@au.edu", role: "Faculty Committee", dept: "Computer Science", status: "Active", lastLogin: "Test account" },
   { id: "U004", name: "RASSC Test", email: "iras.office@au.edu", role: "RASSC", dept: "RASSC", status: "Active", lastLogin: "Test account" },
-  { id: "U005", name: "Expert 1", email: "expert.ml@au.edu", role: "Expert Reviewer", dept: "External reviewer", status: "Active", lastLogin: "Test account" },
-  { id: "U006", name: "Expert 2", email: "expert.bio@au.edu", role: "Expert Reviewer", dept: "External reviewer", status: "Active", lastLogin: "Test account" },
-  { id: "U007", name: "Expert 3", email: "expert.ds@au.edu", role: "Expert Reviewer", dept: "External reviewer", status: "Active", lastLogin: "Test account" },
-  { id: "U008", name: "President Test", email: "president@au.edu", role: "President", dept: "Office of the President", status: "Active", lastLogin: "Test account" },
   { id: "U009", name: "Finance Test", email: "finance@au.edu", role: "OFM / Finance", dept: "Office of Financial Management", status: "Active", lastLogin: "Test account" },
   { id: "U010", name: "Admin Test", email: "admin@au.edu", role: "Administrator", dept: "IT Services", status: "Active", lastLogin: "Test account" },
 ];
@@ -270,9 +241,7 @@ const AUDIT_LOG = [];
 const Q_DEAN_SCREEN = APPLICATIONS.filter(a => a.status.key === "submitted");
 const Q_DEAN_SIGN = APPLICATIONS.filter(a => a.status.key === "dean_sign");
 const Q_COMMITTEE = APPLICATIONS.filter(a => a.status.key === "committee_review");
-const Q_RASSC = APPLICATIONS.filter(a => ["iras_review", "expert_review", "president_review", "approved", "active"].includes(a.status.key));
-const Q_EXPERT = APPLICATIONS.filter(a => a.status.key === "expert_review");
-const Q_PRESIDENT = APPLICATIONS.filter(a => a.status.key === "president_review");
+const Q_RASSC = APPLICATIONS.filter(a => ["iras_review", "approved", "active"].includes(a.status.key));
 const Q_OFM = APPLICATIONS.filter(a => ["approved", "active", "completed"].includes(a.status.key));
 
 const FACULTIES = [
@@ -440,15 +409,15 @@ window.AU = {
   NOTIFS, PAYMENTS, ACTIVITY,
   ROLES,
   NAV_RESEARCHER, NAV_RESEARCHER_R3, NAV_DEAN, NAV_COMMITTEE, NAV_RASSC,
-  NAV_EXPERT, NAV_PRESIDENT, NAV_OFM, NAV_ADMIN,
+  NAV_OFM, NAV_ADMIN,
   SYSTEM_USERS, JOURNAL_TIERS, AUDIT_LOG,
-  Q_DEAN_SCREEN, Q_DEAN_SIGN, Q_COMMITTEE, Q_RASSC, Q_EXPERT, Q_PRESIDENT, Q_OFM,
+  Q_DEAN_SCREEN, Q_DEAN_SIGN, Q_COMMITTEE, Q_RASSC, Q_OFM,
   REQUIRED_UPLOAD_DOCS: REQUIRED_DOCS,
   FACULTY_QUEUE: APPLICATIONS.filter(a => ["submitted", "committee_review", "dean_sign", "returned"].includes(a.status.key)),
-  RASSC_QUEUE: APPLICATIONS.filter(a => ["iras_review", "expert_review", "president_review", "approved", "active", "completed"].includes(a.status.key)),
+  RASSC_QUEUE: APPLICATIONS.filter(a => ["iras_review", "approved", "active", "completed"].includes(a.status.key)),
 };
 
-[NAV_DEAN, NAV_COMMITTEE, NAV_RASSC, NAV_EXPERT, NAV_PRESIDENT, NAV_OFM, NAV_ADMIN].forEach(function (nav) {
+[NAV_DEAN, NAV_COMMITTEE, NAV_RASSC, NAV_OFM, NAV_ADMIN].forEach(function (nav) {
   nav.push({ section: "RESOURCES" });
   nav.push({ key: "forms", label: "Forms & Templates", icon: "FileText" });
 });

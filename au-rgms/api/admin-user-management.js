@@ -1,12 +1,4 @@
-const ROLES = ["researcher", "dean", "committee", "iras", "expert", "president", "ofm", "admin"];
-const FACULTY_TEST_CODES = ["vmes", "msme", "arts", "comm", "arch", "nurse", "law", "biotech", "music"];
-const PROTECTED_DEMO_EMAILS = FACULTY_TEST_CODES.reduce((emails, code) => emails.concat(
-  code + "researcher@au.edu", code + "dean@au.edu", code + "committee@au.edu"
-), []).concat([
-  "rassc@au.edu", "finance@au.edu", "admin@au.edu",
-  "researcher.test@au.edu", "dean.sci@au.edu", "comm.chair@au.edu", "iras.office@au.edu",
-  "expert.ml@au.edu", "president@au.edu",
-]);
+const ROLES = ["researcher", "dean", "committee", "iras", "ofm", "admin"];
 const NULLABLE_PROFILE_REFERENCES = [
   ["app_settings", "updated_by"],
   ["application_documents", "uploaded_by"],
@@ -151,9 +143,6 @@ module.exports = async (req, res) => {
     const targetRes = await fetch(sb("/rest/v1/profiles?select=id,full_name,email&id=eq." + encodeURIComponent(targetId)), { headers: svcHeaders() });
     const target = await targetRes.json();
     if (!Array.isArray(target) || !target[0]) { res.status(404).json({ error: "User not found." }); return; }
-    if (PROTECTED_DEMO_EMAILS.indexOf(String(target[0].email || "").toLowerCase()) >= 0) {
-      res.status(400).json({ error: "Built-in demo accounts cannot be edited or deleted because the Quick Demo Login buttons depend on them." }); return;
-    }
 
     if (req.method === "PATCH") {
       const f = validateProfile(body, false);

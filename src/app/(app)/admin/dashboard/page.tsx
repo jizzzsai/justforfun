@@ -8,7 +8,7 @@ import { thbCompact } from "@/lib/format";
 
 const STAGE_ORDER: AppStatus[] = [
   "draft", "submitted", "committee_review", "dean_sign", "iras_review",
-  "expert_review", "president_review", "active", "completed", "rejected", "returned",
+  "approved", "active", "completed", "rejected", "returned",
 ];
 
 export default async function AdminDashboard() {

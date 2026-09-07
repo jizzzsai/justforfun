@@ -11,10 +11,7 @@ import {
   History,
   ListChecks,
   Inbox,
-  UserPlus,
   Users,
-  Gavel,
-  FileSignature,
   Banknote,
   BookMarked,
   ScrollText,
@@ -26,8 +23,6 @@ export type Role =
   | "dean"
   | "committee"
   | "iras"
-  | "expert"
-  | "president"
   | "ofm"
   | "admin";
 
@@ -36,8 +31,6 @@ export const ROLES: Role[] = [
   "dean",
   "committee",
   "iras",
-  "expert",
-  "president",
   "ofm",
   "admin",
 ];
@@ -72,19 +65,7 @@ export const ROLE_META: Record<Role, RoleMeta> = {
     label: "IRAS Research Office",
     short: "IRAS",
     unit: "HR / Research Office",
-    blurb: "Receive forwarded proposals, screen them and assign experts.",
-  },
-  expert: {
-    label: "Expert Reviewer",
-    short: "Expert",
-    unit: "External / Internal Expert",
-    blurb: "Evaluate assigned proposals and submit a verdict.",
-  },
-  president: {
-    label: "Office of the President",
-    short: "President",
-    unit: "President",
-    blurb: "Final approval, contract issuance and tracking.",
+    blurb: "Receive forwarded proposals, complete university review and approve eligible grants.",
   },
   ofm: {
     label: "OFM / Finance",
@@ -130,18 +111,6 @@ export const NAV: Record<Role, NavItem[]> = {
     { label: "Dashboard", href: "/iras/dashboard", icon: LayoutDashboard },
     { label: "Received", href: "/iras/received", icon: Inbox },
     { label: "Office Screening", href: "/iras/screen", icon: ClipboardCheck },
-    { label: "Assign Experts", href: "/iras/assign", icon: UserPlus },
-    { label: "Reviewer Pool", href: "/iras/reviewers", icon: Users },
-  ],
-  expert: [
-    { label: "Dashboard", href: "/expert/dashboard", icon: LayoutDashboard },
-    { label: "My Assignments", href: "/expert/assignments", icon: ClipboardList },
-    { label: "Submitted Reviews", href: "/expert/history", icon: FileCheck2 },
-  ],
-  president: [
-    { label: "Dashboard", href: "/president/dashboard", icon: LayoutDashboard },
-    { label: "Approval Queue", href: "/president/queue", icon: Gavel },
-    { label: "Contracts", href: "/president/contracts", icon: FileSignature },
   ],
   ofm: [
     { label: "Dashboard", href: "/ofm/dashboard", icon: LayoutDashboard },

@@ -17,9 +17,7 @@ export default async function DeanDashboard() {
     (counts.submitted ?? 0) +
     (counts.committee_review ?? 0) +
     (counts.dean_sign ?? 0) +
-    (counts.iras_review ?? 0) +
-    (counts.expert_review ?? 0) +
-    (counts.president_review ?? 0);
+    (counts.iras_review ?? 0);
 
   return (
     <div className="space-y-6">

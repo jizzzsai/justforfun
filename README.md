@@ -1,8 +1,8 @@
 # AU Research Grant Management System
 
 A full-stack portal for **Assumption University**'s research grant lifecycle —
-from proposal submission through multi-stage review, Presidential approval,
-contract issuance and 30 / 40 / 30 disbursement.
+from proposal submission through faculty and RASSC review,
+approval and Finance disbursement.
 
 Built with **Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 ·
 Supabase** (Postgres + Auth + RLS). The design recreates the original AU
@@ -12,12 +12,11 @@ prototype: a warm cream canvas, brown/gold accent, Newsreader + Inter type.
 
 ```
 Researcher → Dean (first screening) → Faculty Committee → Dean (sign & forward)
-→ IRAS (office screening + assign experts) → Expert Reviewers
-→ President (approve + issue contract) → OFM (30/40/30 disbursement)
+→ RASSC (university review + approval) → OFM / Finance
 ```
 
 Plus an **Administrator** for users, journal tiers, audit log and settings.
-There are 8 roles and ~40 screens; access is role-gated by the proxy + per-role
+There are 6 roles; access is role-gated by the proxy + per-role
 layouts, enforced again at the database with Row Level Security.
 
 ## Getting started
@@ -91,7 +90,7 @@ src/
   app/
     login/                 # AU-branded sign-in
     (app)/                 # authenticated shell (sidebar + topbar)
-      researcher/ dean/ committee/ iras/ expert/ president/ ofm/ admin/
+      researcher/ dean/ committee/ iras/ ofm/ admin/
   components/              # UI kit + shared detail/table components
   lib/
     supabase/              # browser / server / admin clients + session refresh

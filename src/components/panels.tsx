@@ -7,10 +7,12 @@ export function ScreeningPanel({
   action,
   appId,
   title = "Screening decision",
+  passLabel = "Pass",
 }: {
   action: Action;
   appId: string;
   title?: string;
+  passLabel?: string;
 }) {
   return (
     <Card>
@@ -22,7 +24,7 @@ export function ScreeningPanel({
         </Field>
         <div className="flex flex-wrap gap-2">
           <button name="decision" value="pass" className={buttonClass("primary")}>
-            Pass
+            {passLabel}
           </button>
           <button name="decision" value="return" className={buttonClass("secondary")}>
             Return

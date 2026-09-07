@@ -18,8 +18,6 @@ const TEST_EMAIL_FOR = {
   dean: "vmesdean@au.edu",
   committee: "vmescommittee@au.edu",
   iras: "rassc@au.edu",
-  expert: "expert.ml@au.edu",
-  president: "president@au.edu",
   ofm: "finance@au.edu",
   admin: "admin@au.edu",
 };
@@ -581,7 +579,6 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "i-screen":         return <RASSCScreen applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-reports":        return <RASSCReports onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-publications":   return <RASSCPublicationGrants toast={c.toast} />;
-    case "i-reviewers":      return <RASSCReviewerPool toast={c.toast} />;
 
 
     case "o-dashboard":      return <OFMDashboard navigate={navigate} toast={c.toast} setConfirm={c.setConfirm} />;

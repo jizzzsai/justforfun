@@ -35,9 +35,6 @@ const USERS = [
   { key: "com1", email: "comm.chair@au.edu",   full_name: "Assoc. Prof. Pim Areerat",  role: "committee",  title: "Assoc. Prof.", faculty: "Science & Technology", department: "Academic Committee" },
   { key: "com2", email: "comm.member@au.edu",  full_name: "Dr. Anan Kittisak",        role: "committee",  title: "Dr.",           faculty: "Engineering",          department: "Academic Committee" },
   { key: "iras", email: "iras.office@au.edu",  full_name: "Suda Wong",                role: "iras",       title: "Khun",          faculty: "Research Office",      department: "IRAS" },
-  { key: "exp1", email: "expert.ml@au.edu",    full_name: "Prof. David Laurent",      role: "expert",     title: "Prof.",         faculty: "External",             department: "Machine Learning", expertise: "Machine Learning, NLP" },
-  { key: "exp2", email: "expert.bio@au.edu",   full_name: "Dr. Mei Lin",              role: "expert",     title: "Dr.",           faculty: "External",             department: "Environmental Science", expertise: "Environmental Science, Marine Biology" },
-  { key: "pres", email: "president@au.edu",    full_name: "Rev. Bro. Dr. Bancha",     role: "president",  title: "Rev. Bro. Dr.", faculty: "Office of the President", department: "President" },
   { key: "ofm",  email: "finance@au.edu",      full_name: "Ratana Srisuk",            role: "ofm",        title: "Khun",          faculty: "Finance",              department: "OFM" },
   { key: "admin",email: "admin@au.edu",        full_name: "System Administrator",     role: "admin",      title: "",              faculty: "IT",                   department: "Administration" },
 ];
@@ -90,9 +87,9 @@ const APPS = [
     abstract: "Mixed-integer optimisation of rooftop solar, storage and demand response to reach a carbon-neutral university campus." },
   { code: "AU-2026-004", who: "res2", status: "iras_review",      tier: "Q2",   amount: 110000, dur: 12, sub: 20, title: "Blockchain Provenance for Thai Handicraft Exports", field: "Distributed Systems",
     abstract: "An on-chain provenance and certification scheme to raise trust and export value of Thai OTOP handicraft products." },
-  { code: "AU-2026-005", who: "res1", status: "expert_review",    tier: "Q1",   amount: 150000, dur: 24, sub: 26, title: "Explainable AI for Retail Credit Scoring", field: "Artificial Intelligence",
+  { code: "AU-2026-005", who: "res1", status: "iras_review",      tier: "Q1",   amount: 150000, dur: 24, sub: 26, title: "Explainable AI for Retail Credit Scoring", field: "Artificial Intelligence",
     abstract: "SHAP-based explanation layer for gradient-boosted credit models, evaluated for fairness across Thai demographic groups." },
-  { code: "AU-2026-006", who: "res2", status: "president_review", tier: "Q1",   amount: 145000, dur: 18, sub: 33, title: "Microplastics in Gulf of Thailand Seafood", field: "Environmental Science",
+  { code: "AU-2026-006", who: "res2", status: "approved",         tier: "Q1",   amount: 145000, dur: 18, sub: 33, title: "Microplastics in Gulf of Thailand Seafood", field: "Environmental Science", approved: 145000,
     abstract: "Quantifying microplastic load across commercial seafood species and modelling dietary human exposure in coastal provinces." },
   { code: "AU-2026-007", who: "res1", status: "active",           tier: "Q2",   amount: 100000, dur: 12, sub: 60, title: "Adaptive Tutoring System for STEM Foundations", field: "Educational Technology",
     abstract: "A Bayesian knowledge-tracing tutor for first-year mathematics, with a randomised classroom trial at AU.", approved: 100000 },
@@ -136,10 +133,10 @@ ev("AU-2026-003", "com1", "Committee recommended", "dean_sign", 4);
 ev("AU-2026-004", "res2", "Submitted application", "submitted", 20);
 ev("AU-2026-004", "dean", "Signed & forwarded to IRAS", "iras_review", 9);
 ev("AU-2026-005", "res1", "Submitted application", "submitted", 26);
-ev("AU-2026-005", "iras", "Office screening passed — experts assigned", "expert_review", 7);
+ev("AU-2026-005", "iras", "RASSC review started", "iras_review", 7);
 ev("AU-2026-006", "res2", "Submitted application", "submitted", 33);
-ev("AU-2026-006", "exp1", "Expert review submitted (favorable)", "president_review", 3);
-ev("AU-2026-007", "pres", "Approved by President", "approved", 50);
+ev("AU-2026-006", "iras", "Approved by RASSC", "approved", 3);
+ev("AU-2026-007", "iras", "Approved by RASSC", "approved", 50);
 ev("AU-2026-007", "ofm", "Contract issued — grant active", "active", 45);
 ev("AU-2026-008", "com1", "Committee did not recommend", "rejected", 30);
 ev("AU-2026-010", "iras", "Returned for revision (budget)", "returned", 12);
@@ -150,33 +147,19 @@ const screenings = [
   { application_id: appId["AU-2026-003"], kind: "dean_first", screener_id: id("dean"), decision: "pass",  notes: "Strong sustainability impact.", created_at: daysAgo(12) },
   { application_id: appId["AU-2026-003"], kind: "dean_sign",  screener_id: id("dean"), decision: "pass",  notes: "Endorsed and forwarded after committee recommendation.", created_at: daysAgo(4) },
   { application_id: appId["AU-2026-004"], kind: "dean_first", screener_id: id("dean"), decision: "pass",  notes: "Forward to IRAS.", created_at: daysAgo(15) },
-  { application_id: appId["AU-2026-004"], kind: "iras_office",screener_id: id("iras"), decision: "pass",  notes: "Documentation complete; ready for expert assignment.", created_at: daysAgo(9) },
-  { application_id: appId["AU-2026-005"], kind: "iras_office",screener_id: id("iras"), decision: "pass",  notes: "Eligible; two experts to be assigned.", created_at: daysAgo(8) },
+  { application_id: appId["AU-2026-004"], kind: "iras_office",screener_id: id("iras"), decision: "pass",  notes: "Documentation complete; ready for RASSC approval.", created_at: daysAgo(9) },
+  { application_id: appId["AU-2026-005"], kind: "iras_office",screener_id: id("iras"), decision: "pass",  notes: "Eligible for RASSC review.", created_at: daysAgo(8) },
 ];
 must((await db.from("screenings").insert(screenings)).error, "insert screenings");
 
 const reviews = [
   { application_id: appId["AU-2026-003"], kind: "committee", reviewer_id: id("com1"), recommendation: "favorable",   score: 86, strengths: "Clear methodology, strong impact.", weaknesses: "Budget slightly high.", comments: "Recommend with minor budget trim.", submitted_at: daysAgo(5) },
   { application_id: appId["AU-2026-008"], kind: "committee", reviewer_id: id("com1"), recommendation: "unfavorable", score: 41, strengths: "Easy to execute.", weaknesses: "Limited scholarly contribution.", comments: "Not at grant level.", submitted_at: daysAgo(31) },
-  { application_id: appId["AU-2026-006"], kind: "expert",    reviewer_id: id("exp2"), recommendation: "favorable",   score: 90, strengths: "Timely environmental topic, rigorous sampling.", weaknesses: "Add QA/QC detail.", comments: "Strongly support.", submitted_at: daysAgo(4) },
-  { application_id: appId["AU-2026-006"], kind: "expert",    reviewer_id: id("exp1"), recommendation: "favorable",   score: 83, strengths: "Sound exposure modelling.", weaknesses: "Sample size.", comments: "Support with conditions.", submitted_at: daysAgo(3) },
 ];
 must((await db.from("reviews").insert(reviews)).error, "insert reviews");
 
-const assignments = [
-  { application_id: appId["AU-2026-005"], expert_id: id("exp1"), assigned_by: id("iras"), status: "accepted", due_date: ymd(7),  created_at: daysAgo(7) },
-  { application_id: appId["AU-2026-005"], expert_id: id("exp2"), assigned_by: id("iras"), status: "pending",  due_date: ymd(7),  created_at: daysAgo(7) },
-  { application_id: appId["AU-2026-006"], expert_id: id("exp1"), assigned_by: id("iras"), status: "completed",due_date: ymd(-2), created_at: daysAgo(14) },
-  { application_id: appId["AU-2026-006"], expert_id: id("exp2"), assigned_by: id("iras"), status: "completed",due_date: ymd(-2), created_at: daysAgo(14) },
-];
-must((await db.from("expert_assignments").insert(assignments)).error, "insert assignments");
-
-must((await db.from("approvals").insert([
-  { application_id: appId["AU-2026-007"], president_id: id("pres"), approved: true, approved_amount: 100000, conditions: "Quarterly progress reports required.", created_at: daysAgo(50) },
-])).error, "insert approvals");
-
 const { data: contracts, error: cErr } = await db.from("contracts").insert([
-  { application_id: appId["AU-2026-007"], contract_no: "AU-CT-2026-007", amount: 100000, start_date: ymd(-45), end_date: ymd(320), status: "active", issued_by: id("pres"), issued_at: daysAgo(45) },
+  { application_id: appId["AU-2026-007"], contract_no: "AU-CT-2026-007", amount: 100000, start_date: ymd(-45), end_date: ymd(320), status: "active", issued_by: id("iras"), issued_at: daysAgo(45) },
 ]).select("id, application_id");
 must(cErr, "insert contracts");
 const contractId = contracts[0].id;

@@ -10,8 +10,6 @@ export default async function DeanHistory() {
     statuses: [
       "committee_review",
       "iras_review",
-      "expert_review",
-      "president_review",
       "approved",
       "active",
       "completed",

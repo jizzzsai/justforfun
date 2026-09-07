@@ -27,9 +27,8 @@ export default async function LoginPage() {
             From proposal to disbursement, in one portal.
           </h1>
           <p className="mt-4 text-white/80">
-            Submit applications, run the Dean, Committee, IRAS, expert and
-            Presidential review workflow, issue contracts and track the
-            30&nbsp;/&nbsp;40&nbsp;/&nbsp;30 disbursement — end to end.
+            Submit applications, complete Dean, Committee and RASSC review,
+            and track Finance disbursements from one portal.
           </p>
         </div>
 
@@ -39,8 +38,6 @@ export default async function LoginPage() {
             "Dean",
             "Committee",
             "IRAS",
-            "Expert",
-            "President",
             "OFM",
             "Admin",
           ].map((r) => (
