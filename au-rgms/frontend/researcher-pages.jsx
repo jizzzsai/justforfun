@@ -4,16 +4,24 @@
 
 const RA = window.AU;
 
-const R1_EXAMPLE_PHASES = [
-  { key: "phase1", number: 1, label: "Phase 1" },
-  { key: "phase2", number: 2, label: "Phase 2" },
-  { key: "phase4", number: 4, label: "Phase 4" },
+const R1_DASHBOARD_PIPELINE = [
+  { key: "submission", label: "Researcher Submission" },
+  { key: "deanScreen", label: "Dean Screening" },
+  { key: "committee", label: "Faculty Committee Review" },
+  { key: "iras", label: "RASSC Approval" },
+  { key: "contract", label: "Contract Signed" },
+  { key: "pay1", label: "Phase 1" },
+  { key: "progress", label: "Progress Report" },
+  { key: "pay2", label: "Phase 2" },
+  { key: "final", label: "Final Report" },
+  { key: "pay3", label: "Phase 3" },
+  { key: "closed", label: "Project Closed" },
 ];
 
 
 function buildResearcherTimeline(statusKey) {
-  const order = ["submission", "deanScreen", "committee", "iras", "contract", "pay1"];
-  const idxMap = { draft: 0, submitted: 1, committee_review: 2, iras_review: 3, approved: 4, active: 5, completed: 6, returned: 0, rejected: 0 };
+  const order = R1_DASHBOARD_PIPELINE.map(step => step.key);
+  const idxMap = { draft: 0, submitted: 1, committee_review: 2, dean_sign: 3, iras_review: 3, approved: 4, active: 5, completed: 10, returned: 0, rejected: 0 };
   let idx = idxMap[statusKey]; if (idx === undefined) idx = 0;
   const tl = {};
   order.forEach((k, i) => { tl[k] = i < idx ? { done: true } : (i === idx ? { current: true } : {}); });
@@ -79,7 +87,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
   const isSingle = isR3 || isR4;
   const n = (k) => (c ? (c[k] || 0) : "…");
   const latest = apps && apps.length ? apps[0] : null;
-  const exampleSteps = isR4 ? R4_PIPELINE : isR3 ? R3_PIPELINE : R1_EXAMPLE_PHASES;
+  const exampleSteps = isR4 ? R4_PIPELINE : isR3 ? R3_PIPELINE : R1_DASHBOARD_PIPELINE;
   const showExample = !!(apps && !apps.length);
   const singleGrant = isSingle && grant && grant.grant_type === grantType ? grant : null;
   const r3PayLabel = { approved: "Awaiting Finance Payment", active: "Paid", completed: "Completed" };
@@ -127,7 +135,11 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
         <div className="card-body">
           {appsError && <p className="text-sm text-muted" role="status">Could not load your application pipeline. Please refresh to try again.</p>}
           {apps === null && !appsError && <p className="text-sm text-muted" role="status">Loading pipeline…</p>}
-          {showExample && <div className="researcher-pipeline-example">
+          {showExample && !isSingle && <div className="researcher-pipeline-example">
+            <p className="text-sm text-muted">AU-R1 application steps.</p>
+            <HTimeline steps={R1_DASHBOARD_PIPELINE} app={{ timeline: buildResearcherTimeline("submitted") }} />
+          </div>}
+          {showExample && isSingle && <div className="researcher-pipeline-example">
             <p className="text-sm text-muted">{isSingle ? "Your " + sys.code + " application will follow these steps." : "AU-R1 phase overview."}</p>
             <ol className="researcher-pipeline-steps" aria-label={sys.code + " example workflow"}>
               {exampleSteps.map((step, index) => <li key={step.key}>
@@ -139,7 +151,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
           </div>}
           {latest && isR4 && <HTimeline steps={R4_PIPELINE} app={{ timeline: buildR4Timeline(latest.status) }} />}
           {latest && isR3 && <HTimeline steps={R3_PIPELINE} app={{ timeline: buildR3Timeline(latest.status) }} />}
-          {latest && !isSingle && <HTimeline steps={RA.ALL_STAGES.slice(0, 9)} app={{ timeline: buildResearcherTimeline(latest.status) }} />}
+          {latest && !isSingle && <HTimeline steps={R1_DASHBOARD_PIPELINE} app={{ timeline: buildResearcherTimeline(latest.status) }} />}
         </div>
       </div>
 
