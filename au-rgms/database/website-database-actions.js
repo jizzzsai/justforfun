@@ -308,7 +308,7 @@
       });
       (results[1].data || []).forEach(function (invitation) {
         var app = invitation.application;
-        if (!app || (grantType && app.grant_type !== grantType)) return;
+        if (!app || (grantType && app.grant_type !== grantType && invitation.status !== "pending")) return;
         if (rows.some(function (row) { return row.id === app.id; })) return;
         app.is_owner = false;
         app.access_mode = "collaborator";

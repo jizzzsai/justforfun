@@ -1827,7 +1827,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
 }
 
 
-function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, setSelectedApplicationId, grantType, toast, setConfirm }) {
+function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, setSelectedApplicationId, grantType, toast, setConfirm, onGrantSwitch }) {
   const sys = grantSystemFor(grantType || "au_r1");
   const [myApps, setMyApps] = useState(null);
   const [invitationBusy, setInvitationBusy] = useState(null);
@@ -1840,6 +1840,8 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
         stage: window.DB.statusBadge(a.status).label, status: window.DB.statusBadge(a.status), statusKey: a.status,
         isOwner: a.is_owner !== false,
         collaboration: a.collaboration || null,
+        grantType: a.grant_type,
+        grantCode: grantSystemFor(a.grant_type || "au_r1").code,
         invitedBy: (a.conference_info && a.conference_info.researcherName) || (a.pub_info && a.pub_info.researcherName) || "Principal researcher",
       })));
     } catch (e) { setMyApps([]); }
@@ -1852,7 +1854,11 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
       try {
         await window.DB.respondToCollaboration(application.collaboration.id, accept);
         if (toast) toast(accept ? "Co-author invitation accepted." : "Co-author invitation declined.");
-        await loadApplications();
+        if (accept && onGrantSwitch && application.grantType && application.grantType !== grantType) {
+          onGrantSwitch(application.grantType, "r-applications");
+        } else {
+          await loadApplications();
+        }
       } catch (e) {
         if (toast) toast("Invitation error: " + ((e && e.message) || e));
       } finally { setInvitationBusy(null); }
@@ -1868,6 +1874,9 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
     } else run();
   };
 
+  const pendingInvitations = (myApps || []).filter(a => !a.isOwner && a.collaboration && a.collaboration.status === "pending");
+  const listedApplications = (myApps || []).filter(a => a.isOwner || !a.collaboration || a.collaboration.status !== "pending");
+
   return (
     <>
       <PageHeader
@@ -1879,6 +1888,31 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
           </button>
         }
       />
+      {pendingInvitations.length > 0 && (
+        <div className="card" style={{ marginBottom: 18, border: "1px solid var(--au-crimson)", overflow: "hidden" }}>
+          <div style={{ padding: "15px 20px", background: "var(--paper-warm)", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 10 }}>
+            <Icon name="UserPlus" size={18} style={{ color: "var(--au-crimson)" }} />
+            <div style={{ fontWeight: 700 }}>Co-author Invitations</div>
+            <span className="badge badge-pending" style={{ marginLeft: "auto" }}>{pendingInvitations.length} pending</span>
+          </div>
+          {pendingInvitations.map((a, index) => (
+            <div key={a._uuid} style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", borderBottom: index < pendingInvitations.length - 1 ? "1px solid var(--line)" : "none" }}>
+              <div style={{ minWidth: 0, flex: "1 1 360px" }}>
+                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 5 }}>
+                  <span className="id">{a.grantCode}</span>
+                  <span style={{ color: "var(--ink-3)", fontSize: 12 }}>{a.id}</span>
+                </div>
+                <div style={{ fontWeight: 700 }}>{a.title}</div>
+                <div style={{ color: "var(--ink-3)", fontSize: 13, marginTop: 3 }}>Invited by {a.invitedBy}</div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="btn btn-primary btn-sm" disabled={invitationBusy === a.collaboration.id} onClick={() => answerInvitation(a, true)}><Icon name="Check" size={13} /> {invitationBusy === a.collaboration.id ? "Accepting…" : "Accept"}</button>
+                <button className="btn btn-ghost btn-sm" disabled={invitationBusy === a.collaboration.id} onClick={() => answerInvitation(a, false)}><Icon name="X" size={13} /> Decline</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
       <div className="card card-pad-0">
         <div className="toolbar">
           <div className="search">
@@ -1903,8 +1937,8 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
           </thead>
           <tbody>
             {myApps === null && <tr><td colSpan="6" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading your applications…</td></tr>}
-            {myApps && myApps.length === 0 && <tr><td colSpan="6" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No applications yet — click "New Application" to submit your first.</td></tr>}
-            {(myApps || []).map(a => (
+            {myApps && listedApplications.length === 0 && <tr><td colSpan="6" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No applications yet — click "New Application" to submit your first.</td></tr>}
+            {listedApplications.map(a => (
               <tr key={a.id}>
                 <td><span className="id">{a.id}</span></td>
                 <td className="title-cell">
