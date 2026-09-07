@@ -6,7 +6,7 @@
 const APP = window.AU;
 const TEST_PASSWORD = "AuResearch#2026";
 const TEST_EMAIL_FOR = {
-  researcher: "somchai.r@au.edu",
+  researcher: "researcher.test@au.edu",
   dean: "dean.sci@au.edu",
   committee: "comm.chair@au.edu",
   iras: "iras.office@au.edu",
@@ -269,7 +269,6 @@ function GrantSystemChooser({ profile, onPick, onLogout }) {
           </div>
         </div>
         <div className="chooser-account">
-          <span className="chooser-email">{profile ? profile.email : ""}</span>
           <button type="button" className="chooser-signout" onClick={onLogout}><Icon name="LogOut" size={14} /> Sign out</button>
         </div>
       </header>

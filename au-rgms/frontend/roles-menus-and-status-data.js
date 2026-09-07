@@ -84,7 +84,7 @@ const PRIMARY_APP = {
   ],
   researcher: {
     name: "Researcher Test",
-    email: "somchai.r@au.edu",
+    email: "researcher.test@au.edu",
     phone: "",
     title: "Researcher",
   },
@@ -240,7 +240,7 @@ const NAV_ADMIN = [
 ];
 
 const SYSTEM_USERS = [
-  { id: "U001", name: "Researcher Test", email: "somchai.r@au.edu", role: "Researcher", dept: "Computer Science", status: "Active", lastLogin: "Test account" },
+  { id: "U001", name: "Researcher Test", email: "researcher.test@au.edu", role: "Researcher", dept: "Computer Science", status: "Active", lastLogin: "Test account" },
   { id: "U002", name: "Dean Test", email: "dean.sci@au.edu", role: "Dean", dept: "Computer Science", status: "Active", lastLogin: "Test account" },
   { id: "U003", name: "Committee Test", email: "comm.chair@au.edu", role: "Faculty Committee", dept: "Computer Science", status: "Active", lastLogin: "Test account" },
   { id: "U004", name: "RASSC Test", email: "iras.office@au.edu", role: "RASSC", dept: "RASSC", status: "Active", lastLogin: "Test account" },

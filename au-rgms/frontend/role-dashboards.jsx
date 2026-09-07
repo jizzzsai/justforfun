@@ -902,7 +902,7 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
           onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "reject", reason); toast(app.code + " rejected."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); } } });
         return (
           <>
-            <PageHeader title={"AU-R3 Verification — " + app.code} desc={(app.researcher ? app.researcher.full_name : "Researcher") + " · " + (app.faculty || "") + " · " + (ci.confName || "")} actions={<Badge status={r3Badge(app.status)} />} />
+            <PageHeader title={"AU-R3 Verification — " + app.code} desc={(ci.researcherName || (app.researcher ? app.researcher.full_name : "Researcher")) + " · " + (app.faculty || "") + " · " + (ci.confName || "")} actions={<Badge status={r3Badge(app.status)} />} />
             <div className="grid-2">
               <div>
                 <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Conference</h3></div><div className="card-body">
@@ -1877,7 +1877,7 @@ const ADMIN_ROLE_OPTIONS = [
   { key: "ofm", label: "OFM / Finance" }, { key: "admin", label: "Administrator" },
 ];
 const ADMIN_PROTECTED_DEMO_EMAILS = [
-  "somchai.r@au.edu", "dean.sci@au.edu", "comm.chair@au.edu", "iras.office@au.edu",
+  "researcher.test@au.edu", "dean.sci@au.edu", "comm.chair@au.edu", "iras.office@au.edu",
   "expert.ml@au.edu", "president@au.edu", "finance@au.edu", "admin@au.edu",
 ];
 

@@ -7,7 +7,7 @@ import { Field, Input, buttonClass } from "@/components/ui";
 
 const DEMO_PASSWORD = "AuResearch#2026";
 const DEMO_ACCOUNTS: { role: string; email: string }[] = [
-  { role: "Researcher", email: "somchai.r@au.edu" },
+  { role: "Researcher", email: "researcher.test@au.edu" },
   { role: "Dean", email: "dean.sci@au.edu" },
   { role: "Committee", email: "comm.chair@au.edu" },
   { role: "IRAS", email: "iras.office@au.edu" },

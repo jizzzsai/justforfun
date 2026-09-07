@@ -60,7 +60,7 @@ All demo accounts use the password **`AuResearch#2026`**:
 
 | Role        | Email                |
 |-------------|----------------------|
-| Researcher  | `somchai.r@au.edu`   |
+| Researcher  | `researcher.test@au.edu` |
 | Dean        | `dean.sci@au.edu`    |
 | Committee   | `comm.chair@au.edu`  |
 | IRAS        | `iras.office@au.edu` |

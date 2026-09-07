@@ -81,11 +81,8 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   min-height: 100svh;
   display: flex;
   flex-direction: column;
-  color: #fff9ee;
-  background:
-    radial-gradient(ellipse at 95% 5%, rgba(201, 162, 39, .48), transparent 46%),
-    radial-gradient(ellipse at 0% 85%, rgba(158, 27, 27, .85), transparent 60%),
-    linear-gradient(125deg, #4d111b, var(--au-crimson-deep) 48%, #38131a);
+  color: var(--ink-1);
+  background: #fff;
 }
 .chooser-header {
   display: flex;
@@ -93,19 +90,19 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   justify-content: space-between;
   gap: 24px;
   padding: 22px 36px;
-  border-bottom: 1px solid rgba(255, 249, 238, .14);
+  border-bottom: 1px solid var(--line);
 }
 .chooser-brand, .chooser-account { display: flex; align-items: center; gap: 12px; }
 .chooser-brand > div:last-child { display: flex; flex-direction: column; gap: 2px; }
 .chooser-brand strong { font-size: 14px; font-weight: 600; }
-.chooser-brand span, .chooser-email { color: #ead6cd; font-size: 11px; }
+.chooser-brand span { color: var(--ink-3); font-size: 11px; }
 .chooser-account { gap: 22px; }
 .chooser-signout {
   display: inline-flex; align-items: center; gap: 8px;
-  padding: 9px 15px; border: 1px solid rgba(255, 249, 238, .3);
+  padding: 9px 15px; border: 1px solid var(--line);
   border-radius: 999px; color: inherit; background: transparent; font-size: 12px;
 }
-.chooser-signout:hover { background: rgba(255, 249, 238, .1); }
+.chooser-signout:hover { color: var(--au-crimson); background: var(--au-crimson-soft); border-color: #e7c2c2; }
 .chooser-main {
   flex: 1; width: 100%; max-width: 1260px; margin: 0 auto;
   display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -113,7 +110,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 }
 .chooser-intro { text-align: center; margin-bottom: 42px; }
 .chooser-intro h1 { margin: 0 0 12px; font-family: var(--font-serif); font-size: clamp(34px, 4vw, 48px); font-weight: 500; line-height: 1.1; letter-spacing: -.025em; }
-.chooser-intro p { margin: 0; font-size: 13px; color: #ead6cd; letter-spacing: .08em; }
+.chooser-intro p { margin: 0; font-size: 13px; color: var(--ink-2); letter-spacing: .08em; }
 .grant-choice-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -121,10 +118,10 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   gap: 16px;
   width: 100%;
   padding: 28px;
-  border: 1px solid rgba(255, 249, 238, .24);
+  border: 1px solid var(--line);
   border-radius: 28px;
-  background: linear-gradient(115deg, rgba(255, 249, 238, .13), rgba(255, 249, 238, .06) 55%, rgba(201, 162, 39, .16));
-  box-shadow: 0 30px 70px rgba(26, 7, 11, .18);
+  background: #fff;
+  box-shadow: 0 24px 60px rgba(62, 42, 36, .09);
 }
 .grant-choice-card {
   min-width: 0;
@@ -135,34 +132,37 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   align-items: center;
   position: relative;
   text-align: center;
+  background: #fff;
+  border: 1px solid var(--line);
   border-radius: 20px;
 }
 .grant-choice-card-center {
   color: var(--au-crimson-deep);
-  background: linear-gradient(155deg, #fffdf7, #f4e6c9);
-  box-shadow: 0 15px 32px rgba(35, 8, 12, .16);
+  background: var(--au-gold-soft);
+  border-color: #e3cf91;
+  box-shadow: 0 15px 32px rgba(91, 65, 34, .13);
 }
 .grant-choice-card.is-disabled { opacity: .65; }
 .grant-choice-icon {
-  height: 64px; margin-bottom: 20px; display: grid; place-items: center; color: #e9ce88;
+  height: 64px; margin-bottom: 20px; display: grid; place-items: center; color: var(--au-gold-deep);
 }
 .grant-choice-icon svg { stroke-width: 1.4; }
 .grant-choice-card-center .grant-choice-icon { color: var(--au-crimson); }
 .grant-choice-code { margin: 0 0 10px; font-size: 11px; font-weight: 600; letter-spacing: .16em; }
 .grant-choice-title { display: flex; align-items: center; justify-content: center; min-height: 58px; margin: 0; font-family: var(--font-serif); font-size: 24px; font-weight: 500; line-height: 1.15; }
-.grant-choice-desc { flex: 1; width: 100%; margin: 20px 0 26px; padding-top: 18px; border-top: 1px solid rgba(255, 249, 238, .24); color: #ead6cd; font-size: 12px; line-height: 1.65; }
+.grant-choice-desc { flex: 1; width: 100%; margin: 20px 0 26px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 12px; line-height: 1.65; }
 .grant-choice-card-center .grant-choice-desc { border-color: rgba(110, 18, 18, .18); color: #765344; }
 .grant-choice-action {
   display: inline-flex; align-items: center; justify-content: center; gap: 18px;
   min-height: 42px; min-width: 150px; padding: 10px 20px;
-  border: 1px solid rgba(255, 249, 238, .2); border-radius: 999px;
-  color: #fff9ee; background: #52131d; font-size: 13px; font-weight: 600;
+  border: 1px solid var(--au-crimson); border-radius: 999px;
+  color: #fff; background: var(--au-crimson); font-size: 13px; font-weight: 600;
   transition: background .16s ease, box-shadow .16s ease;
 }
 .grant-choice-card-center .grant-choice-action { background: var(--au-crimson); border-color: transparent; }
-.grant-choice-action:not(:disabled):hover { background: #351018; box-shadow: 0 5px 16px rgba(35, 8, 12, .2); }
+.grant-choice-action:not(:disabled):hover { background: var(--au-crimson-deep); border-color: var(--au-crimson-deep); box-shadow: 0 5px 16px rgba(35, 8, 12, .2); }
 .grant-choice-action:disabled { cursor: not-allowed; }
-.grant-choice-action:focus-visible, .chooser-signout:focus-visible { outline: 3px solid #e9ce88; outline-offset: 5px; }
+.grant-choice-action:focus-visible, .chooser-signout:focus-visible { outline: 3px solid var(--au-gold); outline-offset: 5px; }
 .grant-choice-card-center .grant-choice-action:focus-visible { outline-color: var(--au-crimson-deep); }
 
 .chooser-ai {
@@ -212,7 +212,6 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   .chooser-header { padding: 18px 20px; }
   .chooser-brand strong { font-size: 12px; }
   .chooser-brand span { max-width: 190px; font-size: 10px; }
-  .chooser-email { display: none; }
   .chooser-signout { padding: 8px 11px; white-space: nowrap; }
   .chooser-main { padding: 36px 20px 88px; }
   .chooser-intro { margin-bottom: 28px; }

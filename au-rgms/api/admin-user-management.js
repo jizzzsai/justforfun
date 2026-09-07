@@ -1,6 +1,6 @@
 const ROLES = ["researcher", "dean", "committee", "iras", "expert", "president", "ofm", "admin"];
 const PROTECTED_DEMO_EMAILS = [
-  "somchai.r@au.edu", "dean.sci@au.edu", "comm.chair@au.edu", "iras.office@au.edu",
+  "researcher.test@au.edu", "dean.sci@au.edu", "comm.chair@au.edu", "iras.office@au.edu",
   "expert.ml@au.edu", "president@au.edu", "finance@au.edu", "admin@au.edu",
 ];
 const NULLABLE_PROFILE_REFERENCES = [

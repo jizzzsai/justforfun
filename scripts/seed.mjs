@@ -29,7 +29,7 @@ const must = (error, where) => {
 
 
 const USERS = [
-  { key: "res1", email: "somchai.r@au.edu",    full_name: "Dr. Somchai Rattana",     role: "researcher", title: "Dr.",          faculty: "Science & Technology", department: "Computer Science" },
+  { key: "res1", email: "researcher.test@au.edu", full_name: "Researcher Test", role: "researcher", title: "Dr.", faculty: "Science & Technology", department: "Computer Science" },
   { key: "res2", email: "niran.p@au.edu",      full_name: "Asst. Prof. Niran Phong",  role: "researcher", title: "Asst. Prof.",  faculty: "Engineering",          department: "Electrical Engineering" },
   { key: "dean", email: "dean.sci@au.edu",     full_name: "Prof. Wichai Saetang",     role: "dean",       title: "Prof.",         faculty: "Science & Technology", department: "Dean's Office" },
   { key: "com1", email: "comm.chair@au.edu",   full_name: "Assoc. Prof. Pim Areerat",  role: "committee",  title: "Assoc. Prof.", faculty: "Science & Technology", department: "Academic Committee" },

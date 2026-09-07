@@ -969,8 +969,8 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
           joinedDate: ci.researcherJoinedDate || "",
           school: app.faculty || d.school, department: app.department || d.department,
           outcome: app.abstract || "",
-          name: app.researcher ? (app.researcher.full_name || d.name) : d.name,
-          email: app.researcher ? (app.researcher.email || d.email) : d.email,
+          name: ci.researcherName || (app.researcher ? (app.researcher.full_name || d.name) : d.name),
+          email: ci.researcherEmail || (app.researcher ? (app.researcher.email || d.email) : d.email),
         }));
         setAuthors(Array.isArray(app.co_members) ? app.co_members : []);
       } catch (e) { if (!cancelled) setErr((e && e.message) || "Could not load this draft."); }
@@ -1002,6 +1002,8 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
     if (submit && !draft.journalDb) { setErr("Select the Journal Database / Index."); return; }
     if (submit && !draft.journalClassification.trim()) { setErr("Select or enter the journal classification."); return; }
     if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
+    if (submit && !draft.name.trim()) { setErr("Enter your full name."); return; }
+    if (submit && !draft.email.trim()) { setErr("Enter your AU email address."); return; }
     if (submit && !draft.joinedDate) { setErr("Select the date you joined Assumption University."); return; }
     if (submit && !universityServiceEligibility(draft.joinedDate).eligible) { setErr("You are not eligible yet. AU-R3 applicants must have at least one year of service at Assumption University."); return; }
     if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
@@ -1015,6 +1017,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         presentation: draft.presentation || "Oral Presentation",
         journalDb: draft.journalDb, journalClassification: draft.journalClassification,
         correspondingAuthor: draft.corresponding, paperAbstract: draft.paperAbstract,
+        researcherName: draft.name.trim(), researcherEmail: draft.email.trim().toLowerCase(),
         researcherJoinedDate: draft.joinedDate || null,
       };
       const app = await window.DB.createApplication({
@@ -1181,13 +1184,13 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
                   {RA.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="field"><label>Full Name</label><input value={draft.name} onChange={e => upd("name", e.target.value)} readOnly={!!draft.name} style={draft.name ? roStyle : null} /></div>
+              <div className="field"><label>Full Name</label><input value={draft.name} onChange={e => upd("name", e.target.value)} /></div>
               <div className="field"><label>AU ID</label><input value={draft.auId} onChange={e => upd("auId", e.target.value)} readOnly={!!draft.auId} placeholder="e.g. 5012345" style={draft.auId ? roStyle : null} /></div>
               <div className="field">
                 <label>Email (AU only)</label>
-                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} readOnly={!!draft.email} placeholder="name@au.edu"
-                  style={draft.email ? roStyle : (emailBad ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : null)} />
-                {!draft.email && emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}
+                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} placeholder="name@au.edu"
+                  style={emailBad ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : null} />
+                {emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}
               </div>
               <div className="field"><label>Phone</label><input value={draft.phone} onChange={e => upd("phone", e.target.value)} /></div>
               <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
@@ -1905,7 +1908,13 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
 function ProjectPrintSheet({ app, status }) {
   const sys = grantSystemFor(app.grant_type || "au_r1");
   const researcher = app.researcher || {};
-  const researcherName = [researcher.name_title, researcher.full_name].filter(Boolean).join(" ") || "-";
+  const applicationContact = app.conference_info || {};
+  const researcherName = app.grant_type === "au_r3" && applicationContact.researcherName
+    ? applicationContact.researcherName
+    : ([researcher.name_title, researcher.full_name].filter(Boolean).join(" ") || "-");
+  const researcherEmail = app.grant_type === "au_r3" && applicationContact.researcherEmail
+    ? applicationContact.researcherEmail
+    : researcher.email;
   const payments = (app.payments || []).slice().sort((a, b) => Number(a.instalment) - Number(b.instalment));
   const show = value => value === 0 || value ? value : "-";
   const date = value => value ? window.DB.fmtDate(value) : "-";
@@ -1966,7 +1975,7 @@ function ProjectPrintSheet({ app, status }) {
           <div className="left"><span>Researcher</span><b>{researcherName}</b></div>
           <div><span>AU ID</span><b>{show(researcher.au_id)}</b></div>
           <div className="wide"><span>Research title</span><b>{show(app.title)}</b></div>
-          <div className="left"><span>Email</span><b>{show(researcher.email)}</b></div>
+          <div className="left"><span>Email</span><b>{show(researcherEmail)}</b></div>
           <div><span>Faculty / Department</span><b>{show(app.faculty)}{app.department ? " - " + app.department : ""}</b></div>
           <div className="left"><span>Joined Assumption University</span><b>{date(joinedDate)}</b></div>
           <div><span>Service eligibility</span><b>{joinedDate ? (service.eligible ? "Eligible" : "Not eligible until " + date(service.eligibleOn)) : "Not recorded"}</b></div>
@@ -2066,7 +2075,13 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
 
   const docs = app.documents || [];
   const budgetRows = Array.isArray(app.budget_breakdown) ? app.budget_breakdown : [];
-  const researcherName = app.researcher ? app.researcher.full_name : "Researcher";
+  const applicationContact = app.conference_info || {};
+  const researcherName = app.grant_type === "au_r3" && applicationContact.researcherName
+    ? applicationContact.researcherName
+    : (app.researcher ? app.researcher.full_name : "Researcher");
+  const researcherEmail = app.grant_type === "au_r3" && applicationContact.researcherEmail
+    ? applicationContact.researcherEmail
+    : (app.researcher ? app.researcher.email : "-");
   const status = app.statusBadge || window.DB.statusBadge(app.status);
   const joinedDate = researcherJoinedDate(app);
   const service = universityServiceEligibility(joinedDate);
@@ -2138,7 +2153,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
             <div className="card-head"><h3>Researcher & Routing</h3></div>
             <div className="card-body">
               <div className="meta-row"><span className="l">Principal researcher</span><span className="r">{researcherName}</span></div>
-              <div className="meta-row"><span className="l">Email</span><span className="r">{app.researcher ? app.researcher.email : "-"}</span></div>
+              <div className="meta-row"><span className="l">Email</span><span className="r">{researcherEmail}</span></div>
               <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{app.faculty || "-"}</span></div>
               <div className="meta-row"><span className="l">{app.grant_type === "au_r4" ? "Major" : "Department"}</span><span className="r">{app.department || "-"}</span></div>
               <div className="meta-row"><span className="l">Joined Assumption University</span><span className="r">{joinedDate ? window.DB.fmtDate(joinedDate) : "Not recorded"}</span></div>
