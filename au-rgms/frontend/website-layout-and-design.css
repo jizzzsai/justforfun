@@ -140,7 +140,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .grant-choice-card-center {
   color: inherit;
   background: #fff;
-  border-color: var(--line);
+  border-color: var(--au-crimson);
   box-shadow: none;
 }
 .grant-choice-card.is-disabled { opacity: .65; }
