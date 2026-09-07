@@ -82,7 +82,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   display: flex;
   flex-direction: column;
   color: var(--ink-1);
-  background: #fff;
+  background: #FBF7EE;
 }
 .chooser-header {
   display: flex;
@@ -90,6 +90,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   justify-content: space-between;
   gap: 24px;
   padding: 22px 36px;
+  background: #fff;
   border-bottom: 1px solid var(--line);
 }
 .chooser-brand, .chooser-account { display: flex; align-items: center; gap: 12px; }
@@ -137,21 +138,19 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   border-radius: 20px;
 }
 .grant-choice-card-center {
-  color: var(--au-crimson-deep);
-  background: var(--au-gold-soft);
-  border-color: #e3cf91;
-  box-shadow: 0 15px 32px rgba(91, 65, 34, .13);
+  color: inherit;
+  background: #fff;
+  border-color: var(--line);
+  box-shadow: none;
 }
 .grant-choice-card.is-disabled { opacity: .65; }
 .grant-choice-icon {
   height: 64px; margin-bottom: 20px; display: grid; place-items: center; color: var(--au-gold-deep);
 }
 .grant-choice-icon svg { stroke-width: 1.4; }
-.grant-choice-card-center .grant-choice-icon { color: var(--au-crimson); }
 .grant-choice-code { margin: 0 0 10px; font-size: 11px; font-weight: 600; letter-spacing: .16em; }
 .grant-choice-title { display: flex; align-items: center; justify-content: center; min-height: 58px; margin: 0; font-family: var(--font-serif); font-size: 24px; font-weight: 500; line-height: 1.15; }
 .grant-choice-desc { flex: 1; width: 100%; margin: 20px 0 26px; padding-top: 18px; border-top: 1px solid var(--line); color: var(--ink-2); font-size: 12px; line-height: 1.65; }
-.grant-choice-card-center .grant-choice-desc { border-color: rgba(110, 18, 18, .18); color: #765344; }
 .grant-choice-action {
   display: inline-flex; align-items: center; justify-content: center; gap: 18px;
   min-height: 42px; min-width: 150px; padding: 10px 20px;
@@ -159,11 +158,9 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   color: #fff; background: var(--au-crimson); font-size: 13px; font-weight: 600;
   transition: background .16s ease, box-shadow .16s ease;
 }
-.grant-choice-card-center .grant-choice-action { background: var(--au-crimson); border-color: transparent; }
 .grant-choice-action:not(:disabled):hover { background: var(--au-crimson-deep); border-color: var(--au-crimson-deep); box-shadow: 0 5px 16px rgba(35, 8, 12, .2); }
 .grant-choice-action:disabled { cursor: not-allowed; }
 .grant-choice-action:focus-visible, .chooser-signout:focus-visible { outline: 3px solid var(--au-gold); outline-offset: 5px; }
-.grant-choice-card-center .grant-choice-action:focus-visible { outline-color: var(--au-crimson-deep); }
 
 .chooser-ai {
   position: fixed; right: 24px; bottom: 24px; z-index: 110;
