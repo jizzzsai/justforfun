@@ -3,13 +3,13 @@
 const { useState, useRef, useEffect } = React;
 
 const ROLE_INTRO = {
-  researcher: "Hi, I'm AU AI. I can help with YOUR applications, publication grant rewards, the AU-R1 documents you need, your 30/40/30 payment stages, and the grant workflow.",
-  admin: "Hi, I'm AU AI. Ask me about live application totals, faculties, workflow status, budgets, payments, users, publication rewards, or reimbursements.",
+  researcher: "Hi, I'm AU AI. Ask me about your applications, forms, documents, co-authors, reviews, reports, or payments.",
+  admin: "Hi, I'm AU AI for Admin Analytics. Ask me to summarize or compare live applications, faculties, budgets, users, workflows, and payments.",
   _default: "Hi, I'm AU AI — Assumption University's research-grant assistant. Ask me about the workflow, AU-R1 documents, payment stages (30/40/30), or publication rewards.",
 };
 const ROLE_SUGGEST = {
-  researcher: ["What's the status of my application?", "What publication reward can I request?", "When do I get my next payment?"],
-  admin: ["Summarize the live analytics", "Which faculty has the most applications?", "Compare requested and approved budgets"],
+  researcher: ["What should I do next?", "Which documents do I still need?", "Explain my payment status"],
+  admin: ["Give me a management summary", "Which faculty has the most applications?", "What needs attention now?"],
   _default: ["What are the 14 workflow stages?", "What documents do I need to apply?", "Reward for a Scopus Q1 paper?"],
 };
 const ROLE_LABEL = {
@@ -25,14 +25,42 @@ async function buildAIContext(grantSystem, mode) {
   try {
     if (role === "researcher") {
       const apps = await window.DB.myApplications(grantSystem || undefined);
-      ctx.myApplications = (apps || []).map(a => ({ code: a.code, title: a.title, status: a.status, faculty: a.faculty, requested: a.requested_amount, grant_system: (a.grant_type || "au_r1").replace("au_r", "AU-R").toUpperCase() }));
+      const details = await Promise.all((apps || []).slice(0, 20).map(async a => {
+        try { return await window.DB.applicationDetail(a.id); }
+        catch (e) { return a; }
+      }));
+      ctx.myApplications = details.map(a => ({
+        code: a.code,
+        title: a.title,
+        grantSystem: (a.grant_type || "au_r1").replace("au_r", "AU-R").toUpperCase(),
+        status: a.status,
+        statusLabel: window.DB.statusBadge(a.status).label,
+        ownership: a.is_owner === false ? "co-author" : "owner",
+        invitationStatus: a.collaboration ? a.collaboration.status : null,
+        faculty: a.faculty,
+        department: a.department,
+        requestedAmount: Number(a.requested_amount || 0),
+        approvedAmount: a.approved_amount == null ? null : Number(a.approved_amount),
+        submittedAt: a.submitted_at || null,
+        updatedAt: a.updated_at || null,
+        documents: (a.documents || []).map(d => ({ name: d.name, type: d.doc_type || null })),
+        coAuthors: (a.collaborators || []).map(member => ({ name: member.full_name, email: member.email, role: member.author_role, status: member.status })),
+        reviews: (a.reviews || []).map(review => ({ type: review.kind, recommendation: review.recommendation, comments: review.comments, submittedAt: review.submitted_at })),
+        recentEvents: (a.events || []).slice(-12).map(event => ({ action: event.action, note: event.note, date: event.created_at })),
+        payments: (a.payments || []).map(payment => ({ phase: payment.instalment, percent: payment.pct, amount: Number(payment.amount || 0), status: payment.status, paidAt: payment.paid_at })),
+        reports: (a.reports || []).map(report => ({ type: report.kind, status: report.status, submittedAt: report.submitted_at })),
+      }));
       try {
         const pgs = await window.DB.myPublicationGrants();
         ctx.myPublicationGrants = (pgs || []).map(g => ({ code: g.id, title: g.title, status: g.status.label, statusKey: g.statusKey, amount: g.budgetTotal, indexing: g.indexing, quartile: g.quartile }));
       } catch (e) {}
       try {
         const g = await window.DB.myGrant(grantSystem || "au_r1");
-        if (g) ctx.myGrant = { code: g.code, approved_amount: g.approved_amount, payments: (g.payments || []).map(p => ({ instalment: p.instalment, pct: p.pct, status: p.status })) };
+        if (g) ctx.myGrant = { code: g.code, approvedAmount: g.approved_amount, requestedAmount: g.requested_amount, status: g.status, payments: (g.payments || []).map(p => ({ phase: p.instalment, percent: p.pct, amount: p.amount, status: p.status, paidAt: p.paid_at })), reports: g.reports || [] };
+      } catch (e) {}
+      try {
+        const reimbursements = await window.DB.myReimbursements();
+        ctx.myReimbursements = (reimbursements || []).map(item => ({ code: item.id, title: item.title, category: item.category, status: item.status.label, requestedAmount: item.requested_amount, approvedAmount: item.approved_amount }));
       } catch (e) {}
     } else if (role === "admin" && mode === "analytics") {
       ctx.analytics = await window.DB.adminAnalyticsSnapshot();
