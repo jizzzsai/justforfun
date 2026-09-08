@@ -50,26 +50,15 @@ function validateProfile(body, requirePassword) {
   const nameTitle = body.name_title ? String(body.name_title).trim() : null;
   const auId = body.au_id ? String(body.au_id).trim() : null;
   const phone = body.phone ? String(body.phone).trim() : null;
-  const rawSplit = body.budget_split && typeof body.budget_split === "object" ? body.budget_split : null;
-  const budgetSplit = rawSplit ? {
-    remuneration: Number(rawSplit.remuneration || 0),
-    equipment: Number(rawSplit.equipment || 0),
-    travel: Number(rawSplit.travel || 0),
-    misc: Number(rawSplit.misc || 0),
-  } : null;
 
   if (!/^[^@\s]+@au\.edu$/.test(email)) return { error: "Email must be an @au.edu address." };
   if (!fullName) return { error: "Full name is required." };
   if (ROLES.indexOf(role) === -1) return { error: "Invalid role." };
   if ((requirePassword || password) && password.length < 8) return { error: "Password must be at least 8 characters." };
   if ((role === "dean" || role === "committee") && !faculty) return { error: "Dean and Committee accounts need a faculty." };
-  if (role === "researcher" && budgetSplit) {
-    const total = budgetSplit.remuneration + budgetSplit.equipment + budgetSplit.travel + budgetSplit.misc;
-    if (total !== 100) return { error: "The researcher budget split must total 100%." };
-  }
 
   return {
-    email, fullName, role, password, faculty, department, nameTitle, auId, phone, budgetSplit,
+    email, fullName, role, password, faculty, department, nameTitle, auId, phone,
     isActive: body.is_active !== false,
   };
 }
@@ -127,7 +116,7 @@ module.exports = async (req, res) => {
         body: JSON.stringify({
           id: created.id, email: f.email, full_name: f.fullName, role: f.role,
           faculty: f.faculty, department: f.department, name_title: f.nameTitle,
-          au_id: f.auId, phone: f.phone, budget_split: f.budgetSplit, is_active: f.isActive,
+          au_id: f.auId, phone: f.phone, is_active: f.isActive,
         }),
       });
       if (!upRes.ok) {
@@ -167,8 +156,7 @@ module.exports = async (req, res) => {
         body: JSON.stringify({
           email: f.email, full_name: f.fullName, role: f.role, faculty: f.faculty,
           department: f.department, name_title: f.nameTitle, au_id: f.auId,
-          phone: f.phone, budget_split: f.budgetSplit,
-          is_active: f.isActive,
+          phone: f.phone, is_active: f.isActive,
         }),
       });
       const updated = await patchRes.json().catch(() => []);

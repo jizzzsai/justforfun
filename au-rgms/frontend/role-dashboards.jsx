@@ -1929,7 +1929,6 @@ function AdminAddUserForm({ onCreated, onClose, toast }) {
 }
 
 function AdminEditUserForm({ user, onSaved, onClose, toast }) {
-  const splitDefault = { remuneration: 30, equipment: 40, travel: 18, misc: 12 };
   const [f, setF] = useState({
     id: user.id,
     name_title: user.name_title || "",
@@ -1942,20 +1941,16 @@ function AdminEditUserForm({ user, onSaved, onClose, toast }) {
     department: user.department || "",
     password: "",
     is_active: user.is_active !== false,
-    budget_split: Object.assign({}, splitDefault, user.budget_split || {}),
   });
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setF(s => Object.assign({}, s, k === "faculty" ? { faculty: v, department: "" } : { [k]: v }));
   const needsFaculty = f.role === "dean" || f.role === "committee";
   const depts = (D.FACULTIES.find(x => x.name === f.faculty) || { departments: [] }).departments;
-  const splitSum = Object.values(f.budget_split).reduce((sum, n) => sum + Number(n || 0), 0);
-  const setSplit = (k, v) => setF(s => Object.assign({}, s, { budget_split: Object.assign({}, s.budget_split, { [k]: Math.max(0, Math.min(100, parseInt((v + "").replace(/[^0-9]/g, ""), 10) || 0)) }) }));
   const submit = async () => {
     if (!f.full_name.trim()) return toast("Enter the full name.");
     if (!/^[^@\s]+@au\.edu$/i.test(f.email.trim())) return toast("Email must end in @au.edu.");
     if (needsFaculty && !f.faculty) return toast("Pick a faculty for a Dean/Committee account.");
     if (f.password && f.password.length < 8) return toast("A new password must be at least 8 characters.");
-    if (f.role === "researcher" && splitSum !== 100) return toast("The researcher budget split must total 100% (currently " + splitSum + "%).");
     setBusy(true);
     try {
       await window.DB.adminUpdateUser(f);
@@ -1990,12 +1985,6 @@ function AdminEditUserForm({ user, onSaved, onClose, toast }) {
           </div>
           <div className="field"><label>New password (optional)</label><input type="password" value={f.password} onChange={e => set("password", e.target.value)} placeholder="Leave blank to keep current password" /></div>
         </div>
-        {f.role === "researcher" && <div style={{ marginTop: 18 }}>
-          <div style={{ display: "flex", alignItems: "center", marginBottom: 8 }}><b style={{ fontSize: 13 }}>Default Budget Split</b><div className="grow"></div><span className="text-sm" style={{ color: splitSum === 100 ? "var(--ink-3)" : "var(--au-crimson)" }}>Total {splitSum}%</span></div>
-          <div className="form-grid">
-            {[["remuneration", "Remuneration"], ["equipment", "Equipment"], ["travel", "Travel / data collection"], ["misc", "Miscellaneous"]].map(([key, label]) => <div className="field" key={key}><label>{label} (%)</label><input inputMode="numeric" value={f.budget_split[key]} onChange={e => setSplit(key, e.target.value)} /></div>)}
-          </div>
-        </div>}
         <div className="flex justify-end gap-2 mt-2">
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
           <button className="btn btn-primary" disabled={busy} onClick={submit}><Icon name="Save" size={14} /> {busy ? "Saving…" : "Save Changes"}</button>
