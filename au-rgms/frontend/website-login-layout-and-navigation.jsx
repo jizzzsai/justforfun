@@ -165,14 +165,12 @@ function LoginHelpDialog({ topic, onClose }) {
     if (topic && !element.open) element.showModal();
     else if (!topic && element.open) element.close();
   }, [topic]);
-  const titles = { access: "Account and password help", privacy: "Sign-in privacy", help: "Signing in to AU-RGMS" };
+  const titles = { access: "Account help", privacy: "Sign-in privacy", help: "Signing in to AU-RGMS" };
   return (
     <dialog ref={dialog} className="au-login-dialog" aria-labelledby="au-login-help-title" onClose={onClose} onClick={e => { if (e.target === e.currentTarget) dialog.current.close(); }}>
       <h2 id="au-login-help-title">{titles[topic] || "Login help"}</h2>
       {topic === "access" && <>
-        <p>Only the system administrator can change account details or reset a password.</p>
-        <p>Contact your Research Affairs (RASSC/IRAS) administrator, or use your usual AU IT support channel. Have your full name, registered AU email, and AU ID ready so they can identify your account.</p>
-        <p>Do not send anyone your password. This page does not send password-reset emails.</p>
+        <p>Contact administrator.</p>
       </>}
       {topic === "help" && <>
         <p>Enter your registered email ending in @au.edu and your password. Your account determines which role and workspace you can access.</p>
@@ -213,8 +211,12 @@ function GrantHelperChat({ profile }) {
     const next = [...msgs, { role: "user", content: q }];
     setMsgs(next); setInput(""); setBusy(true);
     try {
+      const session = await window.AUTH.session();
       const r = await fetch("/api/ai-chat-response", {
-        method: "POST", headers: { "Content-Type": "application/json" },
+        method: "POST", headers: {
+          "Content-Type": "application/json",
+          "Authorization": session && session.access_token ? "Bearer " + session.access_token : "",
+        },
         body: JSON.stringify({ messages: next, context: ctx }),
       });
       const data = await r.json().catch(() => ({}));

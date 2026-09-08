@@ -86,9 +86,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
   const isR4 = grantType === "au_r4";
   const isSingle = isR3 || isR4;
   const n = (k) => (c ? (c[k] || 0) : "…");
-  const latest = apps && apps.length ? apps[0] : null;
   const exampleSteps = isR4 ? R4_PIPELINE : isR3 ? R3_PIPELINE : R1_DASHBOARD_PIPELINE;
-  const showExample = !!(apps && !apps.length);
   const singleGrant = isSingle && grant && grant.grant_type === grantType ? grant : null;
   const r3PayLabel = { approved: "Awaiting Finance Payment", active: "Paid", completed: "Completed" };
   const approvedLabel = isR4 ? "Approved Publication Claims" : isR3 ? "Approved Conference Grants" : "Approved Projects";
@@ -125,23 +123,15 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
 
       <div className="card card-pad-0 mb-6">
         <div className="card-head">
-          <h3>{sys.code} Application Pipeline{latest ? " · " + latest.code : ""}</h3>
+          <h3>{sys.code} Application Pipeline</h3>
           <div className="grow"></div>
-          {showExample && <span className="badge badge-draft">Example workflow</span>}
-          {latest && <button className="btn btn-ghost btn-sm" onClick={() => navigate("r-applications")}>
-            Open detail <Icon name="ArrowRight" size={12} />
-          </button>}
+          <span className="badge badge-draft">Example workflow</span>
         </div>
         <div className="card-body">
-          {appsError && <p className="text-sm text-muted" role="status">Could not load your application pipeline. Please refresh to try again.</p>}
-          {apps === null && !appsError && <p className="text-sm text-muted" role="status">Loading pipeline…</p>}
-          {showExample && <div className="researcher-pipeline-example">
+          <div className="researcher-pipeline-example">
             <p className="text-sm text-muted">{sys.code} application steps.</p>
             <HTimeline steps={exampleSteps} app={{ timeline: {} }} />
-          </div>}
-          {latest && isR4 && <HTimeline steps={R4_PIPELINE} app={{ timeline: buildR4Timeline(latest.status) }} />}
-          {latest && isR3 && <HTimeline steps={R3_PIPELINE} app={{ timeline: buildR3Timeline(latest.status) }} />}
-          {latest && !isSingle && <HTimeline steps={R1_DASHBOARD_PIPELINE} app={{ timeline: buildResearcherTimeline(latest.status) }} />}
+          </div>
         </div>
       </div>
 
