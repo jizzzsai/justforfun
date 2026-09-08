@@ -2146,9 +2146,26 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
   const researcherName = (app.researcher && app.researcher.full_name) || applicationContact.researcherName || "Researcher";
   const researcherEmail = (app.researcher && app.researcher.email) || applicationContact.researcherEmail || applicationContact.contactEmail || "-";
   const collaboratorRows = (app.collaborators || []).filter(c => c.status !== "declined");
-  const leadRole = app.grant_type === "au_r4" && app.pub_info && app.pub_info.applicantRole
+  const applicantAuthorRole = app.grant_type === "au_r4" && app.pub_info && app.pub_info.applicantRole
     ? app.pub_info.applicantRole
     : "Lead Researcher";
+  const ownerParticipant = {
+    id: "owner",
+    name: researcherName,
+    email: researcherEmail,
+    authorRole: applicantAuthorRole,
+  };
+  const collaboratorParticipants = collaboratorRows.map(member => ({
+    id: member.id,
+    name: member.full_name || member.email || "Researcher",
+    email: member.email || "",
+    authorRole: member.author_role || "Co-author",
+  }));
+  const leadParticipant = app.grant_type === "au_r4"
+    ? collaboratorParticipants.find(member => member.authorRole === "First Author") || ownerParticipant
+    : ownerParticipant;
+  const coAuthorParticipants = [ownerParticipant].concat(collaboratorParticipants)
+    .filter(member => member.id !== leadParticipant.id);
   const status = app.statusBadge || window.DB.statusBadge(app.status);
   const joinedDate = researcherJoinedDate(app);
   const service = universityServiceEligibility(joinedDate);
@@ -2231,16 +2248,16 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
                 <div style={{ marginTop: 8, borderTop: "1px solid var(--line-2)", paddingTop: 8 }}>
                   <div className="eyebrow" style={{ marginBottom: 6 }}>Collaborators</div>
                   <div className="meta-row">
-                    <span className="l">Lead Researcher{leadRole !== "Lead Researcher" ? " · " + leadRole : ""}</span>
-                    <span className="r">{researcherName}{researcherEmail !== "-" ? " · " + researcherEmail : ""}</span>
+                    <span className="l">Lead Researcher{leadParticipant.authorRole !== "Lead Researcher" ? " · " + leadParticipant.authorRole : ""}</span>
+                    <span className="r">{leadParticipant.name}{leadParticipant.email && leadParticipant.email !== "-" ? " · " + leadParticipant.email : ""}</span>
                   </div>
-                  {collaboratorRows.map((member, i) => (
+                  {coAuthorParticipants.map((member, i) => (
                     <div className="meta-row" key={member.id || i}>
-                      <span className="l">Co-author{member.author_role && member.author_role !== "Co-author" ? " · " + member.author_role : ""}</span>
-                      <span className="r">{member.full_name || member.email || "Researcher"}{member.email ? " · " + member.email : ""}</span>
+                      <span className="l">Co-author{member.authorRole && member.authorRole !== "Co-author" ? " · " + member.authorRole : ""}</span>
+                      <span className="r">{member.name}{member.email && member.email !== "-" ? " · " + member.email : ""}</span>
                     </div>
                   ))}
-                  {collaboratorRows.length === 0 && <div className="meta-row"><span className="l">Co-author</span><span className="r">None</span></div>}
+                  {coAuthorParticipants.length === 0 && <div className="meta-row"><span className="l">Co-author</span><span className="r">None</span></div>}
                 </div>
               )}
               {app.conference_info && (
