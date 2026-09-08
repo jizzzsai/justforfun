@@ -288,10 +288,12 @@
 
     async myApplications(grantType) {
       var me = await uid();
-      var ownQuery = sb.from("applications").select("*").eq("researcher_id", me);
+      var ownQuery = sb.from("applications")
+        .select("*, researcher:profiles(full_name,email)")
+        .eq("researcher_id", me);
       if (grantType) ownQuery = ownQuery.eq("grant_type", grantType);
       var invitedQuery = sb.from("application_collaborators")
-        .select("id,status,author_role,invited_at,responded_at,application:applications(*)")
+        .select("id,status,author_role,invited_at,responded_at,application:applications(*,researcher:profiles(full_name,email))")
         .eq("user_id", me)
         .in("status", ["pending", "accepted"]);
       var results = await Promise.all([

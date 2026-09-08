@@ -1842,7 +1842,8 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
         collaboration: a.collaboration || null,
         grantType: a.grant_type,
         grantCode: grantSystemFor(a.grant_type || "au_r1").code,
-        invitedBy: (a.conference_info && a.conference_info.researcherName) || (a.pub_info && a.pub_info.researcherName) || "Principal researcher",
+        invitedBy: (a.researcher && a.researcher.full_name) || (a.conference_info && a.conference_info.researcherName) || (a.pub_info && a.pub_info.researcherName) || "Principal researcher",
+        invitedByEmail: (a.researcher && a.researcher.email) || (a.conference_info && a.conference_info.researcherEmail) || (a.pub_info && (a.pub_info.researcherEmail || a.pub_info.contactEmail)) || "",
       })));
     } catch (e) { setMyApps([]); }
   };
@@ -1903,7 +1904,9 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
                   <span style={{ color: "var(--ink-3)", fontSize: 12 }}>{a.id}</span>
                 </div>
                 <div style={{ fontWeight: 700 }}>{a.title}</div>
-                <div style={{ color: "var(--ink-3)", fontSize: 13, marginTop: 3 }}>Invited by {a.invitedBy}</div>
+                <div style={{ color: "var(--ink-3)", fontSize: 13, marginTop: 3 }}>
+                  Invited by {a.invitedBy}{a.invitedByEmail ? " · " + a.invitedByEmail : ""}
+                </div>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button className="btn btn-primary btn-sm" disabled={invitationBusy === a.collaboration.id} onClick={() => answerInvitation(a, true)}><Icon name="Check" size={13} /> {invitationBusy === a.collaboration.id ? "Accepting…" : "Accept"}</button>
@@ -2140,12 +2143,12 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
   const docs = app.documents || [];
   const budgetRows = Array.isArray(app.budget_breakdown) ? app.budget_breakdown : [];
   const applicationContact = app.grant_type === "au_r3" ? (app.conference_info || {}) : (app.pub_info || {});
-  const researcherName = applicationContact.researcherName
-    ? applicationContact.researcherName
-    : (app.researcher ? app.researcher.full_name : "Researcher");
-  const researcherEmail = applicationContact.researcherEmail || applicationContact.contactEmail
-    ? (applicationContact.researcherEmail || applicationContact.contactEmail)
-    : (app.researcher ? app.researcher.email : "-");
+  const researcherName = (app.researcher && app.researcher.full_name) || applicationContact.researcherName || "Researcher";
+  const researcherEmail = (app.researcher && app.researcher.email) || applicationContact.researcherEmail || applicationContact.contactEmail || "-";
+  const collaboratorRows = (app.collaborators || []).filter(c => c.status !== "declined");
+  const leadRole = app.grant_type === "au_r4" && app.pub_info && app.pub_info.applicantRole
+    ? app.pub_info.applicantRole
+    : "Lead Researcher";
   const status = app.statusBadge || window.DB.statusBadge(app.status);
   const joinedDate = researcherJoinedDate(app);
   const service = universityServiceEligibility(joinedDate);
@@ -2224,15 +2227,20 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
               <div className="meta-row"><span className="l">Joined Assumption University</span><span className="r">{joinedDate ? window.DB.fmtDate(joinedDate) : "Not recorded"}</span></div>
               <div className="meta-row"><span className="l">Service eligibility</span><span className="r" style={{ color: joinedDate && service.eligible ? "var(--status-approved)" : "var(--au-crimson)" }}>{joinedDate ? (service.eligible ? "Eligible" : "Not eligible until " + fmtNiceDate(service.eligibleOn)) : "Not recorded"}</span></div>
               <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.requested_amount || 0))}</span></div>
-              {Array.isArray(app.co_members) && app.co_members.length > 0 && (
+              {(app.grant_type === "au_r3" || app.grant_type === "au_r4") && (
                 <div style={{ marginTop: 8, borderTop: "1px solid var(--line-2)", paddingTop: 8 }}>
                   <div className="eyebrow" style={{ marginBottom: 6 }}>Collaborators</div>
-                  {app.co_members.map((m, i) => (
-                    <div className="meta-row" key={i}>
-                      <span className="l">{m.kind || "Member"}</span>
-                      <span className="r">{m.name}{m.email ? " · " + m.email : ""}</span>
+                  <div className="meta-row">
+                    <span className="l">Lead Researcher{leadRole !== "Lead Researcher" ? " · " + leadRole : ""}</span>
+                    <span className="r">{researcherName}{researcherEmail !== "-" ? " · " + researcherEmail : ""}</span>
+                  </div>
+                  {collaboratorRows.map((member, i) => (
+                    <div className="meta-row" key={member.id || i}>
+                      <span className="l">Co-author{member.author_role && member.author_role !== "Co-author" ? " · " + member.author_role : ""}</span>
+                      <span className="r">{member.full_name || member.email || "Researcher"}{member.email ? " · " + member.email : ""}</span>
                     </div>
                   ))}
+                  {collaboratorRows.length === 0 && <div className="meta-row"><span className="l">Co-author</span><span className="r">None</span></div>}
                 </div>
               )}
               {app.conference_info && (
