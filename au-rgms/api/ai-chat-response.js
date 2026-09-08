@@ -60,10 +60,10 @@ function buildRoleNote(ctx) {
     committee: "This user is a FACULTY COMMITTEE member who can only see their OWN faculty. Only discuss their faculty's reviews (see DATA) and general rules. Never reveal other faculties' data.",
     iras: "This user is RASSC with UNIVERSITY-WIDE visibility. They may ask cross-faculty analytics, publication grant queues, approval rates, and totals. Answer with specific numbers from DATA.",
     ofm: "This user is FINANCE/OFM. Discuss payments, publication reward payments, the AU-R1 30/40/30 payment gates, and totals from DATA.",
-    admin: "This user is ADMIN with university-wide visibility for users and analytics. Answer with numbers from DATA.",
+    admin: "This user is ADMIN with university-wide visibility for users and analytics. Answer any AU-RGMS analytics question using DATA.analytics, including application records, user aggregates, payments, publication rewards, and reimbursements. Calculate comparisons and totals from the supplied records when needed.",
   };
   const data = {};
-  ["myApplications", "myPublicationGrants", "myGrant", "myAssignments", "facultyStats", "statusCounts", "publicationGrantStats", "totalPaid", "paidCount"].forEach(function (k) { if (ctx[k] !== undefined) data[k] = ctx[k]; });
+  ["myApplications", "myPublicationGrants", "myGrant", "myAssignments", "facultyStats", "statusCounts", "publicationGrantStats", "totalPaid", "paidCount", "analytics"].forEach(function (k) { if (ctx[k] !== undefined) data[k] = ctx[k]; });
   return "\n\n=== CURRENT SIGNED-IN USER (scope EVERY answer to this) ===\n"
     + "- Role: " + ctx.role + (ctx.faculty ? " | Faculty: " + ctx.faculty : "") + (ctx.name ? " | Name: " + ctx.name : "") + "\n"
     + (scope[ctx.role] || "Scope answers to this user's role and permissions.") + "\n"
@@ -98,6 +98,35 @@ module.exports = async (req, res) => {
     }
     const messages = Array.isArray(body && body.messages) ? body.messages : [];
     const ctx = (body && body.context) || {};
+    const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "").trim();
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || "";
+    if (!token || !supabaseUrl || !serviceKey) {
+      res.status(401).json({ reply: "Please sign in again before using AU AI." });
+      return;
+    }
+    const authResponse = await fetch(supabaseUrl + "/auth/v1/user", {
+      headers: { apikey: serviceKey, Authorization: "Bearer " + token },
+    });
+    const authUser = await authResponse.json();
+    if (!authResponse.ok || !authUser || !authUser.id) {
+      res.status(401).json({ reply: "Your session has expired. Please sign in again." });
+      return;
+    }
+    const profileResponse = await fetch(supabaseUrl + "/rest/v1/profiles?id=eq." + encodeURIComponent(authUser.id) + "&select=role,faculty,full_name", {
+      headers: { apikey: serviceKey, Authorization: "Bearer " + serviceKey, Accept: "application/vnd.pgrst.object+json" },
+    });
+    const verifiedProfile = await profileResponse.json();
+    if (!profileResponse.ok || !verifiedProfile || !verifiedProfile.role) {
+      res.status(403).json({ reply: "AU AI could not verify your account access." });
+      return;
+    }
+    ctx.role = verifiedProfile.role;
+    ctx.faculty = verifiedProfile.faculty || null;
+    ctx.name = verifiedProfile.full_name || null;
+    if (ctx.analytics !== undefined && verifiedProfile.role !== "admin") {
+      delete ctx.analytics;
+    }
     const contents = messages.slice(-14).map((m) => ({
       role: m.role === "assistant" ? "model" : "user",
       parts: [{ text: String(m.content || "").slice(0, 4000) }],

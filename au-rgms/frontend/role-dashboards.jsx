@@ -2226,19 +2226,15 @@ function AnalyticsDashboard({ role }) {
       window.DB.statusCounts().catch(() => ({})),
       window.DB.facultyStats().catch(() => []),
       window.DB.publicationGrantStats().catch(() => ({ total: 0, byFaculty: [], byIndex: {} })),
-      window.DB.paidPayments().catch(() => []),
-    ]).then(([counts, faculties, publications, paid]) => {
+    ]).then(([counts, faculties, publications]) => {
       if (!alive) return;
-      setData({ counts, faculties, publications, paid });
+      setData({ counts, faculties, publications });
     });
     return () => { alive = false; };
   }, [role]);
-  const isFaculty = role === "dean" || role === "committee";
   const c = data ? data.counts : {};
   const faculties = data ? data.faculties : [];
   const pub = data ? data.publications : { total: 0, byFaculty: [], byIndex: {} };
-  const paid = data ? data.paid : [];
-  const totalPaid = paid.reduce((s, p) => s + Number(p.amount || 0), 0);
   const statusRows = Object.keys(c || {})
     .filter(k => k.charAt(0) !== "_")
     .map(k => ({ label: window.DB.statusBadge(k).label, value: c[k] }))
@@ -2248,17 +2244,15 @@ function AnalyticsDashboard({ role }) {
     requested_sum: Number(f.requested_sum || 0),
     approved_sum: Number(f.approved_sum || 0),
   })).sort((a, b) => b.requested_sum - a.requested_sum);
-  const pubIndexRows = Object.keys(pub.byIndex || {}).map(k => ({
-    label: k,
-    value: pub.byIndex[k],
-  })).sort((a, b) => b.value - a.value);
-
   return (
     <>
       <PageHeader
         title="AI Analytics"
         desc="Live Supabase analytics for research grants, payments, and publication rewards."
-        actions={<Badge status={{ label: role === "dean" || role === "committee" ? "Faculty scoped" : "Live data", cls: "badge-academic" }} />}
+        actions={<>
+          <Badge status={{ label: "Live data", cls: "badge-academic" }} />
+          <button className="btn btn-primary" onClick={() => window.dispatchEvent(new CustomEvent("au-ai-toggle"))}><Icon name="Bot" size={14} /> Ask AU AI</button>
+        </>}
       />
       <div className="stats">
         <Stat label="Applications" value={data ? c._total || 0 : "..."} icon="Folder" />
@@ -2289,7 +2283,7 @@ function AnalyticsDashboard({ role }) {
         </div>
       </div>
 
-      <div className="grid-2 mt-4">
+      <div className="mt-4">
         <div className="card card-pad-0">
           <div className="card-head"><h3>Requested Budget by Faculty</h3></div>
           <AnalyticsBars
@@ -2300,41 +2294,6 @@ function AnalyticsDashboard({ role }) {
             emptyTitle="No budget data yet"
           />
         </div>
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>Publication Rewards</h3></div>
-          <AnalyticsBars
-            rows={pubIndexRows}
-            valueKey="value"
-            renderValue={r => r.value + " grants"}
-            emptyTitle="No publication grants yet"
-            emptyDesc="Researcher publication reward submissions will appear after RASSC receives them."
-          />
-        </div>
-      </div>
-
-      <div className="grid-2 mt-4">
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>Publication Rewards by Faculty</h3></div>
-          <AnalyticsBars
-            rows={(pub.byFaculty || []).slice(0, 8)}
-            labelKey="faculty"
-            valueKey="total"
-            renderValue={r => r.total + " grants"}
-            emptyTitle="No publication faculty data yet"
-          />
-        </div>
-        {!isFaculty && (
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>Finance Snapshot</h3></div>
-          <div className="card-body">
-            <div className="meta-row"><span className="l">Paid grant phases</span><span className="r">{paid.length}</span></div>
-            <div className="meta-row"><span className="l">Paid grant phases</span><span className="r">{fmtBaht(totalPaid)}</span></div>
-            <div className="meta-row"><span className="l">Publication rewards pending OFM</span><span className="r">{pub.payment_pending || 0}</span></div>
-            <div className="meta-row"><span className="l">Publication rewards paid</span><span className="r">{pub.paid || 0}</span></div>
-            <div className="meta-row"><span className="l">Publication reward amount approved</span><span className="r">{fmtBaht(pub.approved_sum || 0)}</span></div>
-          </div>
-        </div>
-        )}
       </div>
     </>
   );

@@ -731,11 +731,14 @@ function App() {
 
   useEffect(() => {
     const supportedSystem = ["au_r1", "au_r3", "au_r4"].includes(rSystem);
-    const visible = !!(loggedIn && profile && profile.role === "researcher" && role === "researcher" && supportedSystem);
+    const researcherAI = !!(loggedIn && profile && profile.role === "researcher" && role === "researcher" && supportedSystem);
+    const adminAnalyticsAI = !!(loggedIn && profile && profile.role === "admin" && role === "admin" && page === "a-analytics");
+    const visible = researcherAI || adminAnalyticsAI;
     window.AU_AI_VISIBLE = visible;
-    window.AU_AI_GRANT_SYSTEM = visible ? rSystem : null;
+    window.AU_AI_GRANT_SYSTEM = researcherAI ? rSystem : null;
+    window.AU_AI_MODE = adminAnalyticsAI ? "analytics" : (researcherAI ? "researcher" : null);
     window.dispatchEvent(new CustomEvent("au-ai-visibility", {
-      detail: { visible, grantSystem: visible ? rSystem : null },
+      detail: { visible, grantSystem: researcherAI ? rSystem : null, mode: adminAnalyticsAI ? "analytics" : (researcherAI ? "researcher" : null) },
     }));
   }, [loggedIn, profile, role, page, rSystem]);
 

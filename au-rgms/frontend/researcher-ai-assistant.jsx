@@ -4,17 +4,20 @@ const { useState, useRef, useEffect } = React;
 
 const ROLE_INTRO = {
   researcher: "Hi, I'm AU AI. I can help with YOUR applications, publication grant rewards, the AU-R1 documents you need, your 30/40/30 payment stages, and the grant workflow.",
+  admin: "Hi, I'm AU AI. Ask me about live application totals, faculties, workflow status, budgets, payments, users, publication rewards, or reimbursements.",
   _default: "Hi, I'm AU AI — Assumption University's research-grant assistant. Ask me about the workflow, AU-R1 documents, payment stages (30/40/30), or publication rewards.",
 };
 const ROLE_SUGGEST = {
   researcher: ["What's the status of my application?", "What publication reward can I request?", "When do I get my next payment?"],
+  admin: ["Summarize the live analytics", "Which faculty has the most applications?", "Compare requested and approved budgets"],
   _default: ["What are the 14 workflow stages?", "What documents do I need to apply?", "Reward for a Scopus Q1 paper?"],
 };
 const ROLE_LABEL = {
   researcher: "Researcher assistant",
+  admin: "Admin analytics assistant",
 };
 
-async function buildAIContext(grantSystem) {
+async function buildAIContext(grantSystem, mode) {
   let prof = null;
   try { prof = await window.AUTH.profile(); } catch (e) {}
   const role = prof ? prof.role : null;
@@ -31,6 +34,8 @@ async function buildAIContext(grantSystem) {
         const g = await window.DB.myGrant(grantSystem || "au_r1");
         if (g) ctx.myGrant = { code: g.code, approved_amount: g.approved_amount, payments: (g.payments || []).map(p => ({ instalment: p.instalment, pct: p.pct, status: p.status })) };
       } catch (e) {}
+    } else if (role === "admin" && mode === "analytics") {
+      ctx.analytics = await window.DB.adminAnalyticsSnapshot();
     }
   } catch (e) {}
   return ctx;
@@ -39,6 +44,7 @@ async function buildAIContext(grantSystem) {
 function AIChat() {
   const [available, setAvailable] = useState(!!window.AU_AI_VISIBLE);
   const [grantSystem, setGrantSystem] = useState(window.AU_AI_GRANT_SYSTEM || null);
+  const [mode, setMode] = useState(window.AU_AI_MODE || null);
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
@@ -52,6 +58,7 @@ function AIChat() {
       const next = !!(event.detail && event.detail.visible);
       setAvailable(next);
       setGrantSystem(next && event.detail ? event.detail.grantSystem : null);
+      setMode(next && event.detail ? event.detail.mode : null);
       if (!next) setOpen(false);
     };
     window.addEventListener("au-ai-visibility", onVisibility);
@@ -69,14 +76,14 @@ function AIChat() {
   useEffect(() => {
     if (!available) return;
     let alive = true;
-    buildAIContext(grantSystem).then(c => {
+    buildAIContext(grantSystem, mode).then(c => {
       if (!alive) return;
       setCtx(c);
       setRole(c.role);
       setMsgs([{ role: "assistant", content: ROLE_INTRO[c.role] || ROLE_INTRO._default }]);
     });
     return () => { alive = false; };
-  }, [available, grantSystem]);
+  }, [available, grantSystem, mode]);
 
   useEffect(() => {
     const el = bodyRef.current;
@@ -92,9 +99,13 @@ function AIChat() {
     setInput("");
     setBusy(true);
     try {
+      const session = await window.AUTH.session();
       const r = await fetch("/api/ai-chat-response", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": session && session.access_token ? "Bearer " + session.access_token : "",
+        },
         body: JSON.stringify({ messages: next, context: ctx }),
       });
       const data = await r.json().catch(() => ({}));

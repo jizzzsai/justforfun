@@ -1182,6 +1182,41 @@
       if (res.error) throw res.error;
       return res.data || [];
     },
+    async adminAnalyticsSnapshot() {
+      var role = await myRole();
+      if (role !== "admin") throw new Error("Administrator access required.");
+      var results = await Promise.all([
+        sb.from("applications").select("code,title,grant_type,status,faculty,department,requested_amount,approved_amount,created_at,submitted_at,decided_at"),
+        sb.from("profiles").select("role,faculty,department,is_active,created_at"),
+        sb.from("payments").select("amount,pct,instalment,status,paid_at,application:applications(code,grant_type,faculty,status)"),
+        sb.from("publication_grants").select("code,article_title,status,faculty,department,requested_amount,approved_amount,indexing,quartile,publication_type,submitted_at,paid_at"),
+        sb.from("reimbursements").select("code,title,status,faculty,department,requested_amount,approved_amount,category,submitted_at,paid_at"),
+      ]);
+      results.forEach(function (result) { if (result.error) throw result.error; });
+      var profiles = results[1].data || [];
+      var usersByRole = {};
+      var usersByFaculty = {};
+      profiles.forEach(function (profile) {
+        var roleKey = profile.role || "unspecified";
+        var facultyKey = profile.faculty || "Unspecified";
+        usersByRole[roleKey] = (usersByRole[roleKey] || 0) + 1;
+        usersByFaculty[facultyKey] = (usersByFaculty[facultyKey] || 0) + 1;
+      });
+      return {
+        generatedAt: new Date().toISOString(),
+        applications: results[0].data || [],
+        users: {
+          total: profiles.length,
+          active: profiles.filter(function (profile) { return profile.is_active; }).length,
+          inactive: profiles.filter(function (profile) { return !profile.is_active; }).length,
+          byRole: usersByRole,
+          byFaculty: usersByFaculty,
+        },
+        payments: results[2].data || [],
+        publicationRewards: results[3].data || [],
+        reimbursements: results[4].data || [],
+      };
+    },
     async allProfiles() {
       var res = await sb.from("profiles").select("*").order("role", { ascending: true }).order("full_name", { ascending: true });
       if (res.error) throw res.error;
