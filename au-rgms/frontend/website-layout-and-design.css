@@ -1223,24 +1223,39 @@ textarea.comment-input:focus { outline: none; border-color: var(--au-crimson); b
 .audp-jump {
   flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
 }
-.audp-jump select {
-  min-width: 0; height: 30px; padding: 0 24px 0 8px;
+.audp-head button.audp-jump-button {
+  min-width: 0; width: auto; height: 30px; padding: 0 8px;
   border: 1px solid rgba(255,255,255,0.42); border-radius: 7px;
   background-color: rgba(255,255,255,0.14); color: #fff;
+  display: flex; align-items: center; justify-content: space-between; gap: 5px;
   font-size: 12px; font-weight: 650; cursor: pointer; outline: none;
 }
-.audp-jump select:first-child { flex: 1; }
-.audp-jump select:last-child { width: 78px; }
-.audp-jump select:focus { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.2); }
-.audp-jump option {
-  background: #fff; color: var(--ink-1);
-}
+.audp-head button.audp-month-button { flex: 1; }
+.audp-head button.audp-year-button { width: 76px; }
+.audp-head button.audp-jump-button:focus { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.2); }
 .audp-head button {
   width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
   border-radius: 8px; color: #fff; background: rgba(255,255,255,0.14);
   transition: background .15s;
 }
 .audp-head button:hover { background: rgba(255,255,255,0.28); }
+.audp-month-grid, .audp-year-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px;
+  padding: 14px; background: var(--paper);
+}
+.audp-year-grid { max-height: 238px; overflow-y: auto; scrollbar-width: thin; }
+.audp-month-grid button, .audp-year-grid button {
+  min-height: 38px; border: 1px solid var(--line-2); border-radius: 9px;
+  background: #fff; color: var(--ink-2); font-size: 12px; font-weight: 600;
+  transition: background .12s, border-color .12s, color .12s;
+}
+.audp-month-grid button:hover, .audp-year-grid button:hover {
+  border-color: var(--au-crimson); background: var(--au-crimson-soft); color: var(--au-crimson);
+}
+.audp-month-grid button.active, .audp-year-grid button.active {
+  border-color: var(--au-crimson); background: var(--au-crimson); color: #fff;
+}
+.audp-month-grid button:disabled { opacity: .35; cursor: not-allowed; }
 .audp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; padding: 10px 12px 4px; }
 .audp-dow {
   text-align: center; font-size: 10px; font-weight: 700; letter-spacing: 0.06em;

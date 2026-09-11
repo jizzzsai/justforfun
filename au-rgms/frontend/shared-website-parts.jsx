@@ -464,6 +464,7 @@ function audpPad(n) { return (n < 10 ? "0" : "") + n; }
 function audpISO(y, m, d) { return y + "-" + audpPad(m + 1) + "-" + audpPad(d); }
 function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…" }) {
   const [open, setOpen] = useState(false);
+  const [panel, setPanel] = useState(null);
   const today = new Date();
   const sel = value ? new Date(value + "T00:00:00") : null;
   const [view, setView] = useState({ y: (sel || today).getFullYear(), m: (sel || today).getMonth() });
@@ -474,6 +475,7 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
   const yearOptions = [];
   for (let y = maxYear; y >= minYear; y--) yearOptions.push(y);
   const wrapRef = useRef(null);
+  const yearPanelRef = useRef(null);
   useEffect(() => {
     if (!open) return;
     const onDoc = (e) => { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); };
@@ -482,10 +484,16 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
     document.addEventListener("keydown", onEsc);
     return () => { document.removeEventListener("mousedown", onDoc); document.removeEventListener("keydown", onEsc); };
   }, [open]);
+  useEffect(() => {
+    if (panel !== "year" || !yearPanelRef.current) return;
+    const activeYear = yearPanelRef.current.querySelector(".active");
+    if (activeYear) activeYear.scrollIntoView({ block: "center" });
+  }, [panel]);
   const toggle = () => {
     if (!open) {
       const base = value ? new Date(value + "T00:00:00") : today;
       if (!isNaN(base)) setView({ y: base.getFullYear(), m: base.getMonth() });
+      setPanel(null);
     }
     setOpen(v => !v);
   };
@@ -496,7 +504,7 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
     if ((min && monthEnd < min) || (max && monthStart > max)) return v;
     return { y: d.getFullYear(), m: d.getMonth() };
   });
-  const pick = (iso) => { if (onChange) onChange(iso); setOpen(false); };
+  const pick = (iso) => { if (onChange) onChange(iso); setPanel(null); setOpen(false); };
   const inRange = (iso) => (!min || iso >= min) && (!max || iso <= max);
   const monthInRange = (y, m) => {
     const monthStart = audpISO(y, m, 1);
@@ -511,6 +519,7 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
       nextMonth = Math.max(lowerMonth, Math.min(upperMonth, nextMonth));
     }
     setView({ y: nextYear, m: nextMonth });
+    setPanel(null);
   };
   const first = new Date(view.y, view.m, 1);
   const start = new Date(view.y, view.m, 1 - first.getDay());
@@ -539,29 +548,42 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
         <div className="audp-pop" role="dialog" aria-label="Choose date">
           <div className="audp-head">
             <div className="audp-jump">
-              <select aria-label="Month" value={view.m} onChange={e => setView(v => ({ ...v, m: Number(e.target.value) }))}>
-                {AUDP_MONTHS.map((month, monthIndex) => <option key={month} value={monthIndex} disabled={!monthInRange(view.y, monthIndex)}>{month}</option>)}
-              </select>
-              <select aria-label="Year" value={view.y} onChange={e => changeYear(Number(e.target.value))}>
-                {yearOptions.map(year => <option key={year} value={year}>{year}</option>)}
-              </select>
+              <button type="button" className="audp-jump-button audp-month-button" aria-label="Choose month" aria-expanded={panel === "month"} onClick={() => setPanel(p => p === "month" ? null : "month")}>
+                {AUDP_MONTHS[view.m]} <Icon name="ChevronDown" size={12} />
+              </button>
+              <button type="button" className="audp-jump-button audp-year-button" aria-label="Choose year" aria-expanded={panel === "year"} onClick={() => setPanel(p => p === "year" ? null : "year")}>
+                {view.y} <Icon name="ChevronDown" size={12} />
+              </button>
             </div>
-            <button type="button" onClick={() => shift(-1)} aria-label="Previous month"><Icon name="ChevronLeft" size={15} /></button>
-            <button type="button" onClick={() => shift(1)} aria-label="Next month"><Icon name="ChevronRight" size={15} /></button>
+            <button type="button" onClick={() => { setPanel(null); shift(-1); }} aria-label="Previous month"><Icon name="ChevronLeft" size={15} /></button>
+            <button type="button" onClick={() => { setPanel(null); shift(1); }} aria-label="Next month"><Icon name="ChevronRight" size={15} /></button>
           </div>
-          <div className="audp-grid">
-            {AUDP_DOW.map(d => <div key={d} className="audp-dow">{d}</div>)}
-            {cells.map((d, i) => {
-              const iso = audpISO(d.getFullYear(), d.getMonth(), d.getDate());
-              const out = d.getMonth() !== view.m;
-              const dis = !inRange(iso);
-              const cls = "audp-day" + (out ? " out" : "") + (dis ? " dis" : "")
-                + (iso === todayISO ? " today" : "") + (value === iso ? " sel" : "");
-              return (
-                <div key={i} className={cls} onClick={() => !dis && pick(iso)}>{d.getDate()}</div>
-              );
-            })}
-          </div>
+          {panel === "month" ? (
+            <div className="audp-month-grid" aria-label="Select month">
+              {AUDP_MONTHS.map((month, monthIndex) => {
+                const disabled = !monthInRange(view.y, monthIndex);
+                return <button key={month} type="button" disabled={disabled} className={view.m === monthIndex ? "active" : ""} onClick={() => { setView(v => ({ ...v, m: monthIndex })); setPanel(null); }}>{month.slice(0, 3)}</button>;
+              })}
+            </div>
+          ) : panel === "year" ? (
+            <div className="audp-year-grid" ref={yearPanelRef} aria-label="Select year">
+              {yearOptions.map(year => <button key={year} type="button" className={view.y === year ? "active" : ""} onClick={() => changeYear(year)}>{year}</button>)}
+            </div>
+          ) : (
+            <div className="audp-grid">
+              {AUDP_DOW.map(d => <div key={d} className="audp-dow">{d}</div>)}
+              {cells.map((d, i) => {
+                const iso = audpISO(d.getFullYear(), d.getMonth(), d.getDate());
+                const out = d.getMonth() !== view.m;
+                const dis = !inRange(iso);
+                const cls = "audp-day" + (out ? " out" : "") + (dis ? " dis" : "")
+                  + (iso === todayISO ? " today" : "") + (value === iso ? " sel" : "");
+                return (
+                  <div key={i} className={cls} onClick={() => !dis && pick(iso)}>{d.getDate()}</div>
+                );
+              })}
+            </div>
+          )}
           <div className="audp-foot">
             <button type="button" onClick={() => pick("")}>Clear</button>
             <button type="button" disabled={!inRange(todayISO)}
