@@ -1878,7 +1878,7 @@ const ADMIN_ROLE_OPTIONS = [
 ];
 
 function AdminAddUserForm({ onCreated, onClose, toast }) {
-  const blank = { name_title: "", full_name: "", email: "", au_id: "", role: "dean", faculty: "", department: "", password: "123456789" };
+  const blank = { name_title: "", full_name: "", email: "", au_id: "", office_room: "", role: "dean", faculty: "", department: "", password: "123456789" };
   const [f, setF] = useState(blank);
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setF(s => Object.assign({}, s, k === "faculty" ? { faculty: v, department: "" } : { [k]: v }));
@@ -1908,6 +1908,7 @@ function AdminAddUserForm({ onCreated, onClose, toast }) {
           <div className="field"><label>Full Name</label><input value={f.full_name} onChange={e => set("full_name", e.target.value)} placeholder="e.g. Tanachai Suksawat" /></div>
           <div className="field"><label>AU ID</label><input value={f.au_id} onChange={e => set("au_id", e.target.value)} placeholder="e.g. 5012345" /></div>
           <div className="field"><label>Email (AU only)</label><input type="email" value={f.email} onChange={e => set("email", e.target.value)} placeholder="name@au.edu" /></div>
+          <div className="field"><label>Office / Room</label><input value={f.office_room} onChange={e => set("office_room", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
           <div className="field"><label>Role</label>
             <select value={f.role} onChange={e => set("role", e.target.value)}>{ADMIN_ROLE_OPTIONS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}</select>
           </div>
@@ -1936,6 +1937,7 @@ function AdminEditUserForm({ user, onSaved, onClose, toast }) {
     email: user.email || "",
     au_id: user.au_id || "",
     phone: user.phone || "",
+    office_room: user.office_room || "",
     role: user.role || "researcher",
     faculty: user.faculty || "",
     department: user.department || "",
@@ -1970,6 +1972,7 @@ function AdminEditUserForm({ user, onSaved, onClose, toast }) {
           <div className="field"><label>Full Name</label><input value={f.full_name} onChange={e => set("full_name", e.target.value)} /></div>
           <div className="field"><label>AU ID</label><input value={f.au_id} onChange={e => set("au_id", e.target.value)} /></div>
           <div className="field"><label>Phone</label><input value={f.phone} onChange={e => set("phone", e.target.value)} /></div>
+          <div className="field"><label>Office / Room</label><input value={f.office_room} onChange={e => set("office_room", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
           <div className="field"><label>Email (AU only)</label><input type="email" value={f.email} onChange={e => set("email", e.target.value)} /></div>
           <div className="field"><label>Role</label>
             <select value={f.role} onChange={e => set("role", e.target.value)}>{ADMIN_ROLE_OPTIONS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}</select>

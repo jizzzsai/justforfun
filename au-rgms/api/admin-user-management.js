@@ -50,6 +50,7 @@ function validateProfile(body, requirePassword) {
   const nameTitle = body.name_title ? String(body.name_title).trim() : null;
   const auId = body.au_id ? String(body.au_id).trim() : null;
   const phone = body.phone ? String(body.phone).trim() : null;
+  const officeRoom = body.office_room ? String(body.office_room).trim() : null;
 
   if (!/^[^@\s]+@au\.edu$/.test(email)) return { error: "Email must be an @au.edu address." };
   if (!fullName) return { error: "Full name is required." };
@@ -58,7 +59,7 @@ function validateProfile(body, requirePassword) {
   if ((role === "dean" || role === "committee") && !faculty) return { error: "Dean and Committee accounts need a faculty." };
 
   return {
-    email, fullName, role, password, faculty, department, nameTitle, auId, phone,
+    email, fullName, role, password, faculty, department, nameTitle, auId, phone, officeRoom,
     isActive: body.is_active !== false,
   };
 }
@@ -116,7 +117,7 @@ module.exports = async (req, res) => {
         body: JSON.stringify({
           id: created.id, email: f.email, full_name: f.fullName, role: f.role,
           faculty: f.faculty, department: f.department, name_title: f.nameTitle,
-          au_id: f.auId, phone: f.phone, is_active: f.isActive,
+          au_id: f.auId, phone: f.phone, office_room: f.officeRoom, is_active: f.isActive,
         }),
       });
       if (!upRes.ok) {
@@ -156,7 +157,7 @@ module.exports = async (req, res) => {
         body: JSON.stringify({
           email: f.email, full_name: f.fullName, role: f.role, faculty: f.faculty,
           department: f.department, name_title: f.nameTitle, au_id: f.auId,
-          phone: f.phone, is_active: f.isActive,
+          phone: f.phone, office_room: f.officeRoom, is_active: f.isActive,
         }),
       });
       const updated = await patchRes.json().catch(() => []);
