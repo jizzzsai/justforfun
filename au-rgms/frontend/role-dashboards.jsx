@@ -1725,34 +1725,35 @@ function OFMDetail({ onDownload, toast, setConfirm }) {
 
 function OFMHistory({ onDownload }) {
   const [rows, setRows] = useState(null);
+  const [grantFilter, setGrantFilter] = useState("all");
   useEffect(() => {
-    window.DB.paidPayments().then(ps => setRows(ps.map(p => ({
-      id: p.application ? p.application.code : "—",
-      who: p.application && p.application.researcher ? p.application.researcher.full_name : "—",
-      stage: (p.instalment === 1 ? "1st · 30%" : p.instalment === 2 ? "2nd · 40%" : "3rd · 30%"),
-      amount: Number(p.amount),
-      date: window.DB.fmtDate(p.paid_at),
-      ref: "PAY-" + String(p.id || "").slice(0, 8),
-    })))).catch(() => setRows([]));
+    window.DB.financePaymentHistory().then(setRows).catch(() => setRows([]));
   }, []);
+  const visibleRows = (rows || []).filter(r => grantFilter === "all" || r.grant_type === grantFilter);
+  const filters = [{ id: "all", label: "All" }, { id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }];
   return (
     <>
-      <PageHeader title="Payment History" desc="All AU-R1 disbursements processed by Finance." />
+      <PageHeader title="Payment History" desc="Paid AU-R1, AU-R3, and AU-R4 transactions processed by Finance." actions={
+        <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden" }}>
+          {filters.map(item => <button key={item.id} onClick={() => setGrantFilter(item.id)} style={{ padding: "7px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: grantFilter === item.id ? "var(--au-crimson)" : "transparent", color: grantFilter === item.id ? "#fff" : "var(--ink-2)" }}>{item.label}</button>)}
+        </div>
+      } />
       <div className="card card-pad-0">
         <table className="tbl">
-          <thead><tr><th>Payment Date</th><th>Application</th><th>Researcher</th><th>Phase</th><th style={{textAlign: "right"}}>Amount</th><th>Reference</th><th style={{textAlign: "right"}}>Status</th></tr></thead>
+          <thead><tr><th>Payment Date</th><th>Grant</th><th>Application</th><th>Researcher</th><th>Payment</th><th style={{textAlign: "right"}}>Amount</th><th>Reference</th><th style={{textAlign: "right"}}>Status</th></tr></thead>
           <tbody>
-            {rows === null && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading…</td></tr>}
-            {rows && rows.length === 0 && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No payments processed yet.</td></tr>}
-            {(rows || []).map((r, i) => (
-              <tr key={i}>
-                <td style={{fontSize: 12}}>{r.date}</td>
-                <td><span className="id">{r.id}</span></td>
-                <td style={{fontSize: 12}}>{r.who}</td>
-                <td style={{fontSize: 12}}>{r.stage}</td>
+            {rows === null && <tr><td colSpan="8" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading…</td></tr>}
+            {rows && visibleRows.length === 0 && <tr><td colSpan="8" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No {grantFilter === "all" ? "" : grantFilter.replace("au_r", "AU-R").toUpperCase() + " "}payments processed yet.</td></tr>}
+            {visibleRows.map(r => (
+              <tr key={r.key}>
+                <td style={{fontSize: 12}}>{window.DB.fmtDate(r.paid_at)}</td>
+                <td><span className="badge badge-submitted"><span className="dot"></span>{String(r.grant_type || "au_r1").replace("au_r", "AU-R").toUpperCase()}</span></td>
+                <td><span className="id">{r.code}</span></td>
+                <td style={{fontSize: 12}}>{r.researcher}</td>
+                <td style={{fontSize: 12}}>{r.payment_label}</td>
                 <td style={{textAlign: "right", fontWeight: 600}}>{r.amount.toLocaleString()} THB</td>
-                <td><span className="id" style={{fontSize: 12}}>{r.ref}</span></td>
-                <td className="actions"><span className="badge badge-paid"><span className="dot"></span>Paid</span></td>
+                <td><span className="id" style={{fontSize: 12}}>{r.reference}</span></td>
+                <td className="actions"><span className={"badge " + (r.status === "completed" ? "badge-check" : "badge-paid")}><span className="dot"></span>{r.status === "completed" ? "Completed" : "Paid"}</span></td>
               </tr>
             ))}
           </tbody>

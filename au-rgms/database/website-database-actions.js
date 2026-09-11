@@ -491,13 +491,14 @@
       if (!me) throw new Error("You must be signed in.");
       var score = Math.max(0, Math.min(100, parseInt(payload.score, 10) || 0));
       var recommendation = payload.recommendation || (score >= 70 ? "favorable" : "revise");
+      var committeeComment = String(payload.comments || "").trim();
       var row = {
         application_id: appId,
         kind: "committee",
         reviewer_id: me,
         recommendation: recommendation,
         score: score,
-        comments: payload.comments || null,
+        comments: committeeComment || null,
         submitted_at: new Date().toISOString(),
       };
       var existing = await sb.from("reviews").select("id")
@@ -512,12 +513,12 @@
           application_id: appId, actor_id: me, actor_role: role || "committee",
           action: "Faculty Committee review submitted",
           from_status: "committee_review", to_status: "iras_review",
-          note: "Score " + score + " / 100; recommendation: " + recommendation + ".",
+          note: "Score " + score + " / 100; recommendation: " + recommendation + "." + (committeeComment ? " Comment: " + committeeComment : ""),
         });
       } catch (e) {}
-      if (recommendation === "unfavorable") return await this.transition(appId, "committee_review", "reject");
-      if (recommendation === "revise") return await this.transition(appId, "committee_review", "return");
-      await this.transition(appId, "committee_review", "advance");
+      if (recommendation === "unfavorable") return await this.transition(appId, "committee_review", "reject", committeeComment);
+      if (recommendation === "revise") return await this.transition(appId, "committee_review", "return", committeeComment);
+      await this.transition(appId, "committee_review", "advance", committeeComment);
       return res.data;
     },
 
@@ -693,7 +694,26 @@
         .eq("application_id", appId).eq("to_status", "returned")
         .order("created_at", { ascending: false }).limit(1);
       if (res.error) return null;
-      return (res.data && res.data[0]) || null;
+      var returnEvent = (res.data && res.data[0]) || null;
+      if (returnEvent && String(returnEvent.note || "").trim()) return returnEvent;
+
+      // Older committee returns stored the reason on the review but not on the
+      // return event. Preserve those records by falling back to that review.
+      var review = await sb.from("reviews")
+        .select("comments, submitted_at, reviewer:profiles(full_name)")
+        .eq("application_id", appId).eq("kind", "committee")
+        .not("comments", "is", null)
+        .order("submitted_at", { ascending: false }).limit(1);
+      if (!review.error && review.data && review.data[0] && String(review.data[0].comments || "").trim()) {
+        return {
+          action: returnEvent ? returnEvent.action : "Returned to researcher",
+          note: review.data[0].comments,
+          actor_role: (returnEvent && returnEvent.actor_role) || "committee",
+          created_at: (returnEvent && returnEvent.created_at) || review.data[0].submitted_at,
+          actor: (returnEvent && returnEvent.actor) || review.data[0].reviewer || null,
+        };
+      }
+      return returnEvent;
     },
 
     async ofmPayments() {
@@ -1218,6 +1238,54 @@
         .eq("status", "paid").order("paid_at", { ascending: false });
       if (res.error) throw res.error;
       return res.data || [];
+    },
+    async financePaymentHistory() {
+      var results = await Promise.all([
+        sb.from("payments")
+          .select("*, application:applications(id,code,title,grant_type,status,researcher:profiles(full_name))")
+          .eq("status", "paid").order("paid_at", { ascending: false }),
+        sb.from("applications")
+          .select("id,code,title,grant_type,status,requested_amount,approved_amount,decided_at,updated_at,events:application_events(id,action,from_status,to_status,note,created_at),researcher:profiles(full_name)")
+          .in("grant_type", ["au_r3", "au_r4"])
+          .in("status", ["active", "completed"]),
+      ]);
+      results.forEach(function (result) { if (result.error) throw result.error; });
+
+      var rows = (results[0].data || []).filter(function (payment) {
+        return !payment.application || !payment.application.grant_type || payment.application.grant_type === "au_r1";
+      }).map(function (payment) {
+        var app = payment.application || {};
+        return {
+          key: "payment-" + payment.id,
+          grant_type: app.grant_type || "au_r1",
+          code: app.code || "—",
+          researcher: app.researcher ? app.researcher.full_name : "—",
+          payment_label: payment.instalment === 1 ? "Phase 1 · 30%" : payment.instalment === 2 ? "Phase 2 · 40%" : "Phase 3 · 30%",
+          amount: Number(payment.amount || 0),
+          paid_at: payment.paid_at,
+          reference: "PAY-" + String(payment.id || "").slice(0, 8),
+          status: "paid",
+        };
+      });
+
+      (results[1].data || []).forEach(function (app) {
+        var events = app.events || [];
+        var paidEvent = events.filter(function (event) {
+          return (event.from_status === "approved" && event.to_status === "active") || event.action === "Finance marked payment as paid";
+        }).sort(function (a, b) { return String(b.created_at || "").localeCompare(String(a.created_at || "")); })[0];
+        rows.push({
+          key: "grant-" + app.id,
+          grant_type: app.grant_type,
+          code: app.code || "—",
+          researcher: app.researcher ? app.researcher.full_name : "—",
+          payment_label: app.grant_type === "au_r4" ? "Publication fee / reward" : "Conference grant",
+          amount: Number(app.approved_amount || app.requested_amount || 0),
+          paid_at: (paidEvent && paidEvent.created_at) || app.updated_at || app.decided_at,
+          reference: "PAY-" + String((paidEvent && paidEvent.id) || app.id || "").slice(0, 8),
+          status: app.status === "completed" ? "completed" : "paid",
+        });
+      });
+      return rows.sort(function (a, b) { return String(b.paid_at || "").localeCompare(String(a.paid_at || "")); });
     },
     async adminAnalyticsSnapshot() {
       var role = await myRole();
