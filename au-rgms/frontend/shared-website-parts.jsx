@@ -182,7 +182,7 @@ function Timeline({ steps, app, onStepClick }) {
           >
             <div className="dot"></div>
             <div className="t">{s.label}</div>
-            <div className="s">{data.date || "Pending"}</div>
+            <div className="s">{data.date || (data.done ? "Completed" : data.current ? "In progress" : "Not started")}</div>
             {data.who && <div className="who">{data.who}</div>}
             {data.note && <div className="comment">{data.note}</div>}
           </div>

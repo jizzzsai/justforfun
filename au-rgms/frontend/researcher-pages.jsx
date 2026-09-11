@@ -24,7 +24,8 @@ function buildResearcherTimeline(statusKey) {
   const idxMap = { draft: 0, submitted: 1, committee_review: 2, dean_sign: 3, iras_review: 3, approved: 4, active: 5, completed: 10, returned: 0, rejected: 0 };
   let idx = idxMap[statusKey]; if (idx === undefined) idx = 0;
   const tl = {};
-  order.forEach((k, i) => { tl[k] = i < idx ? { done: true } : (i === idx ? { current: true } : {}); });
+  const currentLabel = statusKey === "draft" ? "Draft" : statusKey === "returned" ? "Returned for revision" : statusKey === "rejected" ? "Not approved" : "In progress";
+  order.forEach((k, i) => { tl[k] = i < idx ? { done: true, date: "Completed" } : (i === idx ? { current: true, date: currentLabel } : { date: "Not started" }); });
   return tl;
 }
 
@@ -38,10 +39,11 @@ const R3_PIPELINE = [
 ];
 function buildR3Timeline(statusKey) {
   const order = ["submission", "dean", "iras", "approved", "payment", "completed"];
-  const idxMap = { draft: 0, submitted: 1, iras_review: 2, approved: 3, active: 4, completed: 5, returned: 0, rejected: 0 };
+  const idxMap = { draft: 0, submitted: 1, iras_review: 2, approved: 4, active: 5, completed: 6, returned: 0, rejected: 0 };
   let idx = idxMap[statusKey]; if (idx === undefined) idx = 0;
   const tl = {};
-  order.forEach((k, i) => { tl[k] = i < idx ? { done: true } : (i === idx ? { current: true } : {}); });
+  const currentLabel = statusKey === "draft" ? "Draft" : statusKey === "returned" ? "Returned for revision" : statusKey === "rejected" ? "Not approved" : "In progress";
+  order.forEach((k, i) => { tl[k] = i < idx ? { done: true, date: "Completed" } : (i === idx ? { current: true, date: currentLabel } : { date: "Not started" }); });
   return tl;
 }
 
@@ -56,10 +58,11 @@ const R4_PIPELINE = [
 ];
 function buildR4Timeline(statusKey) {
   const order = ["submission", "dean", "committee", "iras", "approved", "payment", "paid"];
-  const idxMap = { draft: 0, submitted: 1, committee_review: 2, iras_review: 3, approved: 4, active: 5, completed: 6, returned: 0, rejected: 0 };
+  const idxMap = { draft: 0, submitted: 1, committee_review: 2, iras_review: 3, approved: 5, active: 7, completed: 7, returned: 0, rejected: 0 };
   let idx = idxMap[statusKey]; if (idx === undefined) idx = 0;
   const tl = {};
-  order.forEach((k, i) => { tl[k] = i < idx ? { done: true } : (i === idx ? { current: true } : {}); });
+  const currentLabel = statusKey === "draft" ? "Draft" : statusKey === "returned" ? "Returned for revision" : statusKey === "rejected" ? "Not approved" : "In progress";
+  order.forEach((k, i) => { tl[k] = i < idx ? { done: true, date: "Completed" } : (i === idx ? { current: true, date: currentLabel } : { date: "Not started" }); });
   return tl;
 }
 
@@ -2178,12 +2181,12 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
   };
   const timelineApp = {
     timeline: {
-      submission: { done: true, current: app.status === "submitted", date: window.DB.fmtDate(app.submitted_at || app.created_at), who: researcherName },
-      deanScreen: { current: app.status === "submitted", done: !["draft", "submitted", "returned"].includes(app.status), date: app.status === "submitted" ? "Waiting Dean screening" : !["draft", "returned"].includes(app.status) ? "Completed" : "Pending" },
-      committee: { current: app.status === "committee_review", done: ["iras_review", "approved", "active", "completed"].includes(app.status), date: app.status === "committee_review" ? "In committee review" : ["iras_review", "approved", "active", "completed"].includes(app.status) ? "Completed" : "Pending" },
-      iras: { current: app.status === "iras_review", done: ["approved", "active", "completed"].includes(app.status), date: app.status === "iras_review" ? "RASSC screening" : ["approved", "active", "completed"].includes(app.status) ? "Approved" : "Pending" },
-      contract: { current: app.status === "approved", done: ["active", "completed"].includes(app.status), date: app.status === "approved" ? "Contract pending" : ["active", "completed"].includes(app.status) ? "Signed" : "Pending" },
-      pay1: { current: ["approved", "active"].includes(app.status) && !phaseApproved(1), done: phaseApproved(1), date: phaseApproved(1) ? "Paid by Finance" : "Waiting for Finance" },
+      submission: { done: !["draft", "returned"].includes(app.status), current: ["draft", "returned"].includes(app.status), date: app.status === "returned" ? "Returned for revision" : app.status === "draft" ? "Draft" : window.DB.fmtDate(app.submitted_at || app.created_at), who: researcherName },
+      deanScreen: { current: app.status === "submitted", done: !["draft", "submitted", "returned"].includes(app.status), date: app.status === "submitted" ? "In progress" : !["draft", "submitted", "returned"].includes(app.status) ? "Completed" : "Not started" },
+      committee: { current: app.status === "committee_review", done: ["dean_sign", "iras_review", "approved", "active", "completed"].includes(app.status), date: app.status === "committee_review" ? "In progress" : ["dean_sign", "iras_review", "approved", "active", "completed"].includes(app.status) ? "Completed" : "Not started" },
+      iras: { current: ["dean_sign", "iras_review"].includes(app.status), done: ["approved", "active", "completed"].includes(app.status), date: ["dean_sign", "iras_review"].includes(app.status) ? "In progress" : ["approved", "active", "completed"].includes(app.status) ? "Completed" : "Not started" },
+      contract: { current: app.status === "approved", done: ["active", "completed"].includes(app.status), date: app.status === "approved" ? "In progress" : ["active", "completed"].includes(app.status) ? "Completed" : "Not started" },
+      pay1: { current: ["approved", "active"].includes(app.status) && !phaseApproved(1), done: phaseApproved(1), date: phaseApproved(1) ? "Completed" : ["approved", "active"].includes(app.status) ? "In progress" : "Not started" },
       progress: { current: phaseApproved(1) && !progressAccepted, done: !!progressAccepted, date: progressAccepted ? "Accepted by RASSC · click to view" : progressReport ? "At RASSC review · click to view" : phaseApproved(1) ? "Ready to submit · click to open" : "Opens after Phase 1 approval" },
       pay2: { current: !!progressAccepted && !phaseApproved(2), done: phaseApproved(2), date: phaseApproved(2) ? "Paid by Finance" : progressAccepted ? "Ready at Finance" : "After RASSC accepts progress report" },
       final: { current: phaseApproved(2) && !finalAccepted, done: !!finalAccepted, date: finalAccepted ? "Accepted by RASSC · click to view" : finalReport ? "At RASSC review · click to view" : phaseApproved(2) ? "Ready to submit · click to open" : "Opens after Phase 2 approval" },
