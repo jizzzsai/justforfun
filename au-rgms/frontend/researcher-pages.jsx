@@ -145,7 +145,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
             <div className="card-head">
               <h3>{isR4 ? "Latest Claim Status" : "Grant Payment Status"}{singleGrant ? " · " + singleGrant.code : ""}</h3>
               <div className="grow"></div>
-              {singleGrant && <Badge status={window.DB.statusBadge(singleGrant.status)} />}
+              {singleGrant && <Badge status={window.DB.statusBadge(singleGrant.status, singleGrant.grant_type)} />}
             </div>
             <div className="card-body">
               {apps === null && !appsError && <div className="text-sm text-muted">Loading…</div>}
@@ -232,7 +232,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
                   <div style={{ fontSize: 13, fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{a.title || "Untitled application"}</div>
                   <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 2 }}>{a.code} · {window.DB.fmtDate(a.submitted_at || a.created_at)}</div>
                 </div>
-                <Badge status={window.DB.statusBadge(a.status)} />
+                <Badge status={a.statusBadge || window.DB.statusBadge(a.status, a.grant_type)} />
               </div>
             ))}
           </div>
@@ -260,7 +260,7 @@ function researcherSnapshotFromDraft(draft) {
     fullName: String(draft.name || "").trim(),
     auId: String(draft.auId || "").trim(),
     email: String(draft.email || "").trim().toLowerCase(),
-    phone: String(draft.phone || "").trim(),
+    phone: normalizeThaiPhone(draft.phone),
     officeRoom: String(draft.office || "").trim(),
     joinedDate: draft.joinedDate || null,
     faculty: draft.school || "",
@@ -420,7 +420,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         const p = await window.AUTH.profile();
         if (p && p.budget_split) setSplit(s => ({ ...s, ...p.budget_split }));
         if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
-        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: p.phone || d.phone, office: p.office_room || d.office }));
+        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: normalizeThaiPhone(p.phone || d.phone), office: p.office_room || d.office }));
       } catch (e) {}
     })();
   }, [applicationId]);
@@ -527,6 +527,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
     if (submit && !draft.joinedDate) { setErr("Select the date you joined Assumption University."); return; }
     if (submit && !universityServiceEligibility(draft.joinedDate).eligible) { setErr("You are not eligible yet. Researchers must have at least one year of service at Assumption University."); return; }
     if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
+    if (submit && draft.phone && !isValidThaiPhone(draft.phone)) { setErr("Phone must be a Thai number with 9–10 digits starting with 0."); return; }
     if (submit && (!draft.startDate || !draft.endDate)) { setErr("Select the project start and expected end dates."); return; }
     if (submit && autoDuration <= 0) { setErr("The expected end date must be after the start date."); return; }
     if (submit && Number(reqTotal) > maxAmount) { setErr("Requested amount (" + Number(reqTotal).toLocaleString() + " THB) exceeds the " + maxAmount.toLocaleString() + " THB maximum for " + sys.code + " grants."); return; }
@@ -669,7 +670,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
               </div>
               <div className="field">
                 <label>Phone</label>
-                <input value={draft.phone} onChange={e => upd("phone", e.target.value)} />
+                <ThaiPhoneInput value={draft.phone} onChange={value => upd("phone", value)} />
               </div>
               <div className="field">
                 <label>Office / Room</label>
@@ -958,7 +959,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
       try {
         const p = await window.AUTH.profile();
         if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
-        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: p.phone || d.phone, office: p.office_room || d.office }));
+        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: normalizeThaiPhone(p.phone || d.phone), office: p.office_room || d.office }));
       } catch (e) {}
     })();
   }, [applicationId]);
@@ -1036,6 +1037,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
     if (submit && !draft.joinedDate) { setErr("Select the date you joined Assumption University."); return; }
     if (submit && !universityServiceEligibility(draft.joinedDate).eligible) { setErr("You are not eligible yet. AU-R3 applicants must have at least one year of service at Assumption University."); return; }
     if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
+    if (submit && draft.phone && !isValidThaiPhone(draft.phone)) { setErr("Phone must be a Thai number with 9–10 digits starting with 0."); return; }
     setBusy(true); setBusyKind(submit ? "submit" : "draft");
     try {
       try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
@@ -1228,7 +1230,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
                   style={emailBad ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : null} />
                 {emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}
               </div>
-              <div className="field"><label>Phone</label><input value={draft.phone} onChange={e => upd("phone", e.target.value)} /></div>
+              <div className="field"><label>Phone</label><ThaiPhoneInput value={draft.phone} onChange={value => upd("phone", value)} /></div>
               <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
               <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} />
               <div className="field">
@@ -1433,7 +1435,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         const p = await window.AUTH.profile();
         if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
         if (p && !applicationId) {
-          setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: p.phone || d.phone, office: p.office_room || d.office }));
+          setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: normalizeThaiPhone(p.phone || d.phone), office: p.office_room || d.office }));
           setAuthors(a => a.map((r, i) => i === 0 ? { ...r, name: p.full_name || r.name, email: p.email || r.email } : r));
         }
       } catch (e) {}
@@ -1528,6 +1530,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       if (!draft.joinedDate) return setErr("Select the date you joined Assumption University.");
       if (!universityServiceEligibility(draft.joinedDate).eligible) return setErr("You are not eligible yet. AU-R4 applicants must have at least one year of service at Assumption University.");
       if (emailBad) return setErr("Email must be an Assumption University address ending in @au.edu.");
+      if (draft.phone && !isValidThaiPhone(draft.phone)) return setErr("Phone must be a Thai number with 9–10 digits starting with 0.");
       if (!draft.predatory) return setErr("You must confirm the journal is not a predatory / Beall's List journal.");
       if (turnitinBad) return setErr("Turnitin similarity exceeds the 20% limit — it must be 20% or lower.");
       if (draft.turnitin === "") return setErr("Enter the Turnitin similarity percentage.");
@@ -1738,7 +1741,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
               <div className="field"><label>Email (AU only)</label>
                 <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} style={emailBad ? { borderColor: "var(--au-crimson)" } : null} placeholder="name@au.edu" />
                 {emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}</div>
-              <div className="field"><label>Phone</label><input value={draft.phone} onChange={e => upd("phone", e.target.value)} /></div>
+              <div className="field"><label>Phone</label><ThaiPhoneInput value={draft.phone} onChange={value => upd("phone", value)} /></div>
               <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} /></div>
               <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} />
               <div className="field"><label>School / Faculty</label>
@@ -1888,7 +1891,7 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
       setMyApps(apps.map(a => ({
         id: a.code, _uuid: a.id, title: a.title, faculty: a.faculty, department: a.department,
         submittedAt: a.submitted_at ? window.DB.fmtDate(a.submitted_at) : "—",
-        stage: window.DB.statusBadge(a.status).label, status: window.DB.statusBadge(a.status), statusKey: a.status,
+        stage: (a.statusBadge || window.DB.statusBadge(a.status, a.grant_type)).label, status: a.statusBadge || window.DB.statusBadge(a.status, a.grant_type), statusKey: a.status,
         isOwner: a.is_owner !== false,
         collaboration: a.collaboration || null,
         grantType: a.grant_type,
@@ -2217,7 +2220,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
     : ownerParticipant;
   const coAuthorParticipants = [ownerParticipant].concat(collaboratorParticipants)
     .filter(member => member.id !== leadParticipant.id);
-  const status = app.statusBadge || window.DB.statusBadge(app.status);
+  const status = app.statusBadge || window.DB.statusBadge(app.status, app.grant_type);
   const joinedDate = researcherJoinedDate(app);
   const service = universityServiceEligibility(joinedDate);
   const isR1 = !app.grant_type || app.grant_type === "au_r1";
@@ -2849,7 +2852,7 @@ function SingleGrantPaymentStatus({ grantType }) {
   const pi = grant.pub_info || {}, ci = grant.conference_info || {};
   return (
     <>
-      <PageHeader title="Payment Status" desc={(isR4 ? "Publication reward · " : "Paper presentation grant · ") + grant.code} actions={<Badge status={window.DB.statusBadge(grant.status)} />} />
+      <PageHeader title="Payment Status" desc={(isR4 ? "Publication reward · " : "Paper presentation grant · ") + grant.code} actions={<Badge status={window.DB.statusBadge(grant.status, grant.grant_type)} />} />
       <div className="card card-pad-0 mb-6">
         <div className="card-head"><h3>{grant.title}</h3></div>
         <div className="card-body">

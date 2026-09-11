@@ -66,7 +66,13 @@
     };
     return m[s] || { label: s || "Reimbursement", cls: "badge-draft" };
   }
-  function badge(s) { return STATUS_MAP[s] || { label: s || "—", cls: "badge-draft" }; }
+  function badge(s, grantType) {
+    var base = STATUS_MAP[s] || { label: s || "—", cls: "badge-draft" };
+    if (s === "iras_review" && (grantType === "au_r3" || grantType === "au_r4")) {
+      return { label: "IRAS Screening", cls: base.cls };
+    }
+    return base;
+  }
   function publicationBadge(s) {
     var m = {
       draft: { label: "Draft", cls: "badge-draft" },
@@ -144,7 +150,7 @@
       faculty: a.faculty, department: a.department,
       submittedAt: a.submitted_at ? fmtDate(a.submitted_at) : fmtDate(a.created_at),
       budgetTotal: requested, requested_amount: requested,
-      status: badge(a.status), statusKey: a.status,
+      status: badge(a.status, a.grant_type), statusKey: a.status,
       grant_type: a.grant_type || "au_r1", conference_info: a.conference_info || null, pub_info: a.pub_info || null,
       approved_amount: approved,
       events: a.events || [],
@@ -327,6 +333,7 @@
       var rows = (results[0].data || []).map(function (app) {
         app.is_owner = true;
         app.access_mode = "owner";
+        app.statusBadge = badge(app.status, app.grant_type);
         return app;
       });
       (results[1].data || []).forEach(function (invitation) {
@@ -335,6 +342,7 @@
         if (rows.some(function (row) { return row.id === app.id; })) return;
         app.is_owner = false;
         app.access_mode = "collaborator";
+        app.statusBadge = badge(app.status, app.grant_type);
         app.collaboration = {
           id: invitation.id,
           status: invitation.status,
@@ -401,7 +409,7 @@
         if (a.approved_amount != null) a.approved_amount = 3500;
         a.budget_breakdown = [{ item: "Fixed AU-R3 Grant", amount: 3500 }];
       }
-      a.statusBadge = badge(a.status);
+      a.statusBadge = badge(a.status, a.grant_type);
       a.documents = (a.documents || []).map(mapDocument);
       a.reviews = (a.reviews || []).sort(function (x, y) {
         return new Date(y.submitted_at || 0) - new Date(x.submitted_at || 0);
@@ -521,12 +529,19 @@
       else if (kind === "reject") to = "rejected";
       else {
         var n = NEXT[fromStatus]; if (!n) throw new Error("No next step from " + fromStatus); to = n.to;
-        if (fromStatus === "submitted") {
+        if (["submitted", "committee_review", "iras_review"].indexOf(fromStatus) >= 0) {
           try {
             var gt = await sb.from("applications").select("grant_type").eq("id", appId).single();
-            if (gt.data && gt.data.grant_type === "au_r3") {
+            var grantType = gt.data && gt.data.grant_type;
+            if (fromStatus === "submitted" && grantType === "au_r3") {
               to = "iras_review";
               labelOverride = "Dean approved — forwarded to IRAS";
+            }
+            if (fromStatus === "committee_review" && grantType === "au_r4") {
+              labelOverride = "Committee recommended — forwarded to IRAS";
+            }
+            if (fromStatus === "iras_review" && (grantType === "au_r3" || grantType === "au_r4")) {
+              labelOverride = "IRAS approved — sent to Finance Office";
             }
           } catch (e) {}
         }

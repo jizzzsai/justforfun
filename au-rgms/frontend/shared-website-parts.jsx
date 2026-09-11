@@ -606,7 +606,7 @@ function submittedResearcherInfo(app) {
       email: researcher.email || "",
       nameTitle: researcher.name_title || researcher.title || "",
       auId: researcher.au_id || "",
-      phone: researcher.phone || "",
+      phone: normalizeThaiPhone(researcher.phone),
       officeRoom: researcher.office_room || "",
       joinedDate: researcher.joined_date || "",
       faculty: researcher.faculty || app.faculty || "",
@@ -621,13 +621,44 @@ function submittedResearcherInfo(app) {
     email: snapshot.email || info.researcherEmail || info.contactEmail || account.email || "",
     nameTitle: snapshot.nameTitle || info.researcherTitle || account.name_title || account.title || "",
     auId: snapshot.auId || info.researcherAuId || account.au_id || "",
-    phone: snapshot.phone || info.researcherPhone || account.phone || "",
+    phone: normalizeThaiPhone(snapshot.phone || info.researcherPhone || account.phone),
     officeRoom: snapshot.officeRoom || info.researcherOffice || account.office_room || "",
     joinedDate: snapshot.joinedDate || info.researcherJoinedDate || "",
     faculty: snapshot.faculty || app.faculty || account.faculty || "",
     department: snapshot.department || app.department || account.department || "",
   };
 }
+
+function normalizeThaiPhone(value) {
+  return String(value || "").replace(/\D/g, "").slice(0, 10);
+}
+
+function isValidThaiPhone(value) {
+  return /^0\d{8,9}$/.test(String(value || ""));
+}
+
+function ThaiPhoneInput({ value, onChange, required = false }) {
+  const invalid = !!value && !isValidThaiPhone(value);
+  return (
+    <>
+      <input
+        type="tel"
+        inputMode="numeric"
+        autoComplete="tel-national"
+        maxLength={10}
+        pattern="0[0-9]{8,9}"
+        value={value || ""}
+        onChange={e => onChange(normalizeThaiPhone(e.target.value))}
+        placeholder="e.g. 0812345678"
+        aria-invalid={invalid}
+        required={required}
+        style={invalid ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : null}
+      />
+      {invalid && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Enter 9–10 digits starting with 0.</div>}
+    </>
+  );
+}
+
 function researcherJoinedDate(app) {
   return submittedResearcherInfo(app).joinedDate;
 }
@@ -662,5 +693,5 @@ Object.assign(window, {
   Icon, AULogo, Badge, Avatar, Toast, FileRow,
   Timeline, HTimeline, Stat, Modal, FilePreviewModal,
   ConfirmModal, ReviewCommentHistory, NotifPanel, PageHeader, Empty, fmtBaht,
-  AUDatePicker, researcherJoinedDate, universityServiceEligibility, ResearcherServiceEligibilityRows,
+  AUDatePicker, normalizeThaiPhone, isValidThaiPhone, ThaiPhoneInput, researcherJoinedDate, universityServiceEligibility, ResearcherServiceEligibilityRows,
 });

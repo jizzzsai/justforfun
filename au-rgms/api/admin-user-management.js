@@ -54,6 +54,7 @@ function validateProfile(body, requirePassword) {
 
   if (!/^[^@\s]+@au\.edu$/.test(email)) return { error: "Email must be an @au.edu address." };
   if (!fullName) return { error: "Full name is required." };
+  if (phone && !/^0\d{8,9}$/.test(phone)) return { error: "Phone must be a Thai number with 9–10 digits starting with 0." };
   if (ROLES.indexOf(role) === -1) return { error: "Invalid role." };
   if ((requirePassword || password) && password.length < 8) return { error: "Password must be at least 8 characters." };
   if ((role === "dean" || role === "committee") && !faculty) return { error: "Dean and Committee accounts need a faculty." };

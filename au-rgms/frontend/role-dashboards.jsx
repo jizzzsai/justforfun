@@ -1878,7 +1878,7 @@ const ADMIN_ROLE_OPTIONS = [
 ];
 
 function AdminAddUserForm({ onCreated, onClose, toast }) {
-  const blank = { name_title: "", full_name: "", email: "", au_id: "", office_room: "", role: "dean", faculty: "", department: "", password: "123456789" };
+  const blank = { name_title: "", full_name: "", email: "", au_id: "", phone: "", office_room: "", role: "dean", faculty: "", department: "", password: "123456789" };
   const [f, setF] = useState(blank);
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setF(s => Object.assign({}, s, k === "faculty" ? { faculty: v, department: "" } : { [k]: v }));
@@ -1887,6 +1887,7 @@ function AdminAddUserForm({ onCreated, onClose, toast }) {
   const submit = async () => {
     if (!f.full_name.trim()) return toast("Enter the full name.");
     if (!/^[^@\s]+@au\.edu$/i.test(f.email.trim())) return toast("Email must end in @au.edu.");
+    if (f.phone && !isValidThaiPhone(f.phone)) return toast("Phone must be a Thai number with 9–10 digits starting with 0.");
     if (needsFaculty && !f.faculty) return toast("Pick a faculty for a Dean/Committee account.");
     if ((f.password || "").length < 8) return toast("Temp password must be at least 8 characters.");
     setBusy(true);
@@ -1908,6 +1909,7 @@ function AdminAddUserForm({ onCreated, onClose, toast }) {
           <div className="field"><label>Full Name</label><input value={f.full_name} onChange={e => set("full_name", e.target.value)} placeholder="e.g. Tanachai Suksawat" /></div>
           <div className="field"><label>AU ID</label><input value={f.au_id} onChange={e => set("au_id", e.target.value)} placeholder="e.g. 5012345" /></div>
           <div className="field"><label>Email (AU only)</label><input type="email" value={f.email} onChange={e => set("email", e.target.value)} placeholder="name@au.edu" /></div>
+          <div className="field"><label>Phone</label><ThaiPhoneInput value={f.phone} onChange={value => set("phone", value)} /></div>
           <div className="field"><label>Office / Room</label><input value={f.office_room} onChange={e => set("office_room", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
           <div className="field"><label>Role</label>
             <select value={f.role} onChange={e => set("role", e.target.value)}>{ADMIN_ROLE_OPTIONS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}</select>
@@ -1936,7 +1938,7 @@ function AdminEditUserForm({ user, onSaved, onClose, toast }) {
     full_name: user.full_name || "",
     email: user.email || "",
     au_id: user.au_id || "",
-    phone: user.phone || "",
+    phone: normalizeThaiPhone(user.phone),
     office_room: user.office_room || "",
     role: user.role || "researcher",
     faculty: user.faculty || "",
@@ -1951,6 +1953,7 @@ function AdminEditUserForm({ user, onSaved, onClose, toast }) {
   const submit = async () => {
     if (!f.full_name.trim()) return toast("Enter the full name.");
     if (!/^[^@\s]+@au\.edu$/i.test(f.email.trim())) return toast("Email must end in @au.edu.");
+    if (f.phone && !isValidThaiPhone(f.phone)) return toast("Phone must be a Thai number with 9–10 digits starting with 0.");
     if (needsFaculty && !f.faculty) return toast("Pick a faculty for a Dean/Committee account.");
     if (f.password && f.password.length < 8) return toast("A new password must be at least 8 characters.");
     setBusy(true);
@@ -1971,7 +1974,7 @@ function AdminEditUserForm({ user, onSaved, onClose, toast }) {
           </div>
           <div className="field"><label>Full Name</label><input value={f.full_name} onChange={e => set("full_name", e.target.value)} /></div>
           <div className="field"><label>AU ID</label><input value={f.au_id} onChange={e => set("au_id", e.target.value)} /></div>
-          <div className="field"><label>Phone</label><input value={f.phone} onChange={e => set("phone", e.target.value)} /></div>
+          <div className="field"><label>Phone</label><ThaiPhoneInput value={f.phone} onChange={value => set("phone", value)} /></div>
           <div className="field"><label>Office / Room</label><input value={f.office_room} onChange={e => set("office_room", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
           <div className="field"><label>Email (AU only)</label><input type="email" value={f.email} onChange={e => set("email", e.target.value)} /></div>
           <div className="field"><label>Role</label>
@@ -2108,7 +2111,7 @@ function AccountSettings({ toast }) {
     window.AUTH.profile().then(pr => {
       setP(pr);
       if (pr) {
-        setF({ name_title: pr.name_title || "", full_name: pr.full_name || "", au_id: pr.au_id || "", phone: pr.phone || "" });
+        setF({ name_title: pr.name_title || "", full_name: pr.full_name || "", au_id: pr.au_id || "", phone: normalizeThaiPhone(pr.phone) });
         if (pr.budget_split) setSplit(Object.assign({}, SPLIT_DEFAULT, pr.budget_split));
       }
     }).catch(() => {});
@@ -2119,6 +2122,7 @@ function AccountSettings({ toast }) {
   const splitSum = split.remuneration + split.equipment + split.travel + split.misc;
   const save = async () => {
     if (!isAdmin) { toast("Account information can only be changed by an administrator."); return; }
+    if (f.phone && !isValidThaiPhone(f.phone)) { toast("Phone must be a Thai number with 9–10 digits starting with 0."); return; }
     setBusy(true);
     try {
       await window.DB.updateMyProfile(f);
@@ -2141,7 +2145,7 @@ function AccountSettings({ toast }) {
                 <div className="field"><label>Title</label><select value={f.name_title} onChange={e => set("name_title", e.target.value)}><option value="">—</option>{D.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
                 <div className="field"><label>Full Name</label><input value={f.full_name} onChange={e => set("full_name", e.target.value)} /></div>
                 <div className="field"><label>AU ID</label><input value={f.au_id} onChange={e => set("au_id", e.target.value)} placeholder="e.g. 5012345" /></div>
-                <div className="field"><label>Phone</label><input value={f.phone} onChange={e => set("phone", e.target.value)} /></div>
+                <div className="field"><label>Phone</label><ThaiPhoneInput value={f.phone} onChange={value => set("phone", value)} /></div>
               </div>
             </>}
             {p && !isAdmin && <>
