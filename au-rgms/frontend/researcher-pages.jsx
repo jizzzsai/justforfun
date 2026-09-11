@@ -341,7 +341,7 @@ function UniversityJoinedDateField({ value, onChange }) {
   return (
     <div className="field">
       <label>Date Joined Assumption University *</label>
-      <AUDatePicker value={value} onChange={onChange} max={todayISO()} placeholder="Select joined date…" />
+      <AUDatePicker value={value} onChange={onChange} min="1969-01-01" max={todayISO()} placeholder="Select joined date…" />
       {value && (
         <div style={{ fontSize: 11, marginTop: 5, color: service.eligible ? "var(--status-approved)" : "var(--au-crimson)", fontWeight: 650 }}>
           {service.eligible

@@ -1211,7 +1211,7 @@ textarea.comment-input:focus { outline: none; border-color: var(--au-crimson); b
 .audp-input .clear:hover { color: var(--au-crimson); background: var(--au-crimson-soft); }
 .audp-pop {
   position: absolute; top: calc(100% + 6px); left: 0; z-index: 60;
-  width: 288px; background: var(--paper); border: 1px solid var(--line);
+  width: 320px; max-width: calc(100vw - 32px); background: var(--paper); border: 1px solid var(--line);
   border-radius: var(--r-lg); box-shadow: 0 14px 40px rgba(45, 26, 26, 0.16);
   overflow: hidden; animation: audp-in .14s ease;
 }
@@ -1220,9 +1220,20 @@ textarea.comment-input:focus { outline: none; border-color: var(--au-crimson); b
   display: flex; align-items: center; gap: 6px;
   padding: 12px 14px; background: var(--au-crimson); color: #fff;
 }
-.audp-head .m {
-  flex: 1; font-family: var(--font-serif); font-size: 16px; font-weight: 500;
-  letter-spacing: 0.01em;
+.audp-jump {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px;
+}
+.audp-jump select {
+  min-width: 0; height: 30px; padding: 0 24px 0 8px;
+  border: 1px solid rgba(255,255,255,0.42); border-radius: 7px;
+  background-color: rgba(255,255,255,0.14); color: #fff;
+  font-size: 12px; font-weight: 650; cursor: pointer; outline: none;
+}
+.audp-jump select:first-child { flex: 1; }
+.audp-jump select:last-child { width: 78px; }
+.audp-jump select:focus { border-color: #fff; box-shadow: 0 0 0 2px rgba(255,255,255,0.2); }
+.audp-jump option {
+  background: #fff; color: var(--ink-1);
 }
 .audp-head button {
   width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;

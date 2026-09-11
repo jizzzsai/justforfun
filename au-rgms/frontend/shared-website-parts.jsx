@@ -467,6 +467,12 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
   const today = new Date();
   const sel = value ? new Date(value + "T00:00:00") : null;
   const [view, setView] = useState({ y: (sel || today).getFullYear(), m: (sel || today).getMonth() });
+  const parsedMin = min ? new Date(min + "T00:00:00") : null;
+  const parsedMax = max ? new Date(max + "T00:00:00") : null;
+  const minYear = parsedMin && !isNaN(parsedMin) ? parsedMin.getFullYear() : today.getFullYear() - 80;
+  const maxYear = parsedMax && !isNaN(parsedMax) ? parsedMax.getFullYear() : today.getFullYear() + 20;
+  const yearOptions = [];
+  for (let y = maxYear; y >= minYear; y--) yearOptions.push(y);
   const wrapRef = useRef(null);
   useEffect(() => {
     if (!open) return;
@@ -485,10 +491,27 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
   };
   const shift = (delta) => setView(v => {
     const d = new Date(v.y, v.m + delta, 1);
+    const monthStart = audpISO(d.getFullYear(), d.getMonth(), 1);
+    const monthEnd = audpISO(d.getFullYear(), d.getMonth(), new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate());
+    if ((min && monthEnd < min) || (max && monthStart > max)) return v;
     return { y: d.getFullYear(), m: d.getMonth() };
   });
   const pick = (iso) => { if (onChange) onChange(iso); setOpen(false); };
   const inRange = (iso) => (!min || iso >= min) && (!max || iso <= max);
+  const monthInRange = (y, m) => {
+    const monthStart = audpISO(y, m, 1);
+    const monthEnd = audpISO(y, m, new Date(y, m + 1, 0).getDate());
+    return (!min || monthEnd >= min) && (!max || monthStart <= max);
+  };
+  const changeYear = (nextYear) => {
+    let nextMonth = view.m;
+    if (!monthInRange(nextYear, nextMonth)) {
+      const lowerMonth = parsedMin && nextYear === parsedMin.getFullYear() ? parsedMin.getMonth() : 0;
+      const upperMonth = parsedMax && nextYear === parsedMax.getFullYear() ? parsedMax.getMonth() : 11;
+      nextMonth = Math.max(lowerMonth, Math.min(upperMonth, nextMonth));
+    }
+    setView({ y: nextYear, m: nextMonth });
+  };
   const first = new Date(view.y, view.m, 1);
   const start = new Date(view.y, view.m, 1 - first.getDay());
   const cells = [];
@@ -515,7 +538,14 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
       {open && (
         <div className="audp-pop" role="dialog" aria-label="Choose date">
           <div className="audp-head">
-            <span className="m">{AUDP_MONTHS[view.m]} {view.y}</span>
+            <div className="audp-jump">
+              <select aria-label="Month" value={view.m} onChange={e => setView(v => ({ ...v, m: Number(e.target.value) }))}>
+                {AUDP_MONTHS.map((month, monthIndex) => <option key={month} value={monthIndex} disabled={!monthInRange(view.y, monthIndex)}>{month}</option>)}
+              </select>
+              <select aria-label="Year" value={view.y} onChange={e => changeYear(Number(e.target.value))}>
+                {yearOptions.map(year => <option key={year} value={year}>{year}</option>)}
+              </select>
+            </div>
             <button type="button" onClick={() => shift(-1)} aria-label="Previous month"><Icon name="ChevronLeft" size={15} /></button>
             <button type="button" onClick={() => shift(1)} aria-label="Next month"><Icon name="ChevronRight" size={15} /></button>
           </div>
