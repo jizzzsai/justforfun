@@ -5,6 +5,19 @@
 
 const APP = window.AU;
 const TEST_PASSWORD = "123456789";
+const DEMO_MODE_KEY = "au-rgms-demo-mode";
+function readDemoMode() {
+  try {
+    return sessionStorage.getItem(DEMO_MODE_KEY) === "true" || localStorage.getItem(DEMO_MODE_KEY) === "true";
+  } catch (e) { return false; }
+}
+function writeDemoMode(enabled, persist = false) {
+  try {
+    sessionStorage.removeItem(DEMO_MODE_KEY);
+    localStorage.removeItem(DEMO_MODE_KEY);
+    if (enabled) window[persist ? "localStorage" : "sessionStorage"].setItem(DEMO_MODE_KEY, "true");
+  } catch (e) {}
+}
 const FACULTY_TEST_ROLES = [
   { key: "researcher", label: "Researcher" },
   { key: "dean", label: "Dean" },
@@ -42,14 +55,14 @@ function LoginPage({ onLogin }) {
     return () => viewport.setAttribute("content", previous || "width=1280");
   }, []);
 
-  async function signInWith(em, pw) {
+  async function signInWith(em, pw, isDemo = false) {
     if (loginPending.current) return;
     loginPending.current = true;
     setErr(""); setBusy(true);
     try {
       const prof = await window.AUTH.signIn(em, pw, remember);
       if (!prof) throw new Error("No profile found for this account.");
-      onLogin(prof);
+      onLogin(prof, { isDemo, persistDemo: isDemo && remember });
     } catch (ex) {
       setErr((ex && ex.message) || "Sign-in failed. Please try again.");
     } finally {
@@ -69,7 +82,7 @@ function LoginPage({ onLogin }) {
     if (!pass) { setErr("Enter your password."); passwordInput.current.focus(); return; }
     signInWith(auEmail, pass);
   }
-  function demoLogin(testEmail) { signInWith(testEmail, TEST_PASSWORD); }
+  function demoLogin(testEmail) { signInWith(testEmail, TEST_PASSWORD, true); }
 
   return (
     <div className="au-login">
@@ -372,12 +385,13 @@ function rolesForSystem(sys) {
   return list;
 }
 
-function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSystem }) {
+function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSystem, demoMode }) {
   const [roleOpen, setRoleOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifItems, setNotifItems] = useState(APP.NOTIFS || []);
   const current = rolesForSystem(grantSystem).find(r => r.key === role) || APP.ROLES.find(r => r.key === role);
   const displayName = (profile && profile.full_name) || current.full;
+  const displaySubtitle = demoMode ? current.subtitle : current.name;
   const displayInitials = (profile && profile.full_name)
     ? profile.full_name.trim().split(/\s+/).slice(-2).map(s => s[0]).join("").toUpperCase()
     : current.initials;
@@ -434,30 +448,32 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSys
             <div className="avatar">{displayInitials}</div>
             <div className="role-info">
               <b>{displayName}</b>
-              <span>{current.subtitle}</span>
+              <span>{displaySubtitle}</span>
             </div>
             <Icon name="ChevronDown" size={14} />
           </button>
           {roleOpen && (
             <div className="dropdown" onClick={e => e.stopPropagation()} style={{minWidth: 320}}>
-              <div className="dropdown-section">
-                Switch test account{grantSystem ? " · " + (grantSystem === "au_r1" ? "AU-R1" : grantSystem === "au_r3" ? "AU-R3" : "AU-R4") : ""}
-              </div>
-              {rolesForSystem(grantSystem).map(r => (
-                <div
-                  key={r.key}
-                  className={`dropdown-item ${role === r.key ? "active" : ""}`}
-                  onClick={() => { onSwitchRole(r.key); setRoleOpen(false); }}
-                >
-                  <div className="role-icon"><Icon name={r.iconName} size={14} /></div>
-                  <div className="meta">
-                    <div className="t">{r.name}</div>
-                    <div className="s">{r.subtitle}</div>
-                  </div>
-                  {role === r.key && <Icon name="Check" size={14} />}
+              {demoMode && <>
+                <div className="dropdown-section">
+                  Switch test account{grantSystem ? " · " + (grantSystem === "au_r1" ? "AU-R1" : grantSystem === "au_r3" ? "AU-R3" : "AU-R4") : ""}
                 </div>
-              ))}
-              <div className="dropdown-divider"></div>
+                {rolesForSystem(grantSystem).map(r => (
+                  <div
+                    key={r.key}
+                    className={`dropdown-item ${role === r.key ? "active" : ""}`}
+                    onClick={() => { onSwitchRole(r.key); setRoleOpen(false); }}
+                  >
+                    <div className="role-icon"><Icon name={r.iconName} size={14} /></div>
+                    <div className="meta">
+                      <div className="t">{r.name}</div>
+                      <div className="s">{r.subtitle}</div>
+                    </div>
+                    {role === r.key && <Icon name="Check" size={14} />}
+                  </div>
+                ))}
+                <div className="dropdown-divider"></div>
+              </>}
               <div className="dropdown-section">Account</div>
               <div className="dropdown-item">
                 <div className="role-icon" style={{background: "var(--paper-warm)", color: "var(--ink-2)"}}>
@@ -629,6 +645,7 @@ function App() {
   const [role, setRole] = useState(startingRole);
   const [page, setPage] = useState(startingPage);
   const [profile, setProfile] = useState(null);
+  const [demoMode, setDemoMode] = useState(() => !!initial.skipLogin || readDemoMode());
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
   const [rSystem, setRSystem] = useState(() => { try { return localStorage.getItem("au-rgms-r-system") || null; } catch (e) { return null; } });
   const chooseSystem = (sys, nextPage) => { try { localStorage.setItem("au-rgms-r-system", sys); } catch (e) {} setSelectedApplicationId(null); setRSystem(sys); setPage(nextPage || "r-dashboard"); };
@@ -677,6 +694,8 @@ function App() {
       setRole(r);
       setSelectedApplicationId(null);
       setLoggedIn(true);
+      writeDemoMode(true, !!(window.AUTH && window.AUTH.remembersSession()));
+      setDemoMode(true);
       if (!opts.keepPage) setPage(ROLE_CONFIG[r].homeKey);
       return prof;
     } catch (ex) {
@@ -685,8 +704,12 @@ function App() {
     }
   };
 
-  const onLogin = (prof) => {
+  const onLogin = (prof, opts = {}) => {
     const r = prof && ROLE_CONFIG[prof.role] ? prof.role : "researcher";
+    const nextDemoMode = opts.isDemo === true;
+    const persistDemo = opts.persistDemo === true || (nextDemoMode && !!(window.AUTH && window.AUTH.remembersSession()));
+    writeDemoMode(nextDemoMode, persistDemo);
+    setDemoMode(nextDemoMode);
     setProfile(prof || null);
     setRole(r);
     setPage(ROLE_CONFIG[r].homeKey);
@@ -694,6 +717,7 @@ function App() {
   };
 
   const onSwitchRole = (newRole, email) => {
+    if (!demoMode) return;
     if (!ROLE_CONFIG[newRole]) return;
     const faculty = profile && (APP.FACULTIES || []).find(f => f.name === profile.faculty);
     const facultyEmail = faculty && FACULTY_TEST_ROLES.some(r => r.key === newRole)
@@ -705,6 +729,8 @@ function App() {
   const onLogout = async () => {
     try { await window.AUTH.signOut(); } catch (e) {}
     switchSystem();
+    writeDemoMode(false);
+    setDemoMode(false);
     setProfile(null); setLoggedIn(false);
   };
 
@@ -726,7 +752,7 @@ function App() {
             if (ROLE_CONFIG[prof.role]) setRole(prof.role);
           }
         }
-        else onLogin(prof);
+        else onLogin(prof, { isDemo: readDemoMode() });
       } catch (e) {}
     })();
   }, []);
@@ -779,7 +805,7 @@ function App() {
 
   return (
     <div className="app">
-      <AppHeader role={role} profile={profile} onSwitchRole={onSwitchRole} onLogout={onLogout} onNavigate={setPage} grantSystem={rSystem} />
+      <AppHeader role={role} profile={profile} onSwitchRole={onSwitchRole} onLogout={onLogout} onNavigate={setPage} grantSystem={rSystem} demoMode={demoMode} />
       <SubBar
         crumbs={crumbs}
         onHome={() => setPage(cfg.homeKey)}
