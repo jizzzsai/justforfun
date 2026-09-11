@@ -597,11 +597,39 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
   );
 }
 
+function submittedResearcherInfo(app) {
+  if (!app) return { fullName: "", email: "", nameTitle: "", auId: "", phone: "", officeRoom: "", joinedDate: "", faculty: "", department: "" };
+  if (window.DB && window.DB.applicationResearcherInfo) {
+    const researcher = window.DB.applicationResearcherInfo(app);
+    return {
+      fullName: researcher.full_name || researcher.name || "",
+      email: researcher.email || "",
+      nameTitle: researcher.name_title || researcher.title || "",
+      auId: researcher.au_id || "",
+      phone: researcher.phone || "",
+      officeRoom: researcher.office_room || "",
+      joinedDate: researcher.joined_date || "",
+      faculty: researcher.faculty || app.faculty || "",
+      department: researcher.department || app.department || "",
+    };
+  }
+  const info = app.grant_type === "au_r3" ? (app.conference_info || {}) : (app.pub_info || {});
+  const snapshot = info.researcherSnapshot || {};
+  const account = app.researcher || {};
+  return {
+    fullName: snapshot.fullName || info.researcherName || account.full_name || account.name || "",
+    email: snapshot.email || info.researcherEmail || info.contactEmail || account.email || "",
+    nameTitle: snapshot.nameTitle || info.researcherTitle || account.name_title || account.title || "",
+    auId: snapshot.auId || info.researcherAuId || account.au_id || "",
+    phone: snapshot.phone || info.researcherPhone || account.phone || "",
+    officeRoom: snapshot.officeRoom || info.researcherOffice || account.office_room || "",
+    joinedDate: snapshot.joinedDate || info.researcherJoinedDate || "",
+    faculty: snapshot.faculty || app.faculty || account.faculty || "",
+    department: snapshot.department || app.department || account.department || "",
+  };
+}
 function researcherJoinedDate(app) {
-  if (!app) return "";
-  return (app.pub_info && app.pub_info.researcherJoinedDate)
-    || (app.conference_info && app.conference_info.researcherJoinedDate)
-    || "";
+  return submittedResearcherInfo(app).joinedDate;
 }
 
 function universityServiceEligibility(joinedDate, asOf) {

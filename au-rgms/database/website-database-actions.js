@@ -115,12 +115,32 @@
       doc_type: d.doc_type,
     };
   }
+  function applicationResearcherInfo(a) {
+    a = a || {};
+    var info = a.grant_type === "au_r3" ? (a.conference_info || {}) : (a.pub_info || {});
+    var snapshot = info.researcherSnapshot || {};
+    var account = a.researcher || {};
+    var fullName = snapshot.fullName || info.researcherName || account.full_name || account.name || "—";
+    return Object.assign({}, account, {
+      full_name: fullName,
+      name: fullName,
+      email: snapshot.email || info.researcherEmail || info.contactEmail || account.email || "",
+      name_title: snapshot.nameTitle || info.researcherTitle || account.name_title || account.title || "",
+      au_id: snapshot.auId || info.researcherAuId || account.au_id || "",
+      phone: snapshot.phone || info.researcherPhone || account.phone || "",
+      office_room: snapshot.officeRoom || info.researcherOffice || account.office_room || "",
+      faculty: snapshot.faculty || a.faculty || account.faculty || "",
+      department: snapshot.department || a.department || account.department || "",
+      joined_date: snapshot.joinedDate || info.researcherJoinedDate || "",
+    });
+  }
   function mapRow(a) {
     var requested = a.grant_type === "au_r3" ? 3500 : a.requested_amount;
     var approved = a.grant_type === "au_r3" && a.approved_amount != null ? 3500 : a.approved_amount;
+    var researcher = applicationResearcherInfo(a);
     return {
       id: a.code, _uuid: a.id, title: a.title,
-      researcher: { name: a.researcher ? a.researcher.full_name : "—" },
+      researcher: { name: researcher.full_name, full_name: researcher.full_name, email: researcher.email },
       faculty: a.faculty, department: a.department,
       submittedAt: a.submitted_at ? fmtDate(a.submitted_at) : fmtDate(a.created_at),
       budgetTotal: requested, requested_amount: requested,
@@ -171,6 +191,7 @@
     publicationAwardAmount: publicationAmount,
     fmtDate: fmtDate,
     mapRow: mapRow,
+    applicationResearcherInfo: applicationResearcherInfo,
     nextStep: function (status) { return NEXT[status] || null; },
 
     async createApplication(payload, submit, appId) {
@@ -374,6 +395,7 @@
       var res = await q.single();
       if (res.error) throw res.error;
       var a = res.data;
+      a.researcher = applicationResearcherInfo(a);
       if (a.grant_type === "au_r3") {
         a.requested_amount = 3500;
         if (a.approved_amount != null) a.approved_amount = 3500;

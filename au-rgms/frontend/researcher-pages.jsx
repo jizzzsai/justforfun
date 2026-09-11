@@ -254,6 +254,19 @@ const RESEARCHER_DEFAULT_DRAFT = {
   department: "",
   outcome: "",
 };
+function researcherSnapshotFromDraft(draft) {
+  return {
+    nameTitle: String(draft.title2 || "").trim(),
+    fullName: String(draft.name || "").trim(),
+    auId: String(draft.auId || "").trim(),
+    email: String(draft.email || "").trim().toLowerCase(),
+    phone: String(draft.phone || "").trim(),
+    officeRoom: String(draft.office || "").trim(),
+    joinedDate: draft.joinedDate || null,
+    faculty: draft.school || "",
+    department: draft.department || "",
+  };
+}
 const RESEARCHER_DEFAULT_SPLIT = { remuneration: 30, equipment: 40, travel: 18, misc: 12 };
 const RESEARCHER_BUDGET_LABELS = [
   "Remuneration (research assistant)",
@@ -448,6 +461,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         }
         if (cancelled) return;
         setEditingId(app.id);
+        const researcherInfo = submittedResearcherInfo(app);
         if (app.status === "returned") { window.DB.lastReturnReason(app.id).then(r => { if (!cancelled) setReturnInfo(r); }).catch(() => {}); } else setReturnInfo(null);
         setExistingDocs(app.documents || []);
         setDraft(d => ({
@@ -458,12 +472,16 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
           duration: String(app.duration_months || 12),
           startDate: app.start_date || "",
           endDate: app.end_date || "",
-          school: app.faculty || "",
-          department: app.department || "",
+          school: researcherInfo.faculty || app.faculty || "",
+          department: researcherInfo.department || app.department || "",
           outcome: app.abstract || "",
-          joinedDate: (app.pub_info && app.pub_info.researcherJoinedDate) || "",
-          name: app.researcher ? (app.researcher.full_name || d.name) : d.name,
-          email: app.researcher ? (app.researcher.email || d.email) : d.email,
+          joinedDate: researcherInfo.joinedDate || "",
+          name: researcherInfo.fullName || d.name,
+          title2: researcherInfo.nameTitle || d.title2,
+          auId: researcherInfo.auId || d.auId,
+          email: researcherInfo.email || d.email,
+          phone: researcherInfo.phone || d.phone,
+          office: researcherInfo.officeRoom || d.office,
         }));
         setReqTotal(String(Number(app.requested_amount || 0)));
         setBudgetRows(Array.isArray(app.budget_breakdown) && app.budget_breakdown.length ? app.budget_breakdown : scaledBudgetRows(maxAmount, RESEARCHER_DEFAULT_SPLIT));
@@ -521,6 +539,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
     setBusy(true); setBusyKind(submit ? "submit" : "draft");
     try {
       try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
+      const researcherSnapshot = researcherSnapshotFromDraft(draft);
       const app = await window.DB.createApplication({
         title: draft.title, abstract: draft.outcome, field: draft.field,
         faculty: draft.school, department: draft.department, keywords: draft.keywords,
@@ -529,7 +548,16 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         budget_breakdown: budgetRows,
         budget_items: items.filter(it => (it.purpose || "").trim() || Number(it.amount) > 0),
         grant_type: sys.id,
-        pub_info: { researcherJoinedDate: draft.joinedDate || null },
+        pub_info: {
+          researcherSnapshot,
+          researcherName: researcherSnapshot.fullName,
+          researcherEmail: researcherSnapshot.email,
+          researcherTitle: researcherSnapshot.nameTitle,
+          researcherAuId: researcherSnapshot.auId,
+          researcherPhone: researcherSnapshot.phone,
+          researcherOffice: researcherSnapshot.officeRoom,
+          researcherJoinedDate: researcherSnapshot.joinedDate,
+        },
         co_members: isR3 ? coMembers.filter(m => (m.name || "").trim()) : null,
       }, submit, editingId);
       const failedUploads = await uploadAllDocuments(app.id, files);
@@ -948,6 +976,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         }
         if (cancelled) return;
         const ci = app.conference_info || {};
+        const researcherInfo = submittedResearcherInfo(app);
         setEditingId(app.id);
         if (app.status === "returned") { window.DB.lastReturnReason(app.id).then(r => { if (!cancelled) setReturnInfo(r); }).catch(() => {}); } else setReturnInfo(null);
         setExistingDocs(app.documents || []);
@@ -961,11 +990,16 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
           journalDb: ci.journalDb || "", journalClassification: ci.journalClassification || "",
           paperTitle: app.title || "", field: app.field || "", keywords: app.keywords || "",
           corresponding: ci.correspondingAuthor || "", paperAbstract: ci.paperAbstract || "",
-          joinedDate: ci.researcherJoinedDate || "",
-          school: app.faculty || d.school, department: app.department || d.department,
+          joinedDate: researcherInfo.joinedDate || "",
+          school: researcherInfo.faculty || app.faculty || d.school,
+          department: researcherInfo.department || app.department || d.department,
           outcome: app.abstract || "",
-          name: ci.researcherName || (app.researcher ? (app.researcher.full_name || d.name) : d.name),
-          email: ci.researcherEmail || (app.researcher ? (app.researcher.email || d.email) : d.email),
+          name: researcherInfo.fullName || d.name,
+          title2: researcherInfo.nameTitle || d.title2,
+          auId: researcherInfo.auId || d.auId,
+          email: researcherInfo.email || d.email,
+          phone: researcherInfo.phone || d.phone,
+          office: researcherInfo.officeRoom || d.office,
         }));
         setAuthors(Array.isArray(app.co_members) ? app.co_members : []);
       } catch (e) { if (!cancelled) setErr((e && e.message) || "Could not load this draft."); }
@@ -1005,6 +1039,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
     setBusy(true); setBusyKind(submit ? "submit" : "draft");
     try {
       try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
+      const researcherSnapshot = researcherSnapshotFromDraft(draft);
       const confInfo = {
         confName: draft.confName, organizer: draft.organizer, website: draft.website,
         confType: draft.confType, conferenceLocation: draft.conferenceLocation,
@@ -1012,8 +1047,14 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         presentation: draft.presentation || "Oral Presentation",
         journalDb: draft.journalDb, journalClassification: draft.journalClassification,
         correspondingAuthor: draft.corresponding, paperAbstract: draft.paperAbstract,
-        researcherName: draft.name.trim(), researcherEmail: draft.email.trim().toLowerCase(),
-        researcherJoinedDate: draft.joinedDate || null,
+        researcherSnapshot,
+        researcherName: researcherSnapshot.fullName,
+        researcherEmail: researcherSnapshot.email,
+        researcherTitle: researcherSnapshot.nameTitle,
+        researcherAuId: researcherSnapshot.auId,
+        researcherPhone: researcherSnapshot.phone,
+        researcherOffice: researcherSnapshot.officeRoom,
+        researcherJoinedDate: researcherSnapshot.joinedDate,
       };
       const app = await window.DB.createApplication({
         title: draft.paperTitle, abstract: draft.outcome, field: draft.field,
@@ -1412,6 +1453,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         }
         if (cancelled) return;
         const pi = app.pub_info || {};
+        const researcherInfo = submittedResearcherInfo(app);
         setEditingId(app.id);
         if (app.status === "returned") { window.DB.lastReturnReason(app.id).then(r => { if (!cancelled) setReturnInfo(r); }).catch(() => {}); } else setReturnInfo(null);
         setExistingDocs(app.documents || []);
@@ -1433,10 +1475,18 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           journalClassification: loadedClassification,
           pubStatus: /^accepted for publication$/i.test(pi.pubStatus || "") ? "Accepted for Publication" : (pi.pubStatus || d.pubStatus),
           academicYear: ((String(pi.academicYear || d.academicYear).match(/\d{4}/) || ["2025"])[0]),
-          joinedDate: pi.researcherJoinedDate || "",
+          joinedDate: researcherInfo.joinedDate || "",
           pageNumber: pi.pageNumber || ([pi.startPage, pi.endPage].filter(Boolean).join("–")),
-          title: app.title || "", school: app.faculty || d.school, department: app.department || d.department,
-          name: app.researcher ? (app.researcher.full_name || d.name) : d.name, email: app.researcher ? (app.researcher.email || d.email) : d.email }));
+          title: app.title || "",
+          school: researcherInfo.faculty || app.faculty || d.school,
+          department: researcherInfo.department || app.department || d.department,
+          name: researcherInfo.fullName || d.name,
+          title2: researcherInfo.nameTitle || d.title2,
+          auId: researcherInfo.auId || d.auId,
+          email: researcherInfo.email || d.email,
+          phone: researcherInfo.phone || d.phone,
+          office: researcherInfo.officeRoom || d.office,
+        }));
         if (Array.isArray(app.co_members) && app.co_members.length) {
           setAuthors(app.co_members.map((a, i) => ({
             name: a.name || "",
@@ -1495,6 +1545,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
     setBusy(true); setBusyKind(submit ? "submit" : "draft");
     try {
       try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
+      const researcherSnapshot = researcherSnapshotFromDraft(draft);
       const pubInfo = {
         articleType: draft.articleType, pubStatus: draft.pubStatus, journal: draft.journal, publisher: draft.publisher,
         website: draft.website, articleUrl: published ? draft.articleUrl : null, doi: published ? draft.doi : null, issn: published ? draft.issn : null,
@@ -1502,8 +1553,15 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         volume: draft.volume, issue: draft.issue, pageNumber: draft.pageNumber, academicYear: draft.academicYear,
         journalDb: draft.journalDb, journalClassification: draft.journalClassification, indexLabel: catLabel, predatory: draft.predatory,
         applicantRole: draft.applicantRole, claimType: draft.claimType,
-        researcherName: draft.name, researcherAuId: draft.auId, contactEmail: draft.email,
-        researcherJoinedDate: draft.joinedDate || null,
+        researcherSnapshot,
+        researcherName: researcherSnapshot.fullName,
+        researcherEmail: researcherSnapshot.email,
+        researcherTitle: researcherSnapshot.nameTitle,
+        researcherAuId: researcherSnapshot.auId,
+        researcherPhone: researcherSnapshot.phone,
+        researcherOffice: researcherSnapshot.officeRoom,
+        contactEmail: researcherSnapshot.email,
+        researcherJoinedDate: researcherSnapshot.joinedDate,
         feePaid: Number(draft.feePaid) || 0, feeDate: draft.feeDate || null, paidBy: draft.paidBy, turnitin: Number(draft.turnitin) || 0,
         reward: requested, requestedClaim: requested, maxAmount: MAX,
         totalContribution: totalContrib, declarations: decls,
