@@ -316,11 +316,11 @@
     async myApplications(grantType) {
       var me = await uid();
       var ownQuery = sb.from("applications")
-        .select("*, researcher:profiles(full_name,email)")
+        .select("*, researcher:profiles(full_name,email), events:application_events(id,action,to_status,note,actor_role,created_at,actor:profiles(full_name))")
         .eq("researcher_id", me);
       if (grantType) ownQuery = ownQuery.eq("grant_type", grantType);
       var invitedQuery = sb.from("application_collaborators")
-        .select("id,status,author_role,invited_at,responded_at,application:applications(*,researcher:profiles(full_name,email))")
+        .select("id,status,author_role,invited_at,responded_at,application:applications(*,researcher:profiles(full_name,email),events:application_events(id,action,to_status,note,actor_role,created_at,actor:profiles(full_name)))")
         .eq("user_id", me)
         .in("status", ["pending", "accepted"]);
       var results = await Promise.all([
@@ -353,7 +353,7 @@
         rows.push(app);
       });
       return rows.sort(function (a, b) {
-        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+        return new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0);
       });
     },
 

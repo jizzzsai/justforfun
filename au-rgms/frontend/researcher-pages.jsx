@@ -323,6 +323,39 @@ function ReturnNotice({ info }) {
   );
 }
 
+function ApplicationDecisionNotice({ app }) {
+  if (!app || !["returned", "rejected"].includes(app.status)) return null;
+  const events = (app.events || []).filter(event => event.to_status === app.status);
+  events.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+  const decision = events[0] || null;
+  const office = app.grant_type === "au_r1" ? "RASSC" : "IRAS";
+  const actorName = decision && decision.actor && decision.actor.full_name
+    ? decision.actor.full_name
+    : ({ dean: "Dean", committee: "Faculty Committee", iras: office, ofm: "Finance Office" }[(decision && decision.actor_role) || ""] || "Reviewer");
+  const rejected = app.status === "rejected";
+  const reason = decision && String(decision.note || "").trim();
+  return (
+    <div style={{
+      border: "1px solid " + (rejected ? "var(--au-crimson)" : "var(--au-gold)"),
+      borderLeft: "4px solid " + (rejected ? "var(--au-crimson)" : "var(--au-gold)"),
+      background: rejected ? "var(--au-crimson-soft)" : "var(--au-gold-soft)",
+      borderRadius: "var(--r-md)", padding: "15px 18px", marginBottom: 20,
+      display: "flex", gap: 12, alignItems: "flex-start",
+    }}>
+      <Icon name={rejected ? "X" : "AlertCircle"} size={21} style={{ color: rejected ? "var(--au-crimson)" : "var(--au-gold-deep)", flexShrink: 0, marginTop: 1 }} />
+      <div>
+        <div style={{ fontWeight: 700, color: rejected ? "var(--au-crimson)" : "var(--ink-1)", marginBottom: 4 }}>
+          {rejected ? "Application rejected" : "Returned for revision"} · {actorName}
+          {decision && decision.created_at ? " · " + window.DB.fmtDate(decision.created_at) : ""}
+        </div>
+        <div style={{ color: "var(--ink-2)", fontSize: 13, lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+          <strong>Reason:</strong> {reason || "No reason was recorded."}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function grantSystemFor(id) {
   const list = (RA && RA.GRANT_SYSTEMS) || [];
   return list.find(s => s.id === id) || list[0] || { id: "au_r1", code: "AU-R1", name: "Research Grant", maxAmount: 100000, collaborative: false };
@@ -1885,10 +1918,16 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
   const sys = grantSystemFor(grantType || "au_r1");
   const [myApps, setMyApps] = useState(null);
   const [invitationBusy, setInvitationBusy] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const loadApplications = async () => {
     try {
       const apps = await window.DB.myApplications(grantType || undefined);
-      setMyApps(apps.map(a => ({
+      setMyApps(apps.map(a => {
+        const decisionEvents = (a.events || []).filter(event => event.to_status === a.status && ["returned", "rejected"].includes(a.status));
+        decisionEvents.sort((x, y) => new Date(y.created_at || 0) - new Date(x.created_at || 0));
+        const decision = decisionEvents[0] || null;
+        return {
         id: a.code, _uuid: a.id, title: a.title, faculty: a.faculty, department: a.department,
         submittedAt: a.submitted_at ? window.DB.fmtDate(a.submitted_at) : "—",
         stage: (a.statusBadge || window.DB.statusBadge(a.status, a.grant_type)).label, status: a.statusBadge || window.DB.statusBadge(a.status, a.grant_type), statusKey: a.status,
@@ -1898,7 +1937,10 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
         grantCode: grantSystemFor(a.grant_type || "au_r1").code,
         invitedBy: (a.researcher && a.researcher.full_name) || (a.conference_info && a.conference_info.researcherName) || (a.pub_info && a.pub_info.researcherName) || "Principal researcher",
         invitedByEmail: (a.researcher && a.researcher.email) || (a.conference_info && a.conference_info.researcherEmail) || (a.pub_info && (a.pub_info.researcherEmail || a.pub_info.contactEmail)) || "",
-      })));
+        decisionReason: decision && String(decision.note || "").trim(),
+        decisionRole: decision && decision.actor_role,
+      };
+      }));
     } catch (e) { setMyApps([]); }
   };
   useEffect(() => { setMyApps(null); loadApplications(); }, [grantType]);
@@ -1931,6 +1973,14 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
 
   const pendingInvitations = (myApps || []).filter(a => !a.isOwner && a.collaboration && a.collaboration.status === "pending");
   const listedApplications = (myApps || []).filter(a => a.isOwner || !a.collaboration || a.collaboration.status !== "pending");
+  const visibleApplications = listedApplications.filter(application => {
+    const query = searchTerm.trim().toLowerCase();
+    const matchesSearch = !query || [application.id, application.title, application.stage, application.faculty].some(value => String(value || "").toLowerCase().includes(query));
+    const matchesStatus = statusFilter === "all"
+      || (statusFilter === "open" && !["completed", "rejected"].includes(application.statusKey))
+      || application.statusKey === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <>
@@ -1974,10 +2024,18 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
         <div className="toolbar">
           <div className="search">
             <Icon name="Search" size={14} className="icon" />
-            <input placeholder="Search by title, ID, or stage…" />
+            <input value={searchTerm} onChange={event => setSearchTerm(event.target.value)} placeholder="Search by title, ID, or stage…" />
           </div>
-          <button className="filter"><Icon name="Filter" size={12} /> Status: All</button>
-          <button className="filter"><Icon name="Calendar" size={12} /> AY 2025–2026</button>
+          <label className="filter"><Icon name="Filter" size={12} />
+            <select value={statusFilter} onChange={event => setStatusFilter(event.target.value)} aria-label="Filter applications by status" style={{ border: 0, background: "transparent", color: "inherit", font: "inherit", cursor: "pointer", outline: "none" }}>
+              <option value="all">Status: All</option>
+              <option value="open">In progress</option>
+              <option value="completed">Completed</option>
+              <option value="rejected">Rejected</option>
+              <option value="returned">Returned</option>
+              <option value="draft">Draft</option>
+            </select>
+          </label>
           <div style={{ flex: 1 }}></div>
           <button className="btn btn-secondary btn-sm"><Icon name="Download" size={12} /> Export CSV</button>
         </div>
@@ -1994,13 +2052,14 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
           </thead>
           <tbody>
             {myApps === null && <tr><td colSpan="6" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading your applications…</td></tr>}
-            {myApps && listedApplications.length === 0 && <tr><td colSpan="6" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No applications yet — click "New Application" to submit your first.</td></tr>}
-            {listedApplications.map(a => (
+            {myApps && visibleApplications.length === 0 && <tr><td colSpan="6" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>{listedApplications.length ? "No applications match this search or status." : "No applications yet — click \"New Application\" to submit your first."}</td></tr>}
+            {visibleApplications.map(a => (
               <tr key={a.id}>
                 <td><span className="id">{a.id}</span></td>
                 <td className="title-cell">
                   <div className="t">{a.title}</div>
                   <div className="s">{a.isOwner ? (a.faculty || "—") + (a.department ? " · " + a.department : "") : (a.collaboration.status === "pending" ? "Co-author invitation from " : "Co-author · added by ") + a.invitedBy}</div>
+                  {a.decisionReason && <div style={{ color: "var(--au-crimson)", fontSize: 11.5, marginTop: 4, maxWidth: 520 }}><strong>{a.statusKey === "rejected" ? "Rejection reason" : "Revision reason"}:</strong> {a.decisionReason}</div>}
                 </td>
                 <td>{a.submittedAt}</td>
                 <td>{!a.isOwner && a.collaboration.status === "pending" ? "Invitation" : a.stage}</td>
@@ -2013,7 +2072,7 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
                     <button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}><Icon name="Eye" size={13} /> View &amp; Timeline</button>
                   ) : <>
                     <button className="btn btn-ghost btn-sm" onClick={() => (a.statusKey === "draft" || a.statusKey === "returned") ? (openDraft && openDraft(a._uuid)) : (openDetail && openDetail(a._uuid))}>
-                      <Icon name={(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit3" : "Eye"} size={13} /> {(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit" : "View"}
+                      <Icon name={(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit3" : "Eye"} size={13} /> {(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit" : a.statusKey === "completed" ? "View & Timeline" : "View"}
                     </button>
                     <button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}><Icon name="FolderOpen" size={13} /> Files</button>
                   </>}
@@ -2272,6 +2331,8 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
       />
 
       <ProjectPrintSheet app={app} status={status} />
+
+      <ApplicationDecisionNotice app={app} />
 
       <div className="grid-2">
         <div>
