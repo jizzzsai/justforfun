@@ -74,7 +74,7 @@ function LoginPage({ onLogin }) {
     } catch (ex) {
       const message = String((ex && ex.message) || "");
       setErr(/invalid login credentials/i.test(message)
-        ? "We couldn't sign you in with those details. Check your password or choose Forgot password to create a new one."
+        ? "Incorrect password."
         : (message || "Sign-in failed. Please try again."));
     } finally {
       loginPending.current = false;
