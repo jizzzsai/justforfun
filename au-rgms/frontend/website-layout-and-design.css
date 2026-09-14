@@ -659,6 +659,20 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .tbl .title-cell .s { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
 .tbl .actions { display: flex; gap: 4px; justify-content: flex-end; }
 
+/* My Applications is shared by AU-R1, AU-R3, and AU-R4. Keep table cells as
+   native table cells: changing a td to flex causes its action column to split
+   away from the header in Chromium. */
+.my-applications-table { table-layout: fixed; }
+.my-applications-table .app-col-id { width: 160px; }
+.my-applications-table .app-col-submitted { width: 140px; }
+.my-applications-table .app-col-stage { width: 178px; }
+.my-applications-table .app-col-status { width: 190px; }
+.my-applications-table .app-col-actions { width: 220px; }
+.my-applications-table .title-cell { min-width: 260px; }
+.my-applications-table .app-actions-cell { text-align: right; white-space: nowrap; }
+.my-applications-table .app-actions { display: inline-flex; align-items: center; justify-content: flex-end; gap: 4px; }
+.my-applications-table .app-actions .btn { white-space: nowrap; }
+
 
 .toolbar {
   display: flex; align-items: center; gap: 10px;

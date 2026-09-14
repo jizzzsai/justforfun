@@ -2036,7 +2036,15 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
           <div style={{ flex: 1 }}></div>
           <button className="btn btn-secondary btn-sm"><Icon name="Download" size={12} /> Export CSV</button>
         </div>
-        <table className="tbl">
+        <table className="tbl my-applications-table">
+          <colgroup>
+            <col className="app-col-id" />
+            <col className="app-col-title" />
+            <col className="app-col-submitted" />
+            <col className="app-col-stage" />
+            <col className="app-col-status" />
+            <col className="app-col-actions" />
+          </colgroup>
           <thead>
             <tr>
               <th>Application ID</th>
@@ -2061,17 +2069,21 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
                 <td>{a.submittedAt}</td>
                 <td>{!a.isOwner && a.collaboration.status === "pending" ? "Invitation" : a.stage}</td>
                 <td>{!a.isOwner && a.collaboration.status === "pending" ? <span className="badge badge-pending"><span className="dot"></span>Awaiting your acceptance</span> : !a.isOwner ? <span className="badge badge-check"><span className="dot"></span>Accepted co-author</span> : <Badge status={a.status} />}</td>
-                <td className="actions">
+                <td className="app-actions-cell">
                   {!a.isOwner && a.collaboration.status === "pending" ? <>
-                    <button className="btn btn-primary btn-sm" disabled={invitationBusy === a.collaboration.id} onClick={() => answerInvitation(a, true)}><Icon name="Check" size={13} /> {invitationBusy === a.collaboration.id ? "Accepting…" : "Accept"}</button>
-                    <button className="btn btn-ghost btn-sm" disabled={invitationBusy === a.collaboration.id} onClick={() => answerInvitation(a, false)}><Icon name="X" size={13} /> Decline</button>
+                    <div className="app-actions">
+                      <button className="btn btn-primary btn-sm" disabled={invitationBusy === a.collaboration.id} onClick={() => answerInvitation(a, true)}><Icon name="Check" size={13} /> {invitationBusy === a.collaboration.id ? "Accepting…" : "Accept"}</button>
+                      <button className="btn btn-ghost btn-sm" disabled={invitationBusy === a.collaboration.id} onClick={() => answerInvitation(a, false)}><Icon name="X" size={13} /> Decline</button>
+                    </div>
                   </> : !a.isOwner ? (
-                    <button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}><Icon name="Eye" size={13} /> View &amp; Timeline</button>
+                    <div className="app-actions"><button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}><Icon name="Eye" size={13} /> View &amp; Timeline</button></div>
                   ) : <>
-                    <button className="btn btn-ghost btn-sm" onClick={() => (a.statusKey === "draft" || a.statusKey === "returned") ? (openDraft && openDraft(a._uuid)) : (openDetail && openDetail(a._uuid))}>
-                      <Icon name={(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit3" : "Eye"} size={13} /> {(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit" : a.statusKey === "completed" ? "View & Timeline" : "View"}
-                    </button>
-                    <button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}><Icon name="FolderOpen" size={13} /> Files</button>
+                    <div className="app-actions">
+                      <button className="btn btn-ghost btn-sm" onClick={() => (a.statusKey === "draft" || a.statusKey === "returned") ? (openDraft && openDraft(a._uuid)) : (openDetail && openDetail(a._uuid))}>
+                        <Icon name={(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit3" : "Eye"} size={13} /> {(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit" : a.statusKey === "completed" ? "View & Timeline" : "View"}
+                      </button>
+                      <button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}><Icon name="FolderOpen" size={13} /> Files</button>
+                    </div>
                   </>}
                 </td>
               </tr>
