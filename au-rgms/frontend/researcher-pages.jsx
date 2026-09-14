@@ -54,11 +54,11 @@ const R4_PIPELINE = [
   { key: "iras", label: "IRAS Verification" },
   { key: "approved", label: "Approved by Research Office" },
   { key: "payment", label: "Finance Payment" },
-  { key: "paid", label: "Paid" },
+  { key: "completed", label: "Completed" },
 ];
 function buildR4Timeline(statusKey) {
-  const order = ["submission", "dean", "committee", "iras", "approved", "payment", "paid"];
-  const idxMap = { draft: 0, submitted: 1, committee_review: 2, iras_review: 3, approved: 5, active: 7, completed: 7, returned: 0, rejected: 0 };
+  const order = ["submission", "dean", "committee", "iras", "approved", "payment", "completed"];
+  const idxMap = { draft: 0, submitted: 1, committee_review: 2, iras_review: 3, approved: 5, active: 5, completed: 7, returned: 0, rejected: 0 };
   let idx = idxMap[statusKey]; if (idx === undefined) idx = 0;
   const tl = {};
   const currentLabel = statusKey === "draft" ? "Draft" : statusKey === "returned" ? "Returned for revision" : statusKey === "rejected" ? "Not approved" : "In progress";
@@ -91,7 +91,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
   const n = (k) => (c ? (c[k] || 0) : "…");
   const exampleSteps = isR4 ? R4_PIPELINE : isR3 ? R3_PIPELINE : R1_DASHBOARD_PIPELINE;
   const singleGrant = isSingle && grant && grant.grant_type === grantType ? grant : null;
-  const r3PayLabel = { approved: "Awaiting Finance Payment", active: "Paid", completed: "Completed" };
+  const r3PayLabel = { approved: "Awaiting Finance Completion", active: "At Finance", completed: "Completed" };
   const approvedLabel = isR4 ? "Approved Publication Claims" : isR3 ? "Approved Conference Grants" : "Approved Projects";
   const pays = grant && grant.payments && grant.payments.length ? grant.payments.slice().sort((a, b) => a.instalment - b.instalment) : [];
   const grantTotal = grant ? Number(grant.approved_amount || grant.requested_amount || 0) : 0;
@@ -2898,8 +2898,8 @@ function SingleGrantPaymentStatus({ grantType }) {
   const isR4 = grantType === "au_r4";
   const [grant, setGrant] = useState(null);
   useEffect(() => { window.DB.myGrant(grantType).then(g => setGrant(g || false)).catch(() => setGrant(false)); }, [grantType]);
-  const STEPS = ["Not yet approved", "Approved for Payment", "Finance Processing", "Paid", "Completed"];
-  const stepIdx = { approved: 1, active: 3, completed: 4 };
+  const STEPS = ["Not yet approved", "Approved for Payment", "Finance Processing", "Completed"];
+  const stepIdx = { approved: 1, active: 2, completed: 3 };
   if (grant === null) {
     return (<><PageHeader title="Payment Status" desc="Your publication reward payment status." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "40px" }}>Loading…</div></>);
   }
@@ -2919,8 +2919,8 @@ function SingleGrantPaymentStatus({ grantType }) {
           {!isR4 && <div className="meta-row"><span className="l">Conference</span><span className="r">{ci.confName || "-"}</span></div>}
           <div className="meta-row"><span className="l">{isR4 ? "Requested claim" : "Requested amount"}</span><span className="r">{fmtBaht(Number(grant.requested_amount || 0))}</span></div>
           <div className="meta-row"><span className="l">{isR4 ? "IRAS-approved amount" : "Approved amount"}</span><span className="r">{grant.approved_amount ? fmtBaht(Number(grant.approved_amount)) : "—"}</span></div>
-          <div className="meta-row"><span className="l">Payment status</span><span className="r">{grant.status === "approved" ? "Awaiting Finance Payment" : grant.status === "active" ? "Paid" : grant.status === "completed" ? "Completed" : "Not yet approved"}</span></div>
-          <div className="meta-row"><span className="l">Payment date</span><span className="r">{["active", "completed"].includes(grant.status) ? window.DB.fmtDate(grant.updated_at || grant.decided_at) : "—"}</span></div>
+          <div className="meta-row"><span className="l">Payment status</span><span className="r">{grant.status === "approved" ? "Awaiting Finance Completion" : grant.status === "active" ? "At Finance" : grant.status === "completed" ? "Completed" : "Not yet approved"}</span></div>
+          <div className="meta-row"><span className="l">Completion date</span><span className="r">{grant.status === "completed" ? window.DB.fmtDate(grant.updated_at || grant.decided_at) : "—"}</span></div>
         </div>
       </div>
       <div className="card card-pad-0">

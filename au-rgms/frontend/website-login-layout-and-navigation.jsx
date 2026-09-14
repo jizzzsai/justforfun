@@ -586,7 +586,7 @@ function Sidebar({ nav, current, onNavigate }) {
         return (
           <div
             key={item.key}
-            className={`nav-item ${current === item.key ? "active" : ""}${item.key === "r-ai-assistant" ? " ai-assistant-item" : ""}`}
+            className={`nav-item ${current === item.key ? "active" : ""}${item.key === "r-ai-assistant" || item.key === "a-analytics" ? " ai-assistant-item" : ""}`}
             onClick={() => {
               if (item.key === "r-ai-assistant") {
                 window.dispatchEvent(new CustomEvent("au-ai-toggle"));

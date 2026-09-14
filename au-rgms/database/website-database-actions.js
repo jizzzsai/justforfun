@@ -71,6 +71,9 @@
     if (s === "iras_review" && (grantType === "au_r3" || grantType === "au_r4")) {
       return { label: "IRAS Screening", cls: base.cls };
     }
+    if (s === "active" && (grantType === "au_r3" || grantType === "au_r4")) {
+      return { label: "At Finance", cls: "badge-contract" };
+    }
     return base;
   }
   function publicationBadge(s) {
@@ -622,6 +625,30 @@
       var kind = "advance";
       var label = fromStatus === "approved" ? "Finance marked payment as paid" : "Finance completed payment record";
       return await this.transition(appId, fromStatus, kind, note, label);
+    },
+
+    async completeSingleGrant(appId) {
+      var me = await uid();
+      var role = await myRole();
+      if (!me || ["ofm", "admin"].indexOf(role) === -1) throw new Error("Only Finance or an administrator can complete this payment.");
+      var current = await sb.from("applications").select("id,code,status,grant_type").eq("id", appId).single();
+      if (current.error) throw current.error;
+      var app = current.data;
+      if (["au_r3", "au_r4"].indexOf(app.grant_type) === -1) throw new Error("This action is only for AU-R3 and AU-R4 payments.");
+      if (app.status === "completed") return app;
+      if (["approved", "active"].indexOf(app.status) === -1) throw new Error("This application is not ready for Finance completion.");
+      var updated = await sb.from("applications").update({ status: "completed" })
+        .eq("id", appId).in("status", ["approved", "active"]).select().single();
+      if (updated.error) throw updated.error;
+      try {
+        await sb.from("application_events").insert({
+          application_id: appId, actor_id: me, actor_role: role,
+          action: "Finance completed payment and closed application",
+          from_status: app.status, to_status: "completed",
+          note: "Payment confirmed complete.",
+        });
+      } catch (e) {}
+      return updated.data;
     },
 
     async submitExpertReview(appId, payload) {

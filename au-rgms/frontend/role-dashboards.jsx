@@ -1478,21 +1478,12 @@ function OFMGrantPayments({ sys, toast, setConfirm }) {
     window.DB.grantPaymentQueue(sys).then(setRows).catch(() => setRows([]));
   };
   useEffect(() => { setRows(null); load(); }, [sys]);
-  const pay = (a) => setConfirm({
-    kind: "success", title: "Record payment as paid?",
-    message: a.id + " will be marked as paid (" + fmtBaht(Number(a.approved_amount || a.requested_amount || 0)) + ").",
-    confirmLabel: "Mark as Paid", withReason: true, reasonLabel: "Payment note / reference",
-    onConfirm: async (reason) => {
-      try { await window.DB.payGrantOnce(a._uuid, "approved", "Payment processed. " + (reason || "")); toast(a.id + " marked as paid."); load(); }
-      catch (e) { toast("Error: " + ((e && e.message) || e)); }
-    },
-  });
   const complete = (a) => setConfirm({
-    kind: "success", title: "Mark application completed?",
-    message: a.id + " will be marked completed.",
-    confirmLabel: "Complete", withReason: true,
-    onConfirm: async (reason) => {
-      try { await window.DB.payGrantOnce(a._uuid, "active", reason); toast(a.id + " completed."); load(); }
+    kind: "success", title: "Complete payment and application?",
+    message: a.id + " will be recorded as completed (" + fmtBaht(Number(a.approved_amount || a.requested_amount || 0)) + "). This closes the Finance workflow.",
+    confirmLabel: "Complete",
+    onConfirm: async () => {
+      try { await window.DB.completeSingleGrant(a._uuid); toast(a.id + " completed."); load(); }
       catch (e) { toast("Error: " + ((e && e.message) || e)); }
     },
   });
@@ -1510,10 +1501,9 @@ function OFMGrantPayments({ sys, toast, setConfirm }) {
               <td className="title-cell"><div className="t" style={{ maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div></td>
               <td style={{ fontSize: 12 }}>{a.researcher?.name}</td>
               <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{fmtBaht(Number(a.approved_amount || a.requested_amount || 0))}</td>
-              <td><Badge status={a.statusKey === "active" ? { key: "active", cls: "badge-paid", label: "Paid" } : a.statusKey === "completed" ? { key: "completed", cls: "badge-check", label: "Completed" } : { key: "approved", cls: "badge-contract", label: "Approved for Payment" }} /></td>
+              <td><Badge status={a.statusKey === "completed" ? { key: "completed", cls: "badge-check", label: "Completed" } : { key: "approved", cls: "badge-contract", label: "At Finance" }} /></td>
               <td className="actions">
-                {a.statusKey === "approved" && <button className="btn btn-primary btn-sm" onClick={() => pay(a)}><Icon name="Coins" size={12} /> Mark Paid</button>}
-                {a.statusKey === "active" && <button className="btn btn-secondary btn-sm" onClick={() => complete(a)}>Complete</button>}
+                {(a.statusKey === "approved" || a.statusKey === "active") && <button className="btn btn-primary btn-sm" onClick={() => complete(a)}><Icon name="CheckCircle" size={12} /> Complete</button>}
                 {a.statusKey === "completed" && <span className="text-sm text-muted">Completed</span>}
               </td>
             </tr>
@@ -1547,8 +1537,7 @@ function OFMDashboard({ navigate, toast, setConfirm }) {
           desc={"Process payments for IRAS-approved " + (isR4 ? "publication fee and reward" : "paper presentation grant") + " applications."}
           actions={sysToggle} />
         <div className="stats">
-          <Stat label="At Finance"      value={gn("approved")} icon="Clock" tone="gold" />
-          <Stat label="Paid" value={gn("active")} icon="Coins" tone="green" />
+          <Stat label="At Finance"      value={gc ? (gc.approved || 0) + (gc.active || 0) : "…"} icon="Clock" tone="gold" />
           <Stat label="Completed" value={gn("completed")} icon="CheckCircle" tone="navy" />
           <Stat label="Total"           value={(gc ? (gc.approved || 0) + (gc.active || 0) + (gc.completed || 0) : "…")} icon="Coins" />
         </div>
