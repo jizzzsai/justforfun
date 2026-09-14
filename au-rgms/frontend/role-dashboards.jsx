@@ -1874,12 +1874,12 @@ function AdminDashboard({ navigate }) {
 
 const ADMIN_ROLE_OPTIONS = [
   { key: "researcher", label: "Researcher" }, { key: "dean", label: "Dean" },
-  { key: "committee", label: "Faculty Committee" }, { key: "iras", label: "RASSC" },
+  { key: "committee", label: "Faculty Committee" }, { key: "iras", label: "RASSC / IRAS" },
   { key: "ofm", label: "OFM / Finance" }, { key: "admin", label: "Administrator" },
 ];
 
 function AdminAddUserForm({ onCreated, onClose, toast }) {
-  const blank = { name_title: "", full_name: "", email: "", au_id: "", phone: "", office_room: "", role: "dean", faculty: "", department: "", password: "123456789" };
+  const blank = { name_title: "", full_name: "", email: "", au_id: "", phone: "", office_room: "", joined_date: "", role: "dean", faculty: "", department: "", password: "123456789" };
   const [f, setF] = useState(blank);
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setF(s => Object.assign({}, s, k === "faculty" ? { faculty: v, department: "" } : { [k]: v }));
@@ -1912,6 +1912,7 @@ function AdminAddUserForm({ onCreated, onClose, toast }) {
           <div className="field"><label>Email (AU only)</label><input type="email" value={f.email} onChange={e => set("email", e.target.value)} placeholder="name@au.edu" /></div>
           <div className="field"><label>Phone</label><ThaiPhoneInput value={f.phone} onChange={value => set("phone", value)} /></div>
           <div className="field"><label>Office / Room</label><input value={f.office_room} onChange={e => set("office_room", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
+          <div className="field"><label>Date Joined Assumption University</label><AUDatePicker value={f.joined_date} onChange={value => set("joined_date", value)} min="1969-01-01" max={new Date().toISOString().slice(0, 10)} placeholder="Select joined date…" /></div>
           <div className="field"><label>Role</label>
             <select value={f.role} onChange={e => set("role", e.target.value)}>{ADMIN_ROLE_OPTIONS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}</select>
           </div>
@@ -1941,6 +1942,7 @@ function AdminEditUserForm({ user, onSaved, onClose, toast }) {
     au_id: user.au_id || "",
     phone: normalizeThaiPhone(user.phone),
     office_room: user.office_room || "",
+    joined_date: user.joined_date || "",
     role: user.role || "researcher",
     faculty: user.faculty || "",
     department: user.department || "",
@@ -1978,6 +1980,7 @@ function AdminEditUserForm({ user, onSaved, onClose, toast }) {
           <div className="field"><label>Phone</label><ThaiPhoneInput value={f.phone} onChange={value => set("phone", value)} /></div>
           <div className="field"><label>Office / Room</label><input value={f.office_room} onChange={e => set("office_room", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
           <div className="field"><label>Email (AU only)</label><input type="email" value={f.email} onChange={e => set("email", e.target.value)} /></div>
+          <div className="field"><label>Date Joined Assumption University</label><AUDatePicker value={f.joined_date} onChange={value => set("joined_date", value)} min="1969-01-01" max={new Date().toISOString().slice(0, 10)} placeholder="Select joined date…" /></div>
           <div className="field"><label>Role</label>
             <select value={f.role} onChange={e => set("role", e.target.value)}>{ADMIN_ROLE_OPTIONS.map(r => <option key={r.key} value={r.key}>{r.label}</option>)}</select>
           </div>

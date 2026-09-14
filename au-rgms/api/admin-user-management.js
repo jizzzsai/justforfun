@@ -51,16 +51,19 @@ function validateProfile(body, requirePassword) {
   const auId = body.au_id ? String(body.au_id).trim() : null;
   const phone = body.phone ? String(body.phone).trim() : null;
   const officeRoom = body.office_room ? String(body.office_room).trim() : null;
+  const joinedDate = body.joined_date ? String(body.joined_date).trim() : null;
 
   if (!/^[^@\s]+@au\.edu$/.test(email)) return { error: "Email must be an @au.edu address." };
   if (!fullName) return { error: "Full name is required." };
   if (phone && !/^0\d{8,9}$/.test(phone)) return { error: "Phone must be a Thai number with 9–10 digits starting with 0." };
+  if (joinedDate && (!/^\d{4}-\d{2}-\d{2}$/.test(joinedDate) || Number.isNaN(Date.parse(joinedDate + "T00:00:00Z")))) return { error: "Date joined must be a valid date." };
+  if (joinedDate && joinedDate > new Date().toISOString().slice(0, 10)) return { error: "Date joined cannot be in the future." };
   if (ROLES.indexOf(role) === -1) return { error: "Invalid role." };
   if ((requirePassword || password) && password.length < 8) return { error: "Password must be at least 8 characters." };
   if ((role === "dean" || role === "committee") && !faculty) return { error: "Dean and Committee accounts need a faculty." };
 
   return {
-    email, fullName, role, password, faculty, department, nameTitle, auId, phone, officeRoom,
+    email, fullName, role, password, faculty, department, nameTitle, auId, phone, officeRoom, joinedDate,
     isActive: body.is_active !== false,
   };
 }
@@ -118,7 +121,7 @@ module.exports = async (req, res) => {
         body: JSON.stringify({
           id: created.id, email: f.email, full_name: f.fullName, role: f.role,
           faculty: f.faculty, department: f.department, name_title: f.nameTitle,
-          au_id: f.auId, phone: f.phone, office_room: f.officeRoom, is_active: f.isActive,
+          au_id: f.auId, phone: f.phone, office_room: f.officeRoom, joined_date: f.joinedDate, is_active: f.isActive,
         }),
       });
       if (!upRes.ok) {
@@ -158,7 +161,7 @@ module.exports = async (req, res) => {
         body: JSON.stringify({
           email: f.email, full_name: f.fullName, role: f.role, faculty: f.faculty,
           department: f.department, name_title: f.nameTitle, au_id: f.auId,
-          phone: f.phone, office_room: f.officeRoom, is_active: f.isActive,
+          phone: f.phone, office_room: f.officeRoom, joined_date: f.joinedDate, is_active: f.isActive,
         }),
       });
       const updated = await patchRes.json().catch(() => []);

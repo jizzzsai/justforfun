@@ -77,6 +77,7 @@
 .au-login button:disabled, .au-login input:disabled { cursor: wait; opacity: .6; }
 .au-login button:focus-visible, .au-login summary:focus-visible, .au-login-remember input:focus-visible { outline: 2px solid var(--au-gold); outline-offset: 4px; }
 .au-login-error { margin: 0 0 20px; padding: 11px 13px; overflow-wrap: anywhere; color: var(--au-crimson-deep); border: 1px solid var(--au-crimson-soft); border-radius: 7px; background: var(--au-crimson-soft); font-size: 12px; line-height: 1.6; }
+.au-login-success { margin: 0 0 20px; padding: 11px 13px; overflow-wrap: anywhere; color: #166534; border: 1px solid #bbf7d0; border-radius: 7px; background: #f0fdf4; font-size: 12px; line-height: 1.6; }
 .au-login-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .au-login-support { margin-top: 24px; color: rgba(255, 255, 255, .7); font-size: 11px; line-height: 1.7; text-align: center; }
 .au-login-support span { display: block; }

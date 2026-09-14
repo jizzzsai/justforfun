@@ -5,7 +5,11 @@
 
 const APP = window.AU;
 const TEST_PASSWORD = "123456789";
+const SELF_SERVICE_RESET_EMAIL = "u6430040@au.edu";
 const DEMO_MODE_KEY = "au-rgms-demo-mode";
+function isPasswordRecoveryRoute() {
+  return new URLSearchParams(window.location.search).get("reset-password") === "1" || /(?:^|[&#])type=recovery(?:&|$)/.test(window.location.hash || "");
+}
 function readDemoMode() {
   try {
     return sessionStorage.getItem(DEMO_MODE_KEY) === "true" || localStorage.getItem(DEMO_MODE_KEY) === "true";
@@ -43,6 +47,10 @@ function LoginPage({ onLogin }) {
   const [remember, setRemember] = useState(() => !!(window.AUTH && window.AUTH.remembersSession()));
   const [helpTopic, setHelpTopic] = useState(null);
   const [demoFaculty, setDemoFaculty] = useState("VMES");
+  const [resetSent, setResetSent] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordChanged, setPasswordChanged] = useState(false);
   const loginPending = useRef(false);
   const emailInput = useRef(null);
   const passwordInput = useRef(null);
@@ -83,6 +91,70 @@ function LoginPage({ onLogin }) {
     signInWith(auEmail, pass);
   }
   function demoLogin(testEmail) { signInWith(testEmail, TEST_PASSWORD, true); }
+
+  async function requestPasswordReset() {
+    const auEmail = email.trim().toLowerCase();
+    setErr(""); setResetSent("");
+    if (auEmail !== SELF_SERVICE_RESET_EMAIL) {
+      setHelpTopic("access");
+      return;
+    }
+    setBusy(true);
+    try {
+      await window.AUTH.requestPasswordReset(auEmail);
+      setResetSent("Password reset email sent to " + auEmail + ". Open the link in that email to choose a new password.");
+    } catch (ex) {
+      setErr((ex && ex.message) || "Could not send the password reset email.");
+    } finally { setBusy(false); }
+  }
+
+  async function changeRecoveredPassword(e) {
+    e.preventDefault(); setErr("");
+    if (newPassword.length < 8) return setErr("New password must be at least 8 characters.");
+    if (newPassword !== confirmPassword) return setErr("The two passwords do not match.");
+    setBusy(true);
+    try {
+      const prof = await window.AUTH.profile();
+      if (!prof || String(prof.email || "").toLowerCase() !== SELF_SERVICE_RESET_EMAIL) {
+        throw new Error("This password-reset link is not valid for this account.");
+      }
+      await window.AUTH.updatePassword(newPassword);
+      setPasswordChanged(true);
+    } catch (ex) {
+      setErr((ex && ex.message) || "Could not update the password. Request a new reset email and try again.");
+    } finally { setBusy(false); }
+  }
+
+  if (isPasswordRecoveryRoute()) {
+    return (
+      <div className="au-login">
+        <main className="au-login-shell" aria-labelledby="au-reset-title">
+          <section className="au-login-story" aria-label="Assumption University Research Affairs">
+            <header className="au-login-identity">
+              <div className="au-login-seal"><img src="assets/au-logo.png" alt="Assumption University crest" width="58" height="58" /></div>
+              <div><p className="au-login-university">Assumption University</p><p className="au-login-meta">Research Grant Management System</p></div>
+            </header>
+            <div className="au-login-story-content"><h1 className="au-login-title">Secure account <em>recovery</em></h1><p className="au-login-story-note">Choose a new password for your AU-RGMS account.</p></div>
+          </section>
+          <section className="au-login-access">
+            <div className="au-login-form-panel">
+              <p className="au-login-form-label">AU-RGMS · Password recovery</p>
+              <h2 className="au-login-welcome" id="au-reset-title">{passwordChanged ? "Password changed" : "Create a new password"}</h2>
+              {passwordChanged ? <>
+                <p className="au-login-intro">Your password has been updated. You can now return to the login page.</p>
+                <button className="au-login-submit" type="button" onClick={async () => { try { await window.AUTH.signOut(); } catch (e) {} window.location.replace(window.location.origin + window.location.pathname); }}>Return to Login</button>
+              </> : <form onSubmit={changeRecoveredPassword}>
+                <div className="au-login-field"><label htmlFor="au-new-password">New password</label><input id="au-new-password" type="password" value={newPassword} onChange={e => setNewPassword(e.target.value)} autoComplete="new-password" required disabled={busy} /></div>
+                <div className="au-login-field"><label htmlFor="au-confirm-password">Confirm new password</label><input id="au-confirm-password" type="password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} autoComplete="new-password" required disabled={busy} /></div>
+                {err && <p className="au-login-error" role="alert">{err}</p>}
+                <button className="au-login-submit" type="submit" disabled={busy}>{busy ? "Updating…" : "Update Password"}</button>
+              </form>}
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="au-login">
@@ -129,10 +201,11 @@ function LoginPage({ onLogin }) {
               </div>
               <div className="au-login-options">
                 <label className="au-login-remember"><input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} disabled={busy} aria-describedby="au-login-remember-note" /> Remember me</label>
-                <button className="au-login-text-button" type="button" onClick={() => setHelpTopic("access")}>Forgot password?</button>
+                <button className="au-login-text-button" type="button" onClick={requestPasswordReset} disabled={busy}>Forgot password?</button>
               </div>
               <span className="au-login-sr-only" id="au-login-remember-note">Remember your login on this device. Leave unchecked on shared computers to keep the session in this tab only.</span>
               {err && <p className="au-login-error" id="au-login-error" role="alert">{err}</p>}
+              {resetSent && <p className="au-login-success" role="status">{resetSent}</p>}
               <button className="au-login-submit" type="submit" disabled={busy}>{busy ? "Signing in…" : <>Sign In <Icon name="ArrowRight" size={16} /></>}</button>
             </form>
             <div className="au-login-support">
@@ -390,10 +463,11 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSys
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifItems, setNotifItems] = useState(APP.NOTIFS || []);
   const current = rolesForSystem(grantSystem).find(r => r.key === role) || APP.ROLES.find(r => r.key === role);
-  const displayName = (profile && profile.full_name) || current.full;
+  const isIrasTestHeader = role === "iras" && (grantSystem === "au_r3" || grantSystem === "au_r4") && profile && String(profile.email || "").toLowerCase() === TEST_EMAIL_FOR.iras;
+  const displayName = isIrasTestHeader ? "IRAS Test" : ((profile && profile.full_name) || current.full);
   const displaySubtitle = demoMode ? current.subtitle : current.name;
-  const displayInitials = (profile && profile.full_name)
-    ? profile.full_name.trim().split(/\s+/).slice(-2).map(s => s[0]).join("").toUpperCase()
+  const displayInitials = displayName
+    ? displayName.trim().split(/\s+/).slice(-2).map(s => s[0]).join("").toUpperCase()
     : current.initials;
   const wrapRef = useRef(null);
 
@@ -737,6 +811,7 @@ function App() {
   useEffect(() => {
     (async () => {
       try {
+        if (isPasswordRecoveryRoute()) return;
         const sess = await window.AUTH.session();
         if (!sess) {
           if (initial.skipLogin) await switchToTestRole(startingRole, { keepPage: true });

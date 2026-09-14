@@ -62,6 +62,8 @@ create table if not exists profiles (
   faculty     text,
   department  text,
   phone       text,
+  office_room text,
+  joined_date date,
   expertise   text,
   is_active   boolean not null default true,
   created_at  timestamptz not null default now()

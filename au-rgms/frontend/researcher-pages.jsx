@@ -382,12 +382,14 @@ function todayISO() {
   return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
 }
 
-function UniversityJoinedDateField({ value, onChange }) {
+function UniversityJoinedDateField({ value, onChange, readOnly = false }) {
   const service = universityServiceEligibility(value);
   return (
     <div className="field">
       <label>Date Joined Assumption University *</label>
-      <AUDatePicker value={value} onChange={onChange} min="1969-01-01" max={todayISO()} placeholder="Select joined date…" />
+      {readOnly
+        ? <input value={value ? fmtNiceDate(value) : "Not set — contact the administrator"} readOnly style={roStyle} />
+        : <AUDatePicker value={value} onChange={onChange} min="1969-01-01" max={todayISO()} placeholder="Select joined date…" />}
       {value && (
         <div style={{ fontSize: 11, marginTop: 5, color: service.eligible ? "var(--status-approved)" : "var(--au-crimson)", fontWeight: 650 }}>
           {service.eligible
@@ -453,7 +455,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
         const p = await window.AUTH.profile();
         if (p && p.budget_split) setSplit(s => ({ ...s, ...p.budget_split }));
         if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
-        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: normalizeThaiPhone(p.phone || d.phone), office: p.office_room || d.office }));
+        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, joinedDate: p.joined_date || d.joinedDate, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: normalizeThaiPhone(p.phone || d.phone), office: p.office_room || d.office }));
       } catch (e) {}
     })();
   }, [applicationId]);
@@ -557,7 +559,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
     setErr("");
     if (submit && !draft.title.trim()) { setErr("Research title is required."); return; }
     if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
-    if (submit && !draft.joinedDate) { setErr("Select the date you joined Assumption University."); return; }
+    if (submit && !draft.joinedDate) { setErr("Your account has no Date Joined AU. Ask the administrator to add it in User Management."); return; }
     if (submit && !universityServiceEligibility(draft.joinedDate).eligible) { setErr("You are not eligible yet. Researchers must have at least one year of service at Assumption University."); return; }
     if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
     if (submit && draft.phone && !isValidThaiPhone(draft.phone)) { setErr("Phone must be a Thai number with 9–10 digits starting with 0."); return; }
@@ -677,7 +679,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
 
         <div className="form-section">
           <h4><span className="num">2</span> Researcher Information</h4>
-          <p className="section-sub">Principal investigator contact details and the faculty used to route the application.</p>
+          <p className="section-sub">Identity details come from your account. You may update only your title, phone, and office / room here.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field">
@@ -689,17 +691,15 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
               </div>
               <div className="field">
                 <label>Full Name</label>
-                <input value={draft.name} onChange={e => upd("name", e.target.value)} />
+                <input value={draft.name} readOnly style={roStyle} />
               </div>
               <div className="field">
                 <label>AU ID</label>
-                <input value={draft.auId} onChange={e => upd("auId", e.target.value)} placeholder="e.g. 5012345" />
+                <input value={draft.auId} readOnly style={roStyle} />
               </div>
               <div className="field">
                 <label>Email (AU only)</label>
-                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} placeholder="name@au.edu"
-                  style={draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim()) ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : {}} />
-                {draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim()) && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}
+                <input type="email" value={draft.email} readOnly style={roStyle} />
               </div>
               <div className="field">
                 <label>Phone</label>
@@ -709,17 +709,17 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                 <label>Office / Room</label>
                 <input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" />
               </div>
-              <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} />
+              <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} readOnly />
               <div className="field">
                 <label>School / Faculty</label>
-                <select value={draft.school} onChange={e => { upd("school", e.target.value); upd("department", ""); }}>
+                <select value={draft.school} disabled style={roStyle}>
                   <option value="">Select your faculty…</option>
                   {RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}
                 </select>
               </div>
               <div className="field">
                 <label>Department</label>
-                <select value={draft.department} onChange={e => upd("department", e.target.value)} disabled={!draft.school}>
+                <select value={draft.department} disabled style={roStyle}>
                   <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
                   {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
@@ -992,7 +992,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
       try {
         const p = await window.AUTH.profile();
         if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
-        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: normalizeThaiPhone(p.phone || d.phone), office: p.office_room || d.office }));
+        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, joinedDate: p.joined_date || d.joinedDate, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: normalizeThaiPhone(p.phone || d.phone), office: p.office_room || d.office }));
       } catch (e) {}
     })();
   }, [applicationId]);
@@ -1067,7 +1067,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
     if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
     if (submit && !draft.name.trim()) { setErr("Enter your full name."); return; }
     if (submit && !draft.email.trim()) { setErr("Enter your AU email address."); return; }
-    if (submit && !draft.joinedDate) { setErr("Select the date you joined Assumption University."); return; }
+    if (submit && !draft.joinedDate) { setErr("Your account has no Date Joined AU. Ask the administrator to add it in User Management."); return; }
     if (submit && !universityServiceEligibility(draft.joinedDate).eligible) { setErr("You are not eligible yet. AU-R3 applicants must have at least one year of service at Assumption University."); return; }
     if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
     if (submit && draft.phone && !isValidThaiPhone(draft.phone)) { setErr("Phone must be a Thai number with 9–10 digits starting with 0."); return; }
@@ -1245,7 +1245,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
 
         <div className="form-section">
           <h4><span className="num">3</span> Researcher Information</h4>
-          <p className="section-sub">Auto-filled from your profile — check it before submitting. The faculty routes the application to your Dean.</p>
+          <p className="section-sub">Identity details come from your account. You may update only your title, phone, and office / room here.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field">
@@ -1255,27 +1255,25 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
                   {RA.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="field"><label>Full Name</label><input value={draft.name} onChange={e => upd("name", e.target.value)} /></div>
-              <div className="field"><label>AU ID</label><input value={draft.auId} onChange={e => upd("auId", e.target.value)} readOnly={!!draft.auId} placeholder="e.g. 5012345" style={draft.auId ? roStyle : null} /></div>
+              <div className="field"><label>Full Name</label><input value={draft.name} readOnly style={roStyle} /></div>
+              <div className="field"><label>AU ID</label><input value={draft.auId} readOnly style={roStyle} /></div>
               <div className="field">
                 <label>Email (AU only)</label>
-                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} placeholder="name@au.edu"
-                  style={emailBad ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)" } : null} />
-                {emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}
+                <input type="email" value={draft.email} readOnly style={roStyle} />
               </div>
               <div className="field"><label>Phone</label><ThaiPhoneInput value={draft.phone} onChange={value => upd("phone", value)} /></div>
               <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
-              <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} />
+              <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} readOnly />
               <div className="field">
                 <label>School / Faculty</label>
-                <select value={facultyValid ? draft.school : ""} onChange={e => { upd("school", e.target.value); upd("department", ""); }}>
+                <select value={facultyValid ? draft.school : ""} disabled style={roStyle}>
                   <option value="">Select your faculty…</option>
                   {RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}
                 </select>
               </div>
               <div className="field">
                 <label>Department</label>
-                <select value={deptValid ? draft.department : ""} onChange={e => upd("department", e.target.value)} disabled={!facultyValid}>
+                <select value={deptValid ? draft.department : ""} disabled style={roStyle}>
                   <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
                   {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d} value={d}>{d}</option>)}
                 </select>
@@ -1468,7 +1466,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         const p = await window.AUTH.profile();
         if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
         if (p && !applicationId) {
-          setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: normalizeThaiPhone(p.phone || d.phone), office: p.office_room || d.office }));
+          setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, joinedDate: p.joined_date || d.joinedDate, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: normalizeThaiPhone(p.phone || d.phone), office: p.office_room || d.office }));
           setAuthors(a => a.map((r, i) => i === 0 ? { ...r, name: p.full_name || r.name, email: p.email || r.email } : r));
         }
       } catch (e) {}
@@ -1560,7 +1558,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       if (published && !draft.pageNumber.trim()) return setErr("Enter the Page Number(s) for the published article.");
       if (!published && !draft.acceptDate) return setErr("Select the Acceptance Date.");
       if (!draft.school) return setErr("Your faculty is required so the application routes to your Dean.");
-      if (!draft.joinedDate) return setErr("Select the date you joined Assumption University.");
+      if (!draft.joinedDate) return setErr("Your account has no Date Joined AU. Ask the administrator to add it in User Management.");
       if (!universityServiceEligibility(draft.joinedDate).eligible) return setErr("You are not eligible yet. AU-R4 applicants must have at least one year of service at Assumption University.");
       if (emailBad) return setErr("Email must be an Assumption University address ending in @au.edu.");
       if (draft.phone && !isValidThaiPhone(draft.phone)) return setErr("Phone must be a Thai number with 9–10 digits starting with 0.");
@@ -1764,24 +1762,23 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         {                               }
         <div className="form-section">
           <h4><span className="num">4</span> Researcher Information</h4>
-          <p className="section-sub">Auto-filled from your profile. Correct any name, ID, faculty, or major information before submitting.</p>
+          <p className="section-sub">Identity details come from your account. You may update only your title, phone, and office / room here.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field"><label>Title</label>
                 <select value={draft.title2} onChange={e => upd("title2", e.target.value)}><option value="">Select title…</option>{RA.AU_TITLES.map(t => <option key={t}>{t}</option>)}</select></div>
-              <div className="field"><label>Full Name</label><input value={draft.name} onChange={e => upd("name", e.target.value)} /></div>
-              <div className="field"><label>AU ID</label><input value={draft.auId} onChange={e => upd("auId", e.target.value)} placeholder="e.g. 5012345" /></div>
+              <div className="field"><label>Full Name</label><input value={draft.name} readOnly style={roStyle} /></div>
+              <div className="field"><label>AU ID</label><input value={draft.auId} readOnly style={roStyle} /></div>
               <div className="field"><label>Email (AU only)</label>
-                <input type="email" value={draft.email} onChange={e => upd("email", e.target.value)} style={emailBad ? { borderColor: "var(--au-crimson)" } : null} placeholder="name@au.edu" />
-                {emailBad && <div style={{ fontSize: 11, color: "var(--au-crimson)", marginTop: 4 }}>Must end in @au.edu</div>}</div>
+                <input type="email" value={draft.email} readOnly style={roStyle} /></div>
               <div className="field"><label>Phone</label><ThaiPhoneInput value={draft.phone} onChange={value => upd("phone", value)} /></div>
               <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} /></div>
-              <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} />
+              <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} readOnly />
               <div className="field"><label>School / Faculty</label>
-                <select value={facultyValid ? draft.school : ""} onChange={e => { setDraft(d => ({ ...d, school: e.target.value, department: "" })); }}>
+                <select value={facultyValid ? draft.school : ""} disabled style={roStyle}>
                   <option value="">Select your faculty…</option>{RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}</select></div>
               <div className="field"><label>Major</label>
-                <select value={deptValid ? draft.department : ""} onChange={e => upd("department", e.target.value)} disabled={!facultyValid}>
+                <select value={deptValid ? draft.department : ""} disabled style={roStyle}>
                   <option value="">{draft.school ? "Select major…" : "Select a faculty first"}</option>
                   {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d}>{d}</option>)}</select></div>
             </div>

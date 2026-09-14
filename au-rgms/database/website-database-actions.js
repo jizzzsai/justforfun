@@ -203,12 +203,44 @@
     async createApplication(payload, submit, appId) {
       var me = await uid();
       if (!me) throw new Error("You must be signed in.");
+      var grantType = payload.grant_type || "au_r1";
+      var profileResult = await sb.from("profiles")
+        .select("full_name,email,name_title,au_id,phone,office_room,joined_date,faculty,department")
+        .eq("id", me).single();
+      if (profileResult.error || !profileResult.data) throw (profileResult.error || new Error("Your account profile could not be loaded."));
+      var accountProfile = profileResult.data;
+      var detailsKey = grantType === "au_r3" ? "conference_info" : "pub_info";
+      var details = Object.assign({}, payload[detailsKey] || {});
+      var suppliedSnapshot = details.researcherSnapshot || {};
+      var lockedSnapshot = {
+        nameTitle: suppliedSnapshot.nameTitle !== undefined ? suppliedSnapshot.nameTitle : (accountProfile.name_title || ""),
+        fullName: accountProfile.full_name || "",
+        auId: accountProfile.au_id || "",
+        email: String(accountProfile.email || "").toLowerCase(),
+        phone: suppliedSnapshot.phone !== undefined ? suppliedSnapshot.phone : (accountProfile.phone || ""),
+        officeRoom: suppliedSnapshot.officeRoom !== undefined ? suppliedSnapshot.officeRoom : (accountProfile.office_room || ""),
+        joinedDate: accountProfile.joined_date || null,
+        faculty: accountProfile.faculty || "",
+        department: accountProfile.department || "",
+      };
+      details.researcherSnapshot = lockedSnapshot;
+      details.researcherName = lockedSnapshot.fullName;
+      details.researcherEmail = lockedSnapshot.email;
+      details.researcherTitle = lockedSnapshot.nameTitle;
+      details.researcherAuId = lockedSnapshot.auId;
+      details.researcherPhone = lockedSnapshot.phone;
+      details.researcherOffice = lockedSnapshot.officeRoom;
+      details.researcherJoinedDate = lockedSnapshot.joinedDate;
+      payload = Object.assign({}, payload, {
+        faculty: lockedSnapshot.faculty,
+        department: lockedSnapshot.department,
+        [detailsKey]: details,
+      });
       if (submit) {
-        var grantType = payload.grant_type || "au_r1";
         var joinedDate = grantType === "au_r3"
           ? payload.conference_info && payload.conference_info.researcherJoinedDate
           : payload.pub_info && payload.pub_info.researcherJoinedDate;
-        if (!joinedDate) throw new Error("Select the date you joined Assumption University.");
+        if (!joinedDate) throw new Error("Your account has no Date Joined AU. Ask the administrator to add it in User Management.");
         var joined = new Date(joinedDate + "T00:00:00");
         if (isNaN(joined.getTime())) throw new Error("Enter a valid university joined date.");
         var eligibleOn = new Date(joined.getFullYear() + 1, joined.getMonth(), joined.getDate());

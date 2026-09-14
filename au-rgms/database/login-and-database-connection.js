@@ -84,5 +84,22 @@
       if (r.error) throw r.error;
       return r.data;
     },
+    async requestPasswordReset(email) {
+      var normalized = String(email || "").trim().toLowerCase();
+      if (normalized !== "u6430040@au.edu") throw new Error("Contact the system administrator to reset this account.");
+      var redirectTo = window.location.origin + window.location.pathname + "?reset-password=1";
+      var r = await sb.auth.resetPasswordForEmail(normalized, { redirectTo: redirectTo });
+      if (r.error) throw r.error;
+      return true;
+    },
+    async updatePassword(password) {
+      var profile = await window.AUTH.profile();
+      if (!profile || String(profile.email || "").toLowerCase() !== "u6430040@au.edu") {
+        throw new Error("Self-service password reset is not enabled for this account.");
+      }
+      var r = await sb.auth.updateUser({ password: password });
+      if (r.error) throw r.error;
+      return true;
+    },
   };
 })();
