@@ -38,6 +38,30 @@ function FormsLibrary() {
       who: "Researcher — approval unlocks the final 30% payment (2 hard copies + 1 soft copy)",
       icon: "FileCheck",
     },
+    {
+      code: "AU-R3",
+      name: "Application Form for Paper Presentation Grant",
+      stage: "Application",
+      badge: "badge-academic",
+      who: "Researcher - complete before submitting an AU-R3 application",
+      icon: "FileText",
+      downloads: [
+        { file: "AU-R3-Paper-Presentation-Grant-Application-Form.pdf", label: "PDF", icon: "Download" },
+        { file: "AU-R3-Paper-Presentation-Grant-Application-Form.docx", label: "Word", icon: "FileText" },
+      ],
+    },
+    {
+      code: "AU-R4",
+      name: "Application Form for Reimbursement of Publication Fee and Publication Remuneration",
+      stage: "Application",
+      badge: "badge-final",
+      who: "Researcher - use one form for each publication",
+      icon: "Award",
+      downloads: [
+        { file: "AU-R4-Publication-Fee-and-Remuneration-Application-Form.pdf", label: "PDF", icon: "Download" },
+        { file: "AU-R4-Publication-Fee-and-Remuneration-Application-Form.docx", label: "Word", icon: "FileText" },
+      ],
+    },
   ];
 
   return (
@@ -71,9 +95,13 @@ function FormsLibrary() {
                 <td><span className={`badge ${f.badge}`}><span className="dot"></span>{f.stage}</span></td>
                 <td style={{ fontSize: 12, color: "var(--ink-3)" }}>{f.who}</td>
                 <td style={{ textAlign: "right" }}>
-                  <a className="btn btn-secondary btn-sm" href={`forms/${f.file}`} download target="_blank" rel="noopener noreferrer">
-                    <Icon name="Download" size={13} /> PDF
-                  </a>
+                  <div style={{ display: "inline-flex", gap: 6, flexWrap: "wrap", justifyContent: "flex-end" }}>
+                    {(f.downloads || [{ file: f.file, label: "PDF", icon: "Download" }]).map((download) => (
+                      <a key={download.file} className="btn btn-secondary btn-sm" href={`forms/${download.file}`} download target="_blank" rel="noopener noreferrer">
+                        <Icon name={download.icon} size={13} /> {download.label}
+                      </a>
+                    ))}
+                  </div>
                 </td>
               </tr>
             ))}
