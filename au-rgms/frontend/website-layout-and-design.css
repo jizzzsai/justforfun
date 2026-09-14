@@ -82,7 +82,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   display: flex;
   flex-direction: column;
   color: var(--ink-1);
-  background: #FBF7EE;
+  background: var(--au-crimson);
 }
 .chooser-header {
   display: flex;
@@ -109,9 +109,9 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   display: flex; flex-direction: column; justify-content: center; align-items: center;
   padding: 48px 80px 76px;
 }
-.chooser-intro { text-align: center; margin-bottom: 42px; }
+.chooser-intro { text-align: center; margin-bottom: 42px; color: #fff; }
 .chooser-intro h1 { margin: 0 0 12px; font-family: var(--font-serif); font-size: clamp(34px, 4vw, 48px); font-weight: 500; line-height: 1.1; letter-spacing: -.025em; }
-.chooser-intro p { margin: 0; font-size: 13px; color: var(--ink-2); letter-spacing: .08em; }
+.chooser-intro p { margin: 0; font-size: 13px; color: #fff4e5; letter-spacing: .08em; }
 .grant-choice-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
