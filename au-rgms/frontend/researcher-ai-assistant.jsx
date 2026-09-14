@@ -8,7 +8,7 @@ const ROLE_INTRO = {
   _default: "Hi, I'm AU AI — Assumption University's research-grant assistant. Ask me about the workflow, AU-R1 documents, payment stages (30/40/30), or publication rewards.",
 };
 const ROLE_SUGGEST = {
-  researcher: ["What should I do next?", "Which documents do I still need?", "Explain my payment status"],
+  researcher: ["What needs my action now?", "Give me a resubmission checklist", "Which documents am I missing?"],
   admin: ["Give me a management summary", "Which faculty has the most applications?", "What needs attention now?"],
   _default: ["What are the 14 workflow stages?", "What documents do I need to apply?", "Reward for a Scopus Q1 paper?"],
 };
@@ -67,6 +67,31 @@ async function buildAIContext(grantSystem, mode) {
     }
   } catch (e) {}
   return ctx;
+}
+
+function AIInlineText({ text }) {
+  const parts = String(text || "").split(/(\*\*[^*]+\*\*|__[^_]+__)/g);
+  return parts.map((part, index) => {
+    const bold = (part.startsWith("**") && part.endsWith("**")) || (part.startsWith("__") && part.endsWith("__"));
+    return bold ? <strong key={index}>{part.slice(2, -2)}</strong> : <React.Fragment key={index}>{part}</React.Fragment>;
+  });
+}
+
+function AIMessageContent({ content }) {
+  const lines = String(content || "").replace(/\r/g, "").split("\n");
+  return (
+    <div className="ai-rich-text">
+      {lines.map((line, index) => {
+        const value = line.trim();
+        if (!value) return <div className="ai-rich-gap" key={index} aria-hidden="true" />;
+        const heading = value.match(/^#{1,3}\s+(.+)$/);
+        const bullet = value.match(/^(?:[-*•]|\d+[.)])\s+(.+)$/);
+        if (heading) return <div className="ai-rich-heading" key={index}><AIInlineText text={heading[1]} /></div>;
+        if (bullet) return <div className="ai-rich-bullet" key={index}><span aria-hidden="true">•</span><div><AIInlineText text={bullet[1]} /></div></div>;
+        return <div className="ai-rich-line" key={index}><AIInlineText text={value} /></div>;
+      })}
+    </div>
+  );
 }
 
 function AIChat() {
@@ -173,7 +198,7 @@ function AIChat() {
           <div className="ai-body" ref={bodyRef}>
             {msgs.map((m, i) => (
               <div key={i} className={`ai-msg ${m.role}`}>
-                {m.content}
+                {m.role === "assistant" ? <AIMessageContent content={m.content} /> : m.content}
               </div>
             ))}
             {busy && <div className="ai-msg assistant ai-typing">Thinking…</div>}
