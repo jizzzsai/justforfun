@@ -286,7 +286,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
   useEffect(() => { if (open) { setReason(""); setStep(1); } }, [open]);
   if (!open) return null;
   const icons = { primary: "Info", success: "CheckCircle", danger: "AlertCircle" };
-  const iconCls = { primary: "", success: "green", danger: "red" }[kind];
+  const iconCls = { primary: "", success: "gold", danger: "red" }[kind];
   const btnCls = { primary: "btn-primary", success: "btn-success", danger: "btn-primary" }[kind];
   const blocked = withReason && reasonRequired && !reason.trim();
   const twoStep = finalConfirm === undefined ? withReason : finalConfirm;
