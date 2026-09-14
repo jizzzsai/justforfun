@@ -431,7 +431,7 @@
       var me = await uid();
       var isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appId || "");
       var q = sb.from("applications")
-        .select("*, researcher:profiles(full_name,email,name_title,title,au_id,phone,office_room), collaborators:application_collaborators(id,user_id,email,full_name,author_role,status,invited_at,responded_at), documents:application_documents(*), reviews(*, reviewer:profiles(full_name,email,title,faculty,department)), events:application_events(*, actor:profiles(full_name)), payments(*), reports(*)")
+        .select("*, researcher:profiles(full_name,email,name_title,title,au_id,phone,office_room,joined_date,faculty,department), collaborators:application_collaborators(id,user_id,email,full_name,author_role,status,invited_at,responded_at), documents:application_documents(*), reviews(*, reviewer:profiles(full_name,email,title,faculty,department)), events:application_events(*, actor:profiles(full_name)), payments(*), reports(*)")
         .eq(isUuid ? "id" : "code", appId);
       var faculty = await currentFacultyScope();
       if (faculty) q = q.eq("faculty", faculty);
@@ -544,10 +544,13 @@
         : await sb.from("reviews").insert(row).select().single();
       if (res.error) throw res.error;
       try {
+        var reviewToStatus = recommendation === "unfavorable"
+          ? "rejected"
+          : recommendation === "revise" ? "returned" : "iras_review";
         await sb.from("application_events").insert({
           application_id: appId, actor_id: me, actor_role: role || "committee",
           action: "Faculty Committee review submitted",
-          from_status: "committee_review", to_status: "iras_review",
+          from_status: "committee_review", to_status: reviewToStatus,
           note: "Score " + score + " / 100; recommendation: " + recommendation + "." + (committeeComment ? " Comment: " + committeeComment : ""),
         });
       } catch (e) {}

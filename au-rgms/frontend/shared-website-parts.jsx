@@ -364,17 +364,38 @@ function ReviewCommentHistory({ app, roles = ["dean", "committee"] }) {
   });
 
   if (wantsCommittee) {
-    (app.reviews || []).forEach(r => {
-      if (r.kind !== "committee" || !r.comments || !r.comments.trim()) return;
+    const committeeEvents = (app.events || []).filter(e =>
+      e.actor_role === "committee"
+      && e.action !== "Faculty Committee review submitted"
+      && e.note
+      && e.note.trim()
+    );
+    committeeEvents.forEach(e => {
       items.push({
-        key: "committee-" + r.id,
+        key: "committee-event-" + e.id,
         role: "Committee comment",
-        author: r.reviewer && r.reviewer.full_name ? r.reviewer.full_name : "Faculty Committee",
-        body: r.comments.trim(),
-        at: r.submitted_at,
+        author: e.actor && e.actor.full_name ? e.actor.full_name : "Faculty Committee",
+        body: e.note.trim(),
+        at: e.created_at,
         initials: "CT",
       });
     });
+
+    // Older records may have a review row without a matching transition event.
+    // Use those comments only as a fallback, preserving history without duplicates.
+    if (committeeEvents.length === 0) {
+      (app.reviews || []).forEach(r => {
+        if (r.kind !== "committee" || !r.comments || !r.comments.trim()) return;
+        items.push({
+          key: "committee-review-" + r.id,
+          role: "Committee comment",
+          author: r.reviewer && r.reviewer.full_name ? r.reviewer.full_name : "Faculty Committee",
+          body: r.comments.trim(),
+          at: r.submitted_at,
+          initials: "CT",
+        });
+      });
+    }
   }
 
   items.sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
