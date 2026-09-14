@@ -72,7 +72,10 @@ function LoginPage({ onLogin }) {
       if (!prof) throw new Error("No profile found for this account.");
       onLogin(prof, { isDemo, persistDemo: isDemo && remember });
     } catch (ex) {
-      setErr((ex && ex.message) || "Sign-in failed. Please try again.");
+      const message = String((ex && ex.message) || "");
+      setErr(/invalid login credentials/i.test(message)
+        ? "We couldn't sign you in with those details. Check your password or choose Forgot password to create a new one."
+        : (message || "Sign-in failed. Please try again."));
     } finally {
       loginPending.current = false;
       setBusy(false);
