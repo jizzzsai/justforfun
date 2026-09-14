@@ -87,7 +87,10 @@
     async requestPasswordReset(email) {
       var normalized = String(email || "").trim().toLowerCase();
       if (normalized !== "u6430040@au.edu") throw new Error("Contact the system administrator to reset this account.");
-      var redirectTo = window.location.origin + window.location.pathname + "?reset-password=1";
+      // Password recovery must always return to the production portal. Using the
+      // current origin can accidentally generate localhost links when a reset is
+      // requested from a development or preview build.
+      var redirectTo = "https://au-rgms-blush.vercel.app/?reset-password=1";
       var r = await sb.auth.resetPasswordForEmail(normalized, { redirectTo: redirectTo });
       if (r.error) throw r.error;
       return true;
