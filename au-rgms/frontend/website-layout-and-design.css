@@ -550,18 +550,16 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .nav-item.active .badge-num { background: var(--au-crimson); color: #fff; }
 .nav-item.ai-assistant-item {
   color: var(--ink-1);
-  font-weight: 600;
+  font-weight: 500;
   background: transparent;
   border: 1px solid transparent;
   box-shadow: none;
 }
 .nav-item.ai-assistant-item svg {
   color: var(--au-gold-deep);
-  background: var(--au-gold-soft);
-  border-radius: 6px;
-  padding: 4px;
-  width: 24px;
-  height: 24px;
+  width: 16px;
+  height: 16px;
+  padding: 0;
 }
 .nav-item.ai-assistant-item::after {
   content: "AI";
