@@ -129,6 +129,9 @@ function LoginPage({ onLogin }) {
     return (
       <div className="au-login">
         <main className="au-login-shell" aria-labelledby="au-reset-title">
+          <svg className="au-login-surface" viewBox="0 0 1200 760" preserveAspectRatio="none" aria-hidden="true">
+            <path d="M0 0H540C545 105 651 157 672 272C705 431 553 493 550 616C548 678 580 730 612 760H0Z" />
+          </svg>
           <section className="au-login-story" aria-label="Assumption University Research Affairs">
             <header className="au-login-identity">
               <div className="au-login-seal"><img src="assets/au-logo.png" alt="Assumption University crest" width="58" height="58" /></div>
