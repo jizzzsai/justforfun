@@ -1457,6 +1457,11 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const facultyValid = RA.FACULTIES.some(f => f.name === draft.school);
   const deptOptions = (RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments;
   const deptValid = facultyValid && deptOptions.indexOf(draft.department) >= 0;
+  const isAuthorContributionDocument = (doc) => (((doc && (doc.doc_type || doc.docType)) || "") + " " + ((doc && (doc.name || (doc.file && doc.file.name))) || "")).toLowerCase().includes("author contribution");
+  const contributionExistingDocs = existingDocs.filter(isAuthorContributionDocument);
+  const contributionFiles = files.filter(isAuthorContributionDocument);
+  const otherExistingDocs = existingDocs.filter(doc => !isAuthorContributionDocument(doc));
+  const otherFiles = files.filter(file => !isAuthorContributionDocument(file));
   const hasDocument = (keyword) => existingDocs.concat(files.map(it => ({ name: it.file.name, doc_type: it.docType })))
     .some(d => (((d && d.doc_type) || "") + " " + ((d && d.name) || "")).toLowerCase().includes(keyword));
 
@@ -1753,8 +1758,32 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
               <label>Author Contribution File *</label>
               <label className="upload-box" style={{ cursor: "pointer", display: "block" }}>
                 <input type="file" accept="application/pdf,.pdf" style={{ display: "none" }} onChange={e => onTypedFiles(e, "Author Contribution Statement")} />
-                <Icon name="Upload" size={24} className="icon" /><div className="t">Attach author contribution statement</div><div className="s">PDF · max 10 MB</div>
+                <Icon name={contributionExistingDocs.length || contributionFiles.length ? "FileCheck" : "Upload"} size={24} className="icon" /><div className="t">{contributionExistingDocs.length || contributionFiles.length ? "Attach updated author contribution statement" : "Attach author contribution statement"}</div><div className="s">PDF · max 10 MB</div>
               </label>
+              {(contributionExistingDocs.length > 0 || contributionFiles.length > 0) && (
+                <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginTop: 10, overflow: "hidden" }}>
+                  <div style={{ padding: "9px 13px", background: "var(--paper-warm)", borderBottom: "1px solid var(--line-2)", fontSize: 11, fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase", color: "var(--ink-3)" }}>Author Contribution Statement</div>
+                  {contributionExistingDocs.map(d => (
+                    <div className="file-row" key={d.id || d.name}>
+                      <div className="ficon"><Icon name="FileText" size={18} /></div>
+                      <div className="fmeta"><div className="fn">{d.name}</div><div className="fs">{d.size || "PDF"} · Uploaded {d.uploadedAt || "-"}</div></div>
+                      <div className="factions">
+                        <button className="btn btn-secondary btn-sm" onClick={() => onView(d)}><Icon name="Eye" size={13} /> View</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => onDownload(d)}><Icon name="Download" size={13} /> Download</button>
+                        <button className="btn btn-danger btn-sm" onClick={() => deleteExistingDoc(d)}><Icon name="Trash2" size={13} /> Delete</button>
+                      </div>
+                    </div>
+                  ))}
+                  {contributionFiles.map(it => {
+                    const fileIndex = files.indexOf(it);
+                    return <div className="file-row" key={fileIndex}>
+                      <div className="ficon"><Icon name="FileText" size={18} /></div>
+                      <div className="fmeta"><div className="fn">{it.file.name}</div><div className="fs">{(it.file.size / 1024).toFixed(0)} KB · ready to upload</div></div>
+                      <div className="factions"><button className="btn btn-secondary btn-sm" onClick={() => setFiles(fs => fs.filter((_, index) => index !== fileIndex))}><Icon name="X" size={13} /> Remove</button></div>
+                    </div>;
+                  })}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -1836,9 +1865,9 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
                 <li><b>Memo for Dean Approval</b></li>
               </ul>
             </div>
-            {existingDocs.length > 0 && (
+            {otherExistingDocs.length > 0 && (
               <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
-                {existingDocs.map(d => (
+                {otherExistingDocs.map(d => (
                   <div className="file-row" key={d.id || d.name}>
                     <div className="ficon"><Icon name="FileText" size={18} /></div>
                     <div className="fmeta"><div className="fn">{d.name}{d.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{d.doc_type}</span>}</div><div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div></div>
@@ -1851,15 +1880,16 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
                 ))}
               </div>
             )}
-            {files.length > 0 && (
+            {otherFiles.length > 0 && (
               <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
-                {files.map((it, i) => (
-                  <div className="file-row" key={i}>
+                {otherFiles.map(it => {
+                  const fileIndex = files.indexOf(it);
+                  return <div className="file-row" key={fileIndex}>
                     <div className="ficon"><Icon name="FileText" size={18} /></div>
                     <div className="fmeta"><div className="fn">{it.file.name}{it.docType && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{it.docType}</span>}</div><div className="fs">{(it.file.size / 1024).toFixed(0)} KB · ready to upload</div></div>
-                    <div className="factions"><button className="btn btn-secondary btn-sm" onClick={() => setFiles(fs => fs.filter((_, j) => j !== i))}><Icon name="X" size={13} /> Remove</button></div>
+                    <div className="factions"><button className="btn btn-secondary btn-sm" onClick={() => setFiles(fs => fs.filter((_, index) => index !== fileIndex))}><Icon name="X" size={13} /> Remove</button></div>
                   </div>
-                ))}
+                })}
               </div>
             )}
             <div className="field" style={{ maxWidth: 360, marginBottom: 10 }}>
