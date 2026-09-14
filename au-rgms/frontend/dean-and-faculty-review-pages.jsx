@@ -262,6 +262,8 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
                   </div>
                 </div>
 
+                <ResearcherInformationCard app={app} className="mb-4" />
+
                 <div className="card card-pad-0 mb-4">
                   <div className="card-head"><h3>{isR3 ? "Grant Amount" : "Budget Review"}</h3></div>
                   <div className="card-body" style={{ padding: 0 }}>
@@ -848,6 +850,7 @@ function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, s
                     <ReviewCommentHistory app={app} roles={["dean"]} />
                   </div>
                 </div>
+                {!isR4 && <ResearcherInformationCard app={app} className="mb-4" />}
                 <div className="card card-pad-0">
                   <div className="card-head"><h3>Documents</h3></div>
                   <div>{(app.documents || []).map(d => <FileRow key={d.id || d.name} doc={d} onDownload={onDownload} onView={onView} />)}</div>
@@ -902,6 +905,7 @@ function FacultyDean({ onDownload, onView, toast, setConfirm }) {
                     <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.requested_amount || 0))}</span></div>
                   </div>
                 </div>
+                <ResearcherInformationCard app={app} className="mb-4" />
                 <div className="card card-pad-0">
                   <div className="card-head"><h3>Committee Reviews</h3></div>
                   <div className="card-body">

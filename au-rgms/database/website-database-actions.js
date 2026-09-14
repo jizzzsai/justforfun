@@ -140,7 +140,7 @@
       office_room: snapshot.officeRoom || info.researcherOffice || account.office_room || "",
       faculty: snapshot.faculty || a.faculty || account.faculty || "",
       department: snapshot.department || a.department || account.department || "",
-      joined_date: snapshot.joinedDate || info.researcherJoinedDate || "",
+      joined_date: snapshot.joinedDate || info.researcherJoinedDate || account.joined_date || "",
     });
   }
   function mapRow(a) {

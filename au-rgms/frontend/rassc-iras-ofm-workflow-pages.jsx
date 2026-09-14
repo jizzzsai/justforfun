@@ -239,6 +239,7 @@ function RASSCExpert({ applicationId, navigate, onDownload, onView, toast, setCo
     const expertReviews = (a.reviews || []).filter(r => r.kind === "expert");
     return {
       _uuid: a.id,
+      sourceApplication: a,
       id: a.code,
       title: a.title,
       status: a.statusBadge || window.DB.statusBadge(a.status),
@@ -379,6 +380,8 @@ function RASSCExpert({ applicationId, navigate, onDownload, onView, toast, setCo
             </div>
           </div>
 
+          <ResearcherInformationCard app={app.sourceApplication} className="mb-4" />
+
           <div className="card card-pad-0">
             <div className="card-head"><h3>Reviewer Documents</h3></div>
             <div>
@@ -504,6 +507,7 @@ function RASSCPresident({ onDownload, toast, setConfirm }) {
               <div className="meta-row"><span className="l">Average score</span><span className="r">{expertReviews.length ? avg + " / 100" : "-"}</span></div>
             </div>
           </div>
+          <ResearcherInformationCard app={app} className="mb-4" />
           <div className="card card-pad-0">
             <div className="card-head"><h3>Expert Reviews</h3></div>
             <div className="card-body">
@@ -596,6 +600,7 @@ function RASSCContract({ onDownload, toast, setConfirm }) {
           </div>
         </div>
       </div>
+      <ResearcherInformationCard app={app} className="mt-4" />
     </>
   );
 }

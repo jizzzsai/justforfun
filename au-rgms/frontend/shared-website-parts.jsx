@@ -644,7 +644,7 @@ function submittedResearcherInfo(app) {
     auId: snapshot.auId || info.researcherAuId || account.au_id || "",
     phone: normalizeThaiPhone(snapshot.phone || info.researcherPhone || account.phone),
     officeRoom: snapshot.officeRoom || info.researcherOffice || account.office_room || "",
-    joinedDate: snapshot.joinedDate || info.researcherJoinedDate || "",
+    joinedDate: snapshot.joinedDate || info.researcherJoinedDate || account.joined_date || "",
     faculty: snapshot.faculty || app.faculty || account.faculty || "",
     department: snapshot.department || app.department || account.department || "",
   };
@@ -709,10 +709,33 @@ function ResearcherServiceEligibilityRows({ app }) {
   );
 }
 
+function ResearcherInformationCard({ app, className = "" }) {
+  const researcher = submittedResearcherInfo(app);
+  const fullName = ((researcher.nameTitle ? researcher.nameTitle + " " : "") + (researcher.fullName || "")).trim() || "—";
+  const row = (label, value) => (
+    <div className="meta-row"><span className="l">{label}</span><span className="r">{value || "—"}</span></div>
+  );
+  return (
+    <div className={("card card-pad-0 " + className).trim()}>
+      <div className="card-head"><h3>Researcher Information</h3></div>
+      <div className="card-body">
+        {row("Full name", fullName)}
+        {row("AU ID", researcher.auId)}
+        {row("Email (AU only)", researcher.email)}
+        {row("Phone", researcher.phone)}
+        {row("Office / Room", researcher.officeRoom)}
+        {row("School / Faculty", researcher.faculty)}
+        {row("Major / Department", researcher.department)}
+        <ResearcherServiceEligibilityRows app={app} />
+      </div>
+    </div>
+  );
+}
+
 
 Object.assign(window, {
   Icon, AULogo, Badge, Avatar, Toast, FileRow,
   Timeline, HTimeline, Stat, Modal, FilePreviewModal,
   ConfirmModal, ReviewCommentHistory, NotifPanel, PageHeader, Empty, fmtBaht,
-  AUDatePicker, normalizeThaiPhone, isValidThaiPhone, ThaiPhoneInput, researcherJoinedDate, universityServiceEligibility, ResearcherServiceEligibilityRows,
+  AUDatePicker, normalizeThaiPhone, isValidThaiPhone, ThaiPhoneInput, researcherJoinedDate, universityServiceEligibility, ResearcherServiceEligibilityRows, ResearcherInformationCard,
 });

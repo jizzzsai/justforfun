@@ -840,6 +840,7 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
               <ReviewCommentHistory app={app} roles={["dean", "committee"]} />
             </div>
           </div>
+          <ResearcherInformationCard app={app} className="mt-4" />
         </div>
         <div>
           <div className="card card-pad-0">
@@ -1382,6 +1383,8 @@ function PresidentReviewDetail({ app, onBack, onDownload, onView, toast, setConf
             </div>
           </div>
 
+          <ResearcherInformationCard app={app} className="mb-4" />
+
           <div className="card card-pad-0 mb-4">
             <div className="card-head"><h3>Application File</h3></div>
             <div>
@@ -1707,6 +1710,7 @@ function OFMDetail({ onDownload, toast, setConfirm }) {
           <div className="meta-row"><span className="l">Phase 3 · 30%</span><span className="r">After Phase 2 is paid and the final report is accepted</span></div>
         </div>
       </div>
+      <ResearcherInformationCard app={app} className="mt-4" />
     </>
   );
 }
