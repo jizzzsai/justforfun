@@ -788,15 +788,32 @@
       var apps = res.data || [];
       for (var i = 0; i < apps.length; i++) {
         var a = apps[i];
-        if (!a.payments || a.payments.length === 0) {
-          var amount = Number(a.approved_amount || a.requested_amount || 0);
-          var p1 = Math.round(amount * 0.30), p3 = Math.round(amount * 0.30), p2 = amount - p1 - p3;
-          var ins = await sb.from("payments").insert([
-            { application_id: a.id, instalment: 1, pct: 30, amount: p1, trigger: "After contract signing", status: "pending" },
-            { application_id: a.id, instalment: 2, pct: 40, amount: p2, trigger: "After progress report", status: "pending" },
-            { application_id: a.id, instalment: 3, pct: 30, amount: p3, trigger: "After final report", status: "pending" },
-          ]).select();
-          a.payments = ins.data || [];
+        var amount = Number(a.approved_amount || a.requested_amount || 0);
+        var p1 = Math.round(amount * 0.30), p3 = Math.round(amount * 0.30), p2 = amount - p1 - p3;
+        var expectedPayments = [
+          { application_id: a.id, instalment: 1, pct: 30, amount: p1, trigger: "After grant approval", status: "pending" },
+          { application_id: a.id, instalment: 2, pct: 40, amount: p2, trigger: "After accepted progress report", status: "pending" },
+          { application_id: a.id, instalment: 3, pct: 30, amount: p3, trigger: "After accepted final report", status: "pending" },
+        ];
+        var existingInstalments = {};
+        (a.payments || []).forEach(function (payment) {
+          existingInstalments[Number(payment.instalment)] = true;
+        });
+        var missingPayments = expectedPayments.filter(function (payment) {
+          return !existingInstalments[payment.instalment];
+        });
+        if (missingPayments.length) {
+          // Several Finance widgets can request this list at the same time. The
+          // database unique key plus an idempotent upsert prevents those reads
+          // from creating duplicate phase rows for one AU-R1 application.
+          var ins = await sb.from("payments").upsert(missingPayments, {
+            onConflict: "application_id,instalment",
+            ignoreDuplicates: true,
+          }).select();
+          if (ins.error) throw ins.error;
+          var refreshed = await sb.from("payments").select("*").eq("application_id", a.id);
+          if (refreshed.error) throw refreshed.error;
+          a.payments = refreshed.data || [];
         }
         var uniquePayments = {};
         (a.payments || []).forEach(function (payment) {
@@ -839,7 +856,7 @@
       if (currentPayment.error) throw currentPayment.error;
       if (!currentPayment.data || currentPayment.data.application_id !== appId) throw new Error("Payment phase does not match this application.");
       if (currentPayment.data.status === "paid") return currentPayment.data;
-      if (currentPayment.data.status !== "pending") throw new Error("This payment phase cannot be paid.");
+      if (["pending", "scheduled"].indexOf(currentPayment.data.status) < 0) throw new Error("This payment phase cannot be paid.");
       var gate = await sb.from("applications").select("status,payments(instalment,status),reports(kind,status)").eq("id", appId).single();
       if (gate.error) throw gate.error;
       if (!this.payable(gate.data, instalment)) throw new Error(this.payBlockedReason(gate.data, instalment) || "This phase is not ready for payment.");
@@ -1185,8 +1202,6 @@
         if (role === "researcher") {
           var apps = await this.myApplications();
           apps.slice(0, 4).forEach(function (a) { push("app-" + a.id, "Folder", a.code, badge(a.status).label, "r-applications", a.status !== "completed"); });
-          var pgs = await this.myPublicationGrants();
-          pgs.slice(0, 3).forEach(function (g) { push("pg-" + g._uuid, "FileText", g.id, g.status.label, "r-publications", g.statusKey !== "paid"); });
         } else if (role === "dean") {
           var s = await this.queue("submitted"); if (s.length) push("dean-screen", "ClipboardCheck", "Dean queue", s.length + " proposal(s) awaiting first screening.", "d-screen", true);
           var ds = await this.queue("dean_sign"); if (ds.length) push("dean-sign", "FileSignature", "Dean sign", ds.length + " proposal(s) awaiting sign and forward.", "d-sign", true);
@@ -1211,7 +1226,6 @@
         } else if (role === "iras") {
           var iq = await this.queue("iras_review"); if (iq.length) push("iras-screen", "Inbox", "RASSC", iq.length + " research proposal(s) awaiting screening.", "i-received", true);
           var reports = await this.reportQueue(); if (reports.length) push("reports", "FileCheck", "Reports", reports.length + " report(s) awaiting RASSC acceptance.", "i-reports", true);
-          var pgq = await this.publicationGrantQueue(["submitted"]); if (pgq.length) push("pub-review", "FileText", "Publication grants", pgq.length + " publication grant(s) awaiting RASSC review.", "i-publications", true);
         } else if (role === "expert") {
           var ex = await this.myExpertAssignments(); if (ex.length) push("expert", "FileSearch", "Expert review", ex.length + " proposal(s) assigned to you.", "e-assignments", true);
         } else if (role === "president") {
@@ -1227,7 +1241,6 @@
             }
           }
           if (readyPhases.length) push("ofm", "Coins", "Finance Office", readyPhases.length + " AU-R1 phase(s) ready for Finance approval after RASSC release.", "o-payments", true);
-          var pgp = await this.publicationGrantQueue(["payment_pending"]); if (pgp.length) push("pub-pay", "Coins", "Publication approvals", pgp.length + " publication reward(s) awaiting Finance approval.", "o-publications", true);
         } else if (role === "admin") {
           var ev = await this.auditEvents(); ev.slice(0, 5).forEach(function (e) { push("audit-" + e.id, "Clock", e.application ? e.application.code : "System", e.action, "a-audit", false); });
         }
@@ -1301,7 +1314,7 @@
       if (res.error) throw res.error;
       return res.data || [];
     },
-    async financePaymentHistory() {
+    async financePaymentHistory(grantType) {
       var results = await Promise.all([
         sb.from("payments")
           .select("*, application:applications(id,code,title,grant_type,status,researcher:profiles(full_name))")
@@ -1347,6 +1360,7 @@
           status: app.status === "completed" ? "completed" : "paid",
         });
       });
+      if (grantType) rows = rows.filter(function (row) { return row.grant_type === grantType; });
       return rows.sort(function (a, b) { return String(b.paid_at || "").localeCompare(String(a.paid_at || "")); });
     },
     async adminAnalyticsSnapshot() {

@@ -654,9 +654,11 @@ function RASSCDashboardV2({ navigate, setSelectedApplicationId }) {
   const isR4 = sys === "au_r4", isR3 = sys === "au_r3";
   const [c, setC] = useState(null);
   const [rows, setRows] = useState(null);
+  const [pendingReportCount, setPendingReportCount] = useState(null);
   useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
   useEffect(() => {
     window.DB.byStatuses(["iras_review", "approved", "active"]).then(setRows).catch(() => setRows([]));
+    window.DB.reportQueue().then(reports => setPendingReportCount((reports || []).length)).catch(() => setPendingReportCount(0));
   }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
   const openWork = (row) => {
@@ -691,6 +693,10 @@ function RASSCDashboardV2({ navigate, setSelectedApplicationId }) {
         actions={
           <>
             {sysToggle}
+            <button className="btn btn-secondary" onClick={() => navigate("i-reports")}>
+              <Icon name="FileCheck" size={14} /> Report Review
+              {pendingReportCount > 0 && <span className="badge badge-pending" style={{ marginLeft: 4 }}>{pendingReportCount}</span>}
+            </button>
             <button className="btn btn-primary" onClick={() => navigate("i-received")}>
               <Icon name="Inbox" size={14} /> Received Queue
             </button>
@@ -1520,19 +1526,28 @@ function OFMGrantPayments({ sys, toast, setConfirm }) {
 
 
 
-function OFMDashboard({ navigate, toast, setConfirm }) {
-  const [sys, setSys] = useState("au_r1");
-  const isR3 = sys === "au_r3", isR4 = sys === "au_r4";
-  const [gc, setGc] = useState(null);
-  useEffect(() => { if (sys !== "au_r1") window.DB.statusCounts(sys).then(setGc).catch(() => setGc({})); }, [sys]);
-  const gn = (k) => (gc ? (gc[k] || 0) : "…");
-  const sysToggle = (
+function FinanceGrantTabs({ sys, onChange }) {
+  return (
     <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden", marginRight: 8 }}>
       {[{ id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
-        <button key={t.id} onClick={() => setSys(t.id)} style={{ padding: "7px 15px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: sys === t.id ? "var(--au-crimson)" : "transparent", color: sys === t.id ? "#fff" : "var(--ink-2)" }}>{t.label}</button>
+        <button key={t.id} onClick={() => onChange(t.id)} style={{ padding: "7px 15px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: sys === t.id ? "var(--au-crimson)" : "transparent", color: sys === t.id ? "#fff" : "var(--ink-2)" }}>{t.label}</button>
       ))}
     </div>
   );
+}
+
+function OFMDashboard({ navigate, toast, setConfirm, grantType, onGrantSwitch }) {
+  const sys = ["au_r1", "au_r3", "au_r4"].includes(grantType) ? grantType : "au_r1";
+  const isR3 = sys === "au_r3", isR4 = sys === "au_r4";
+  const [gc, setGc] = useState(null);
+  useEffect(() => {
+    if (sys !== "au_r1") {
+      setGc(null);
+      window.DB.statusCounts(sys).then(setGc).catch(() => setGc({}));
+    }
+  }, [sys]);
+  const gn = (k) => (gc ? (gc[k] || 0) : "…");
+  const sysToggle = <FinanceGrantTabs sys={sys} onChange={next => onGrantSwitch(next, "o-dashboard")} />;
   if (isR3 || isR4) {
     return (
       <>
@@ -1554,7 +1569,7 @@ function OFMDashboard({ navigate, toast, setConfirm }) {
 function OFMDashboardR1({ navigate, sysToggle }) {
   const [c, setC] = useState(null);
   const [payments, setPayments] = useState(null);
-  useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  useEffect(() => { window.DB.statusCounts("au_r1").then(setC).catch(() => setC({})); }, []);
   useEffect(() => {
     window.DB.ofmPayments().then(apps => {
       const rows = [];
@@ -1607,7 +1622,7 @@ function OFMDashboardR1({ navigate, sysToggle }) {
               {payments === null && <tr><td colSpan="5" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
               {payments && payments.length === 0 && <tr><td colSpan="5"><Empty title="No pending disbursements" desc="Approved grants will appear here after contract setup." icon="Coins" /></td></tr>}
               {(payments || []).map(p => (
-                <tr key={p.id + p.stage} style={{cursor: "pointer"}} onClick={() => navigate("o-detail")}>
+                <tr key={p.id + p.stage} style={{cursor: "pointer"}} onClick={() => navigate("o-payments")}>
                   <td><span className="id">{p.id}</span></td>
                   <td style={{fontSize: 12}}>{p.who}</td>
                   <td style={{fontSize: 12}}>{p.stage}</td>
@@ -1716,28 +1731,45 @@ function OFMDetail({ onDownload, toast, setConfirm }) {
 }
 
 
-function OFMHistory({ onDownload }) {
-  const [rows, setRows] = useState(null);
-  const [grantFilter, setGrantFilter] = useState("all");
-  useEffect(() => {
-    window.DB.financePaymentHistory().then(setRows).catch(() => setRows([]));
-  }, []);
-  const visibleRows = (rows || []).filter(r => grantFilter === "all" || r.grant_type === grantFilter);
-  const filters = [{ id: "all", label: "All" }, { id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }];
+function OFMPaymentQueue({ grantType, onGrantSwitch, onDownload, toast, setConfirm }) {
+  const sys = ["au_r1", "au_r3", "au_r4"].includes(grantType) ? grantType : "au_r1";
+  const tabs = <FinanceGrantTabs sys={sys} onChange={next => onGrantSwitch(next, "o-payments")} />;
+  if (sys === "au_r1") {
+    return <RASSCPayment onDownload={onDownload} toast={toast} setConfirm={setConfirm} sysToggle={tabs} />;
+  }
+  const isR4 = sys === "au_r4";
   return (
     <>
-      <PageHeader title="Payment History" desc="Paid AU-R1, AU-R3, and AU-R4 transactions processed by Finance." actions={
-        <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden" }}>
-          {filters.map(item => <button key={item.id} onClick={() => setGrantFilter(item.id)} style={{ padding: "7px 14px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: grantFilter === item.id ? "var(--au-crimson)" : "transparent", color: grantFilter === item.id ? "#fff" : "var(--ink-2)" }}>{item.label}</button>)}
-        </div>
+      <PageHeader
+        title={(isR4 ? "AU-R4" : "AU-R3") + " · Payment Queue"}
+        desc={"Only " + (isR4 ? "AU-R4 publication fee and reward" : "AU-R3 paper presentation grant") + " applications approved by IRAS appear here."}
+        actions={tabs}
+      />
+      <OFMGrantPayments sys={sys} toast={toast} setConfirm={setConfirm} />
+    </>
+  );
+}
+
+function OFMHistory({ grantType, onGrantSwitch }) {
+  const sys = ["au_r1", "au_r3", "au_r4"].includes(grantType) ? grantType : "au_r1";
+  const [rows, setRows] = useState(null);
+  useEffect(() => {
+    setRows(null);
+    window.DB.financePaymentHistory(sys).then(setRows).catch(() => setRows([]));
+  }, [sys]);
+  const label = sys.replace("au_r", "AU-R").toUpperCase();
+  return (
+    <>
+      <PageHeader title={label + " · Payment History"} desc={"Only completed " + label + " Finance transactions are shown."} actions={
+        <FinanceGrantTabs sys={sys} onChange={next => onGrantSwitch(next, "o-history")} />
       } />
       <div className="card card-pad-0">
         <table className="tbl">
           <thead><tr><th>Payment Date</th><th>Grant</th><th>Application</th><th>Researcher</th><th>Payment</th><th style={{textAlign: "right"}}>Amount</th><th>Reference</th><th style={{textAlign: "right"}}>Status</th></tr></thead>
           <tbody>
             {rows === null && <tr><td colSpan="8" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading…</td></tr>}
-            {rows && visibleRows.length === 0 && <tr><td colSpan="8" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No {grantFilter === "all" ? "" : grantFilter.replace("au_r", "AU-R").toUpperCase() + " "}payments processed yet.</td></tr>}
-            {visibleRows.map(r => (
+            {rows && rows.length === 0 && <tr><td colSpan="8" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No {label} payments processed yet.</td></tr>}
+            {(rows || []).map(r => (
               <tr key={r.key}>
                 <td style={{fontSize: 12}}>{window.DB.fmtDate(r.paid_at)}</td>
                 <td><span className="badge badge-submitted"><span className="dot"></span>{String(r.grant_type || "au_r1").replace("au_r", "AU-R").toUpperCase()}</span></td>
@@ -2229,16 +2261,14 @@ function AnalyticsDashboard({ role }) {
     Promise.all([
       window.DB.statusCounts().catch(() => ({})),
       window.DB.facultyStats().catch(() => []),
-      window.DB.publicationGrantStats().catch(() => ({ total: 0, byFaculty: [], byIndex: {} })),
-    ]).then(([counts, faculties, publications]) => {
+    ]).then(([counts, faculties]) => {
       if (!alive) return;
-      setData({ counts, faculties, publications });
+      setData({ counts, faculties });
     });
     return () => { alive = false; };
   }, [role]);
   const c = data ? data.counts : {};
   const faculties = data ? data.faculties : [];
-  const pub = data ? data.publications : { total: 0, byFaculty: [], byIndex: {} };
   const statusRows = Object.keys(c || {})
     .filter(k => k.charAt(0) !== "_")
     .map(k => ({ label: window.DB.statusBadge(k).label, value: c[k] }))
@@ -2252,7 +2282,7 @@ function AnalyticsDashboard({ role }) {
     <>
       <PageHeader
         title="AI Analytics"
-        desc="Live Supabase analytics for research grants, payments, and publication rewards."
+        desc="Live Supabase analytics for AU-R1, AU-R3, and AU-R4 applications and payments."
         actions={<>
           <Badge status={{ label: "Live data", cls: "badge-academic" }} />
           <button className="btn btn-primary" onClick={() => window.dispatchEvent(new CustomEvent("au-ai-toggle"))}><Icon name="Bot" size={14} /> Ask AU AI</button>
@@ -2262,7 +2292,6 @@ function AnalyticsDashboard({ role }) {
         <Stat label="Applications" value={data ? c._total || 0 : "..."} icon="Folder" />
         <Stat label="Under Review" value={data ? c._underReview || 0 : "..."} icon="FileSearch" tone="gold" />
         <Stat label="Approved / Active" value={data ? c._approved || 0 : "..."} icon="CheckCircle" tone="green" />
-        <Stat label="Publication Grants" value={data ? pub.total || 0 : "..."} icon="Award" tone="navy" />
       </div>
 
       <div className="grid-2">
@@ -2331,7 +2360,7 @@ Object.assign(window, {
   DeanDashboard, DeanScreenQueue, DeanSignQueue, DeanHistory, DeanR3Queue, DeanR4Queue,
   CommitteeDashboard, CommitteeQueue, CommitteeHistory,
   RASSCDashboardV2, RASSCScreen, IRASr3Detail, IRASr4Detail,
-  OFMDashboard, OFMDetail, OFMHistory,
+  OFMDashboard, OFMPaymentQueue, OFMDetail, OFMHistory,
   AdminDashboard, AdminUsers, AdminAudit,
   AnalyticsDashboard, AccountSettings,
 });

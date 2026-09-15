@@ -51,10 +51,6 @@ async function buildAIContext(grantSystem, mode) {
         reports: (a.reports || []).map(report => ({ type: report.kind, status: report.status, submittedAt: report.submitted_at })),
       }));
       try {
-        const pgs = await window.DB.myPublicationGrants();
-        ctx.myPublicationGrants = (pgs || []).map(g => ({ code: g.id, title: g.title, status: g.status.label, statusKey: g.statusKey, amount: g.budgetTotal, indexing: g.indexing, quartile: g.quartile }));
-      } catch (e) {}
-      try {
         const g = await window.DB.myGrant(grantSystem || "au_r1");
         if (g) ctx.myGrant = { code: g.code, approvedAmount: g.approved_amount, requestedAmount: g.requested_amount, status: g.status, payments: (g.payments || []).map(p => ({ phase: p.instalment, percent: p.pct, amount: p.amount, status: p.status, paidAt: p.paid_at })), reports: g.reports || [] };
       } catch (e) {}

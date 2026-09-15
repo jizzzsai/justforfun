@@ -191,7 +191,6 @@ const NAV_RASSC = [
   { section: "REVIEW" },
   { key: "i-screen", label: "Office Screening", icon: "ClipboardCheck" },
   { key: "i-reports", label: "Report Review", icon: "FileCheck" },
-  { key: "i-publications", label: "Publication Grants", icon: "FileText" },
 ];
 
 const NAV_OFM = [
@@ -199,8 +198,6 @@ const NAV_OFM = [
   { key: "o-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { section: "PAYMENTS" },
   { key: "o-payments", label: "Payment Queue", icon: "Coins" },
-  { key: "o-detail", label: "Grant Detail", icon: "FileText" },
-  { key: "o-publications", label: "Publication Payments", icon: "Award" },
   { section: "TRACKING" },
   { key: "o-history", label: "Payment History", icon: "Clock" },
 ];

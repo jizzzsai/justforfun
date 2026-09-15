@@ -650,9 +650,6 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "r-progress":      return <ResearcherProgress applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
     case "r-final":         return <ResearcherFinal applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
     case "r-payments":      return <ResearcherPayments onDownload={c.onDownload} toast={c.toast} grantType={c.grantType} />;
-    case "r-publications":  return <ResearcherPublicationGrants toast={c.toast} />;
-
-
     case "d-dashboard":      return <DeanDashboard navigate={navigate} />;
     case "d-screen":         return <DeanScreenQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "d-screen-detail":  return <FacultyChecklist applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
@@ -676,14 +673,12 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "i-received":       return <RASSCReceived navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "i-screen":         return <RASSCScreen applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "i-reports":        return <RASSCReports onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "i-publications":   return <RASSCPublicationGrants toast={c.toast} />;
 
 
-    case "o-dashboard":      return <OFMDashboard navigate={navigate} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "o-payments":       return <RASSCPayment onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "o-detail":         return <OFMDetail onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "o-publications":   return <OFMPublicationPayments toast={c.toast} />;
-    case "o-history":        return <OFMHistory onDownload={c.onDownload} />;
+    case "o-dashboard":      return <OFMDashboard navigate={navigate} toast={c.toast} setConfirm={c.setConfirm} grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} />;
+    case "o-payments":       return <OFMPaymentQueue grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "o-detail":         return <OFMPaymentQueue grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "o-history":        return <OFMHistory grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} />;
 
 
     case "a-dashboard":      return <AdminDashboard navigate={navigate} />;
@@ -715,11 +710,15 @@ function readHash() {
   } catch (e) { return {}; }
 }
 
+const LEGACY_PUBLICATION_PAGES = ["r-publications", "i-publications", "o-publications"];
+
 
 function App() {
   const initial = readHash();
   const startingRole = initial.role && ROLE_CONFIG[initial.role] ? initial.role : "researcher";
-  const startingPage = initial.page || ROLE_CONFIG[startingRole].homeKey;
+  const startingPage = initial.page && !LEGACY_PUBLICATION_PAGES.includes(initial.page)
+    ? initial.page
+    : ROLE_CONFIG[startingRole].homeKey;
 
   const [loggedIn, setLoggedIn] = useState(!!initial.skipLogin);
   const [role, setRole] = useState(startingRole);
@@ -732,6 +731,10 @@ function App() {
   const switchSystem = () => { try { localStorage.removeItem("au-rgms-r-system"); } catch (e) {} setRSystem(null); };
   const navigate = (key, opts) => {
     if (key === "r-switch-system") { switchSystem(); return; }
+    if (LEGACY_PUBLICATION_PAGES.includes(key)) {
+      setPage(ROLE_CONFIG[role].homeKey);
+      return;
+    }
     if (key === "r-submit" && !(opts && opts.keepSelection)) setSelectedApplicationId(null);
     setPage(key);
   };
@@ -901,7 +904,7 @@ function App() {
         <PageRouter
           pageKey={page}
           navigate={navigate}
-          ctx={{ onDownload, onView, toast, setConfirm, profile, selectedApplicationId, setSelectedApplicationId, grantType: role === "researcher" ? rSystem : null, onGrantSwitch: chooseSystem }}
+          ctx={{ onDownload, onView, toast, setConfirm, profile, selectedApplicationId, setSelectedApplicationId, grantType: role === "researcher" || role === "ofm" ? rSystem : null, onGrantSwitch: chooseSystem }}
         />
       </main>
       {previewDoc && (

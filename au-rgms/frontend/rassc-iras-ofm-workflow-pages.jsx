@@ -606,7 +606,7 @@ function RASSCContract({ onDownload, toast, setConfirm }) {
 }
 
 
-function RASSCPayment({ onDownload, toast, setConfirm }) {
+function RASSCPayment({ onDownload, toast, setConfirm, sysToggle }) {
   const [apps, setApps] = useState(null);
   const load = () => window.DB.ofmPayments().then(setApps).catch(() => setApps([]));
   useEffect(() => { load(); }, []);
@@ -645,8 +645,9 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
   return (
     <>
       <PageHeader
-        title="Finance / OFM Payment"
-        desc="Process disbursements after each milestone: grant approval, progress report, and final report."
+        title="AU-R1 · Payment Queue"
+        desc="Only AU-R1 payment phases appear here. Process each disbursement after its approval or report gate is complete."
+        actions={sysToggle}
       />
 
       <div className="stats" style={{gridTemplateColumns: "repeat(3, 1fr)"}}>
@@ -727,8 +728,21 @@ function RASSCPayment({ onDownload, toast, setConfirm }) {
 
 function RASSCReports({ onDownload, onView, toast, setConfirm }) {
   const [reports, setReports] = useState(null);
-  const load = () => window.DB.reportQueue().then(setReports).catch(() => setReports([]));
-  useEffect(() => { load(); }, []);
+  const [loadError, setLoadError] = useState("");
+  const load = () => {
+    setLoadError("");
+    return window.DB.reportQueue()
+      .then(rows => setReports(rows || []))
+      .catch(error => {
+        setReports([]);
+        setLoadError((error && error.message) || "Could not load submitted reports.");
+      });
+  };
+  useEffect(() => {
+    load();
+    const refreshTimer = window.setInterval(load, 15000);
+    return () => window.clearInterval(refreshTimer);
+  }, []);
   const approve = (r) => setConfirm({
     kind: "success",
     title: "Accept " + r.kind + " report?",
@@ -775,7 +789,12 @@ function RASSCReports({ onDownload, onView, toast, setConfirm }) {
   );
   return (
     <>
-      <PageHeader title="Report Review" desc="Researcher reports arrive here first. After RASSC acceptance, the related AU-R1 phase is forwarded to Finance for approval." />
+      <PageHeader
+        title="Report Review"
+        desc="Researcher reports arrive here first. After RASSC acceptance, the related AU-R1 phase is forwarded to Finance for approval."
+        actions={<button className="btn btn-secondary" onClick={load}><Icon name="RefreshCw" size={13} /> Refresh Reports</button>}
+      />
+      {loadError && <div className="card" style={{ marginBottom: 16, padding: "14px 18px", color: "var(--au-crimson)" }}>Could not load RASSC reports: {loadError}</div>}
       <div className="grid-2eq">
         <div className="card card-pad-0">
           <div className="card-head"><h3>Progress Reports - Awaiting Review</h3></div>
