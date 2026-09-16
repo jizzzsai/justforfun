@@ -68,7 +68,6 @@ function buildR4Timeline(statusKey) {
 
 function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicationId, grantType }) {
   const sys = grantSystemFor(grantType || "au_r1");
-  const [c, setC] = useState(null);
   const [me, setMe] = useState(null);
   const [grant, setGrant] = useState(null);
   const [apps, setApps] = useState(null);
@@ -77,22 +76,19 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
     let active = true;
     setApps(null);
     setAppsError(false);
-    window.DB.statusCounts(grantType || undefined).then(setC).catch(() => setC({}));
     window.AUTH.profile().then(setMe).catch(() => {});
     window.DB.myGrant(grantType || "au_r1").then(g => setGrant(g || false)).catch(() => setGrant(false));
     window.DB.myApplications(grantType || undefined)
-      .then(items => { if (active) setApps((items || []).filter(app => !app.collaboration || app.collaboration.status === "accepted")); })
+      .then(items => { if (active) setApps(items || []); })
       .catch(() => { if (active) setAppsError(true); });
     return () => { active = false; };
   }, [grantType]);
   const isR3 = grantType === "au_r3";
   const isR4 = grantType === "au_r4";
   const isSingle = isR3 || isR4;
-  const n = (k) => (c ? (c[k] || 0) : "…");
   const exampleSteps = isR4 ? R4_PIPELINE : isR3 ? R3_PIPELINE : R1_DASHBOARD_PIPELINE;
   const singleGrant = isSingle && grant && grant.grant_type === grantType ? grant : null;
   const r3PayLabel = { approved: "Awaiting Finance Completion", active: "At Finance", completed: "Completed" };
-  const approvedLabel = isR4 ? "Approved Publication Claims" : isR3 ? "Approved Conference Grants" : "Approved Projects";
   const pays = grant && grant.payments && grant.payments.length ? grant.payments.slice().sort((a, b) => a.instalment - b.instalment) : [];
   const grantTotal = grant ? Number(grant.approved_amount || grant.requested_amount || 0) : 0;
   const paidTotal = pays.filter(p => p.status === "paid").reduce((s, p) => s + Number(p.amount || 0), 0);
@@ -116,13 +112,6 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
           </>
         }
       />
-
-      <div className="stats">
-        <Stat label="Total Applications"  value={n("_total")} icon="Folder" />
-        <Stat label="Draft Applications"  value={n("draft")} icon="FileText"   tone="navy" />
-        <Stat label="Under Review"        value={n("_underReview")} icon="FileSearch" tone="gold" />
-        <Stat label={approvedLabel} value={n("_approved")} icon="CheckCircle" tone="green" />
-      </div>
 
       <div className="card card-pad-0 mb-6">
         <div className="card-head">
@@ -961,7 +950,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
 const R3_DEFAULT_DRAFT = {
   confName: "", organizer: "", website: "", confType: "International", conferenceLocation: "",
   presentationDate: "", presentation: "Oral Presentation", journalDb: "", journalClassification: "",
-  paperTitle: "", field: "", keywords: "", corresponding: "", paperAbstract: "",
+  paperTitle: "", field: "", keywords: "", corresponding: "", paperAbstract: "", authorType: "Lead Author",
   name: "", title2: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
   outcome: "",
 };
@@ -972,7 +961,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
   const classificationOptions = (RA.R4_JOURNAL_CLASSIFICATIONS || {})[draft.journalDb] || null;
 
   const [authors, setAuthors] = useState([]);
-  const addAuthor = () => setAuthors(m => m.concat([{ name: "", kind: "Researcher", auId: "", email: "" }]));
+  const addAuthor = () => setAuthors(m => m.concat([{ name: "", authorType: "Co-author", kind: "Researcher", auId: "", email: "" }]));
   const setAuthor = (i, k, v) => setAuthors(m => m.map((r, j) => j === i ? { ...r, [k]: v } : r));
   const removeAuthor = (i) => setAuthors(m => m.filter((_, j) => j !== i));
 
@@ -1023,7 +1012,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
           presentation: ci.presentation || "Oral Presentation",
           journalDb: ci.journalDb || "", journalClassification: ci.journalClassification || "",
           paperTitle: app.title || "", field: app.field || "", keywords: app.keywords || "",
-          corresponding: ci.correspondingAuthor || "", paperAbstract: ci.paperAbstract || "",
+          corresponding: ci.correspondingAuthor || "", paperAbstract: ci.paperAbstract || "", authorType: ci.authorType || "Lead Author",
           joinedDate: researcherInfo.joinedDate || "",
           school: researcherInfo.faculty || app.faculty || d.school,
           department: researcherInfo.department || app.department || d.department,
@@ -1035,7 +1024,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
           phone: researcherInfo.phone || d.phone,
           office: researcherInfo.officeRoom || d.office,
         }));
-        setAuthors(Array.isArray(app.co_members) ? app.co_members : []);
+        setAuthors(Array.isArray(app.co_members) ? app.co_members.map(m => ({ ...m, authorType: m.authorType || "Co-author" })) : []);
       } catch (e) { if (!cancelled) setErr((e && e.message) || "Could not load this draft."); }
       finally { if (!cancelled) setLoadingDraft(false); }
     }
@@ -1081,7 +1070,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         presentationDate: draft.presentationDate || null,
         presentation: draft.presentation || "Oral Presentation",
         journalDb: draft.journalDb, journalClassification: draft.journalClassification,
-        correspondingAuthor: draft.corresponding, paperAbstract: draft.paperAbstract,
+        correspondingAuthor: draft.corresponding, paperAbstract: draft.paperAbstract, authorType: draft.authorType,
         researcherSnapshot,
         researcherName: researcherSnapshot.fullName,
         researcherEmail: researcherSnapshot.email,
@@ -1195,6 +1184,13 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
                 <label>Research Field</label>
                 <input value={draft.field} onChange={e => upd("field", e.target.value)} />
               </div>
+              <div className="field">
+                <label>Your Author Type</label>
+                <select value={draft.authorType} onChange={e => upd("authorType", e.target.value)}>
+                  <option value="Lead Author">Lead Author</option>
+                  <option value="Co-author">Co-author</option>
+                </select>
+              </div>
               <div className="field full">
                 <label>Corresponding Author</label>
                 <input value={draft.corresponding} onChange={e => upd("corresponding", e.target.value)} placeholder="Name of the corresponding author" />
@@ -1215,15 +1211,21 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
               <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
                 <table className="tbl">
                   <thead>
-                    <tr><th>Name</th><th style={{ width: 130 }}>Role</th><th style={{ width: 120 }}>AU ID</th><th>Email</th><th style={{ width: 48 }}></th></tr>
+                    <tr><th>Name</th><th style={{ width: 140 }}>Author Type</th><th style={{ width: 120 }}>Person Type</th><th style={{ width: 110 }}>AU ID</th><th>Email</th><th style={{ width: 48 }}></th></tr>
                   </thead>
                   <tbody>
                     {authors.length === 0 && (
-                      <tr><td colSpan="5" style={{ color: "var(--ink-3)", textAlign: "center", padding: "14px" }}>No co-authors added — you are the sole author.</td></tr>
+                      <tr><td colSpan="6" style={{ color: "var(--ink-3)", textAlign: "center", padding: "14px" }}>No additional authors added — you are the sole author.</td></tr>
                     )}
                     {authors.map((m, i) => (
                       <tr key={i}>
                         <td><input value={m.name} onChange={e => setAuthor(i, "name", e.target.value)} placeholder="Full name" style={{ width: "100%", minWidth: 140 }} /></td>
+                        <td>
+                          <select value={m.authorType || "Co-author"} onChange={e => setAuthor(i, "authorType", e.target.value)}>
+                            <option value="Lead Author">Lead Author</option>
+                            <option value="Co-author">Co-author</option>
+                          </select>
+                        </td>
                         <td>
                           <select value={m.kind} onChange={e => setAuthor(i, "kind", e.target.value)}>
                             <option value="Researcher">Researcher</option>
@@ -1944,7 +1946,6 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
 function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, setSelectedApplicationId, grantType, toast, setConfirm, onGrantSwitch }) {
   const sys = grantSystemFor(grantType || "au_r1");
   const [myApps, setMyApps] = useState(null);
-  const [invitationBusy, setInvitationBusy] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const loadApplications = async () => {
@@ -1958,12 +1959,8 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
         id: a.code, _uuid: a.id, title: a.title, faculty: a.faculty, department: a.department,
         submittedAt: a.submitted_at ? window.DB.fmtDate(a.submitted_at) : "—",
         stage: (a.statusBadge || window.DB.statusBadge(a.status, a.grant_type)).label, status: a.statusBadge || window.DB.statusBadge(a.status, a.grant_type), statusKey: a.status,
-        isOwner: a.is_owner !== false,
-        collaboration: a.collaboration || null,
         grantType: a.grant_type,
         grantCode: grantSystemFor(a.grant_type || "au_r1").code,
-        invitedBy: (a.researcher && a.researcher.full_name) || (a.conference_info && a.conference_info.researcherName) || (a.pub_info && a.pub_info.researcherName) || "Principal researcher",
-        invitedByEmail: (a.researcher && a.researcher.email) || (a.conference_info && a.conference_info.researcherEmail) || (a.pub_info && (a.pub_info.researcherEmail || a.pub_info.contactEmail)) || "",
         decisionReason: decision && String(decision.note || "").trim(),
         decisionRole: decision && decision.actor_role,
       };
@@ -1972,34 +1969,7 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
   };
   useEffect(() => { setMyApps(null); loadApplications(); }, [grantType]);
 
-  const answerInvitation = (application, accept) => {
-    const run = async () => {
-      setInvitationBusy(application.collaboration.id);
-      try {
-        await window.DB.respondToCollaboration(application.collaboration.id, accept);
-        if (toast) toast(accept ? "Co-author invitation accepted." : "Co-author invitation declined.");
-        if (accept && onGrantSwitch && application.grantType && application.grantType !== grantType) {
-          onGrantSwitch(application.grantType, "r-applications");
-        } else {
-          await loadApplications();
-        }
-      } catch (e) {
-        if (toast) toast("Invitation error: " + ((e && e.message) || e));
-      } finally { setInvitationBusy(null); }
-    };
-    if (!accept && setConfirm) {
-      setConfirm({
-        kind: "danger",
-        title: "Decline co-author invitation?",
-        message: "This application will be removed from your My Applications list.",
-        confirmLabel: "Decline Invitation",
-        onConfirm: run,
-      });
-    } else run();
-  };
-
-  const pendingInvitations = (myApps || []).filter(a => !a.isOwner && a.collaboration && a.collaboration.status === "pending");
-  const listedApplications = (myApps || []).filter(a => a.isOwner || !a.collaboration || a.collaboration.status !== "pending");
+  const listedApplications = myApps || [];
   const visibleApplications = listedApplications.filter(application => {
     const query = searchTerm.trim().toLowerCase();
     const matchesSearch = !query || [application.id, application.title, application.stage, application.faculty].some(value => String(value || "").toLowerCase().includes(query));
@@ -2020,33 +1990,6 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
           </button>
         }
       />
-      {pendingInvitations.length > 0 && (
-        <div className="card" style={{ marginBottom: 18, border: "1px solid var(--au-crimson)", overflow: "hidden" }}>
-          <div style={{ padding: "15px 20px", background: "var(--paper-warm)", borderBottom: "1px solid var(--line)", display: "flex", alignItems: "center", gap: 10 }}>
-            <Icon name="UserPlus" size={18} style={{ color: "var(--au-crimson)" }} />
-            <div style={{ fontWeight: 700 }}>Co-author Invitations</div>
-            <span className="badge badge-pending" style={{ marginLeft: "auto" }}>{pendingInvitations.length} pending</span>
-          </div>
-          {pendingInvitations.map((a, index) => (
-            <div key={a._uuid} style={{ padding: "16px 20px", display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap", borderBottom: index < pendingInvitations.length - 1 ? "1px solid var(--line)" : "none" }}>
-              <div style={{ minWidth: 0, flex: "1 1 360px" }}>
-                <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 5 }}>
-                  <span className="id">{a.grantCode}</span>
-                  <span style={{ color: "var(--ink-3)", fontSize: 12 }}>{a.id}</span>
-                </div>
-                <div style={{ fontWeight: 700 }}>{a.title}</div>
-                <div style={{ color: "var(--ink-3)", fontSize: 13, marginTop: 3 }}>
-                  Invited by {a.invitedBy}{a.invitedByEmail ? " · " + a.invitedByEmail : ""}
-                </div>
-              </div>
-              <div style={{ display: "flex", gap: 8 }}>
-                <button className="btn btn-primary btn-sm" disabled={invitationBusy === a.collaboration.id} onClick={() => answerInvitation(a, true)}><Icon name="Check" size={13} /> {invitationBusy === a.collaboration.id ? "Accepting…" : "Accept"}</button>
-                <button className="btn btn-ghost btn-sm" disabled={invitationBusy === a.collaboration.id} onClick={() => answerInvitation(a, false)}><Icon name="X" size={13} /> Decline</button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
       <div className="card card-pad-0">
         <div className="toolbar">
           <div className="search">
@@ -2093,28 +2036,21 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
                 <td><span className="id">{a.id}</span></td>
                 <td className="title-cell">
                   <div className="t">{a.title}</div>
-                  <div className="s">{a.isOwner ? (a.faculty || "—") + (a.department ? " · " + a.department : "") : (a.collaboration.status === "pending" ? "Co-author invitation from " : "Co-author · added by ") + a.invitedBy}</div>
+                  <div className="s">{(a.faculty || "—") + (a.department ? " · " + a.department : "")}</div>
                   {a.decisionReason && <div style={{ color: "var(--au-crimson)", fontSize: 11.5, marginTop: 4, maxWidth: 520 }}><strong>{a.statusKey === "rejected" ? "Rejection reason" : "Revision reason"}:</strong> {a.decisionReason}</div>}
                 </td>
                 <td>{a.submittedAt}</td>
-                <td>{!a.isOwner && a.collaboration.status === "pending" ? "Invitation" : a.stage}</td>
-                <td>{!a.isOwner && a.collaboration.status === "pending" ? <span className="badge badge-pending"><span className="dot"></span>Awaiting your acceptance</span> : !a.isOwner ? <span className="badge badge-check"><span className="dot"></span>Accepted co-author</span> : <Badge status={a.status} />}</td>
+                <td>{a.stage}</td>
+                <td><Badge status={a.status} /></td>
                 <td className="app-actions-cell">
-                  {!a.isOwner && a.collaboration.status === "pending" ? <>
-                    <div className="app-actions">
-                      <button className="btn btn-primary btn-sm" disabled={invitationBusy === a.collaboration.id} onClick={() => answerInvitation(a, true)}><Icon name="Check" size={13} /> {invitationBusy === a.collaboration.id ? "Accepting…" : "Accept"}</button>
-                      <button className="btn btn-ghost btn-sm" disabled={invitationBusy === a.collaboration.id} onClick={() => answerInvitation(a, false)}><Icon name="X" size={13} /> Decline</button>
-                    </div>
-                  </> : !a.isOwner ? (
-                    <div className="app-actions"><button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}><Icon name="Eye" size={13} /> View &amp; Timeline</button></div>
-                  ) : <>
+                  <>
                     <div className="app-actions">
                       <button className="btn btn-ghost btn-sm" onClick={() => (a.statusKey === "draft" || a.statusKey === "returned") ? (openDraft && openDraft(a._uuid)) : (openDetail && openDetail(a._uuid))}>
                         <Icon name={(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit3" : "Eye"} size={13} /> {(a.statusKey === "draft" || a.statusKey === "returned") ? "Edit" : a.statusKey === "completed" ? "View & Timeline" : "View"}
                       </button>
                       <button className="btn btn-ghost btn-sm" onClick={() => openDetail && openDetail(a._uuid)}><Icon name="FolderOpen" size={13} /> Files</button>
                     </div>
-                  </>}
+                  </>
                 </td>
               </tr>
             ))}
@@ -2297,27 +2233,26 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
   const applicationContact = app.grant_type === "au_r3" ? (app.conference_info || {}) : (app.pub_info || {});
   const researcherName = (app.researcher && app.researcher.full_name) || applicationContact.researcherName || "Researcher";
   const researcherEmail = (app.researcher && app.researcher.email) || applicationContact.researcherEmail || applicationContact.contactEmail || "-";
-  const collaboratorRows = (app.collaborators || []).filter(c => c.status !== "declined");
   const applicantAuthorRole = app.grant_type === "au_r4" && app.pub_info && app.pub_info.applicantRole
     ? app.pub_info.applicantRole
-    : "Lead Researcher";
+    : app.grant_type === "au_r3" && app.conference_info && app.conference_info.authorType
+      ? app.conference_info.authorType
+      : "Lead Author";
   const ownerParticipant = {
     id: "owner",
     name: researcherName,
     email: researcherEmail,
     authorRole: applicantAuthorRole,
   };
-  const collaboratorParticipants = collaboratorRows.map(member => ({
-    id: member.id,
-    name: member.full_name || member.email || "Researcher",
+  const listedAuthorParticipants = (app.co_members || []).map((member, index) => ({
+    id: "author-" + index,
+    name: member.name || member.email || "Researcher",
     email: member.email || "",
-    authorRole: member.author_role || "Co-author",
+    authorRole: member.authorType || member.type || member.kind || "Co-author",
   }));
-  const leadParticipant = app.grant_type === "au_r4"
-    ? collaboratorParticipants.find(member => member.authorRole === "First Author") || ownerParticipant
-    : ownerParticipant;
-  const coAuthorParticipants = [ownerParticipant].concat(collaboratorParticipants)
-    .filter(member => member.id !== leadParticipant.id);
+  const authorParticipants = app.grant_type === "au_r4" && listedAuthorParticipants.length
+    ? listedAuthorParticipants
+    : [ownerParticipant].concat(listedAuthorParticipants);
   const status = app.statusBadge || window.DB.statusBadge(app.status, app.grant_type);
   const joinedDate = researcherJoinedDate(app);
   const service = universityServiceEligibility(joinedDate);
@@ -2362,9 +2297,8 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
         actions={
           <>
             <button className="btn btn-secondary" onClick={printProject} title="Open the print dialog, then choose Save as PDF"><Icon name="Printer" size={13} /> Print PDF</button>
-            {app.is_owner === false && <span className="badge badge-academic"><span className="dot"></span>Co-author · View only</span>}
             <Badge status={status} />
-            {app.is_owner !== false && ["draft", "returned"].includes(app.status) && <button className="btn btn-secondary" onClick={() => navigate("r-submit", { keepSelection: true })}><Icon name="Edit3" size={13} /> {app.status === "returned" ? "Edit & Resubmit" : "Edit Draft"}</button>}
+            {["draft", "returned"].includes(app.status) && <button className="btn btn-secondary" onClick={() => navigate("r-submit", { keepSelection: true })}><Icon name="Edit3" size={13} /> {app.status === "returned" ? "Edit & Resubmit" : "Edit Draft"}</button>}
           </>
         }
       />
@@ -2400,18 +2334,13 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
               <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.requested_amount || 0))}</span></div>
               {(app.grant_type === "au_r3" || app.grant_type === "au_r4") && (
                 <div style={{ marginTop: 8, borderTop: "1px solid var(--line-2)", paddingTop: 8 }}>
-                  <div className="eyebrow" style={{ marginBottom: 6 }}>Collaborators</div>
-                  <div className="meta-row">
-                    <span className="l">Lead Researcher{leadParticipant.authorRole !== "Lead Researcher" ? " · " + leadParticipant.authorRole : ""}</span>
-                    <span className="r">{leadParticipant.name}{leadParticipant.email && leadParticipant.email !== "-" ? " · " + leadParticipant.email : ""}</span>
-                  </div>
-                  {coAuthorParticipants.map((member, i) => (
+                  <div className="eyebrow" style={{ marginBottom: 6 }}>Authors</div>
+                  {authorParticipants.map((member, i) => (
                     <div className="meta-row" key={member.id || i}>
-                      <span className="l">Co-author{member.authorRole && member.authorRole !== "Co-author" ? " · " + member.authorRole : ""}</span>
+                      <span className="l">{member.authorRole || "Author"}</span>
                       <span className="r">{member.name}{member.email && member.email !== "-" ? " · " + member.email : ""}</span>
                     </div>
                   ))}
-                  {coAuthorParticipants.length === 0 && <div className="meta-row"><span className="l">Co-author</span><span className="r">None</span></div>}
                 </div>
               )}
               {app.conference_info && (

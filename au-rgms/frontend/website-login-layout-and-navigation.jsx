@@ -689,7 +689,9 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "a-audit":          return <AdminAudit />;
 
 
-    case "forms":            return <FormsLibrary />;
+    case "forms":            return c.role === "researcher"
+      ? <FormsLibrary />
+      : <Empty title="Researcher access required" desc="Official grant forms are available from the researcher workspace." icon="Lock" />;
     case "account":          return <AccountSettings toast={c.toast} />;
 
     default:                 return <Empty title="Page not found" desc="Use the sidebar to navigate." icon="Folder" />;
@@ -904,7 +906,7 @@ function App() {
         <PageRouter
           pageKey={page}
           navigate={navigate}
-          ctx={{ onDownload, onView, toast, setConfirm, profile, selectedApplicationId, setSelectedApplicationId, grantType: role === "researcher" || role === "ofm" ? rSystem : null, onGrantSwitch: chooseSystem }}
+          ctx={{ role, onDownload, onView, toast, setConfirm, profile, selectedApplicationId, setSelectedApplicationId, grantType: role === "researcher" || role === "ofm" ? rSystem : null, onGrantSwitch: chooseSystem }}
         />
       </main>
       {previewDoc && (

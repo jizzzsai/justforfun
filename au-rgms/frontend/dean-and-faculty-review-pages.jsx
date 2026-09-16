@@ -459,7 +459,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                   <div className="card-body">
                     <div className="meta-row"><span className="l">Paper title</span><span className="r">{app.title}</span></div>
                     <div className="meta-row"><span className="l">Research field</span><span className="r">{app.field || "-"}</span></div>
-                    <div className="meta-row"><span className="l">Author(s)</span><span className="r">{[ci.researcherName || r.full_name].concat((app.co_members || []).map(m => m.name + (m.kind === "Student" ? " (Student)" : ""))).filter(Boolean).join(", ")}</span></div>
+                    <div className="meta-row"><span className="l">Author(s)</span><span className="r">{[(ci.researcherName || r.full_name) + " (" + (ci.authorType || "Lead Author") + ")"].concat((app.co_members || []).map(m => m.name + " (" + (m.authorType || "Co-author") + ")" + (m.kind === "Student" ? " · Student" : ""))).filter(Boolean).join(", ")}</span></div>
                     <div className="meta-row"><span className="l">Corresponding author</span><span className="r">{ci.correspondingAuthor || "-"}</span></div>
                     {ci.paperAbstract && (
                       <>

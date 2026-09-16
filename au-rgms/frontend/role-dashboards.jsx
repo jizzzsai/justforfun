@@ -918,7 +918,10 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                   {row("Presentation date", (ci.presentationDate || ci.confStart) ? window.DB.fmtDate(ci.presentationDate || ci.confStart) : "-")}{row("Presentation", ci.presentation)}
                 </div></div>
                 <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Paper</h3></div><div className="card-body">
-                  {row("Paper title", app.title)}{row("Field", app.field)}{row("Corresponding author", ci.correspondingAuthor)}{row("Abstract", ci.paperAbstract)}{row("Keywords", app.keywords)}
+                  {row("Paper title", app.title)}{row("Field", app.field)}
+                  {row("Applicant author type", ci.authorType || "Lead Author")}
+                  {(app.co_members || []).map((author, index) => <div className="meta-row" key={index}><span className="l">{"Additional author " + (index + 1) + " · " + (author.authorType || "Co-author")}</span><span className="r">{author.name + (author.kind ? " · " + author.kind : "")}</span></div>)}
+                  {row("Corresponding author", ci.correspondingAuthor)}{row("Abstract", ci.paperAbstract)}{row("Keywords", app.keywords)}
                   <ResearcherServiceEligibilityRows app={app} />
                   <ReviewCommentHistory app={app} roles={["dean"]} />
                 </div></div>
@@ -1635,22 +1638,6 @@ function OFMDashboardR1({ navigate, sysToggle }) {
         </div>
 
         <div>
-          <div className="card card-pad-0 mb-4">
-            <div className="card-head"><h3>Monthly Disbursement</h3></div>
-            <div className="card-body">
-              <div style={{display: "flex", alignItems: "flex-end", gap: 6, height: 100, padding: "0 4px"}}>
-                {[3, 5, 4, 7, 6, 8, 5, 9, 7, 11, 9, 11].map((v, i) => (
-                  <div key={i} style={{flex: 1, height: `${v * 8}%`, background: i === 11 ? "var(--au-crimson)" : "var(--au-gold-soft)", borderRadius: 3}}></div>
-                ))}
-              </div>
-              <div style={{display: "flex", justifyContent: "space-between", fontSize: 10, color: "var(--ink-3)", marginTop: 6}}>
-                <span>Nov</span><span>Dec</span><span>Jan</span><span>Feb</span><span>Mar</span><span>Apr</span>
-                <span>May</span><span>Jun</span><span>Jul</span><span>Aug</span><span>Sep</span><span>Oct</span>
-              </div>
-              <div className="text-sm text-muted mt-4 text-center">Highest approved amount this October: <b style={{color: "var(--ink-1)"}}>430k THB</b></div>
-            </div>
-          </div>
-
           <div className="card card-pad-0">
             <div className="card-head"><h3>By Tranche</h3></div>
             <div className="card-body">

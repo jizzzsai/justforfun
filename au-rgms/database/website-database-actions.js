@@ -354,52 +354,14 @@
         .select("*, researcher:profiles(full_name,email), events:application_events(id,action,to_status,note,actor_role,created_at,actor:profiles(full_name))")
         .eq("researcher_id", me);
       if (grantType) ownQuery = ownQuery.eq("grant_type", grantType);
-      var invitedQuery = sb.from("application_collaborators")
-        .select("id,status,author_role,invited_at,responded_at,application:applications(*,researcher:profiles(full_name,email),events:application_events(id,action,to_status,note,actor_role,created_at,actor:profiles(full_name)))")
-        .eq("user_id", me)
-        .in("status", ["pending", "accepted"]);
-      var results = await Promise.all([
-        ownQuery.order("created_at", { ascending: false }),
-        invitedQuery.order("invited_at", { ascending: false }),
-      ]);
-      if (results[0].error) throw results[0].error;
-      if (results[1].error) throw results[1].error;
-
-      var rows = (results[0].data || []).map(function (app) {
+      var result = await ownQuery.order("created_at", { ascending: false });
+      if (result.error) throw result.error;
+      return (result.data || []).map(function (app) {
         app.is_owner = true;
         app.access_mode = "owner";
         app.statusBadge = badge(app.status, app.grant_type);
         return app;
       });
-      (results[1].data || []).forEach(function (invitation) {
-        var app = invitation.application;
-        if (!app || (grantType && app.grant_type !== grantType && invitation.status !== "pending")) return;
-        if (rows.some(function (row) { return row.id === app.id; })) return;
-        app.is_owner = false;
-        app.access_mode = "collaborator";
-        app.statusBadge = badge(app.status, app.grant_type);
-        app.collaboration = {
-          id: invitation.id,
-          status: invitation.status,
-          author_role: invitation.author_role,
-          invited_at: invitation.invited_at,
-          responded_at: invitation.responded_at,
-        };
-        rows.push(app);
-      });
-      return rows.sort(function (a, b) {
-        return new Date(b.updated_at || b.created_at || 0) - new Date(a.updated_at || a.created_at || 0);
-      });
-    },
-
-    async respondToCollaboration(invitationId, accept) {
-      if (!invitationId) throw new Error("No co-author invitation selected.");
-      var res = await sb.rpc("respond_to_collaboration", {
-        p_invitation_id: invitationId,
-        p_accept: !!accept,
-      });
-      if (res.error) throw res.error;
-      return res.data;
     },
 
     async queue(status, grantType) {
@@ -431,7 +393,7 @@
       var me = await uid();
       var isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appId || "");
       var q = sb.from("applications")
-        .select("*, researcher:profiles(full_name,email,name_title,title,au_id,phone,office_room,joined_date,faculty,department), collaborators:application_collaborators(id,user_id,email,full_name,author_role,status,invited_at,responded_at), documents:application_documents(*), reviews(*, reviewer:profiles(full_name,email,title,faculty,department)), events:application_events(*, actor:profiles(full_name)), payments(*), reports(*)")
+        .select("*, researcher:profiles(full_name,email,name_title,title,au_id,phone,office_room,joined_date,faculty,department), documents:application_documents(*), reviews(*, reviewer:profiles(full_name,email,title,faculty,department)), events:application_events(*, actor:profiles(full_name)), payments(*), reports(*)")
         .eq(isUuid ? "id" : "code", appId);
       var faculty = await currentFacultyScope();
       if (faculty) q = q.eq("faculty", faculty);
@@ -453,8 +415,7 @@
         return new Date(x.created_at || 0) - new Date(y.created_at || 0);
       });
       a.is_owner = a.researcher_id === me;
-      a.collaboration = (a.collaborators || []).find(function (item) { return item.user_id === me; }) || null;
-      a.access_mode = a.is_owner ? "owner" : (a.collaboration ? "collaborator" : "reviewer");
+      a.access_mode = a.is_owner ? "owner" : "reviewer";
       return a;
     },
 

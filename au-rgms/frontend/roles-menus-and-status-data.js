@@ -413,8 +413,3 @@ window.AU = {
   FACULTY_QUEUE: APPLICATIONS.filter(a => ["submitted", "committee_review", "dean_sign", "returned"].includes(a.status.key)),
   RASSC_QUEUE: APPLICATIONS.filter(a => ["iras_review", "approved", "active", "completed"].includes(a.status.key)),
 };
-
-[NAV_DEAN, NAV_COMMITTEE, NAV_RASSC, NAV_OFM, NAV_ADMIN].forEach(function (nav) {
-  nav.push({ section: "RESOURCES" });
-  nav.push({ key: "forms", label: "Forms & Templates", icon: "FileText" });
-});
