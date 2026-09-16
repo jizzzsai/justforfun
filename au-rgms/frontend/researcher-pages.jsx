@@ -382,8 +382,8 @@ function UniversityJoinedDateField({ value, onChange, readOnly = false }) {
       {value && (
         <div style={{ fontSize: 11, marginTop: 5, color: service.eligible ? "var(--status-approved)" : "var(--au-crimson)", fontWeight: 650 }}>
           {service.eligible
-            ? "Eligible — at least one year of university service completed."
-            : "Not eligible until " + fmtNiceDate(service.eligibleOn) + "."}
+            ? "University service: " + service.months + " months · Eligible."
+            : "University service: " + service.months + " months · Not eligible until " + fmtNiceDate(service.eligibleOn) + "."}
         </div>
       )}
     </div>
@@ -430,7 +430,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
   const [busyKind, setBusyKind] = useState(null);
   const [err, setErr] = useState("");
   const docTypeOptions = isR3 ? (RA.R3_DOC_TYPES || RA.DOC_TYPES) : RA.DOC_TYPES;
-  const [docType, setDocType] = useState(isR3 ? "Full Research Article" : "Research Proposal");
+  const [docType, setDocType] = useState(isR3 ? "Full Conference Paper" : "Research Proposal");
   const [caps, setCaps] = useState(RA.DEFAULT_BUDGET_CAPS || { remuneration: 30, equipment: 50, travel: 40, misc: 20 });
   const [split, setSplit] = useState({ remuneration: 30, equipment: 40, travel: 18, misc: 12 });
   const capArr = [caps.remuneration, caps.equipment, caps.travel, caps.misc];
@@ -952,7 +952,6 @@ const R3_DEFAULT_DRAFT = {
   presentationDate: "", presentation: "Oral Presentation", journalDb: "", journalClassification: "",
   paperTitle: "", field: "", keywords: "", corresponding: "", paperAbstract: "", authorType: "Lead Author",
   name: "", title2: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
-  outcome: "",
 };
 function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
   const fixedGrantAmount = 3500;
@@ -966,7 +965,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
   const removeAuthor = (i) => setAuthors(m => m.filter((_, j) => j !== i));
 
   const [files, setFiles] = useState([]);
-  const [docType, setDocType] = useState("Full Research Article");
+  const [docType, setDocType] = useState("Full Conference Paper");
   const onFiles = (e) => { const fs = Array.from(e.target.files || []); setFiles(prev => prev.concat(fs.map(f => ({ file: f, docType })))); e.target.value = ""; };
   const [editingId, setEditingId] = useState(applicationId || null);
   const [existingDocs, setExistingDocs] = useState([]);
@@ -1016,7 +1015,6 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
           joinedDate: researcherInfo.joinedDate || "",
           school: researcherInfo.faculty || app.faculty || d.school,
           department: researcherInfo.department || app.department || d.department,
-          outcome: app.abstract || "",
           name: researcherInfo.fullName || d.name,
           title2: researcherInfo.nameTitle || d.title2,
           auId: researcherInfo.auId || d.auId,
@@ -1051,8 +1049,8 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
     if (submit && !draft.field.trim()) { setErr("Enter the research field."); return; }
     if (submit && !draft.corresponding.trim()) { setErr("Enter the corresponding author."); return; }
     if (submit && !draft.paperAbstract.trim()) { setErr("Enter the paper abstract."); return; }
-    if (submit && !draft.journalDb) { setErr("Select the Journal Database / Index."); return; }
-    if (submit && !draft.journalClassification.trim()) { setErr("Select or enter the journal classification."); return; }
+    if (submit && !draft.journalDb) { setErr("Select the Conference Database / Index."); return; }
+    if (submit && !draft.journalClassification.trim()) { setErr("Select or enter the conference classification."); return; }
     if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
     if (submit && !draft.name.trim()) { setErr("Enter your full name."); return; }
     if (submit && !draft.email.trim()) { setErr("Enter your AU email address."); return; }
@@ -1060,6 +1058,11 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
     if (submit && !universityServiceEligibility(draft.joinedDate).eligible) { setErr("You are not eligible yet. AU-R3 applicants must have at least one year of service at Assumption University."); return; }
     if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
     if (submit && draft.phone && !isValidThaiPhone(draft.phone)) { setErr("Phone must be a Thai number with 9–10 digits starting with 0."); return; }
+    if (submit) {
+      const selectedTypes = existingDocs.map(d => d.doc_type).concat(files.map(f => f.docType));
+      const missingDocs = (RA.R3_DOC_TYPES || []).filter(t => selectedTypes.indexOf(t) === -1);
+      if (missingDocs.length) { setErr("Upload all three required documents. Missing: " + missingDocs.join(", ") + "."); return; }
+    }
     setBusy(true); setBusyKind(submit ? "submit" : "draft");
     try {
       try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
@@ -1081,7 +1084,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         researcherJoinedDate: researcherSnapshot.joinedDate,
       };
       const app = await window.DB.createApplication({
-        title: draft.paperTitle, abstract: draft.outcome, field: draft.field,
+        title: draft.paperTitle, abstract: draft.paperAbstract, field: draft.field,
         faculty: draft.school, department: draft.department, keywords: draft.keywords,
         requested_amount: fixedGrantAmount, duration_months: 1,
         start_date: draft.presentationDate || null, end_date: draft.presentationDate || null,
@@ -1285,17 +1288,17 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         </div>
 
         <div className="form-section">
-          <h4><span className="num">4</span> Journal Classification</h4>
-          <p className="section-sub">Select the journal or proceedings database and its classification. The AU-R3 grant amount is fixed at 3,500 THB.</p>
+          <h4><span className="num">4</span> Conference Classification</h4>
+          <p className="section-sub">Select the conference proceedings database and its classification. The AU-R3 grant amount is fixed at 3,500 THB.</p>
           <div className="section-body">
             <div className="form-grid">
-              <div className="field"><label>Journal Database / Index *</label>
+              <div className="field"><label>Conference Database / Index *</label>
                 <select value={draft.journalDb} onChange={e => setDraft(d => ({ ...d, journalDb: e.target.value, journalClassification: "" }))}>
                   <option value="">Select database / index…</option>
                   {(RA.R4_JOURNAL_DBS || []).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="field"><label>Classification *</label>
+              <div className="field"><label>Conference Classification *</label>
                 {classificationOptions ? (
                   <select value={draft.journalClassification} onChange={e => upd("journalClassification", e.target.value)} disabled={!draft.journalDb}>
                     <option value="">Select classification…</option>
@@ -1311,18 +1314,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         </div>
 
         <div className="form-section">
-          <h4><span className="num">5</span> Expected Outcomes</h4>
-          <p className="section-sub">Purpose of attending, expected benefits to Assumption University, and expected research impact.</p>
-          <div className="section-body">
-            <div className="field">
-              <textarea className="comment-input" style={{ minHeight: 120 }} value={draft.outcome} onChange={e => upd("outcome", e.target.value)}
-                placeholder={"e.g.\n- Purpose of attending the conference\n- Expected benefits to Assumption University\n- Expected research impact and outcomes"} />
-            </div>
-          </div>
-        </div>
-
-        <div className="form-section">
-          <h4><span className="num">6</span> Required Documents</h4>
+          <h4><span className="num">5</span> Required Documents</h4>
           <p className="section-sub">Upload the AU-R3 PDF documents. You can add or delete files while the application is still waiting for Dean screening.</p>
           <div className="section-body">
             <div style={{ background: "var(--paper-warm)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "12px 14px", marginBottom: 14 }}>
@@ -2132,7 +2124,7 @@ function ProjectPrintSheet({ app, status }) {
           <div className="wide"><span>Research title</span><b>{show(app.title)}</b></div>
           <div className="left"><span>Email</span><b>{show(researcherEmail)}</b></div>
           <div><span>Faculty / Department</span><b>{show(app.faculty)}{app.department ? " - " + app.department : ""}</b></div>
-          <div className="left"><span>Joined Assumption University</span><b>{date(joinedDate)}</b></div>
+          <div className="left"><span>Joined Assumption University</span><b>{date(joinedDate)}{joinedDate ? " · " + service.months + " months" : ""}</b></div>
           <div><span>Service eligibility</span><b>{joinedDate ? (service.eligible ? "Eligible" : "Not eligible until " + date(service.eligibleOn)) : "Not recorded"}</b></div>
           <div className="left"><span>Submitted</span><b>{date(app.submitted_at || app.created_at)}</b></div>
           <div><span>Approved amount</span><b>{amount(app.approved_amount || app.requested_amount)}</b></div>
@@ -2329,7 +2321,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
               <div className="meta-row"><span className="l">Email</span><span className="r">{researcherEmail}</span></div>
               <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{app.faculty || "-"}</span></div>
               <div className="meta-row"><span className="l">{app.grant_type === "au_r4" ? "Major" : "Department"}</span><span className="r">{app.department || "-"}</span></div>
-              <div className="meta-row"><span className="l">Joined Assumption University</span><span className="r">{joinedDate ? window.DB.fmtDate(joinedDate) : "Not recorded"}</span></div>
+              <div className="meta-row"><span className="l">Joined Assumption University</span><span className="r">{joinedDate ? window.DB.fmtDate(joinedDate) + " · " + service.months + " months" : "Not recorded"}</span></div>
               <div className="meta-row"><span className="l">Service eligibility</span><span className="r" style={{ color: joinedDate && service.eligible ? "var(--status-approved)" : "var(--au-crimson)" }}>{joinedDate ? (service.eligible ? "Eligible" : "Not eligible until " + fmtNiceDate(service.eligibleOn)) : "Not recorded"}</span></div>
               <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.requested_amount || 0))}</span></div>
               {(app.grant_type === "au_r3" || app.grant_type === "au_r4") && (
@@ -2353,8 +2345,8 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
                   <div className="meta-row"><span className="l">Presentation date</span><span className="r">{(app.conference_info.presentationDate || app.conference_info.confStart) ? fmtNiceDate(app.conference_info.presentationDate || app.conference_info.confStart) : "-"}</span></div>
                   <div className="meta-row"><span className="l">Presentation</span><span className="r">{app.conference_info.presentation || "Oral Presentation"}</span></div>
                   <div className="meta-row"><span className="l">Corresponding</span><span className="r">{app.conference_info.correspondingAuthor || "-"}</span></div>
-                  <div className="meta-row"><span className="l">Journal Database / Index</span><span className="r">{app.conference_info.journalDb || "-"}</span></div>
-                  <div className="meta-row"><span className="l">Classification</span><span className="r">{app.conference_info.journalClassification || "-"}</span></div>
+                  <div className="meta-row"><span className="l">Conference Database / Index</span><span className="r">{app.conference_info.journalDb || "-"}</span></div>
+                  <div className="meta-row"><span className="l">Conference Classification</span><span className="r">{app.conference_info.journalClassification || "-"}</span></div>
                 </div>
               )}
               {app.pub_info && (

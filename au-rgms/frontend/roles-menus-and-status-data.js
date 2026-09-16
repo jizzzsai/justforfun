@@ -57,10 +57,9 @@ const REQUIRED_DOCS = [
 ];
 
 const PAPER_PRESENTATION_DOCS = [
-  { id: "r3-article", name: "Full_Research_Article.pdf", role: "AU-R3 requirement: full article only" },
-  { id: "r3-turnitin", name: "Turnitin_Result.pdf", role: "AU-R3 requirement: similarity must not exceed 20%" },
-  { id: "r3-peer", name: "Peer_Review_Comments.pdf", role: "AU-R3 requirement when available" },
-  { id: "r3-memo", name: "Dean_Signed_Memo.pdf", role: "AU-R3 requirement: memo signed by the Dean" },
+  { id: "r3-paper", name: "Full_Conference_Paper.pdf", role: "AU-R3 requirement: complete conference paper" },
+  { id: "r3-turnitin", name: "Turnitin_Report.pdf", role: "AU-R3 requirement: Turnitin similarity report" },
+  { id: "r3-acceptance", name: "Conference_Acceptance_Letter.pdf", role: "AU-R3 requirement: official conference acceptance letter" },
 ];
 
 const PRIMARY_APP = {
@@ -132,7 +131,8 @@ const ROLES = [
   { key: "researcher", name: "Researcher", full: "Researcher Test", subtitle: "Researcher - Test Account", initials: "RT", iconName: "GraduationCap" },
   { key: "dean", name: "Dean", full: "Dean Test", subtitle: "Dean - Test Account", initials: "DT", iconName: "Building2" },
   { key: "committee", name: "Faculty Committee", full: "Committee Test", subtitle: "Committee - Test Account", initials: "CT", iconName: "Users" },
-  { key: "iras", name: "RASSC", full: "RASSC Test", subtitle: "RASSC - Test Account", initials: "RS", iconName: "Landmark" },
+  { key: "rassc", name: "RASSC", full: "RASSC Test", subtitle: "RASSC - Test Account", initials: "RS", iconName: "Landmark" },
+  { key: "iras", name: "IRAS", full: "IRAS Test", subtitle: "IRAS - Test Account", initials: "IR", iconName: "ShieldCheck" },
   { key: "ofm", name: "OFM / Finance", full: "Finance Test", subtitle: "Finance - Test Account", initials: "FT", iconName: "Coins" },
   { key: "admin", name: "Administrator", full: "Admin Test", subtitle: "Admin - Test Account", initials: "AT", iconName: "Settings" },
 ];
@@ -193,6 +193,11 @@ const NAV_RASSC = [
   { key: "i-reports", label: "Report Review", icon: "FileCheck" },
 ];
 
+const NAV_IRAS = [
+  { section: "WORKSPACE" },
+  { key: "i-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+];
+
 const NAV_OFM = [
   { section: "WORKSPACE" },
   { key: "o-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
@@ -215,7 +220,8 @@ const SYSTEM_USERS = [
   { id: "U001", name: "Researcher Test", email: "researcher.test@au.edu", role: "Researcher", dept: "Computer Science", status: "Active", lastLogin: "Test account" },
   { id: "U002", name: "Dean Test", email: "dean.sci@au.edu", role: "Dean", dept: "Computer Science", status: "Active", lastLogin: "Test account" },
   { id: "U003", name: "Committee Test", email: "comm.chair@au.edu", role: "Faculty Committee", dept: "Computer Science", status: "Active", lastLogin: "Test account" },
-  { id: "U004", name: "RASSC Test", email: "iras.office@au.edu", role: "RASSC", dept: "RASSC", status: "Active", lastLogin: "Test account" },
+  { id: "U004", name: "RASSC Test", email: "rassc@au.edu", role: "RASSC", dept: "RASSC", status: "Active", lastLogin: "Test account" },
+  { id: "U005", name: "IRAS Test", email: "iras@au.edu", role: "IRAS", dept: "IRAS", status: "Active", lastLogin: "Test account" },
   { id: "U009", name: "Finance Test", email: "finance@au.edu", role: "OFM / Finance", dept: "Office of Financial Management", status: "Active", lastLogin: "Test account" },
   { id: "U010", name: "Admin Test", email: "admin@au.edu", role: "Administrator", dept: "IT Services", status: "Active", lastLogin: "Test account" },
 ];
@@ -290,11 +296,9 @@ const DOC_TYPES = [
 const R3_CONFERENCE_TYPES = ["Domestic", "International"];
 
 const R3_DOC_TYPES = [
-  "Full Research Article",
-  "Turnitin Result (≤ 20%)",
-  "Peer Review Comments",
-  "Dean-signed Memo",
-  "Other supporting document",
+  "Full Conference Paper",
+  "Turnitin Report",
+  "Conference Acceptance Letter",
 ];
 
 const GRANT_SYSTEMS = [
@@ -405,7 +409,7 @@ window.AU = {
   PRIMARY_APP, APPLICATIONS,
   NOTIFS, PAYMENTS, ACTIVITY,
   ROLES,
-  NAV_RESEARCHER, NAV_RESEARCHER_R3, NAV_DEAN, NAV_COMMITTEE, NAV_RASSC,
+  NAV_RESEARCHER, NAV_RESEARCHER_R3, NAV_DEAN, NAV_COMMITTEE, NAV_RASSC, NAV_IRAS,
   NAV_OFM, NAV_ADMIN,
   SYSTEM_USERS, JOURNAL_TIERS, AUDIT_LOG,
   Q_DEAN_SCREEN, Q_DEAN_SIGN, Q_COMMITTEE, Q_RASSC, Q_OFM,

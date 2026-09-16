@@ -6,11 +6,11 @@ const IR = window.AU;
 
 
 
-function RASSCReceived({ navigate, onDownload, setSelectedApplicationId }) {
+function RASSCReceived({ navigate, onDownload, setSelectedApplicationId, grantType = "au_r1" }) {
   const [rows, setRows] = useState(null);
   useEffect(() => {
-    window.DB.queue("iras_review").then(setRows).catch(() => setRows([]));
-  }, []);
+    window.DB.queue("iras_review", grantType).then(setRows).catch(() => setRows([]));
+  }, [grantType]);
   const openScreening = (row) => {
     setSelectedApplicationId(row._uuid);
     navigate("i-screen");
@@ -19,7 +19,7 @@ function RASSCReceived({ navigate, onDownload, setSelectedApplicationId }) {
     <>
       <PageHeader
         title="Received Applications"
-        desc="AU-R1 and AU-R4 applications recommended by the Faculty Committee, plus AU-R3 applications forwarded by the Dean, awaiting university-level review."
+        desc="AU-R1 applications received for RASSC verification."
       />
 
       <div className="card card-pad-0">

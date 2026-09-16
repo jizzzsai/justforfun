@@ -34,7 +34,8 @@ const USERS = [
   { key: "dean", email: "dean.sci@au.edu",     full_name: "Prof. Wichai Saetang",     role: "dean",       title: "Prof.",         faculty: "Science & Technology", department: "Dean's Office" },
   { key: "com1", email: "comm.chair@au.edu",   full_name: "Assoc. Prof. Pim Areerat",  role: "committee",  title: "Assoc. Prof.", faculty: "Science & Technology", department: "Academic Committee" },
   { key: "com2", email: "comm.member@au.edu",  full_name: "Dr. Anan Kittisak",        role: "committee",  title: "Dr.",           faculty: "Engineering",          department: "Academic Committee" },
-  { key: "iras", email: "iras.office@au.edu",  full_name: "Suda Wong",                role: "iras",       title: "Khun",          faculty: "Research Office",      department: "IRAS" },
+  { key: "rassc", email: "rassc@au.edu",       full_name: "RASSC Test",               role: "rassc",      title: "",              faculty: "Research Affairs",     department: "RASSC" },
+  { key: "iras",  email: "iras@au.edu",        full_name: "IRAS Test",                role: "iras",       title: "",              faculty: "Research Affairs",     department: "IRAS" },
   { key: "ofm",  email: "finance@au.edu",      full_name: "Ratana Srisuk",            role: "ofm",        title: "Khun",          faculty: "Finance",              department: "OFM" },
   { key: "admin",email: "admin@au.edu",        full_name: "System Administrator",     role: "admin",      title: "",              faculty: "IT",                   department: "Administration" },
 ];
@@ -133,13 +134,13 @@ ev("AU-2026-003", "com1", "Committee recommended", "dean_sign", 4);
 ev("AU-2026-004", "res2", "Submitted application", "submitted", 20);
 ev("AU-2026-004", "dean", "Signed & forwarded to IRAS", "iras_review", 9);
 ev("AU-2026-005", "res1", "Submitted application", "submitted", 26);
-ev("AU-2026-005", "iras", "RASSC review started", "iras_review", 7);
+ev("AU-2026-005", "rassc", "RASSC review started", "iras_review", 7);
 ev("AU-2026-006", "res2", "Submitted application", "submitted", 33);
-ev("AU-2026-006", "iras", "Approved by RASSC", "approved", 3);
-ev("AU-2026-007", "iras", "Approved by RASSC", "approved", 50);
+ev("AU-2026-006", "rassc", "Approved by RASSC", "approved", 3);
+ev("AU-2026-007", "rassc", "Approved by RASSC", "approved", 50);
 ev("AU-2026-007", "ofm", "Contract issued — grant active", "active", 45);
 ev("AU-2026-008", "com1", "Committee did not recommend", "rejected", 30);
-ev("AU-2026-010", "iras", "Returned for revision (budget)", "returned", 12);
+ev("AU-2026-010", "rassc", "Returned for revision (budget)", "returned", 12);
 must((await db.from("application_events").insert(events)).error, "insert events");
 
 const screenings = [
@@ -147,8 +148,8 @@ const screenings = [
   { application_id: appId["AU-2026-003"], kind: "dean_first", screener_id: id("dean"), decision: "pass",  notes: "Strong sustainability impact.", created_at: daysAgo(12) },
   { application_id: appId["AU-2026-003"], kind: "dean_sign",  screener_id: id("dean"), decision: "pass",  notes: "Endorsed and forwarded after committee recommendation.", created_at: daysAgo(4) },
   { application_id: appId["AU-2026-004"], kind: "dean_first", screener_id: id("dean"), decision: "pass",  notes: "Forward to IRAS.", created_at: daysAgo(15) },
-  { application_id: appId["AU-2026-004"], kind: "iras_office",screener_id: id("iras"), decision: "pass",  notes: "Documentation complete; ready for RASSC approval.", created_at: daysAgo(9) },
-  { application_id: appId["AU-2026-005"], kind: "iras_office",screener_id: id("iras"), decision: "pass",  notes: "Eligible for RASSC review.", created_at: daysAgo(8) },
+  { application_id: appId["AU-2026-004"], kind: "iras_office",screener_id: id("rassc"), decision: "pass",  notes: "Documentation complete; ready for RASSC approval.", created_at: daysAgo(9) },
+  { application_id: appId["AU-2026-005"], kind: "iras_office",screener_id: id("rassc"), decision: "pass",  notes: "Eligible for RASSC review.", created_at: daysAgo(8) },
 ];
 must((await db.from("screenings").insert(screenings)).error, "insert screenings");
 
@@ -159,7 +160,7 @@ const reviews = [
 must((await db.from("reviews").insert(reviews)).error, "insert reviews");
 
 const { data: contracts, error: cErr } = await db.from("contracts").insert([
-  { application_id: appId["AU-2026-007"], contract_no: "AU-CT-2026-007", amount: 100000, start_date: ymd(-45), end_date: ymd(320), status: "active", issued_by: id("iras"), issued_at: daysAgo(45) },
+  { application_id: appId["AU-2026-007"], contract_no: "AU-CT-2026-007", amount: 100000, start_date: ymd(-45), end_date: ymd(320), status: "active", issued_by: id("rassc"), issued_at: daysAgo(45) },
 ]).select("id, application_id");
 must(cErr, "insert contracts");
 const contractId = contracts[0].id;

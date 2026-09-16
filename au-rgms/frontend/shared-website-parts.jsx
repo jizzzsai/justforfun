@@ -685,16 +685,20 @@ function researcherJoinedDate(app) {
 }
 
 function universityServiceEligibility(joinedDate, asOf) {
-  if (!joinedDate) return { eligible: false, missing: true, eligibleOn: "" };
+  if (!joinedDate) return { eligible: false, missing: true, eligibleOn: "", months: 0 };
   const joined = new Date(joinedDate + "T00:00:00");
-  if (isNaN(joined)) return { eligible: false, missing: true, eligibleOn: "" };
+  if (isNaN(joined)) return { eligible: false, missing: true, eligibleOn: "", months: 0 };
   const eligibleOn = new Date(joined.getFullYear() + 1, joined.getMonth(), joined.getDate());
   const today = asOf ? new Date(asOf) : new Date();
   today.setHours(0, 0, 0, 0);
+  let months = (today.getFullYear() - joined.getFullYear()) * 12 + (today.getMonth() - joined.getMonth());
+  if (today.getDate() < joined.getDate()) months -= 1;
+  months = Math.max(0, months);
   return {
     eligible: today >= eligibleOn,
     missing: false,
     eligibleOn: audpISO(eligibleOn.getFullYear(), eligibleOn.getMonth(), eligibleOn.getDate()),
+    months,
   };
 }
 
@@ -704,6 +708,7 @@ function ResearcherServiceEligibilityRows({ app }) {
   return (
     <>
       <div className="meta-row"><span className="l">Joined Assumption University</span><span className="r">{joinedDate ? window.DB.fmtDate(joinedDate) : "Not recorded"}</span></div>
+      <div className="meta-row"><span className="l">University service</span><span className="r">{joinedDate ? service.months + " months" : "Not recorded"}</span></div>
       <div className="meta-row"><span className="l">Service eligibility</span><span className="r" style={{ color: joinedDate && service.eligible ? "var(--status-approved)" : "var(--au-crimson)" }}>{joinedDate ? (service.eligible ? "Eligible" : "Not eligible until " + window.DB.fmtDate(service.eligibleOn)) : "Not recorded"}</span></div>
     </>
   );

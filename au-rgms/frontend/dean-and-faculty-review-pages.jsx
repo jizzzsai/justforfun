@@ -354,7 +354,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
       status="submitted"
       applicationId={applicationId}
       title="AU-R3 Screening"
-      desc="Review the conference, paper, journal classification, and documents before forwarding to IRAS."
+      desc="Review the conference, paper, conference classification, and documents before forwarding to IRAS."
       render={(app, load) => {
         const docs = app.documents || [];
         const ci = app.conference_info || {};
@@ -364,10 +364,9 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
 
         const hasDoc = (kw) => docs.some(d => ((d.doc_type || "") + " " + (d.name || "")).toLowerCase().includes(kw));
         const docCats = [
-          { label: "Full Research Article", required: true, ok: hasDoc("article") },
+          { label: "Full Conference Paper", required: true, ok: hasDoc("conference paper") || hasDoc("full paper") },
           { label: "Turnitin Report", required: true, ok: hasDoc("turnitin") },
-          { label: "Dean-signed Memo", required: true, ok: hasDoc("memo") },
-          { label: "Peer Review Comments", required: false, ok: hasDoc("peer") },
+          { label: "Conference Acceptance Letter", required: true, ok: hasDoc("acceptance") },
         ];
 
         const confComplete = !!(ci.confName && ci.organizer && ci.confType && (ci.conferenceLocation || ci.city) && (ci.presentationDate || ci.confStart));
@@ -386,7 +385,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
         const ret = () => setConfirm({
           kind: "danger",
           title: "Return for revision?",
-          message: app.code + " will be sent back to the researcher. Explain what needs to be fixed (for example, a clearer Turnitin report or corrected journal classification).",
+          message: app.code + " will be sent back to the researcher. Explain what needs to be fixed (for example, a clearer Turnitin report or corrected conference classification).",
           confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment",
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-r3-screen"); }
@@ -405,16 +404,15 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
         });
 
         const checklist = [
-          { label: "Full research article uploaded", checked: docCats[0].ok },
+          { label: "Full conference paper uploaded", checked: docCats[0].ok },
           { label: "Turnitin report uploaded", checked: docCats[1].ok },
           { label: "Turnitin similarity does not exceed 20%", checked: similarityOk, manual: true },
           { label: "Conference information is complete", checked: confComplete },
           { label: "Paper and researcher information is complete", checked: infoComplete },
           { label: "At least one year of Assumption University service", checked: serviceEligible },
-          { label: "Journal database and classification are provided", checked: !!(ci.journalDb && ci.journalClassification) },
+          { label: "Conference database and classification are provided", checked: !!(ci.journalDb && ci.journalClassification) },
           { label: "Fixed AU-R3 grant amount is 3,500 THB", checked: requested === 3500 },
-          { label: "Dean-signed memo is uploaded", checked: docCats[2].ok },
-          { label: "Peer review comments uploaded (optional)", checked: docCats[3].ok, optional: true },
+          { label: "Conference acceptance letter is uploaded", checked: docCats[2].ok },
         ];
 
         const intl = ci.confType === "International";
@@ -468,12 +466,6 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                       </>
                     )}
                     <div className="meta-row" style={{ marginTop: 10 }}><span className="l">Keywords</span><span className="r">{app.keywords || "-"}</span></div>
-                    {app.abstract && (
-                      <>
-                        <div className="eyebrow mt-4 mb-2">Expected outcomes</div>
-                        <p style={{ margin: 0, lineHeight: 1.65, color: "var(--ink-2)" }}>{app.abstract}</p>
-                      </>
-                    )}
                   </div>
                 </div>
 
@@ -492,10 +484,10 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 </div>
 
                 <div className="card card-pad-0 mb-4">
-                  <div className="card-head"><h3>Journal Classification</h3></div>
+                  <div className="card-head"><h3>Conference Classification</h3></div>
                   <div className="card-body">
-                    <div className="meta-row"><span className="l">Journal Database / Index</span><span className="r">{ci.journalDb || "-"}</span></div>
-                    <div className="meta-row"><span className="l">Classification</span><span className="r">{ci.journalClassification || "-"}</span></div>
+                    <div className="meta-row"><span className="l">Conference Database / Index</span><span className="r">{ci.journalDb || "-"}</span></div>
+                    <div className="meta-row"><span className="l">Conference Classification</span><span className="r">{ci.journalClassification || "-"}</span></div>
                     <div className="meta-row"><span className="l">Fixed AU-R3 grant</span><span className="r">{fmtBaht(3500)}</span></div>
                   </div>
                 </div>

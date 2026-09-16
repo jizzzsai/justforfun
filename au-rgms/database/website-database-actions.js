@@ -257,8 +257,8 @@
           if (!String(conference.conferenceLocation || "").trim()) throw new Error("Enter the conference location.");
           if (!conference.presentationDate) throw new Error("Select the presentation date.");
           if (!String(conference.paperAbstract || "").trim()) throw new Error("Enter the paper abstract.");
-          if (!String(conference.journalDb || "").trim()) throw new Error("Select the Journal Database / Index.");
-          if (!String(conference.journalClassification || "").trim()) throw new Error("Select or enter the journal classification.");
+          if (!String(conference.journalDb || "").trim()) throw new Error("Select the Conference Database / Index.");
+          if (!String(conference.journalClassification || "").trim()) throw new Error("Select or enter the conference classification.");
         }
       }
       var existing = null;
@@ -419,8 +419,10 @@
       return a;
     },
 
-    async firstApplicationForStatus(status) {
+    async firstApplicationForStatus(status, grantType) {
       var q = sb.from("applications").select("id").eq("status", status);
+      if (grantType === "au_r1") q = q.or("grant_type.eq.au_r1,grant_type.is.null");
+      else if (grantType) q = q.eq("grant_type", grantType);
       var faculty = await currentFacultyScope();
       if (faculty) q = q.eq("faculty", faculty);
       var res = await q.order("submitted_at", { ascending: true }).limit(1);
@@ -524,6 +526,14 @@
     async transition(appId, fromStatus, kind, note, requestedLabel) {
       var me = await uid();
       var role = await myRole();
+      var scopedGrantType = null;
+      if (fromStatus === "iras_review") {
+        var scoped = await sb.from("applications").select("grant_type").eq("id", appId).single();
+        if (scoped.error) throw scoped.error;
+        scopedGrantType = scoped.data && scoped.data.grant_type;
+        if ((!scopedGrantType || scopedGrantType === "au_r1") && ["rassc", "admin"].indexOf(role) === -1) throw new Error("Only RASSC can review AU-R1 applications.");
+        if (["au_r3", "au_r4"].indexOf(scopedGrantType) >= 0 && ["iras", "admin"].indexOf(role) === -1) throw new Error("Only IRAS can review AU-R3 and AU-R4 applications.");
+      }
       var to, labelOverride = requestedLabel || null;
       if (kind === "return") to = "returned";
       else if (kind === "reject") to = "rejected";
@@ -904,7 +914,7 @@
     async acceptReport(reportId) {
       var me = await uid();
       var role = await myRole();
-      if (role !== "iras") throw new Error("Only RASSC can accept milestone reports and release them to Finance.");
+      if (role !== "rassc" && role !== "admin") throw new Error("Only RASSC can accept milestone reports and release them to Finance.");
       var current = await sb.from("reports")
         .select("id,kind,status,application_id,application:applications(id,code,grant_type)")
         .eq("id", reportId).single();
@@ -1184,9 +1194,13 @@
             }
           });
           if (cdecided) push("committee-decided", "Bell", "RASSC outcome", cdecided + " proposal(s) you recommended now have a RASSC decision.", "c-history", true);
-        } else if (role === "iras") {
-          var iq = await this.queue("iras_review"); if (iq.length) push("iras-screen", "Inbox", "RASSC", iq.length + " research proposal(s) awaiting screening.", "i-received", true);
+        } else if (role === "rassc") {
+          var iq = await this.queue("iras_review", "au_r1"); if (iq.length) push("rassc-screen", "Inbox", "RASSC", iq.length + " AU-R1 proposal(s) awaiting screening.", "i-received", true);
           var reports = await this.reportQueue(); if (reports.length) push("reports", "FileCheck", "Reports", reports.length + " report(s) awaiting RASSC acceptance.", "i-reports", true);
+        } else if (role === "iras") {
+          var iras3 = await this.queue("iras_review", "au_r3");
+          var iras4 = await this.queue("iras_review", "au_r4");
+          if (iras3.length + iras4.length) push("iras-screen", "Inbox", "IRAS", (iras3.length + iras4.length) + " AU-R3/AU-R4 application(s) awaiting verification.", "i-dashboard", true);
         } else if (role === "expert") {
           var ex = await this.myExpertAssignments(); if (ex.length) push("expert", "FileSearch", "Expert review", ex.length + " proposal(s) assigned to you.", "e-assignments", true);
         } else if (role === "president") {
@@ -1254,8 +1268,10 @@
       if (r.error) throw r.error;
       return r.count || 0;
     },
-    async byStatuses(arr) {
+    async byStatuses(arr, grantType) {
       var q = sb.from("applications").select("*, researcher:profiles(full_name)").in("status", arr);
+      if (grantType === "au_r1") q = q.or("grant_type.eq.au_r1,grant_type.is.null");
+      else if (grantType) q = q.eq("grant_type", grantType);
       var faculty = await currentFacultyScope();
       if (faculty) q = q.eq("faculty", faculty);
       var res = await q.order("decided_at", { ascending: false, nullsFirst: false });

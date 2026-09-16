@@ -28,7 +28,8 @@ const accounts = faculties.flatMap(faculty => [
 ]).concat([
   { email: "felix@au.edu", full_name: "Felix Researcher", role: "researcher", faculty: "Vincent Mary School of Engineering, Science and Technology", department: "Information Technology", name_title: "Mr." },
   { email: "james@au.edu", full_name: "James Researcher", role: "researcher", faculty: "Vincent Mary School of Engineering, Science and Technology", department: "Information Technology", name_title: "Mr." },
-  { email: "rassc@au.edu", full_name: "RASSC Test", role: "iras", faculty: "Research Affairs", department: "RASSC", name_title: "" },
+  { email: "rassc@au.edu", full_name: "RASSC Test", role: "rassc", faculty: "Research Affairs", department: "RASSC", name_title: "" },
+  { email: "iras@au.edu", full_name: "IRAS Test", role: "iras", faculty: "Research Affairs", department: "IRAS", name_title: "" },
   { email: "finance@au.edu", full_name: "Finance Test", role: "ofm", faculty: "Office of Financial Management", department: "Finance", name_title: "" },
   { email: "admin@au.edu", full_name: "Administrator Test", role: "admin", faculty: "Information Technology", department: "Administration", name_title: "" },
 ]);

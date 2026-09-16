@@ -649,29 +649,30 @@ function IRASGrantDashboard({ navigate, setSelectedApplicationId, sys }) {
   );
 }
 
-function RASSCDashboardV2({ navigate, setSelectedApplicationId }) {
-  const [sys, setSys] = useState("au_r1");
+function RASSCDashboardV2({ navigate, setSelectedApplicationId, officeRole = "rassc", grantType = "au_r1", onGrantSwitch }) {
+  const isIras = officeRole === "iras";
+  const sys = isIras && ["au_r3", "au_r4"].includes(grantType) ? grantType : "au_r1";
   const isR4 = sys === "au_r4", isR3 = sys === "au_r3";
   const [c, setC] = useState(null);
   const [rows, setRows] = useState(null);
   const [pendingReportCount, setPendingReportCount] = useState(null);
-  useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
+  useEffect(() => { window.DB.statusCounts(sys).then(setC).catch(() => setC({})); }, [sys]);
   useEffect(() => {
-    window.DB.byStatuses(["iras_review", "approved", "active"]).then(setRows).catch(() => setRows([]));
-    window.DB.reportQueue().then(reports => setPendingReportCount((reports || []).length)).catch(() => setPendingReportCount(0));
-  }, []);
+    window.DB.byStatuses(["iras_review", "approved", "active"], sys).then(setRows).catch(() => setRows([]));
+    if (!isIras) window.DB.reportQueue().then(reports => setPendingReportCount((reports || []).length)).catch(() => setPendingReportCount(0));
+  }, [sys, isIras]);
   const n = (k) => (c ? (c[k] || 0) : "…");
   const openWork = (row) => {
     navigate(row.statusKey === "iras_review" ? "i-screen" : "i-received");
   };
   const sysToggle = (
     <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden", marginRight: 8 }}>
-      {[{ id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
-        <button key={t.id} onClick={() => setSys(t.id)} style={{ padding: "7px 15px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: sys === t.id ? "var(--au-crimson)" : "transparent", color: sys === t.id ? "#fff" : "var(--ink-2)" }}>{t.label}</button>
+      {[{ id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
+        <button key={t.id} onClick={() => onGrantSwitch && onGrantSwitch(t.id, "i-dashboard")} style={{ padding: "7px 15px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: sys === t.id ? "var(--au-crimson)" : "transparent", color: sys === t.id ? "#fff" : "var(--ink-2)" }}>{t.label}</button>
       ))}
     </div>
   );
-  if (isR3 || isR4) {
+  if (isIras && (isR3 || isR4)) {
     return (
       <>
         <PageHeader
@@ -692,7 +693,6 @@ function RASSCDashboardV2({ navigate, setSelectedApplicationId }) {
         desc="Receive committee-recommended proposals, screen them, and approve eligible ones for Finance."
         actions={
           <>
-            {sysToggle}
             <button className="btn btn-secondary" onClick={() => navigate("i-reports")}>
               <Icon name="FileCheck" size={14} /> Report Review
               {pendingReportCount > 0 && <span className="badge badge-pending" style={{ marginLeft: 4 }}>{pendingReportCount}</span>}
@@ -739,14 +739,14 @@ function RASSCDashboardV2({ navigate, setSelectedApplicationId }) {
 }
 
 
-function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDownload, onView, toast, setConfirm }) {
+function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDownload, onView, toast, setConfirm, grantType = "au_r1" }) {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
   const load = () => {
     setLoading(true);
     const req = applicationId
       ? window.DB.applicationDetail(applicationId)
-      : window.DB.firstApplicationForStatus("iras_review");
+      : window.DB.firstApplicationForStatus("iras_review", grantType);
     req.then(a => {
       setApp(a);
       if (a && setSelectedApplicationId) setSelectedApplicationId(a.id);
@@ -925,8 +925,8 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                   <ResearcherServiceEligibilityRows app={app} />
                   <ReviewCommentHistory app={app} roles={["dean"]} />
                 </div></div>
-                <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Journal Classification</h3></div>
-                  <div className="card-body">{row("Journal Database / Index", ci.journalDb)}{row("Classification", ci.journalClassification)}{row("Fixed AU-R3 grant", fmtBaht(3500))}</div>
+                <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Conference Classification</h3></div>
+                  <div className="card-body">{row("Conference Database / Index", ci.journalDb)}{row("Conference Classification", ci.journalClassification)}{row("Fixed AU-R3 grant", fmtBaht(3500))}</div>
                 </div>
                 <div className="card card-pad-0"><div className="card-head"><h3>Documents</h3></div><div>
                   {docs.length === 0 && <Empty title="No documents" desc="No files forwarded." icon="FileText" />}
@@ -934,7 +934,7 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 </div></div>
               </div>
               <div className="card card-pad-0" style={{ alignSelf: "start" }}><div className="card-head"><h3>IRAS Decision</h3></div><div className="card-body">
-                <p className="text-sm text-muted mb-4">Confirm the conference, paper, journal classification, documents, and fixed 3,500 THB grant are eligible, then forward to Finance for payment.</p>
+                <p className="text-sm text-muted mb-4">Confirm the conference, paper, conference classification, three required documents, and fixed 3,500 THB grant are eligible, then forward to Finance for payment.</p>
                 <div className="flex flex-col gap-2">
                   <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Finance</button>
                   <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
@@ -1798,7 +1798,7 @@ function AdminDashboard({ navigate }) {
   const codePrefix = sys === "au_r4" ? "AU-R4-" : sys === "au_r3" ? "AU-R3-" : sys === "au_r1" ? "RG-" : null;
   const evFiltered = events === null ? null : (codePrefix ? events.filter(e => e.application && (e.application.code || "").indexOf(codePrefix) === 0) : events);
   const roleList = isR4 ? D.ROLES.filter(r => ADMIN_R4_ROLES.indexOf(r.key) >= 0) : D.ROLES;
-  const roleRows = profiles === null ? null : roleList.map(r => ({ key: r.key, name: r.key === "iras" && isR4 ? "IRAS" : r.name, count: profiles.filter(p => p.role === r.key).length })).filter(r => r.count > 0);
+  const roleRows = profiles === null ? null : roleList.map(r => ({ key: r.key, name: r.name, count: profiles.filter(p => p.role === r.key).length })).filter(r => r.count > 0);
   const sysToggle = (
     <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden", marginRight: 8 }}>
       {[{ id: "all", label: "All" }, { id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
@@ -1886,7 +1886,8 @@ function AdminDashboard({ navigate }) {
 
 const ADMIN_ROLE_OPTIONS = [
   { key: "researcher", label: "Researcher" }, { key: "dean", label: "Dean" },
-  { key: "committee", label: "Faculty Committee" }, { key: "iras", label: "RASSC / IRAS" },
+  { key: "committee", label: "Faculty Committee" }, { key: "rassc", label: "RASSC (AU-R1)" },
+  { key: "iras", label: "IRAS (AU-R3 / AU-R4)" },
   { key: "ofm", label: "OFM / Finance" }, { key: "admin", label: "Administrator" },
 ];
 

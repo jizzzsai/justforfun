@@ -34,7 +34,8 @@ const TEST_EMAIL_FOR = {
   researcher: "vmesresearcher@au.edu",
   dean: "vmesdean@au.edu",
   committee: "vmescommittee@au.edu",
-  iras: "rassc@au.edu",
+  rassc: "rassc@au.edu",
+  iras: "iras@au.edu",
   ofm: "finance@au.edu",
   admin: "admin@au.edu",
 };
@@ -236,7 +237,8 @@ function LoginPage({ onLogin }) {
                 </div>
                 <div className="au-login-demo-section">University-wide</div>
                 <div className="au-login-demo-grid au-login-demo-grid-wide">
-                  <button type="button" disabled={busy} title="rassc@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.iras)}><strong>rassc</strong><span>RASSC / IRAS</span></button>
+                  <button type="button" disabled={busy} title="rassc@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.rassc)}><strong>rassc</strong><span>AU-R1 Office</span></button>
+                  <button type="button" disabled={busy} title="iras@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.iras)}><strong>iras</strong><span>AU-R3 / AU-R4 Office</span></button>
                   <button type="button" disabled={busy} title="finance@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.ofm)}><strong>finance</strong><span>OFM / Finance</span></button>
                   <button type="button" disabled={busy} title="admin@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.admin)}><strong>admin</strong><span>Administrator</span></button>
                 </div>
@@ -429,10 +431,15 @@ const ROLE_CONFIG = {
     homeKey: "c-dashboard",
     crumbRoot: "Faculty Committee",
   },
-  iras: {
+  rassc: {
     nav: APP.NAV_RASSC,
     homeKey: "i-dashboard",
     crumbRoot: "RASSC",
+  },
+  iras: {
+    nav: APP.NAV_IRAS,
+    homeKey: "i-dashboard",
+    crumbRoot: "IRAS",
   },
   ofm: {
     nav: APP.NAV_OFM,
@@ -448,7 +455,7 @@ const ROLE_CONFIG = {
 
 
 const SYSTEM_ROLE_KEYS = {
-  au_r1: ["researcher", "dean", "committee", "iras", "ofm", "admin"],
+  au_r1: ["researcher", "dean", "committee", "rassc", "ofm", "admin"],
   au_r3: ["researcher", "dean", "iras", "ofm", "admin"],
   au_r4: ["researcher", "dean", "committee", "iras", "ofm", "admin"],
 };
@@ -456,11 +463,6 @@ function rolesForSystem(sys) {
   const all = APP.ROLES || [];
   const keys = SYSTEM_ROLE_KEYS[sys];
   const list = keys ? keys.map(k => all.find(r => r.key === k)).filter(Boolean) : all;
-  if (sys === "au_r3" || sys === "au_r4") {
-    return list.map(r => r.key === "iras"
-      ? { ...r, name: "IRAS", full: "IRAS Test", subtitle: "IRAS - Test Account", initials: "IR" }
-      : r);
-  }
   return list;
 }
 
@@ -469,8 +471,7 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSys
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifItems, setNotifItems] = useState(APP.NOTIFS || []);
   const current = rolesForSystem(grantSystem).find(r => r.key === role) || APP.ROLES.find(r => r.key === role);
-  const isIrasTestHeader = role === "iras" && (grantSystem === "au_r3" || grantSystem === "au_r4") && profile && String(profile.email || "").toLowerCase() === TEST_EMAIL_FOR.iras;
-  const displayName = isIrasTestHeader ? "IRAS Test" : ((profile && profile.full_name) || current.full);
+  const displayName = (profile && profile.full_name) || current.full;
   const displaySubtitle = demoMode ? current.subtitle : current.name;
   const displayInitials = displayName
     ? displayName.trim().split(/\s+/).slice(-2).map(s => s[0]).join("").toUpperCase()
@@ -667,12 +668,12 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "c-history":        return <CommitteeHistory onDownload={c.onDownload} />;
 
 
-    case "i-dashboard":      return <RASSCDashboardV2 navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
-    case "i-r3-verify":      return <IRASr3Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "i-r4-verify":      return <IRASr4Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "i-received":       return <RASSCReceived navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} />;
-    case "i-screen":         return <RASSCScreen applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "i-reports":        return <RASSCReports onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "i-dashboard":      return <RASSCDashboardV2 navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} officeRole={c.role} grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} />;
+    case "i-r3-verify":      return c.role === "iras" ? <IRASr3Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} /> : <Empty title="IRAS access required" desc="AU-R3 verification is available only to IRAS." icon="Lock" />;
+    case "i-r4-verify":      return c.role === "iras" ? <IRASr4Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} /> : <Empty title="IRAS access required" desc="AU-R4 verification is available only to IRAS." icon="Lock" />;
+    case "i-received":       return c.role === "rassc" ? <RASSCReceived navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} grantType="au_r1" /> : <Empty title="RASSC access required" desc="AU-R1 applications are available only to RASSC." icon="Lock" />;
+    case "i-screen":         return c.role === "rassc" ? <RASSCScreen applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} grantType="au_r1" /> : <Empty title="RASSC access required" desc="AU-R1 screening is available only to RASSC." icon="Lock" />;
+    case "i-reports":        return c.role === "rassc" ? <RASSCReports onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} /> : <Empty title="RASSC access required" desc="AU-R1 report review is available only to RASSC." icon="Lock" />;
 
 
     case "o-dashboard":      return <OFMDashboard navigate={navigate} toast={c.toast} setConfirm={c.setConfirm} grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} />;
@@ -856,8 +857,13 @@ function App() {
     }));
   }, [loggedIn, profile, role, page, rSystem]);
 
+  const effectiveGrantSystem = role === "rassc"
+    ? "au_r1"
+    : role === "iras"
+      ? (["au_r3", "au_r4"].includes(rSystem) ? rSystem : "au_r3")
+      : rSystem;
   const cfg = ROLE_CONFIG[role];
-  const researcherTrimmed = role === "researcher" && (rSystem === "au_r3" || rSystem === "au_r4");
+  const researcherTrimmed = role === "researcher" && (effectiveGrantSystem === "au_r3" || effectiveGrantSystem === "au_r4");
   const navForRole = researcherTrimmed ? (APP.NAV_RESEARCHER_R3 || cfg.nav) : cfg.nav;
 
   const pageLabel = useMemo(() => {
@@ -891,7 +897,7 @@ function App() {
 
   return (
     <div className="app">
-      <AppHeader role={role} profile={profile} onSwitchRole={onSwitchRole} onLogout={onLogout} onNavigate={setPage} grantSystem={rSystem} demoMode={demoMode} />
+      <AppHeader role={role} profile={profile} onSwitchRole={onSwitchRole} onLogout={onLogout} onNavigate={setPage} grantSystem={effectiveGrantSystem} demoMode={demoMode} />
       <SubBar
         crumbs={crumbs}
         onHome={() => setPage(cfg.homeKey)}
@@ -906,7 +912,7 @@ function App() {
         <PageRouter
           pageKey={page}
           navigate={navigate}
-          ctx={{ role, onDownload, onView, toast, setConfirm, profile, selectedApplicationId, setSelectedApplicationId, grantType: role === "researcher" || role === "ofm" ? rSystem : null, onGrantSwitch: chooseSystem }}
+          ctx={{ role, onDownload, onView, toast, setConfirm, profile, selectedApplicationId, setSelectedApplicationId, grantType: ["researcher", "ofm", "rassc", "iras"].includes(role) ? effectiveGrantSystem : null, onGrantSwitch: chooseSystem }}
         />
       </main>
       {previewDoc && (

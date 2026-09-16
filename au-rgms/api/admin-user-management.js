@@ -1,4 +1,4 @@
-const ROLES = ["researcher", "dean", "committee", "iras", "ofm", "admin"];
+const ROLES = ["researcher", "dean", "committee", "rassc", "iras", "ofm", "admin"];
 const NULLABLE_PROFILE_REFERENCES = [
   ["app_settings", "updated_by"],
   ["application_documents", "uploaded_by"],

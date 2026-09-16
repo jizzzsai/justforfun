@@ -46,15 +46,11 @@ try {
       assert.ifError(inserted.error);
       createdIds.push(inserted.data.id);
 
-      const pending = await person.guest.from("application_collaborators")
-        .select("id,status,email,full_name,author_role,application:applications(id,title,grant_type)")
-        .eq("application_id", inserted.data.id)
-        .single();
-      assert.ifError(pending.error);
-      assert.equal(pending.data.status, "pending");
-      assert.equal(pending.data.application.grant_type, grantType);
-      assert.equal(pending.data.email, person.guestEmail);
-      assert.equal(pending.data.full_name, person.guestName);
+      const invitations = await admin.from("application_collaborators")
+        .select("id")
+        .eq("application_id", inserted.data.id);
+      assert.ifError(invitations.error);
+      assert.equal((invitations.data || []).length, 0, "AU-R3/R4 author details must not create account invitations");
 
       const deniedBefore = await person.guest.from("applications")
         .update({ title: "Unauthorized collaborator edit" })
@@ -62,29 +58,12 @@ try {
         .select("id");
       assert.equal((deniedBefore.data || []).length, 0);
 
-      const accepted = await person.guest.rpc("respond_to_collaboration", {
-        p_invitation_id: pending.data.id,
-        p_accept: true,
-      });
-      assert.ifError(accepted.error);
-      assert.equal(accepted.data.status, "accepted");
-
-      const ownerView = await person.owner.from("application_collaborators")
-        .select("status,user_id,full_name,email")
-        .eq("application_id", inserted.data.id)
-        .single();
-      assert.ifError(ownerView.error);
-      assert.equal(ownerView.data.status, "accepted");
-      assert.equal(ownerView.data.full_name, person.guestName);
-
       const visible = await person.guest.from("applications")
-        .select("*, researcher:profiles(full_name,email,name_title,title,au_id,phone,office_room), collaborators:application_collaborators(id,user_id,email,full_name,author_role,status,invited_at,responded_at), documents:application_documents(*), reviews(*, reviewer:profiles(full_name,email,title,faculty,department)), events:application_events(*, actor:profiles(full_name)), payments(*), reports(*)")
+        .select("id")
         .eq("id", inserted.data.id)
-        .single();
+        .maybeSingle();
       assert.ifError(visible.error);
-      assert.equal(visible.data.grant_type, grantType);
-      assert.ok((visible.data.collaborators || []).some(item => item.status === "accepted"));
-      assert.ok((visible.data.events || []).some(event => event.action === "Co-author invitation accepted"));
+      assert.equal(visible.data, null, "Listed authors must not gain access to another researcher's application");
 
       const deniedAfter = await person.guest.from("applications")
         .update({ title: "Unauthorized accepted co-author edit" })
@@ -94,7 +73,7 @@ try {
     }
   }
 
-  console.log("AU-R3 and AU-R4 co-author invitation flow passed.");
+  console.log("AU-R3 and AU-R4 descriptive-author access test passed.");
 } finally {
   if (createdIds.length) await admin.from("applications").delete().in("id", createdIds);
   await felix.auth.signOut();
