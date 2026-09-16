@@ -756,19 +756,6 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
       },
     });
   };
-  const reject = () => {
-    if (!app) return;
-    setConfirm({
-      kind: "danger",
-      title: "Reject this application?",
-      message: app.code + " will be rejected. This ends the application.",
-      confirmLabel: "Reject", withReason: true, reasonRequired: true, reasonLabel: "RASSC comment",
-      onConfirm: async (reason) => {
-        try { await window.DB.transition(app.id, "iras_review", "reject", reason); toast(app.code + " rejected."); navigate("i-received"); }
-        catch (e) { toast("Error: " + ((e && e.message) || e)); }
-      },
-    });
-  };
   const docs = (app && app.documents) || [];
 
   if (loading) {
@@ -822,33 +809,17 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
           <ResearcherInformationCard app={app} className="mt-4" />
         </div>
         <div>
-          <div className="card card-pad-0">
-            <div className="card-head"><h3>Screening Checklist</h3></div>
+          <div className="card card-pad-0" style={{ alignSelf: "start" }}>
+            <div className="card-head"><h3>RASSC Decision</h3></div>
             <div className="card-body">
-              {[
-                { label: docs.length + " forwarded PDF document(s)", checked: docs.length > 0 },
-                { label: "Budget total is within the 100,000 THB AU ceiling", checked: Number(app.requested_amount || 0) > 0 && Number(app.requested_amount || 0) <= 100000 },
-                { label: "Researcher, faculty, and department are recorded", checked: !!(app.researcher && app.faculty && app.department) },
-                { label: "At least one year of Assumption University service", checked: universityServiceEligibility(researcherJoinedDate(app)).eligible },
-                { label: "Proposal is complete and ready for approval", checked: docs.length > 0 },
-              ].map((item, i, arr) => (
-                <label key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < arr.length - 1 ? "1px solid var(--line-2)" : "none", cursor: "pointer" }}>
-                  <input type="checkbox" defaultChecked={item.checked} style={{ accentColor: "var(--au-crimson)" }} />
-                  <span style={{ flex: 1, fontSize: 13 }}>{item.label}</span>
-                </label>
-              ))}
-              <div className="flex flex-col gap-2 mt-4">
-                <button className="btn btn-primary btn-block" disabled={docs.length === 0 || !universityServiceEligibility(researcherJoinedDate(app)).eligible} onClick={approve}>
+              <div className="flex flex-col gap-2">
+                <button className="btn btn-primary btn-block" onClick={approve}>
                   <Icon name="CheckCircle" size={14} /> Approve &amp; Send to Finance
                 </button>
                 <button className="btn btn-secondary btn-block" onClick={returnToResearcher}>
                   <Icon name="Repeat" size={14} /> Return for Revision
                 </button>
-                <button className="btn btn-danger btn-block" onClick={reject}>
-                  <Icon name="X" size={14} /> Reject Application
-                </button>
               </div>
-              {docs.length === 0 && <div className="text-sm text-muted mt-3">Upload at least one PDF before approving this application.</div>}
             </div>
           </div>
         </div>
@@ -878,8 +849,6 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
         });
         const ret = () => setConfirm({ kind: "danger", title: "Return for revision?", message: app.code + " will be returned to the researcher.", confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "IRAS comment",
           onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "return", reason); toast(app.code + " returned."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); } } });
-        const rej = () => setConfirm({ kind: "danger", title: "Reject application?", message: app.code + " will be rejected. This ends the request.", confirmLabel: "Reject", withReason: true, reasonRequired: true, reasonLabel: "IRAS comment",
-          onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "reject", reason); toast(app.code + " rejected."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); } } });
         return (
           <>
             <PageHeader title={"AU-R3 Verification — " + app.code} desc={(ci.researcherName || (app.researcher ? app.researcher.full_name : "Researcher")) + " · " + (app.faculty || "") + " · " + (ci.confName || "")} actions={<Badge status={r3Badge(app.status)} />} />
@@ -911,7 +880,6 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 <div className="flex flex-col gap-2">
                   <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Finance</button>
                   <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
-                  <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
                 </div>
               </div></div>
             </div>
@@ -955,8 +923,6 @@ function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setC
         };
         const ret = () => setConfirm({ kind: "danger", title: "Return for revision?", message: app.code + " will be returned to the researcher.", confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "IRAS comment",
           onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "return", reason); toast(app.code + " returned."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); } } });
-        const rej = () => setConfirm({ kind: "danger", title: "Reject application?", message: app.code + " will be rejected. This ends the claim.", confirmLabel: "Reject", withReason: true, reasonRequired: true, reasonLabel: "IRAS comment",
-          onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "reject", reason); toast(app.code + " rejected."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); } } });
         return (
           <>
             <PageHeader title={"AU-R4 Verification — " + app.code} desc={(app.researcher ? app.researcher.full_name : "Researcher") + " · " + (pi.journal || "") + " · " + (pi.indexLabel || "")} actions={<Badge status={r4Badge(app.status)} />} />
@@ -995,7 +961,6 @@ function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 <div className="flex flex-col gap-2 mt-4">
                   <button className="btn btn-primary btn-block" disabled={overMax || finalNum <= 0} onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Finance</button>
                   <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
-                  <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
                 </div>
               </div></div>
             </div>
@@ -1464,9 +1429,9 @@ function OFMGrantPayments({ sys, toast, setConfirm }) {
   };
   useEffect(() => { setRows(null); load(); }, [sys]);
   const complete = (a) => setConfirm({
-    kind: "success", title: "Complete payment and application?",
+    kind: "success", title: "Confirm payment completion?",
     message: a.id + " will be recorded as completed (" + fmtBaht(Number(a.approved_amount || a.requested_amount || 0)) + "). This closes the Finance workflow.",
-    confirmLabel: "Complete",
+    confirmLabel: "Continue", finalConfirm: true, reasonLabel: "Payment confirmation",
     onConfirm: async () => {
       try { await window.DB.completeSingleGrant(a._uuid); toast(a.id + " completed."); load(); }
       catch (e) { toast("Error: " + ((e && e.message) || e)); }

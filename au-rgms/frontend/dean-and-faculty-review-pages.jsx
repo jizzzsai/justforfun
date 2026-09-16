@@ -203,8 +203,6 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
         const isR3 = app.grant_type === "au_r3";
         const grantCap = app.grant_type === "au_r3" ? 3500 : app.grant_type === "au_r4" ? 80000 : 100000;
         const grantCode = app.grant_type === "au_r3" ? "AU-R3" : app.grant_type === "au_r4" ? "AU-R4" : "AU-R1";
-        const withinCap = isR3 ? requested === 3500 : requested > 0 && requested <= grantCap;
-        const serviceEligible = universityServiceEligibility(researcherJoinedDate(app)).eligible;
         const forward = () => setConfirm({
           kind: "success",
           title: isR3 ? "Forward to RASSC?" : "Forward to Faculty Committee?",
@@ -224,16 +222,6 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
           confirmLabel: "Return", withReason: true, reasonLabel: "Dean comment", reasonRequired: true,
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-screen"); }
-            catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
-          },
-        });
-        const rej = () => setConfirm({
-          kind: "danger",
-          title: "Reject this application?",
-          message: app.code + " will be rejected at Dean screening. This ends the application.",
-          confirmLabel: "Reject", withReason: true, reasonLabel: "Dean comment", reasonRequired: true,
-          onConfirm: async (reason) => {
-            try { await window.DB.transition(app.id, "submitted", "reject", reason); toast(app.code + " rejected."); navigate("d-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
@@ -300,28 +288,13 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
                   </div>
                 </div>
               </div>
-              <div className="card card-pad-0">
-                <div className="card-head"><h3>Checklist Decision</h3></div>
+              <div className="card card-pad-0" style={{ alignSelf: "start" }}>
+                <div className="card-head"><h3>Dean Decision</h3></div>
                 <div className="card-body">
-                  {[
-                    { label: docs.length + " uploaded PDF document(s)", checked: docs.length > 0 },
-                    { label: isR3 ? "Fixed AU-R3 grant amount is 3,500 THB" : "Budget total within " + grantCap.toLocaleString() + " THB " + grantCode + " ceiling", checked: withinCap },
-                    { label: "Research title, researcher, faculty and department entered", checked: !!(app.title && app.researcher && app.faculty && app.department) },
-                    { label: "At least one year of Assumption University service", checked: serviceEligible },
-                    { label: "Expected outcomes / proposal summary entered", checked: !!app.abstract },
-                  ].map((item, i, arr) => (
-                    <label key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < arr.length - 1 ? "1px solid var(--line-2)" : "none" }}>
-                      <input type="checkbox" defaultChecked={item.checked} style={{ accentColor: "var(--au-crimson)" }} />
-                      <span style={{ flex: 1, fontSize: 13 }}>{item.label}</span>
-                      <Icon name={item.checked ? "CheckCircle" : "AlertCircle"} size={16} style={{ color: item.checked ? "var(--status-approved)" : "var(--au-gold)" }} />
-                    </label>
-                  ))}
-                  <div className="flex flex-col gap-2 mt-4">
-                    <button className="btn btn-primary btn-block" disabled={docs.length === 0 || !serviceEligible} onClick={forward}><Icon name="Send" size={14} /> {isR3 ? "Forward to RASSC" : "Forward to Faculty Committee"}</button>
+                  <div className="flex flex-col gap-2">
+                    <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward</button>
                     <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
-                    <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
                   </div>
-                  {docs.length === 0 && <div className="text-sm text-muted mt-3">Upload at least one PDF before forwarding.</div>}
                 </div>
               </div>
             </div>
@@ -348,7 +321,6 @@ function r3Badge(status) {
 }
 
 function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
-  const [similarityOk, setSimilarityOk] = useState(false);
   return (
     <LiveAppLoader
       status="submitted"
@@ -358,9 +330,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
       render={(app, load) => {
         const docs = app.documents || [];
         const ci = app.conference_info || {};
-        const requested = Number(app.requested_amount || 0);
         const r = app.researcher || {};
-        const serviceEligible = universityServiceEligibility(researcherJoinedDate(app)).eligible;
 
         const hasDoc = (kw) => docs.some(d => ((d.doc_type || "") + " " + (d.name || "")).toLowerCase().includes(kw));
         const docCats = [
@@ -368,9 +338,6 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
           { label: "Turnitin Report", required: true, ok: hasDoc("turnitin") },
           { label: "Conference Acceptance Letter", required: true, ok: hasDoc("acceptance") },
         ];
-
-        const confComplete = !!(ci.confName && ci.organizer && ci.confType && (ci.conferenceLocation || ci.city) && (ci.presentationDate || ci.confStart));
-        const infoComplete = !!(app.title && ci.correspondingAuthor && ci.paperAbstract && ci.journalDb && ci.journalClassification && app.field && app.faculty && app.department);
 
         const forward = () => setConfirm({
           kind: "success",
@@ -392,28 +359,6 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
-        const rej = () => setConfirm({
-          kind: "danger",
-          title: "Reject this application?",
-          message: app.code + " will be rejected at Dean screening. This ends the request.",
-          confirmLabel: "Reject", withReason: true, reasonRequired: true, reasonLabel: "Dean comment",
-          onConfirm: async (reason) => {
-            try { await window.DB.transition(app.id, "submitted", "reject", reason); toast(app.code + " rejected."); navigate("d-r3-screen"); }
-            catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
-          },
-        });
-
-        const checklist = [
-          { label: "Full conference paper uploaded", checked: docCats[0].ok },
-          { label: "Turnitin report uploaded", checked: docCats[1].ok },
-          { label: "Turnitin similarity does not exceed 20%", checked: similarityOk, manual: true },
-          { label: "Conference information is complete", checked: confComplete },
-          { label: "Paper and researcher information is complete", checked: infoComplete },
-          { label: "At least one year of Assumption University service", checked: serviceEligible },
-          { label: "Conference database and classification are provided", checked: !!(ci.journalDb && ci.journalClassification) },
-          { label: "Fixed AU-R3 grant amount is 3,500 THB", checked: requested === 3500 },
-          { label: "Conference acceptance letter is uploaded", checked: docCats[2].ok },
-        ];
 
         const intl = ci.confType === "International";
         return (
@@ -523,24 +468,12 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
               </div>
 
               <div className="card card-pad-0" style={{ alignSelf: "start" }}>
-                <div className="card-head"><h3>AU-R3 Checklist Decision</h3></div>
+                <div className="card-head"><h3>Dean Decision</h3></div>
                 <div className="card-body">
-                  {checklist.map((item, i, arr) => (
-                    <label key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 0", borderBottom: i < arr.length - 1 ? "1px solid var(--line-2)" : "none", opacity: item.optional && !item.checked ? 0.75 : 1 }}>
-                      <input type="checkbox"
-                        checked={item.checked}
-                        onChange={item.manual ? (e => setSimilarityOk(e.target.checked)) : (() => {})}
-                        style={{ accentColor: "var(--au-crimson)" }} />
-                      <span style={{ flex: 1, fontSize: 13 }}>{item.label}{item.manual && <span style={{ display: "block", fontSize: 11, color: "var(--ink-3)" }}>Tick after checking the Turnitin report yourself.</span>}</span>
-                      <Icon name={item.checked ? "CheckCircle" : "AlertCircle"} size={16} style={{ color: item.checked ? "var(--status-approved)" : (item.optional ? "var(--ink-4)" : "var(--au-gold)") }} />
-                    </label>
-                  ))}
-                  <div className="flex flex-col gap-2 mt-4">
-                    <button className="btn btn-primary btn-block" disabled={docs.length === 0 || !serviceEligible} onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to IRAS</button>
+                  <div className="flex flex-col gap-2">
+                    <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to IRAS</button>
                     <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
-                    <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
                   </div>
-                  {docs.length === 0 && <div className="text-sm text-muted mt-3">The researcher must upload at least one PDF before this can be forwarded.</div>}
                 </div>
               </div>
             </div>
@@ -563,8 +496,6 @@ function r4Badge(status) {
 }
 
 function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
-  const [similarityOk, setSimilarityOk] = useState(false);
-  const [memoApproved, setMemoApproved] = useState(false);
   return (
     <LiveAppLoader
       status="submitted"
@@ -591,11 +522,6 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
         const turnitinBad = turnitin > 20;
         const overMax = requested > MAX;
         const totalContrib = Math.round(Number(pi.totalContribution || authors.reduce((s, a) => s + (Number(a.contribution) || 0), 0)));
-        const principal = Number((authors.find(a => /first|principal/i.test(a.type || "")) || {}).contribution) || 0;
-        const serviceEligible = universityServiceEligibility(researcherJoinedDate(app)).eligible;
-
-        const canApprove = docs.length > 0 && docCats.every(d => d.ok) && !turnitinBad && !overMax && similarityOk && memoApproved && totalContrib === 100 && serviceEligible;
-
         const forward = () => setConfirm({
           kind: "success",
           title: "Confirm AU-R4 Approval",
@@ -615,32 +541,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
-        const rej = () => setConfirm({
-          kind: "danger", title: "Reject Application?",
-          message: app.code + " will be rejected at Dean screening. This ends the claim.",
-          confirmLabel: "Reject", withReason: true, reasonRequired: true, reasonLabel: "Dean comment",
-          onConfirm: async (reason) => {
-            try { await window.DB.transition(app.id, "submitted", "reject", reason); toast(app.code + " rejected."); navigate("d-r4-screen"); }
-            catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
-          },
-        });
-
         const row = (l, v) => <div className="meta-row"><span className="l">{l}</span><span className="r">{v || "-"}</span></div>;
-        const checklist = [
-          { label: "Article information is complete", checked: !!(app.title && pi.journal && pi.publisher) },
-          { label: "Journal classification is provided", checked: !!pi.journalDb },
-          { label: "Author contributions total 100%", checked: totalContrib === 100 },
-          { label: "At least one year of Assumption University service", checked: serviceEligible },
-          { label: "First Author contribution ≥ 50%", checked: principal >= 50 },
-          { label: "Full research article uploaded", checked: docCats[0].ok },
-          { label: "Turnitin report uploaded", checked: docCats[1].ok },
-          { label: "Turnitin similarity does not exceed 20%", checked: similarityOk, manual: true },
-          { label: "Original publication fee receipt uploaded", checked: docCats[2].ok },
-          { label: "Author contribution statement uploaded", checked: docCats[4].ok },
-          ...(pi.pubStatus !== "Published" ? [{ label: "Acceptance letter uploaded", checked: docCats[5].ok }] : []),
-          { label: "Requested claim within 80,000 THB", checked: !overMax },
-          { label: "Memo digitally approved by Dean", checked: memoApproved, manual: true },
-        ];
 
         return (
           <>
@@ -745,23 +646,12 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
               </div>
 
               <div className="card card-pad-0" style={{ alignSelf: "start" }}>
-                <div className="card-head"><h3>AU-R4 Checklist Decision</h3></div>
+                <div className="card-head"><h3>Dean Decision</h3></div>
                 <div className="card-body">
-                  {checklist.map((item, i, arr) => (
-                    <label key={item.label} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 0", borderBottom: i < arr.length - 1 ? "1px solid var(--line-2)" : "none" }}>
-                      <input type="checkbox" checked={item.checked}
-                        onChange={item.manual ? (e => (item.label.indexOf("Turnitin") === 0 ? setSimilarityOk(e.target.checked) : setMemoApproved(e.target.checked))) : (() => {})}
-                        style={{ accentColor: "var(--au-crimson)" }} />
-                      <span style={{ flex: 1, fontSize: 13 }}>{item.label}{item.label.indexOf("Memo") === 0 && <span style={{ display: "block", fontSize: 11, color: "var(--ink-3)" }}>Tick to digitally approve &amp; sign the memo.</span>}</span>
-                      <Icon name={item.checked ? "CheckCircle" : "AlertCircle"} size={16} style={{ color: item.checked ? "var(--status-approved)" : "var(--au-gold)" }} />
-                    </label>
-                  ))}
-                  <div className="flex flex-col gap-2 mt-4">
-                    <button className="btn btn-primary btn-block" disabled={!canApprove} onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Committee</button>
+                  <div className="flex flex-col gap-2">
+                    <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Committee</button>
                     <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
-                    <button className="btn btn-danger btn-block" onClick={rej}><Icon name="X" size={14} /> Reject Application</button>
                   </div>
-                  {!canApprove && <div className="text-sm text-muted mt-3">Complete the required documents, Turnitin check, memo approval, and amount checks before forwarding.</div>}
                 </div>
               </div>
             </div>
@@ -786,7 +676,7 @@ function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, s
         const pi = app.pub_info || {};
         const authors = Array.isArray(app.co_members) ? app.co_members : [];
         const row = (l, v) => <div className="meta-row"><span className="l">{l}</span><span className="r">{v || "-"}</span></div>;
-        const recLabel = { favorable: "forwarded to RASSC", revise: "returned to the researcher for revision", unfavorable: "rejected" };
+        const recLabel = { favorable: "approved and forwarded", revise: "returned to the researcher for revision" };
         const submit = () => setConfirm({
           kind: form.recommendation === "favorable" ? "success" : "danger",
           title: "Submit Committee Decision?",
@@ -855,7 +745,7 @@ function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, s
                 <div className="card-head"><h3>Committee Decision</h3></div>
                 <div className="card-body">
                   <div className="field"><label>Score (0-100)</label><input type="number" min="0" max="100" value={form.score} onChange={e => setField("score", e.target.value)} /></div>
-                  <div className="field"><label>Recommendation</label><select value={form.recommendation} onChange={e => setField("recommendation", e.target.value)}><option value="favorable">Recommend</option><option value="revise">Request revision</option><option value="unfavorable">Reject</option></select></div>
+                  <div className="field"><label>Decision</label><select value={form.recommendation} onChange={e => setField("recommendation", e.target.value)}><option value="favorable">Approve &amp; Forward</option><option value="revise">Return for Revision</option></select></div>
                   <button className="btn btn-primary btn-block" onClick={submit}><Icon name="Send" size={14} /> Submit Decision</button>
                 </div>
               </div>
@@ -875,10 +765,10 @@ function FacultyDean({ onDownload, onView, toast, setConfirm }) {
       desc="Final faculty-level decision before forwarding to RASSC."
       render={(app, load) => {
         const decide = (kind) => setConfirm({
-          kind: kind === "reject" ? "danger" : "success",
-          title: kind === "advance" ? "Approve and forward to RASSC?" : kind === "return" ? "Return for revision?" : "Reject this application?",
-          message: app.code + " will be " + (kind === "advance" ? "sent to RASSC." : kind === "return" ? "returned for revision." : "rejected."),
-          confirmLabel: kind === "advance" ? "Approve & Forward" : kind === "return" ? "Return" : "Reject",
+          kind: kind === "return" ? "danger" : "success",
+          title: kind === "advance" ? "Approve and forward to RASSC?" : "Return for revision?",
+          message: app.code + " will be " + (kind === "advance" ? "sent to RASSC." : "returned for revision."),
+          confirmLabel: kind === "advance" ? "Approve & Forward" : "Return",
           onConfirm: async () => {
             try { await window.DB.transition(app.id, "dean_sign", kind); toast(app.code + " updated."); load(); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -919,7 +809,6 @@ function FacultyDean({ onDownload, onView, toast, setConfirm }) {
                   <div className="flex flex-col gap-2">
                     <button className="btn btn-primary btn-block" onClick={() => decide("advance")}><Icon name="ShieldCheck" size={14} /> Approve and Forward to RASSC</button>
                     <button className="btn btn-secondary btn-block" onClick={() => decide("return")}><Icon name="Repeat" size={14} /> Return for Revision</button>
-                    <button className="btn btn-danger btn-block" onClick={() => decide("reject")}><Icon name="X" size={14} /> Reject</button>
                   </div>
                 </div>
               </div>

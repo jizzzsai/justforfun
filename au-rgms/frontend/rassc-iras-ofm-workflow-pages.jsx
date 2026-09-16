@@ -863,7 +863,6 @@ function RASSCPublicationGrants({ toast }) {
               <div className="flex flex-col gap-2">
                 <button className="btn btn-primary btn-block" onClick={() => review("approve")}><Icon name="CheckCircle" size={14} /> Approve for OFM Payment</button>
                 <button className="btn btn-secondary btn-block" onClick={() => review("return")}><Icon name="Repeat" size={14} /> Return to Researcher</button>
-                <button className="btn btn-danger btn-block" onClick={() => review("reject")}><Icon name="X" size={14} /> Reject</button>
               </div>
             </div>
           )}
@@ -975,7 +974,6 @@ function ReimbursementReview({ title, desc, statuses, stage, toast }) {
               <div className="flex flex-col gap-2">
                 <button className="btn btn-primary btn-block" onClick={() => review("approve")}><Icon name="CheckCircle" size={14} /> {stage === "dean" ? "Approve & Forward to RASSC" : "Approve for OFM Payment"}</button>
                 <button className="btn btn-secondary btn-block" onClick={() => review("return")}><Icon name="Repeat" size={14} /> Return to Researcher</button>
-                <button className="btn btn-danger btn-block" onClick={() => review("reject")}><Icon name="X" size={14} /> Reject</button>
               </div>
             </div>
           )}
