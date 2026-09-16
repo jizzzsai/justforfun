@@ -845,6 +845,37 @@ function App() {
     })();
   }, []);
 
+  // Keep the visible workspace aligned with Supabase if a login is changed in
+  // another tab or the saved session is cleared.  This prevents an old Dean
+  // screen from remaining visible with a different account's permissions.
+  useEffect(() => {
+    if (!window.sb || !window.sb.auth) return;
+    const listener = window.sb.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") {
+        setProfile(null);
+        setLoggedIn(false);
+        return;
+      }
+      if (["SIGNED_IN", "TOKEN_REFRESHED", "USER_UPDATED"].includes(event)) {
+        window.setTimeout(() => {
+          window.AUTH.profile().then(prof => {
+            if (!prof) { setProfile(null); setLoggedIn(false); return; }
+            setProfile(prof);
+            if (ROLE_CONFIG[prof.role]) setRole(prof.role);
+            if (event === "SIGNED_IN" && ROLE_CONFIG[prof.role]) {
+              setSelectedApplicationId(null);
+              setPage(ROLE_CONFIG[prof.role].homeKey);
+            }
+            setLoggedIn(true);
+          }).catch(() => { setProfile(null); setLoggedIn(false); });
+        }, 0);
+      }
+    });
+    return () => {
+      if (listener && listener.data && listener.data.subscription) listener.data.subscription.unsubscribe();
+    };
+  }, []);
+
   useEffect(() => {
     const supportedSystem = ["au_r1", "au_r3", "au_r4"].includes(rSystem);
     const researcherAI = !!(loggedIn && profile && profile.role === "researcher" && role === "researcher" && supportedSystem);

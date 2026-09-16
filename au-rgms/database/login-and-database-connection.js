@@ -51,6 +51,10 @@
   });
   window.sb = sb;
 
+  function clearStoredSession() {
+    [authKey, authKey + "-user", authKey + "-code-verifier"].forEach(function (key) { authStorage.removeItem(key); });
+  }
+
   window.AUTH = {
     remembersSession: function () { return rememberSession; },
     async signIn(email, password, remember) {
@@ -70,19 +74,30 @@
     async signOut() {
       try { await sb.auth.signOut(); }
       finally {
-        [authKey, authKey + "-user", authKey + "-code-verifier"].forEach(function (key) { authStorage.removeItem(key); });
+        clearStoredSession();
       }
     },
     async session() {
       var r = await sb.auth.getSession();
       return r.data ? r.data.session : null;
     },
-    async profile() {
+    // Read the active Supabase user first, then load that user's profile.  This
+    // deliberately avoids trusting a role that was rendered before an account
+    // switch (for example, a Dean screen left open after a test-account switch).
+    async identity() {
+      var sessionResult = await sb.auth.getSession();
+      if (sessionResult.error) throw sessionResult.error;
+      if (!sessionResult.data || !sessionResult.data.session) return null;
       var u = await sb.auth.getUser();
+      if (u.error) throw u.error;
       if (!u.data || !u.data.user) return null;
       var r = await sb.from("profiles").select("*").eq("id", u.data.user.id).single();
       if (r.error) throw r.error;
-      return r.data;
+      return { user: u.data.user, profile: r.data };
+    },
+    async profile() {
+      var identity = await window.AUTH.identity();
+      return identity ? identity.profile : null;
     },
     async requestPasswordReset(email) {
       var normalized = String(email || "").trim().toLowerCase();

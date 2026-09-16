@@ -37,6 +37,38 @@
     var r = await sb.from("profiles").select("role").eq("id", id).single();
     return r.data ? r.data.role : null;
   }
+  async function currentActor() {
+    var u = await sb.auth.getUser();
+    if (u.error) throw u.error;
+    if (!u.data || !u.data.user) return { id: null, role: null, profile: null };
+    var r = await sb.from("profiles").select("id,role,email,full_name,faculty").eq("id", u.data.user.id).maybeSingle();
+    if (r.error) throw r.error;
+    return { id: u.data.user.id, role: r.data ? r.data.role : null, profile: r.data || null };
+  }
+  function roleLabel(role) {
+    var labels = {
+      researcher: "Researcher", dean: "Dean", committee: "Faculty Committee",
+      rassc: "RASSC", iras: "IRAS", ofm: "Finance", admin: "Administrator",
+      expert: "Expert Reviewer", president: "President"
+    };
+    return labels[role] || (role ? String(role) : "an unassigned account");
+  }
+  function expectedRoles(app, fromStatus) {
+    if (fromStatus === "submitted" || fromStatus === "dean_sign") return ["dean"];
+    if (fromStatus === "committee_review") return ["committee"];
+    if (fromStatus === "iras_review") return app && app.grant_type === "au_r1" ? ["rassc"] : ["iras"];
+    if (fromStatus === "expert_review") return ["expert"];
+    if (fromStatus === "president_review") return ["president"];
+    if (fromStatus === "approved" || fromStatus === "active") return ["ofm"];
+    return [];
+  }
+  function assertWorkflowRole(actor, app, fromStatus) {
+    if (!actor || !actor.id) throw new Error("Your login session has expired. Please sign in again.");
+    var required = expectedRoles(app, fromStatus);
+    if (!required.length || actor.role === "admin" || required.indexOf(actor.role) >= 0) return;
+    var expected = required.map(roleLabel).join(" or ");
+    throw new Error("You are signed in as " + roleLabel(actor.role) + ". This action requires " + expected + ". Please sign out and sign in with the correct account.");
+  }
   async function currentFacultyScope() {
     var id = await uid();
     if (!id) return null;
@@ -543,16 +575,26 @@
     },
 
     async transition(appId, fromStatus, kind, note, requestedLabel) {
-      var me = await uid();
-      var role = await myRole();
-      var scopedGrantType = null;
-      if (fromStatus === "iras_review") {
-        var scoped = await sb.from("applications").select("grant_type").eq("id", appId).single();
-        if (scoped.error) throw scoped.error;
-        scopedGrantType = scoped.data && scoped.data.grant_type;
-        if ((!scopedGrantType || scopedGrantType === "au_r1") && ["rassc", "admin"].indexOf(role) === -1) throw new Error("Only RASSC can review AU-R1 applications.");
-        if (["au_r3", "au_r4"].indexOf(scopedGrantType) >= 0 && ["iras", "admin"].indexOf(role) === -1) throw new Error("Only IRAS can review AU-R3 and AU-R4 applications.");
+      // Always re-read the authenticated account and application.  The screen
+      // may be older than the current session after an account switch or a
+      // token refresh, and a queued item may have moved while it was open.
+      var actor = await currentActor();
+      if (!actor.id) throw new Error("Your login session has expired. Please sign in again.");
+      var current = await sb.from("applications")
+        .select("id,code,status,grant_type,faculty")
+        .eq("id", appId).maybeSingle();
+      if (current.error) throw current.error;
+      var currentApp = current.data;
+      if (!currentApp) {
+        throw new Error("This application is not available to the signed-in " + roleLabel(actor.role) + " account. Please sign out and sign in again before approving.");
       }
+      assertWorkflowRole(actor, currentApp, fromStatus);
+      if (currentApp.status !== fromStatus) {
+        throw new Error((currentApp.code || "This application") + " is already at " + (STATUS_MAP[currentApp.status] ? STATUS_MAP[currentApp.status].label : currentApp.status) + ". Refresh the queue before taking another action.");
+      }
+      var me = actor.id;
+      var role = actor.role;
+      var scopedGrantType = currentApp.grant_type;
       var to, labelOverride = requestedLabel || null;
       if (kind === "return") to = "returned";
       else if (kind === "reject") to = "rejected";
@@ -560,8 +602,7 @@
         var n = NEXT[fromStatus]; if (!n) throw new Error("No next step from " + fromStatus); to = n.to;
         if (["submitted", "committee_review", "iras_review"].indexOf(fromStatus) >= 0) {
           try {
-            var gt = await sb.from("applications").select("grant_type").eq("id", appId).single();
-            var grantType = gt.data && gt.data.grant_type;
+            var grantType = scopedGrantType;
             if (fromStatus === "submitted" && grantType === "au_r3") {
               to = "iras_review";
               labelOverride = "Dean approved — forwarded to IRAS";
@@ -580,7 +621,12 @@
       var upd = await sb.from("applications").update(patch).eq("id", appId).eq("status", fromStatus).select();
       if (upd.error) throw upd.error;
       if (!upd.data || upd.data.length === 0) {
-        throw new Error("No application was updated. Sign in with the correct role for this queue, or refresh if the application already moved.");
+        var latest = await sb.from("applications").select("code,status").eq("id", appId).maybeSingle();
+        if (latest.error) throw latest.error;
+        if (latest.data && latest.data.status !== fromStatus) {
+          throw new Error((latest.data.code || "This application") + " was already moved to " + (STATUS_MAP[latest.data.status] ? STATUS_MAP[latest.data.status].label : latest.data.status) + ". Refresh the queue.");
+        }
+        throw new Error("Your " + roleLabel(role) + " session could not complete this action. Please sign out, sign in again, and reopen the queue.");
       }
       if (upd.data.length > 1) {
         throw new Error("More than one application matched this action. Refresh and try again.");
