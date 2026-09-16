@@ -677,6 +677,7 @@ function PageRouter({ pageKey, navigate, ctx }) {
 
 
     case "o-dashboard":      return <OFMDashboard navigate={navigate} toast={c.toast} setConfirm={c.setConfirm} grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} />;
+    case "o-summary":        return <OFMTotalSummary onDownload={c.onDownload} />;
     case "o-payments":       return <OFMPaymentQueue grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-detail":         return <OFMPaymentQueue grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
     case "o-history":        return <OFMHistory grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} />;

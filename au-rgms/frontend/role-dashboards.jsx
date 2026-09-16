@@ -1512,6 +1512,95 @@ function FinanceGrantTabs({ sys, onChange }) {
   );
 }
 
+function FinanceApplicationDetailsModal({ applicationId, onClose, onDownload }) {
+  const [app, setApp] = useState(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (!applicationId) return;
+    setApp(null); setError("");
+    window.DB.applicationDetail(applicationId).then(setApp).catch(e => setError((e && e.message) || "Could not load application details."));
+  }, [applicationId]);
+  const grantLabel = app => app && app.grant_type === "au_r3" ? "AU-R3" : app && app.grant_type === "au_r4" ? "AU-R4" : "AU-R1";
+  return (
+    <Modal open={!!applicationId} onClose={onClose} title={app ? grantLabel(app) + " · " + app.code : "Application Details"} size="sm"
+      footer={<button className="btn btn-secondary" onClick={onClose}>Close</button>}>
+      {!app && !error && <div style={{ padding: "16px 0", textAlign: "center", color: "var(--ink-3)" }}>Loading application details…</div>}
+      {error && <div style={{ color: "var(--au-crimson)", lineHeight: 1.55 }}>{error}</div>}
+      {app && <>
+        <div style={{ marginBottom: 16 }}>
+          <div className="eyebrow mb-2">{grantLabel(app)} Application</div>
+          <div style={{ fontFamily: "var(--font-serif)", fontSize: 21, lineHeight: 1.25 }}>{app.title || "Untitled application"}</div>
+          <div style={{ marginTop: 8 }}><Badge status={app.statusBadge || window.DB.statusBadge(app.status, app.grant_type)} /></div>
+        </div>
+        <div className="meta-row"><span className="l">Application ID</span><span className="r">{app.code || "-"}</span></div>
+        <div className="meta-row"><span className="l">Researcher</span><span className="r">{app.researcher?.full_name || "-"}</span></div>
+        <div className="meta-row"><span className="l">Faculty / Department</span><span className="r">{[app.faculty, app.department].filter(Boolean).join(" / ") || "-"}</span></div>
+        <div className="meta-row"><span className="l">Submitted</span><span className="r">{window.DB.fmtDate(app.submitted_at || app.created_at)}</span></div>
+        <div className="meta-row"><span className="l">Approved amount</span><span className="r">{fmtBaht(Number(app.approved_amount || app.requested_amount || 0))}</span></div>
+        <div className="meta-row"><span className="l">Disbursed</span><span className="r">{fmtBaht((app.payments || []).filter(p => p.status === "paid").reduce((sum, p) => sum + Number(p.amount || 0), 0))}</span></div>
+        <div style={{ borderTop: "1px solid var(--line-2)", marginTop: 14, paddingTop: 12 }}>
+          <div className="eyebrow mb-2">Files</div>
+          {(app.documents || []).length === 0 && <div className="text-sm text-muted">No files attached to this application.</div>}
+          {(app.documents || []).map(doc => <FileRow key={doc.id} doc={doc} compact onDownload={onDownload} />)}
+        </div>
+      </>}
+    </Modal>
+  );
+}
+
+function OFMTotalSummary({ onDownload }) {
+  const [apps, setApps] = useState(null);
+  const [filter, setFilter] = useState("all");
+  const [selectedId, setSelectedId] = useState(null);
+  useEffect(() => { window.DB.financeSummaryApplications().then(setApps).catch(() => setApps([])); }, []);
+  const rows = (apps || []).filter(app => filter === "all" || app.grant_type === filter);
+  const grantLabel = app => app.grant_type === "au_r3" ? "AU-R3" : app.grant_type === "au_r4" ? "AU-R4" : "AU-R1";
+  const summary = [
+    { label: "Total Allocated", value: "1,290,000 THB", icon: "Coins" },
+    { label: "Disbursed", value: "602,000 THB", icon: "TrendingUp", tone: "green" },
+    { label: "Active Grants", value: "14", icon: "Briefcase", tone: "navy" },
+  ];
+  return (
+    <>
+      <PageHeader title="Total Summary" desc="Today’s finance summary across AU-R1, AU-R3, and AU-R4 applications." />
+      <div className="stats" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+        {summary.map(item => <Stat key={item.label} label={item.label} value={item.value} icon={item.icon} tone={item.tone} />)}
+      </div>
+      <div className="card card-pad-0">
+        <div className="card-head">
+          <h3>All Grant Applications</h3><div className="grow"></div>
+          <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden" }}>
+            {[{ id: "all", label: "All" }, { id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(tab => (
+              <button key={tab.id} onClick={() => setFilter(tab.id)} style={{ padding: "7px 12px", fontSize: 11, fontWeight: 700, border: "none", cursor: "pointer", background: filter === tab.id ? "var(--au-crimson)" : "transparent", color: filter === tab.id ? "#fff" : "var(--ink-2)" }}>{tab.label}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ overflowX: "auto" }}>
+          <table className="tbl">
+            <thead><tr><th>Application</th><th>Researcher</th><th>Grant</th><th>Submitted</th><th style={{ textAlign: "right" }}>Amount</th><th>Status</th><th style={{ textAlign: "right" }}>Details</th></tr></thead>
+            <tbody>
+              {apps === null && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading applications…</td></tr>}
+              {apps && rows.length === 0 && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No applications in this view.</td></tr>}
+              {rows.map(app => (
+                <tr key={app.id} style={{ cursor: "pointer" }} onClick={() => setSelectedId(app.id)}>
+                  <td><div className="id">{app.code || "-"}</div><div style={{ fontSize: 12, fontWeight: 600, marginTop: 3, maxWidth: 260, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{app.title || "Untitled application"}</div></td>
+                  <td style={{ fontSize: 12 }}>{app.researcher?.full_name || "-"}</td>
+                  <td><span className="badge badge-submitted"><span className="dot"></span>{grantLabel(app)}</span></td>
+                  <td style={{ fontSize: 12 }}>{window.DB.fmtDate(app.submitted_at || app.created_at)}</td>
+                  <td style={{ textAlign: "right", fontWeight: 600, fontFamily: "ui-monospace, monospace", fontSize: 12 }}>{fmtBaht(Number(app.approved_amount || app.requested_amount || 0))}</td>
+                  <td><Badge status={app.statusBadge || window.DB.statusBadge(app.status, app.grant_type)} /></td>
+                  <td className="actions"><button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); setSelectedId(app.id); }}><Icon name="Eye" size={13} /> View</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <FinanceApplicationDetailsModal applicationId={selectedId} onClose={() => setSelectedId(null)} onDownload={onDownload} />
+    </>
+  );
+}
+
 function OFMDashboard({ navigate, toast, setConfirm, grantType, onGrantSwitch }) {
   const sys = ["au_r1", "au_r3", "au_r4"].includes(grantType) ? grantType : "au_r1";
   const isR3 = sys === "au_r3", isR4 = sys === "au_r4";
@@ -1701,7 +1790,7 @@ function OFMPaymentQueue({ grantType, onGrantSwitch, onDownload, toast, setConfi
   return (
     <>
       <PageHeader
-        title={(isR4 ? "AU-R4" : "AU-R3") + " · Payment Queue"}
+        title={(isR4 ? "AU-R4" : "AU-R3") + " Payment Queue"}
         desc={"Only " + (isR4 ? "AU-R4 publication fee and reward" : "AU-R3 paper presentation grant") + " applications approved by IRAS appear here."}
         actions={tabs}
       />
@@ -2321,7 +2410,7 @@ Object.assign(window, {
   DeanDashboard, DeanScreenQueue, DeanSignQueue, DeanHistory, DeanR3Queue, DeanR4Queue,
   CommitteeDashboard, CommitteeQueue, CommitteeHistory,
   RASSCDashboardV2, RASSCScreen, IRASr3Detail, IRASr4Detail,
-  OFMDashboard, OFMPaymentQueue, OFMDetail, OFMHistory,
+  OFMDashboard, OFMTotalSummary, OFMPaymentQueue, OFMDetail, OFMHistory,
   AdminDashboard, AdminUsers, AdminAudit,
   AnalyticsDashboard, AccountSettings,
 });

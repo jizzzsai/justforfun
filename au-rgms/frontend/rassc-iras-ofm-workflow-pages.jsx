@@ -611,9 +611,6 @@ function RASSCPayment({ onDownload, toast, setConfirm, sysToggle }) {
   const load = () => window.DB.ofmPayments().then(setApps).catch(() => setApps([]));
   useEffect(() => { load(); }, []);
 
-  const totalAllocated = (apps || []).reduce((s, a) => s + Number(a.approved_amount || a.requested_amount || 0), 0);
-  const disbursed = (apps || []).reduce((s, a) => s + (a.payments || []).filter(p => p.status === "paid").reduce((t, p) => t + Number(p.amount), 0), 0);
-
   const payCell = (app, p) => {
     if (!p) return "—";
     if (p.status === "paid") return <span className="badge badge-paid"><span className="dot"></span>Paid</span>;
@@ -645,16 +642,10 @@ function RASSCPayment({ onDownload, toast, setConfirm, sysToggle }) {
   return (
     <>
       <PageHeader
-        title="AU-R1 · Payment Queue"
+        title="AU-R1 Payment Queue"
         desc="Only AU-R1 payment phases appear here. Process each disbursement after its approval or report gate is complete."
         actions={sysToggle}
       />
-
-      <div className="stats" style={{gridTemplateColumns: "repeat(3, 1fr)"}}>
-        <Stat label="Total Allocated" value={fmtBaht(totalAllocated)} icon="Coins" />
-        <Stat label="Disbursed" value={fmtBaht(disbursed)} icon="TrendingUp" tone="green" />
-        <Stat label="Active Grants" value={(apps || []).length} icon="Briefcase" tone="navy" />
-      </div>
 
       <div className="card card-pad-0">
         {apps === null && <div style={{ padding: "36px", textAlign: "center", color: "var(--ink-3)" }}>Loading payments…</div>}

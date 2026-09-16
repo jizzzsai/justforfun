@@ -201,6 +201,7 @@ const NAV_IRAS = [
 const NAV_OFM = [
   { section: "WORKSPACE" },
   { key: "o-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+  { key: "o-summary", label: "Total Summary", icon: "BarChart3" },
   { section: "PAYMENTS" },
   { key: "o-payments", label: "Payment Queue", icon: "Coins" },
   { section: "TRACKING" },

@@ -392,6 +392,17 @@
       if (res.error) throw res.error;
       return (res.data || []).map(mapRow);
     },
+    async financeSummaryApplications() {
+      var res = await sb.from("applications")
+        .select("*, researcher:profiles(full_name,email,phone,office_room), payments(*), reports(kind,status), documents:application_documents(id,name,doc_type)")
+        .order("created_at", { ascending: false });
+      if (res.error) throw res.error;
+      return (res.data || []).map(function (app) {
+        app.grant_type = app.grant_type || "au_r1";
+        app.statusBadge = badge(app.status, app.grant_type);
+        return app;
+      });
+    },
     async deanQueue() { return this.queue("submitted"); },
 
     async applicationDetail(appId) {
