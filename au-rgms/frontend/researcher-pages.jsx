@@ -2364,7 +2364,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
           </div>
 
           <div className="card mb-4">
-            <ReviewCommentHistory app={app} roles={app.grant_type === "au_r3" ? ["dean", "iras"] : ["dean", "committee", "iras"]} />
+            <ReviewCommentHistory app={app} roles={app.grant_type === "au_r3" ? ["dean", "iras"] : (!app.grant_type || app.grant_type === "au_r1") ? ["dean", "committee", "rassc"] : ["dean", "committee", "iras"]} />
           </div>
 
           <div className="card card-pad-0 mb-4">
@@ -2412,12 +2412,8 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
 
         <div style={{ alignSelf: "start" }}>
           <div className="card card-pad-0 mb-4">
-            <div className="card-head"><h3>Approval Timeline</h3><div className="grow"></div><Badge status={status} /></div>
-            <div className="card-body">{app.grant_type === "au_r4"
-              ? <Timeline steps={R4_PIPELINE} app={{ timeline: buildR4Timeline(app.status) }} />
-              : app.grant_type === "au_r3"
-              ? <Timeline steps={R3_PIPELINE} app={{ timeline: buildR3Timeline(app.status) }} />
-              : <Timeline steps={RA.ALL_STAGES} app={timelineApp} onStepClick={openProjectReport} />}</div>
+            <div className="card-head"><h3>Application Timeline</h3><div className="grow"></div><Badge status={status} /></div>
+            <div className="card-body"><ApplicationEventTimeline app={app} /></div>
           </div>
 
           {isR1 && <div className="card card-pad-0">

@@ -788,6 +788,14 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .tl-step.current .dot::after {
   content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--au-crimson);
 }
+.application-event-timeline .tl-step.rejected .dot { background: #b42318; border-color: #b42318; box-shadow: 0 0 0 4px #fee4e2; }
+.application-event-timeline .tl-step.rejected .t { color: #9e1b1b; }
+.application-event-timeline .tl-step.returned .dot { background: #c58b00; border-color: #c58b00; box-shadow: 0 0 0 4px #fff3cd; }
+.application-event-timeline .tl-step.returned .t { color: #9a6700; }
+.application-event-timeline .event-transition {
+  display: inline-block; margin-top: 6px; padding: 3px 8px; border-radius: 999px;
+  background: var(--paper-warm); color: var(--ink-3); font-size: 10px; font-weight: 700;
+}
 .tl-step .t {
   font-size: 13px; font-weight: 600; color: var(--ink-1);
 }

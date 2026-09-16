@@ -337,6 +337,59 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
   );
 }
 
+function ApplicationEventTimeline({ app }) {
+  const grantType = app && app.grant_type ? app.grant_type : "au_r1";
+  const officeName = grantType === "au_r1" ? "RASSC" : "IRAS";
+  const roleName = role => ({
+    researcher: "Researcher", dean: "Dean", committee: "Faculty Committee",
+    rassc: "RASSC", iras: officeName, ofm: "Finance Office", admin: "Administrator",
+  })[role] || "System";
+  const statusName = value => value ? window.DB.statusBadge(value, grantType).label : "";
+  const dateTime = value => {
+    if (!value) return "Date not recorded";
+    try { return new Date(value).toLocaleString("en-US", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" }); }
+    catch (e) { return value; }
+  };
+  const eventTitle = event => {
+    const actor = roleName(event.actor_role);
+    if (event.to_status === "rejected") return actor + " rejected the application";
+    if (event.to_status === "returned") return actor + " requested revision";
+    if (/resubmitted/i.test(event.action || "")) return "Researcher resubmitted the application";
+    if (/submitted application/i.test(event.action || "")) return "Researcher submitted the application";
+    return event.action || actor + " action recorded";
+  };
+  let events = (app && app.events ? app.events : [])
+    .filter(event => event.action !== "Saved draft" && event.action !== "Faculty Committee review submitted")
+    .slice()
+    .sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+  if (app && app.submitted_at && !events.some(event => event.actor_role === "researcher" && /submit/i.test(event.action || ""))) {
+    events.unshift({ id: "initial-submission", actor_role: "researcher", action: "Submitted application", from_status: "draft", to_status: "submitted", created_at: app.submitted_at, note: "Initial submission." });
+  }
+  const last = events[events.length - 1];
+  if (app && app.status && app.status !== "draft" && (!last || last.to_status !== app.status)) {
+    events.push({ id: "current-status", action: "Current application status", to_status: app.status, created_at: app.updated_at || app.decided_at || app.submitted_at, synthetic: true });
+  }
+  if (!events.length) return <Empty title="No timeline activity yet" desc="Actions will appear after the researcher submits this application." icon="Clock" />;
+  return (
+    <div className="timeline application-event-timeline">
+      {events.map((event, index) => {
+        const tone = event.to_status === "rejected" ? "rejected" : event.to_status === "returned" ? "returned" : index === events.length - 1 && !["rejected", "completed"].includes(app.status) ? "current" : "done";
+        const actor = event.actor && event.actor.full_name ? event.actor.full_name : roleName(event.actor_role);
+        return (
+          <div className={`tl-step ${tone}`} key={event.id || index}>
+            <div className="dot"></div>
+            <div className="t">{eventTitle(event)}</div>
+            <div className="s">{dateTime(event.created_at)}</div>
+            {!event.synthetic && <div className="who">{actor}</div>}
+            {(event.from_status || event.to_status) && <div className="event-transition">{event.from_status ? statusName(event.from_status) + " → " : ""}{statusName(event.to_status)}</div>}
+            {event.note && <div className="comment" style={{ whiteSpace: "pre-wrap" }}>{event.note}</div>}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 
 function ReviewCommentHistory({ app, roles = ["dean", "committee"] }) {
   const wantsCommittee = roles.includes("committee");
@@ -344,6 +397,7 @@ function ReviewCommentHistory({ app, roles = ["dean", "committee"] }) {
   const officeName = app && app.grant_type === "au_r1" ? "RASSC" : "IRAS";
   const eventRoles = {
     dean: { label: "Dean comment", author: "Dean", initials: "DN" },
+    rassc: { label: "RASSC comment", author: "RASSC", initials: "RS" },
     iras: { label: officeName + " comment", author: officeName, initials: officeName === "RASSC" ? "RS" : "IR" },
     ofm: { label: "Finance comment", author: "Finance Office", initials: "FN" },
   };
@@ -351,7 +405,8 @@ function ReviewCommentHistory({ app, roles = ["dean", "committee"] }) {
   roles.filter(role => role !== "committee").forEach(role => {
     const meta = eventRoles[role] || { label: role + " comment", author: role, initials: role.slice(0, 2).toUpperCase() };
     (app.events || []).forEach(e => {
-      if (e.actor_role !== role || !e.note || !e.note.trim()) return;
+      const roleMatches = e.actor_role === role || (role === "rassc" && (!app.grant_type || app.grant_type === "au_r1") && e.actor_role === "iras");
+      if (!roleMatches || !e.note || !e.note.trim()) return;
       items.push({
         key: role + "-" + e.id,
         role: meta.label,
@@ -740,7 +795,7 @@ function ResearcherInformationCard({ app, className = "" }) {
 
 Object.assign(window, {
   Icon, AULogo, Badge, Avatar, Toast, FileRow,
-  Timeline, HTimeline, Stat, Modal, FilePreviewModal,
+  Timeline, ApplicationEventTimeline, HTimeline, Stat, Modal, FilePreviewModal,
   ConfirmModal, ReviewCommentHistory, NotifPanel, PageHeader, Empty, fmtBaht,
   AUDatePicker, normalizeThaiPhone, isValidThaiPhone, ThaiPhoneInput, researcherJoinedDate, universityServiceEligibility, ResearcherServiceEligibilityRows, ResearcherInformationCard,
 });

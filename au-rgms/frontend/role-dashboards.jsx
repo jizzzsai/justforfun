@@ -411,15 +411,6 @@ function DeanDecisionTimeline({ applicationId, navigate }) {
   }
 
   const grantLabel = app.grant_type === "au_r3" ? "AU-R3" : app.grant_type === "au_r4" ? "AU-R4" : "AU-R1";
-  const deanEvents = (app.events || []).filter(event => event.actor_role === "dean");
-  const dateTime = value => {
-    if (!value) return "Date not recorded";
-    try {
-      return new Date(value).toLocaleString("en-US", { year: "numeric", month: "short", day: "2-digit", hour: "2-digit", minute: "2-digit" });
-    } catch (e) { return value; }
-  };
-  const statusLabel = value => value ? window.DB.statusBadge(value).label : "-";
-
   return (
     <>
       <PageHeader
@@ -445,30 +436,12 @@ function DeanDecisionTimeline({ applicationId, navigate }) {
 
       <div className="card card-pad-0">
         <div className="card-head">
-          <h3>Dean Activity</h3>
+          <h3>Complete Application Activity</h3>
           <div className="grow"></div>
           <span className="text-sm text-muted"><Icon name="Lock" size={12} /> Read-only</span>
         </div>
         <div className="card-body">
-          {deanEvents.length === 0 && <Empty title="No Dean activity recorded" desc="This older application does not have a saved Dean decision event." icon="Clock" />}
-          {deanEvents.length > 0 && (
-            <div className="timeline">
-              {deanEvents.map((event, index) => (
-                <div className="tl-step done" key={event.id || index}>
-                  <div className="dot"></div>
-                  <div className="t">{event.action || "Dean decision recorded"}</div>
-                  <div className="s">{dateTime(event.created_at)}</div>
-                  <div className="who">{event.actor?.full_name || "Dean"}</div>
-                  {(event.from_status || event.to_status) && (
-                    <div className="text-sm text-muted" style={{ marginTop: 7 }}>
-                      {statusLabel(event.from_status)} <Icon name="ArrowRight" size={11} /> {statusLabel(event.to_status)}
-                    </div>
-                  )}
-                  {event.note && <div className="comment" style={{ whiteSpace: "pre-wrap" }}><b>Dean comment:</b> {event.note}</div>}
-                </div>
-              ))}
-            </div>
-          )}
+          <ApplicationEventTimeline app={app} />
         </div>
       </div>
     </>

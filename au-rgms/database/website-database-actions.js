@@ -302,12 +302,17 @@
         : await sb.from("applications").insert(row).select().single();
       if (res.error) throw res.error;
       try {
+        var wasReturned = !!(existing && existing.status === "returned");
+        if (submit && existing && !wasReturned) {
+          var earlierReturn = await sb.from("application_events").select("id").eq("application_id", existing.id).eq("to_status", "returned").limit(1);
+          wasReturned = !earlierReturn.error && earlierReturn.data && earlierReturn.data.length > 0;
+        }
         await sb.from("application_events").insert({
           application_id: res.data.id, actor_id: me, actor_role: "researcher",
-          action: submit ? "Submitted application" : "Saved draft",
+          action: submit ? (wasReturned ? "Researcher resubmitted application" : "Submitted application") : "Saved draft",
           from_status: existing ? existing.status : null,
           to_status: res.data.status,
-          note: submit ? (existing ? "Submitted from saved draft." : "Initial submission.") : "Draft saved.",
+          note: submit ? (wasReturned ? "Revised application submitted again for review." : (existing ? "Submitted from saved draft." : "Initial submission.")) : "Draft saved.",
         });
       } catch (e) {}
       return res.data;
