@@ -135,6 +135,7 @@
       name: fullName,
       email: snapshot.email || info.researcherEmail || info.contactEmail || account.email || "",
       name_title: snapshot.nameTitle || info.researcherTitle || account.name_title || account.title || "",
+      academic_position: snapshot.academicPosition || info.researcherPosition || account.academic_position || "",
       au_id: snapshot.auId || info.researcherAuId || account.au_id || "",
       phone: snapshot.phone || info.researcherPhone || account.phone || "",
       office_room: snapshot.officeRoom || info.researcherOffice || account.office_room || "",
@@ -217,6 +218,7 @@
       var suppliedSnapshot = details.researcherSnapshot || {};
       var lockedSnapshot = {
         nameTitle: suppliedSnapshot.nameTitle !== undefined ? suppliedSnapshot.nameTitle : (accountProfile.name_title || ""),
+        academicPosition: suppliedSnapshot.academicPosition !== undefined ? suppliedSnapshot.academicPosition : "",
         fullName: accountProfile.full_name || "",
         auId: accountProfile.au_id || "",
         email: String(accountProfile.email || "").toLowerCase(),
@@ -230,6 +232,7 @@
       details.researcherName = lockedSnapshot.fullName;
       details.researcherEmail = lockedSnapshot.email;
       details.researcherTitle = lockedSnapshot.nameTitle;
+      details.researcherPosition = lockedSnapshot.academicPosition;
       details.researcherAuId = lockedSnapshot.auId;
       details.researcherPhone = lockedSnapshot.phone;
       details.researcherOffice = lockedSnapshot.officeRoom;

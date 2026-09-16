@@ -254,7 +254,7 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
                     <div className="meta-row"><span className="l">Keywords</span><span className="r">{app.keywords || "-"}</span></div>
                     <div className="meta-row"><span className="l">Duration</span><span className="r">{app.duration_months || 12} months</span></div>
                     <div className="meta-row"><span className="l">Researcher</span><span className="r">{app.researcher ? app.researcher.full_name : "-"}</span></div>
-                    <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{app.faculty || "-"}</span></div>
+                    <div className="meta-row"><span className="l">Faculty</span><span className="r">{app.faculty || "-"}</span></div>
                     <div className="meta-row"><span className="l">Department</span><span className="r">{app.department || "-"}</span></div>
                     <ResearcherServiceEligibilityRows app={app} />
                     <div className="eyebrow mt-4 mb-2">Expected outcomes / summary</div>
@@ -473,11 +473,12 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                   <div className="card-head"><h3>Researcher Information</h3></div>
                   <div className="card-body">
                     <div className="meta-row"><span className="l">Name</span><span className="r">{((r.name_title || r.title) ? (r.name_title || r.title) + " " : "") + (r.full_name || "-")}</span></div>
+                    <div className="meta-row"><span className="l">Academic / administrative position</span><span className="r">{r.academic_position || "-"}</span></div>
                     <div className="meta-row"><span className="l">AU ID</span><span className="r">{r.au_id || "-"}</span></div>
                     <div className="meta-row"><span className="l">Email</span><span className="r">{r.email || "-"}</span></div>
                     <div className="meta-row"><span className="l">Phone</span><span className="r">{r.phone || "-"}</span></div>
                     <div className="meta-row"><span className="l">Office / Room</span><span className="r">{r.office_room || "-"}</span></div>
-                    <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{app.faculty || "-"}</span></div>
+                    <div className="meta-row"><span className="l">Faculty</span><span className="r">{app.faculty || "-"}</span></div>
                     <div className="meta-row"><span className="l">Department</span><span className="r">{app.department || "-"}</span></div>
                     <ResearcherServiceEligibilityRows app={app} />
                   </div>
@@ -694,11 +695,12 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                   <div className="card-head"><h3>Researcher Information</h3></div>
                   <div className="card-body">
                     {row("Name", ((r.name_title || r.title) ? (r.name_title || r.title) + " " : "") + (pi.researcherName || r.full_name || "-"))}
+                    {row("Academic / administrative position", r.academic_position)}
                     {row("AU ID", pi.researcherAuId || r.au_id)}
                     {row("Email", pi.contactEmail || r.email)}
                     {row("Phone", r.phone)}
-                    {row("School / Faculty", app.faculty)}
-                    {row("Major", app.department)}
+                    {row("Faculty", app.faculty)}
+                    {row("Department", app.department)}
                     <ResearcherServiceEligibilityRows app={app} />
                   </div>
                 </div>
@@ -826,7 +828,7 @@ function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, s
                         {pi.pubStatus === "Published" && <>{row("Article URL", pi.articleUrl)}{row("DOI", pi.doi)}{row("ISSN / eISSN", pi.issn)}{row("Page number(s)", pi.pageNumber)}</>}
                         <div className="eyebrow" style={{ marginTop: 16, marginBottom: 6 }}>Authors and contribution</div>
                         {authors.map((a, i) => <div className="meta-row" key={i}><span className="l">{a.type || "Author"}</span><span className="r">{a.name || "-"}{a.email ? " · " + a.email : ""}{a.contribution ? " · " + a.contribution + "%" : ""}</span></div>)}
-                        {row("Major", app.department)}
+                        {row("Department", app.department)}
                       </>
                     ) : (
                       <>

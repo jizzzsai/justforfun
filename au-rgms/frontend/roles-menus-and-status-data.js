@@ -203,7 +203,7 @@ const NAV_OFM = [
   { key: "o-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { key: "o-summary", label: "Total Summary", icon: "BarChart3" },
   { section: "PAYMENTS" },
-  { key: "o-payments", label: "Payment Queue", icon: "Coins" },
+  { key: "o-payments", label: "AU-R1 Payment Queue", icon: "Coins" },
   { section: "TRACKING" },
   { key: "o-history", label: "Payment History", icon: "Clock" },
 ];
@@ -268,6 +268,20 @@ const AU_TITLES = [
   "Assoc. Prof.", "Assoc. Prof. Dr.",
   "Prof.", "Prof. Dr.",
   "Rev. Bro.", "Rev. Bro. Dr.",
+];
+
+// Administrative and teaching positions shown on the AU VMES faculty directory.
+// These are distinct from an academic title such as "Asst. Prof. Dr.".
+const AU_ACADEMIC_POSITIONS = [
+  "Dean",
+  "Associate Dean",
+  "Assistant Dean for Academic Affairs",
+  "Assistant Dean for Administrative and Student Affairs",
+  "Assistant Dean for Special Affairs",
+  "Chairperson / Head of Department",
+  "Deputy Chairperson",
+  "Graduate Director",
+  "Full-Time Lecturer",
 ];
 
 const WORK_TYPES = ["Individual Research", "Collaborative Research", "Creative Work"];
@@ -403,7 +417,7 @@ const R4_REQUIRED_DOCS = [
 
 window.AU = {
   ALL_STAGES, STATUS, FACULTIES, REQUIRED_DOCS, PAPER_PRESENTATION_DOCS,
-  AU_TITLES, WORK_TYPES, DEFAULT_BUDGET_CAPS, NECESSARY_DOCS, DOC_TYPES, R3_DOC_TYPES, R3_CONFERENCE_TYPES, GRANT_SYSTEMS, REIMBURSE_CATEGORIES,
+  AU_TITLES, AU_ACADEMIC_POSITIONS, WORK_TYPES, DEFAULT_BUDGET_CAPS, NECESSARY_DOCS, DOC_TYPES, R3_DOC_TYPES, R3_CONFERENCE_TYPES, GRANT_SYSTEMS, REIMBURSE_CATEGORIES,
   R4_INDEX_TYPES, R4_SCOPUS_QUARTILE_REWARD, r4EstimateReward, R4_DOC_TYPES, R4_REQUIRED_DOCS,
   R4_ARTICLE_TYPES, R4_PUB_STATUS, R4_JOURNAL_DBS, R4_JOURNAL_CLASSIFICATIONS, R4_WOS_INDEXES, R4_OPEN_ACCESS, R4_AUTHOR_TYPES,
   R4_APPLICANT_ROLES, R4_CLAIM_TYPES, R4_DECLARATIONS, r4RewardForJournal, r4CategoryLabel,

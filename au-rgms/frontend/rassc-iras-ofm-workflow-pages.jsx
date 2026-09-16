@@ -606,7 +606,7 @@ function RASSCContract({ onDownload, toast, setConfirm }) {
 }
 
 
-function RASSCPayment({ onDownload, toast, setConfirm, sysToggle }) {
+function RASSCPayment({ onDownload, toast, setConfirm }) {
   const [apps, setApps] = useState(null);
   const load = () => window.DB.ofmPayments().then(setApps).catch(() => setApps([]));
   useEffect(() => { load(); }, []);
@@ -644,7 +644,6 @@ function RASSCPayment({ onDownload, toast, setConfirm, sysToggle }) {
       <PageHeader
         title="AU-R1 Payment Queue"
         desc="Only AU-R1 payment phases appear here. Process each disbursement after its approval or report gate is complete."
-        actions={sysToggle}
       />
 
       <div className="card card-pad-0">

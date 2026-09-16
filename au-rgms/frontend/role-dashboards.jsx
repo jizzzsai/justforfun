@@ -1780,23 +1780,10 @@ function OFMDetail({ onDownload, toast, setConfirm }) {
 }
 
 
-function OFMPaymentQueue({ grantType, onGrantSwitch, onDownload, toast, setConfirm }) {
-  const sys = ["au_r1", "au_r3", "au_r4"].includes(grantType) ? grantType : "au_r1";
-  const tabs = <FinanceGrantTabs sys={sys} onChange={next => onGrantSwitch(next, "o-payments")} />;
-  if (sys === "au_r1") {
-    return <RASSCPayment onDownload={onDownload} toast={toast} setConfirm={setConfirm} sysToggle={tabs} />;
-  }
-  const isR4 = sys === "au_r4";
-  return (
-    <>
-      <PageHeader
-        title={(isR4 ? "AU-R4" : "AU-R3") + " Payment Queue"}
-        desc={"Only " + (isR4 ? "AU-R4 publication fee and reward" : "AU-R3 paper presentation grant") + " applications approved by IRAS appear here."}
-        actions={tabs}
-      />
-      <OFMGrantPayments sys={sys} toast={toast} setConfirm={setConfirm} />
-    </>
-  );
+function OFMPaymentQueue({ onDownload, toast, setConfirm }) {
+  // The dedicated payment queue is the staged AU-R1 30/40/30 workflow only.
+  // AU-R3 and AU-R4 payment records remain visible in Total Summary.
+  return <RASSCPayment onDownload={onDownload} toast={toast} setConfirm={setConfirm} />;
 }
 
 function OFMHistory({ grantType, onGrantSwitch }) {

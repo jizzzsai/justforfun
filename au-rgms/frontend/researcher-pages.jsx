@@ -238,7 +238,7 @@ const RESEARCHER_DEFAULT_DRAFT = {
   type: "Individual Research",
   startDate: "", endDate: "", duration: "12",
   keywords: "",
-  name: "", title2: "", auId: "", email: "", phone: "", office: "", joinedDate: "",
+  name: "", title2: "", academicPosition: "", auId: "", email: "", phone: "", office: "", joinedDate: "",
   school: "",
   department: "",
   outcome: "",
@@ -246,6 +246,7 @@ const RESEARCHER_DEFAULT_DRAFT = {
 function researcherSnapshotFromDraft(draft) {
   return {
     nameTitle: String(draft.title2 || "").trim(),
+    academicPosition: String(draft.academicPosition || "").trim(),
     fullName: String(draft.name || "").trim(),
     auId: String(draft.auId || "").trim(),
     email: String(draft.email || "").trim().toLowerCase(),
@@ -502,6 +503,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
           joinedDate: researcherInfo.joinedDate || "",
           name: researcherInfo.fullName || d.name,
           title2: researcherInfo.nameTitle || d.title2,
+          academicPosition: researcherInfo.academicPosition || d.academicPosition,
           auId: researcherInfo.auId || d.auId,
           email: researcherInfo.email || d.email,
           phone: researcherInfo.phone || d.phone,
@@ -668,14 +670,21 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
 
         <div className="form-section">
           <h4><span className="num">2</span> Researcher Information</h4>
-          <p className="section-sub">Identity details come from your account. You may update only your title, phone, and office / room here.</p>
+          <p className="section-sub">Identity details come from your account. You may update your academic title, position, phone, and office / room here.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field">
-                <label>Title</label>
+                <label>Academic Title</label>
                 <select value={draft.title2} onChange={e => upd("title2", e.target.value)}>
                   <option value="">Select title…</option>
                   {RA.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>Academic / Administrative Position</label>
+                <select value={draft.academicPosition} onChange={e => upd("academicPosition", e.target.value)}>
+                  <option value="">Select position…</option>
+                  {(RA.AU_ACADEMIC_POSITIONS || []).map(position => <option key={position} value={position}>{position}</option>)}
                 </select>
               </div>
               <div className="field">
@@ -700,7 +709,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
               </div>
               <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} readOnly />
               <div className="field">
-                <label>School / Faculty</label>
+                <label>Faculty</label>
                 <select value={draft.school} disabled style={roStyle}>
                   <option value="">Select your faculty…</option>
                   {RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}
@@ -951,7 +960,7 @@ const R3_DEFAULT_DRAFT = {
   confName: "", organizer: "", website: "", confType: "International", conferenceLocation: "",
   presentationDate: "", presentation: "Oral Presentation", journalDb: "", journalClassification: "",
   paperTitle: "", field: "", keywords: "", corresponding: "", paperAbstract: "", authorType: "Lead Author",
-  name: "", title2: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
+  name: "", title2: "", academicPosition: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
 };
 function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
   const fixedGrantAmount = 3500;
@@ -1017,6 +1026,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
           department: researcherInfo.department || app.department || d.department,
           name: researcherInfo.fullName || d.name,
           title2: researcherInfo.nameTitle || d.title2,
+          academicPosition: researcherInfo.academicPosition || d.academicPosition,
           auId: researcherInfo.auId || d.auId,
           email: researcherInfo.email || d.email,
           phone: researcherInfo.phone || d.phone,
@@ -1250,14 +1260,21 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
 
         <div className="form-section">
           <h4><span className="num">3</span> Researcher Information</h4>
-          <p className="section-sub">Identity details come from your account. You may update only your title, phone, and office / room here.</p>
+          <p className="section-sub">Identity details come from your account. You may update your academic title, position, phone, and office / room here.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field">
-                <label>Title</label>
+                <label>Academic Title</label>
                 <select value={draft.title2} onChange={e => upd("title2", e.target.value)}>
                   <option value="">Select title…</option>
                   {RA.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="field">
+                <label>Academic / Administrative Position</label>
+                <select value={draft.academicPosition} onChange={e => upd("academicPosition", e.target.value)}>
+                  <option value="">Select position…</option>
+                  {(RA.AU_ACADEMIC_POSITIONS || []).map(position => <option key={position} value={position}>{position}</option>)}
                 </select>
               </div>
               <div className="field"><label>Full Name</label><input value={draft.name} readOnly style={roStyle} /></div>
@@ -1270,7 +1287,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
               <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" /></div>
               <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} readOnly />
               <div className="field">
-                <label>School / Faculty</label>
+                <label>Faculty</label>
                 <select value={facultyValid ? draft.school : ""} disabled style={roStyle}>
                   <option value="">Select your faculty…</option>
                   {RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}
@@ -1393,7 +1410,7 @@ const R4_DEFAULT_DRAFT = {
   acceptDate: "", pubDate: "", volume: "", issue: "", pageNumber: "", academicYear: "2025",
   journalDb: "", journalClassification: "", predatory: false,
   applicantRole: "First Author",
-  name: "", title2: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
+  name: "", title2: "", academicPosition: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
   claimType: "Publication Reward", feePaid: "", feeDate: "", paidBy: "",
   turnitin: "",
 };
@@ -1514,6 +1531,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           department: researcherInfo.department || app.department || d.department,
           name: researcherInfo.fullName || d.name,
           title2: researcherInfo.nameTitle || d.title2,
+          academicPosition: researcherInfo.academicPosition || d.academicPosition,
           auId: researcherInfo.auId || d.auId,
           email: researcherInfo.email || d.email,
           phone: researcherInfo.phone || d.phone,
@@ -1785,11 +1803,13 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         {                               }
         <div className="form-section">
           <h4><span className="num">4</span> Researcher Information</h4>
-          <p className="section-sub">Identity details come from your account. You may update only your title, phone, and office / room here.</p>
+          <p className="section-sub">Identity details come from your account. You may update your academic title, position, phone, and office / room here.</p>
           <div className="section-body">
             <div className="form-grid">
-              <div className="field"><label>Title</label>
+              <div className="field"><label>Academic Title</label>
                 <select value={draft.title2} onChange={e => upd("title2", e.target.value)}><option value="">Select title…</option>{RA.AU_TITLES.map(t => <option key={t}>{t}</option>)}</select></div>
+              <div className="field"><label>Academic / Administrative Position</label>
+                <select value={draft.academicPosition} onChange={e => upd("academicPosition", e.target.value)}><option value="">Select position…</option>{(RA.AU_ACADEMIC_POSITIONS || []).map(position => <option key={position} value={position}>{position}</option>)}</select></div>
               <div className="field"><label>Full Name</label><input value={draft.name} readOnly style={roStyle} /></div>
               <div className="field"><label>AU ID</label><input value={draft.auId} readOnly style={roStyle} /></div>
               <div className="field"><label>Email (AU only)</label>
@@ -1797,12 +1817,12 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
               <div className="field"><label>Phone</label><ThaiPhoneInput value={draft.phone} onChange={value => upd("phone", value)} /></div>
               <div className="field"><label>Office / Room</label><input value={draft.office} onChange={e => upd("office", e.target.value)} /></div>
               <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} readOnly />
-              <div className="field"><label>School / Faculty</label>
+              <div className="field"><label>Faculty</label>
                 <select value={facultyValid ? draft.school : ""} disabled style={roStyle}>
                   <option value="">Select your faculty…</option>{RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}</select></div>
-              <div className="field"><label>Major</label>
+              <div className="field"><label>Department</label>
                 <select value={deptValid ? draft.department : ""} disabled style={roStyle}>
-                  <option value="">{draft.school ? "Select major…" : "Select a faculty first"}</option>
+                  <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
                   {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d}>{d}</option>)}</select></div>
             </div>
           </div>
@@ -2319,8 +2339,8 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
             <div className="card-body">
               <div className="meta-row"><span className="l">Principal researcher</span><span className="r">{researcherName}</span></div>
               <div className="meta-row"><span className="l">Email</span><span className="r">{researcherEmail}</span></div>
-              <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{app.faculty || "-"}</span></div>
-              <div className="meta-row"><span className="l">{app.grant_type === "au_r4" ? "Major" : "Department"}</span><span className="r">{app.department || "-"}</span></div>
+              <div className="meta-row"><span className="l">Faculty</span><span className="r">{app.faculty || "-"}</span></div>
+              <div className="meta-row"><span className="l">Department</span><span className="r">{app.department || "-"}</span></div>
               <div className="meta-row"><span className="l">Joined Assumption University</span><span className="r">{joinedDate ? window.DB.fmtDate(joinedDate) + " · " + service.months + " months" : "Not recorded"}</span></div>
               <div className="meta-row"><span className="l">Service eligibility</span><span className="r" style={{ color: joinedDate && service.eligible ? "var(--status-approved)" : "var(--au-crimson)" }}>{joinedDate ? (service.eligible ? "Eligible" : "Not eligible until " + fmtNiceDate(service.eligibleOn)) : "Not recorded"}</span></div>
               <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.requested_amount || 0))}</span></div>
@@ -2546,7 +2566,7 @@ function ResearcherProgress({ applicationId, navigate, onDownload, onView, toast
         <div className="card-body">
           <div className="meta-row"><span className="l">Application ID</span><span className="r"><b>{grant.code}</b></span></div>
           <div className="meta-row"><span className="l">Research title</span><span className="r"><b>{grant.title}</b></span></div>
-          <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{grant.faculty || "—"}{grant.department ? " · " + grant.department : ""}</span></div>
+          <div className="meta-row"><span className="l">Faculty / Department</span><span className="r">{grant.faculty || "—"}{grant.department ? " · " + grant.department : ""}</span></div>
           <div className="meta-row"><span className="l">Report unlock</span><span className="r">{phaseOneApproved ? "Phase 1 approved — report is available" : "Locked until Finance approves Phase 1"}</span></div>
         </div>
       </div>
@@ -2753,7 +2773,7 @@ function ResearcherFinal({ applicationId, navigate, onDownload, onView, toast })
         <div className="card-body">
           <div className="meta-row"><span className="l">Application ID</span><span className="r"><b>{grant.code}</b></span></div>
           <div className="meta-row"><span className="l">Research title</span><span className="r"><b>{grant.title}</b></span></div>
-          <div className="meta-row"><span className="l">School / Faculty</span><span className="r">{grant.faculty || "—"}{grant.department ? " · " + grant.department : ""}</span></div>
+          <div className="meta-row"><span className="l">Faculty / Department</span><span className="r">{grant.faculty || "—"}{grant.department ? " · " + grant.department : ""}</span></div>
           <div className="meta-row"><span className="l">Report unlock</span><span className="r">{phaseTwoApproved ? "Phase 2 approved — report is available" : "Locked until Finance approves Phase 2"}</span></div>
         </div>
       </div>

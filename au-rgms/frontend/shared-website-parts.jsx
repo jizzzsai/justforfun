@@ -674,13 +674,14 @@ function AUDatePicker({ value, onChange, min, max, placeholder = "Select date…
 }
 
 function submittedResearcherInfo(app) {
-  if (!app) return { fullName: "", email: "", nameTitle: "", auId: "", phone: "", officeRoom: "", joinedDate: "", faculty: "", department: "" };
+  if (!app) return { fullName: "", email: "", nameTitle: "", academicPosition: "", auId: "", phone: "", officeRoom: "", joinedDate: "", faculty: "", department: "" };
   if (window.DB && window.DB.applicationResearcherInfo) {
     const researcher = window.DB.applicationResearcherInfo(app);
     return {
       fullName: researcher.full_name || researcher.name || "",
       email: researcher.email || "",
       nameTitle: researcher.name_title || researcher.title || "",
+      academicPosition: researcher.academic_position || "",
       auId: researcher.au_id || "",
       phone: normalizeThaiPhone(researcher.phone),
       officeRoom: researcher.office_room || "",
@@ -696,6 +697,7 @@ function submittedResearcherInfo(app) {
     fullName: snapshot.fullName || info.researcherName || account.full_name || account.name || "",
     email: snapshot.email || info.researcherEmail || info.contactEmail || account.email || "",
     nameTitle: snapshot.nameTitle || info.researcherTitle || account.name_title || account.title || "",
+    academicPosition: snapshot.academicPosition || info.researcherPosition || account.academic_position || "",
     auId: snapshot.auId || info.researcherAuId || account.au_id || "",
     phone: normalizeThaiPhone(snapshot.phone || info.researcherPhone || account.phone),
     officeRoom: snapshot.officeRoom || info.researcherOffice || account.office_room || "",
@@ -780,12 +782,13 @@ function ResearcherInformationCard({ app, className = "" }) {
       <div className="card-head"><h3>Researcher Information</h3></div>
       <div className="card-body">
         {row("Full name", fullName)}
+        {row("Academic / administrative position", researcher.academicPosition)}
         {row("AU ID", researcher.auId)}
         {row("Email (AU only)", researcher.email)}
         {row("Phone", researcher.phone)}
         {row("Office / Room", researcher.officeRoom)}
-        {row("School / Faculty", researcher.faculty)}
-        {row("Major / Department", researcher.department)}
+        {row("Faculty", researcher.faculty)}
+        {row("Department", researcher.department)}
         <ResearcherServiceEligibilityRows app={app} />
       </div>
     </div>
