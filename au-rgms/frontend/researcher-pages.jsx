@@ -1411,7 +1411,7 @@ const R4_DEFAULT_DRAFT = {
   journalDb: "", journalClassification: "", predatory: false,
   applicantRole: "First Author",
   name: "", title2: "", academicPosition: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
-  claimType: "Publication Reward", feePaid: "", feeDate: "", paidBy: "",
+  feePaid: "", feeDate: "",
   turnitin: "",
 };
 function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
@@ -1569,6 +1569,8 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
     if (submit) {
       if (!draft.title.trim()) return setErr("Enter the article title.");
       if (!draft.journal.trim()) return setErr("Enter the journal name.");
+      if (!draft.website.trim()) return setErr("Enter the journal website.");
+      if (!draft.issn.trim()) return setErr("Enter the ISSN or eISSN.");
       if (!draft.journalDb) return setErr("Select the Journal Database / Index.");
       if (!draft.journalClassification.trim()) return setErr("Select or enter the journal classification.");
       if (published && !draft.articleUrl.trim()) return setErr("Enter the Article URL for the published article.");
@@ -1599,11 +1601,11 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       const researcherSnapshot = researcherSnapshotFromDraft(draft);
       const pubInfo = {
         articleType: draft.articleType, pubStatus: draft.pubStatus, journal: draft.journal, publisher: draft.publisher,
-        website: draft.website, articleUrl: published ? draft.articleUrl : null, doi: published ? draft.doi : null, issn: published ? draft.issn : null,
+        website: draft.website, articleUrl: published ? draft.articleUrl : null, doi: published ? draft.doi : null, issn: draft.issn || null,
         acceptDate: draft.acceptDate || null, pubDate: draft.pubDate || null,
         volume: draft.volume, issue: draft.issue, pageNumber: draft.pageNumber, academicYear: draft.academicYear,
         journalDb: draft.journalDb, journalClassification: draft.journalClassification, indexLabel: catLabel, predatory: draft.predatory,
-        applicantRole: draft.applicantRole, claimType: draft.claimType,
+        applicantRole: draft.applicantRole,
         researcherSnapshot,
         researcherName: researcherSnapshot.fullName,
         researcherEmail: researcherSnapshot.email,
@@ -1613,7 +1615,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         researcherOffice: researcherSnapshot.officeRoom,
         contactEmail: researcherSnapshot.email,
         researcherJoinedDate: researcherSnapshot.joinedDate,
-        feePaid: Number(draft.feePaid) || 0, feeDate: draft.feeDate || null, paidBy: draft.paidBy, turnitin: Number(draft.turnitin) || 0,
+        feePaid: Number(draft.feePaid) || 0, feeDate: draft.feeDate || null, turnitin: Number(draft.turnitin) || 0,
         reward: requested, requestedClaim: requested, maxAmount: MAX,
         totalContribution: totalContrib, declarations: decls,
       };
@@ -1671,13 +1673,13 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
                 <select value={draft.pubStatus} onChange={e => upd("pubStatus", e.target.value)}>{(RA.R4_PUB_STATUS || []).map(t => <option key={t}>{t}</option>)}</select></div>
               <div className="field"><label>Journal Name *</label><input value={draft.journal} onChange={e => upd("journal", e.target.value)} /></div>
               <div className="field"><label>Publisher *</label><input value={draft.publisher} onChange={e => upd("publisher", e.target.value)} /></div>
-              <div className="field"><label>Journal Website</label><input value={draft.website} onChange={e => upd("website", e.target.value)} placeholder="https://…" /></div>
+              <div className="field"><label>Journal Website *</label><input value={draft.website} onChange={e => upd("website", e.target.value)} placeholder="https://…" /></div>
+              <div className="field"><label>ISSN / eISSN *</label><input value={draft.issn} onChange={e => upd("issn", e.target.value)} placeholder="e.g. 1234-5678" /></div>
               <div className="field"><label>Academic Year <span style={{ color: "var(--ink-3)", fontWeight: 700 }}>(AD)</span> *</label><input value={draft.academicYear} onChange={e => upd("academicYear", (e.target.value + "").replace(/[^0-9]/g, "").slice(0, 4))} placeholder="2025" inputMode="numeric" /></div>
               {published ? (
                 <>
                   <div className="field"><label>Article URL *</label><input value={draft.articleUrl} onChange={e => upd("articleUrl", e.target.value)} placeholder="https://…" /></div>
                   <div className="field"><label>DOI</label><input value={draft.doi} onChange={e => upd("doi", e.target.value)} placeholder="10.xxxx/…" /></div>
-                  <div className="field"><label>ISSN / eISSN</label><input value={draft.issn} onChange={e => upd("issn", e.target.value)} /></div>
                   <div className="field"><label>Publication Date *</label><AUDatePicker value={draft.pubDate} onChange={v => upd("pubDate", v)} placeholder="Select date…" /></div>
                   <div className="field"><label>Volume *</label><input value={draft.volume} onChange={e => upd("volume", e.target.value)} /></div>
                   <div className="field"><label>Issue *</label><input value={draft.issue} onChange={e => upd("issue", e.target.value)} /></div>
@@ -1835,23 +1837,10 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
             <p className="section-sub">The final eligible amount is decided by the research office after verification.</p>
             <div className="section-body">
               <div className="form-grid">
-                <div className="field"><label>Claim Type *</label>
-                  <select value={draft.claimType} onChange={e => upd("claimType", e.target.value)}>{(RA.R4_CLAIM_TYPES || []).map(t => <option key={t} value={t}>{t}</option>)}</select>
-                </div>
                 <div className="field"><label>Publication Fee (THB) *</label>
                   <input value={draft.feePaid === "" ? "" : Number(draft.feePaid || 0).toLocaleString()} onChange={e => upd("feePaid", (e.target.value + "").replace(/[^0-9]/g, ""))} placeholder="Enter publication fee manually" inputMode="numeric" />
                 </div>
                 <div className="field"><label>Payment Date</label><AUDatePicker value={draft.feeDate} onChange={v => upd("feeDate", v)} placeholder="Select date…" /></div>
-                <div className="field"><label>Paid By</label><input value={draft.paidBy} onChange={e => upd("paidBy", e.target.value)} placeholder="Name / department" /></div>
-              </div>
-              <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginTop: 8 }}>
-                <table className="tbl"><tbody>
-                  <tr><td>Publication fee</td><td style={{ textAlign: "right" }}>{fmtBaht(Number(draft.feePaid) || 0)}</td></tr>
-                  <tr><td>Preliminary reward</td><td style={{ textAlign: "right" }}>{fmtBaht(requested)}</td></tr>
-                  <tr><td>Requested claim amount</td><td style={{ textAlign: "right", fontWeight: 600 }}>{fmtBaht(requested)}</td></tr>
-                  <tr><td>Maximum eligible</td><td style={{ textAlign: "right" }}>{fmtBaht(MAX)} / article</td></tr>
-                  <tr style={{ color: "var(--ink-3)" }}><td>Final research-office-approved amount</td><td style={{ textAlign: "right" }}>Pending verification</td></tr>
-                </tbody></table>
               </div>
             </div>
           </div>
