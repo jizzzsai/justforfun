@@ -756,6 +756,18 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
       },
     });
   };
+  const reject = () => {
+    if (!app) return;
+    setConfirm({
+      kind: "danger", title: "Reject application?",
+      message: app.code + " will be rejected. This is a final decision and will close the application.",
+      confirmLabel: "Reject Application", withReason: true, reasonRequired: true, reasonLabel: "RASSC rejection reason",
+      onConfirm: async (reason) => {
+        try { await window.DB.transition(app.id, "iras_review", "reject", reason); toast(app.code + " rejected."); navigate("i-received"); }
+        catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
+      },
+    });
+  };
   const docs = (app && app.documents) || [];
 
   if (loading) {
@@ -819,6 +831,9 @@ function RASSCScreen({ applicationId, setSelectedApplicationId, navigate, onDown
                 <button className="btn btn-secondary btn-block" onClick={returnToResearcher}>
                   <Icon name="Repeat" size={14} /> Return for Revision
                 </button>
+                <button className="btn btn-danger btn-block" onClick={reject}>
+                  <Icon name="X" size={14} /> Reject Application
+                </button>
               </div>
             </div>
           </div>
@@ -849,6 +864,8 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
         });
         const ret = () => setConfirm({ kind: "danger", title: "Return for revision?", message: app.code + " will be returned to the researcher.", confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "IRAS comment",
           onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "return", reason); toast(app.code + " returned."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); } } });
+        const reject = () => setConfirm({ kind: "danger", title: "Reject application?", message: app.code + " will be rejected. This is a final decision and will close the application.", confirmLabel: "Reject Application", withReason: true, reasonRequired: true, reasonLabel: "IRAS rejection reason",
+          onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "reject", reason); toast(app.code + " rejected."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); load(); } } });
         return (
           <>
             <PageHeader title={"AU-R3 Verification — " + app.code} desc={(ci.researcherName || (app.researcher ? app.researcher.full_name : "Researcher")) + " · " + (app.faculty || "") + " · " + (ci.confName || "")} actions={<Badge status={r3Badge(app.status)} />} />
@@ -880,6 +897,7 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 <div className="flex flex-col gap-2">
                   <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Finance</button>
                   <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
+                  <button className="btn btn-danger btn-block" onClick={reject}><Icon name="X" size={14} /> Reject Application</button>
                 </div>
               </div></div>
             </div>
@@ -923,6 +941,8 @@ function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setC
         };
         const ret = () => setConfirm({ kind: "danger", title: "Return for revision?", message: app.code + " will be returned to the researcher.", confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "IRAS comment",
           onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "return", reason); toast(app.code + " returned."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); } } });
+        const reject = () => setConfirm({ kind: "danger", title: "Reject application?", message: app.code + " will be rejected. This is a final decision and will close the application.", confirmLabel: "Reject Application", withReason: true, reasonRequired: true, reasonLabel: "IRAS rejection reason",
+          onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "reject", reason); toast(app.code + " rejected."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); load(); } } });
         return (
           <>
             <PageHeader title={"AU-R4 Verification — " + app.code} desc={(app.researcher ? app.researcher.full_name : "Researcher") + " · " + (pi.journal || "") + " · " + (pi.indexLabel || "")} actions={<Badge status={r4Badge(app.status)} />} />
@@ -961,6 +981,7 @@ function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 <div className="flex flex-col gap-2 mt-4">
                   <button className="btn btn-primary btn-block" disabled={overMax || finalNum <= 0} onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Finance</button>
                   <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
+                  <button className="btn btn-danger btn-block" onClick={reject}><Icon name="X" size={14} /> Reject Application</button>
                 </div>
               </div></div>
             </div>

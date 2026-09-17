@@ -225,6 +225,16 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
+        const reject = () => setConfirm({
+          kind: "danger",
+          title: "Reject application?",
+          message: app.code + " will be rejected. This is a final decision and will close the application.",
+          confirmLabel: "Reject Application", withReason: true, reasonLabel: "Dean rejection reason", reasonRequired: true,
+          onConfirm: async (reason) => {
+            try { await window.DB.transition(app.id, "submitted", "reject", reason); toast(app.code + " rejected."); navigate("d-screen"); }
+            catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
+          },
+        });
         return (
           <>
             <PageHeader
@@ -294,6 +304,7 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
                   <div className="flex flex-col gap-2">
                     <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward</button>
                     <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
+                    <button className="btn btn-danger btn-block" onClick={reject}><Icon name="X" size={14} /> Reject Application</button>
                   </div>
                 </div>
               </div>
@@ -356,6 +367,15 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
           confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment",
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-r3-screen"); }
+            catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
+          },
+        });
+        const reject = () => setConfirm({
+          kind: "danger", title: "Reject application?",
+          message: app.code + " will be rejected. This is a final decision and will close the application.",
+          confirmLabel: "Reject Application", withReason: true, reasonRequired: true, reasonLabel: "Dean rejection reason",
+          onConfirm: async (reason) => {
+            try { await window.DB.transition(app.id, "submitted", "reject", reason); toast(app.code + " rejected."); navigate("d-r3-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
@@ -473,6 +493,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                   <div className="flex flex-col gap-2">
                     <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to IRAS</button>
                     <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
+                    <button className="btn btn-danger btn-block" onClick={reject}><Icon name="X" size={14} /> Reject Application</button>
                   </div>
                 </div>
               </div>
@@ -537,6 +558,15 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
           confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment",
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-r4-screen"); }
+            catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
+          },
+        });
+        const reject = () => setConfirm({
+          kind: "danger", title: "Reject application?",
+          message: app.code + " will be rejected. This is a final decision and will close the application.",
+          confirmLabel: "Reject Application", withReason: true, reasonRequired: true, reasonLabel: "Dean rejection reason",
+          onConfirm: async (reason) => {
+            try { await window.DB.transition(app.id, "submitted", "reject", reason); toast(app.code + " rejected."); navigate("d-r4-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
@@ -650,6 +680,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                   <div className="flex flex-col gap-2">
                     <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to IRAS</button>
                     <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
+                    <button className="btn btn-danger btn-block" onClick={reject}><Icon name="X" size={14} /> Reject Application</button>
                   </div>
                 </div>
               </div>
@@ -675,7 +706,7 @@ function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, s
         if (app.grant_type !== "au_r1") {
           return <><PageHeader title="AU-R1 Faculty Committee Review" desc="Faculty Committee review is available only for AU-R1 applications." /><div className="card"><Empty title="AU-R1 review only" desc="AU-R3 and AU-R4 applications go directly from Dean review to IRAS." icon="Lock" /></div></>;
         }
-        const recLabel = { favorable: "approved and forwarded", revise: "returned to the researcher for revision" };
+        const recLabel = { favorable: "approved and forwarded", revise: "returned to the researcher for revision", unfavorable: "rejected" };
         const submit = () => setConfirm({
           kind: form.recommendation === "favorable" ? "success" : "danger",
           title: "Submit Committee Decision?",
@@ -723,7 +754,7 @@ function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, s
                 <div className="card-head"><h3>Committee Decision</h3></div>
                 <div className="card-body">
                   <div className="field"><label>Score (0-100)</label><input type="number" min="0" max="100" value={form.score} onChange={e => setField("score", e.target.value)} /></div>
-                  <div className="field"><label>Decision</label><select value={form.recommendation} onChange={e => setField("recommendation", e.target.value)}><option value="favorable">Approve &amp; Forward</option><option value="revise">Return for Revision</option></select></div>
+                  <div className="field"><label>Decision</label><select value={form.recommendation} onChange={e => setField("recommendation", e.target.value)}><option value="favorable">Approve &amp; Forward</option><option value="revise">Return for Revision</option><option value="unfavorable">Reject Application</option></select></div>
                   <button className="btn btn-primary btn-block" onClick={submit}><Icon name="Send" size={14} /> Submit Decision</button>
                 </div>
               </div>
@@ -743,12 +774,13 @@ function FacultyDean({ onDownload, onView, toast, setConfirm }) {
       desc="Final faculty-level decision before forwarding to RASSC."
       render={(app, load) => {
         const decide = (kind) => setConfirm({
-          kind: kind === "return" ? "danger" : "success",
-          title: kind === "advance" ? "Approve and forward to RASSC?" : "Return for revision?",
-          message: app.code + " will be " + (kind === "advance" ? "sent to RASSC." : "returned for revision."),
-          confirmLabel: kind === "advance" ? "Approve & Forward" : "Return",
-          onConfirm: async () => {
-            try { await window.DB.transition(app.id, "dean_sign", kind); toast(app.code + " updated."); load(); }
+          kind: kind === "advance" ? "success" : "danger",
+          title: kind === "advance" ? "Approve and forward to RASSC?" : kind === "reject" ? "Reject application?" : "Return for revision?",
+          message: app.code + " will be " + (kind === "advance" ? "sent to RASSC." : kind === "reject" ? "rejected. This is a final decision." : "returned for revision."),
+          confirmLabel: kind === "advance" ? "Approve & Forward" : kind === "reject" ? "Reject Application" : "Return",
+          withReason: true, reasonLabel: kind === "reject" ? "Dean rejection reason" : "Dean comment", reasonRequired: kind !== "advance",
+          onConfirm: async (reason) => {
+            try { await window.DB.transition(app.id, "dean_sign", kind, reason || ""); toast(app.code + " updated."); load(); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
@@ -787,6 +819,7 @@ function FacultyDean({ onDownload, onView, toast, setConfirm }) {
                   <div className="flex flex-col gap-2">
                     <button className="btn btn-primary btn-block" onClick={() => decide("advance")}><Icon name="ShieldCheck" size={14} /> Approve and Forward to RASSC</button>
                     <button className="btn btn-secondary btn-block" onClick={() => decide("return")}><Icon name="Repeat" size={14} /> Return for Revision</button>
+                    <button className="btn btn-danger btn-block" onClick={() => decide("reject")}><Icon name="X" size={14} /> Reject Application</button>
                   </div>
                 </div>
               </div>

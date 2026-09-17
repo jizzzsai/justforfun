@@ -582,11 +582,17 @@ function Sidebar({ nav, current, onNavigate }) {
         if (item.section) {
           return <div key={`s${i}`} className="sidebar-section">{item.section}</div>;
         }
+        const isDisabled = !!item.disabled;
+        const isCurrent = current === item.key || (item.activeFor || []).includes(current);
         return (
           <div
             key={item.key}
-            className={`nav-item ${current === item.key ? "active" : ""}${item.key === "r-ai-assistant" || item.key === "a-analytics" ? " ai-assistant-item" : ""}`}
+            className={`nav-item ${isCurrent ? "active" : ""}${item.key === "r-ai-assistant" || item.key === "a-analytics" ? " ai-assistant-item" : ""}`}
+            aria-disabled={isDisabled || undefined}
+            title={isDisabled ? item.hint : undefined}
+            style={isDisabled ? { cursor: "not-allowed", opacity: 0.58 } : undefined}
             onClick={() => {
+              if (isDisabled) return;
               if (item.key === "r-ai-assistant") {
                 window.dispatchEvent(new CustomEvent("au-ai-toggle"));
                 return;

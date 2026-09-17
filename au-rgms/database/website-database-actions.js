@@ -545,11 +545,7 @@
         throw new Error("Faculty Committee review is available only for AU-R1 applications awaiting committee review.");
       }
       var score = Math.max(0, Math.min(100, parseInt(payload.score, 10) || 0));
-      // Reviewer decisions now use the two outcomes shown in the UI.  Treat a
-      // stale client sending the former "unfavorable" value as a revision,
-      // rather than allowing an old page to reject the application.
       var recommendation = payload.recommendation || (score >= 70 ? "favorable" : "revise");
-      if (recommendation === "unfavorable") recommendation = "revise";
       var committeeComment = String(payload.comments || "").trim();
       var row = {
         application_id: appId,
@@ -599,9 +595,6 @@
         throw new Error("This application is not available to the signed-in " + roleLabel(actor.role) + " account. Please sign out and sign in again before approving.");
       }
       assertWorkflowRole(actor, currentApp, fromStatus);
-      if (kind === "reject" && ["submitted", "committee_review", "dean_sign", "iras_review"].indexOf(fromStatus) >= 0) {
-        throw new Error("Rejection is no longer available at this review stage. Return the application for revision instead.");
-      }
       if (currentApp.status !== fromStatus) {
         throw new Error((currentApp.code || "This application") + " is already at " + (STATUS_MAP[currentApp.status] ? STATUS_MAP[currentApp.status].label : currentApp.status) + ". Refresh the queue before taking another action.");
       }

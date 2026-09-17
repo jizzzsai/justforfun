@@ -190,6 +190,8 @@ const NAV_RASSC = [
 const NAV_IRAS = [
   { section: "WORKSPACE" },
   { key: "i-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+  { section: "REVIEW" },
+  { key: "i-screening", label: "IRAS Screening", icon: "ClipboardCheck", disabled: true, activeFor: ["i-r3-verify", "i-r4-verify"], hint: "Choose Verify from the AU-R3 or AU-R4 dashboard first." },
 ];
 
 const NAV_OFM = [
