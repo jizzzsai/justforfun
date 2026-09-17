@@ -515,7 +515,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
           { label: "Turnitin Report", req: true, ok: hasDoc("turnitin") },
           { label: "Original Publication Fee Receipt", req: true, ok: hasDoc("receipt") },
           { label: "Memo for Dean Approval", req: true, ok: hasDoc("memo") },
-          { label: "Author Contribution Statement", req: true, ok: hasDoc("author contribution") },
+          { label: "Author Contribution Statement", req: authors.length > 1, ok: authors.length <= 1 || hasDoc("author contribution") },
           { label: "Acceptance Letter", req: pi.pubStatus !== "Published", ok: pi.pubStatus === "Published" || hasDoc("acceptance") },
         ];
         const turnitin = Number(pi.turnitin || 0);

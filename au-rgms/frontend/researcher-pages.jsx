@@ -1435,6 +1435,9 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   });
   const removeAuthor = (i) => setAuthors(a => a.length > 1 ? a.filter((_, j) => j !== i) : a);
 
+  // One acknowledgement covers the published AU-R4 eligibility rules.  Keep the
+  // stored array shape for older applications, but do not make researchers tick
+  // seven copies of the same acknowledgement.
   const [decls, setDecls] = useState((RA.R4_DECLARATIONS || []).map(() => false));
   const allDecl = decls.length > 0 && decls.every(Boolean);
 
@@ -1461,6 +1464,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const catLabel = [draft.journalDb, draft.journalClassification].filter(Boolean).join(" — ");
   const showPreliminaryReward = !!draft.journalDb && !!draft.journalClassification.trim() && !tierSelected;
   const totalContrib = authors.reduce((s, a) => s + (Number(a.contribution) || 0), 0);
+  const hasSecondAuthor = authors.length > 1;
   const firstContrib = Number((authors.find(a => a.type === "First Author") || {}).contribution) || 0;
   const turnitinNum = Number(draft.turnitin);
   const turnitinBad = draft.turnitin !== "" && turnitinNum > 20;
@@ -1471,10 +1475,16 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const isAuthorContributionDocument = (doc) => (((doc && (doc.doc_type || doc.docType)) || "") + " " + ((doc && (doc.name || (doc.file && doc.file.name))) || "")).toLowerCase().includes("author contribution");
   const contributionExistingDocs = existingDocs.filter(isAuthorContributionDocument);
   const contributionFiles = files.filter(isAuthorContributionDocument);
-  const otherExistingDocs = existingDocs.filter(doc => !isAuthorContributionDocument(doc));
-  const otherFiles = files.filter(file => !isAuthorContributionDocument(file));
+  // A legacy contribution statement should remain visible in the normal file
+  // list if the researcher removes the second author from an edited draft.
+  const otherExistingDocs = existingDocs.filter(doc => !hasSecondAuthor || !isAuthorContributionDocument(doc));
+  const otherFiles = files.filter(file => !hasSecondAuthor || !isAuthorContributionDocument(file));
   const hasDocument = (keyword) => existingDocs.concat(files.map(it => ({ name: it.file.name, doc_type: it.docType })))
     .some(d => (((d && d.doc_type) || "") + " " + ((d && d.name) || "")).toLowerCase().includes(keyword));
+
+  useEffect(() => {
+    if (!hasSecondAuthor && /author contribution/i.test(docType)) setDocType("Full Research Article");
+  }, [hasSecondAuthor, docType]);
 
   useEffect(() => {
     (async () => {
@@ -1546,7 +1556,8 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           })));
         }
         if (pi.declarations && Array.isArray(pi.declarations)) {
-          setDecls((RA.R4_DECLARATIONS || []).map((_, i) => i === 2 ? !!pi.predatory : !!pi.declarations[i]));
+          const accepted = !!pi.predatory && pi.declarations.every(Boolean);
+          setDecls((RA.R4_DECLARATIONS || []).map(() => accepted));
         }
       } catch (e) { if (!cancelled) setErr((e && e.message) || "Could not load this draft."); }
       finally { if (!cancelled) setLoadingDraft(false); }
@@ -1589,11 +1600,11 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       const lowCo = authors.some(a => Number(a.contribution) > 0 && Number(a.contribution) < 5);
       if (lowCo) return setErr("Each listed author must have at least 5% contribution.");
       if (authors.some(a => !a.name.trim() || !a.email.trim())) return setErr("Enter the name and email address for every listed author.");
-      if (!hasDocument("author contribution")) return setErr("Attach the Author Contribution Statement.");
+      if (hasSecondAuthor && !hasDocument("author contribution")) return setErr("Attach the Author Contribution Statement for the second author.");
       if (!published && !hasDocument("acceptance")) return setErr("Attach the Acceptance Letter.");
       if (requested > MAX) return setErr("The requested claim exceeds the AU-R4 maximum of 80,000 THB per article.");
       if (tierSelected && requested <= 0) return setErr("Enter the publication fee for the selected journal tier.");
-      if (!allDecl) return setErr("You must accept every eligibility declaration before submitting.");
+      if (!allDecl) return setErr("Read and accept the eligibility declaration before submitting.");
     }
     setBusy(true); setBusyKind(submit ? "submit" : "draft");
     try {
@@ -1768,7 +1779,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
               </table>
             </div>
             <button type="button" className="btn btn-secondary btn-sm mt-1" onClick={addAuthor}><Icon name="Plus" size={13} /> Add author</button>
-            <div className="field full" style={{ marginTop: 14 }}>
+            {hasSecondAuthor && <div className="field full" style={{ marginTop: 14 }}>
               <label>Author Contribution File *</label>
               <label className="upload-box" style={{ cursor: "pointer", display: "block" }}>
                 <input type="file" accept="application/pdf,.pdf" style={{ display: "none" }} onChange={e => onTypedFiles(e, "Author Contribution Statement")} />
@@ -1798,7 +1809,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
                   })}
                 </div>
               )}
-            </div>
+            </div>}
           </div>
         </div>
 
@@ -1862,7 +1873,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
               <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink-2)", lineHeight: 1.7 }}>
                 <li><b>Full Research Article</b> — the full published article</li>
                 {!published && <li><b>Acceptance Letter</b> — required for an accepted article</li>}
-                <li><b>Author Contribution Statement</b></li>
+                {hasSecondAuthor && <li><b>Author Contribution Statement</b> — required when a second author is listed</li>}
                 <li><b>Turnitin Report</b> — similarity ≤ 20%</li>
                 <li><b>Original Publication Fee Receipt</b></li>
                 <li><b>Memo for Dean Approval</b></li>
@@ -1897,7 +1908,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
             )}
             <div className="field" style={{ maxWidth: 360, marginBottom: 10 }}>
               <label>Document type for the next upload</label>
-              <select value={docType} onChange={e => setDocType(e.target.value)}>{(RA.R4_DOC_TYPES || RA.DOC_TYPES).map(t => <option key={t} value={t}>{t}</option>)}</select>
+              <select value={docType} onChange={e => setDocType(e.target.value)}>{(RA.R4_DOC_TYPES || RA.DOC_TYPES).filter(t => hasSecondAuthor || !/author contribution/i.test(t)).map(t => <option key={t} value={t}>{t}</option>)}</select>
             </div>
             <label className="upload-box mt-1" style={{ cursor: "pointer", display: "block" }}>
               <input type="file" accept="application/pdf,.pdf" multiple style={{ display: "none" }} onChange={onFiles} />
@@ -1910,24 +1921,16 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
 
         {                                }
         <div className="form-section">
-          <h4><span className="num">7</span> Eligibility Declaration</h4>
-          <p className="section-sub">You must accept all declarations before you can submit.</p>
+          <h4>Eligibility Declaration</h4>
+          <p className="section-sub">Please read these AU-R4 eligibility rules before submitting your claim.</p>
           <div className="section-body">
-            {(RA.R4_DECLARATIONS || []).map((d, i) => (
-              <label key={i} style={{ display: "flex", alignItems: "flex-start", gap: 10, padding: "8px 0", fontSize: 13, borderBottom: "1px solid var(--line-2)" }}>
-                {i === 2 ? (
-                  <>
-                    <input type="checkbox" checked={draft.predatory} onChange={e => { upd("predatory", e.target.checked); setDecls(s => s.map((v, j) => j === i ? e.target.checked : v)); }} style={{ accentColor: "var(--au-crimson)", marginTop: 3 }} />
-                    <span>{i + 1}. I confirmed that this journal was not a predatory journal and was not listed in <a href="https://beallslist.net/" target="_blank" rel="noopener noreferrer">Beall's List</a>. *</span>
-                  </>
-                ) : (
-                  <>
-                    <input type="checkbox" checked={decls[i] || false} onChange={e => setDecls(s => s.map((v, j) => j === i ? e.target.checked : v))} style={{ accentColor: "var(--au-crimson)", marginTop: 3 }} />
-                    <span>{i + 1}. {d}</span>
-                  </>
-                )}
-              </label>
-            ))}
+            <div style={{ background: "var(--paper-warm)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "14px 16px", color: "var(--ink-2)", fontSize: 13, lineHeight: 1.7 }}>
+              {(RA.R4_DECLARATIONS || []).map((d, i) => <div key={i} style={{ padding: i ? "8px 0 0" : 0 }}>{i === 2 ? <>The journal is not predatory and is not listed in <a href="https://beallslist.net/" target="_blank" rel="noopener noreferrer">Beall's List</a>.</> : d}</div>)}
+            </div>
+            <label style={{ display: "flex", alignItems: "flex-start", gap: 10, marginTop: 16, padding: "13px 14px", border: "1px solid var(--au-gold)", borderRadius: "var(--r-md)", background: "var(--au-gold-soft)", fontSize: 13, fontWeight: 600, lineHeight: 1.55, cursor: "pointer" }}>
+              <input type="checkbox" checked={allDecl} onChange={e => { const accepted = e.target.checked; upd("predatory", accepted); setDecls(s => s.map(() => accepted)); }} style={{ accentColor: "var(--au-crimson)", marginTop: 3 }} />
+              <span>I have read and understand these AU-R4 rules. I confirm that the information and documents in this application are true, accurate, complete, and eligible for this claim. *</span>
+            </label>
           </div>
         </div>
 
