@@ -40,7 +40,7 @@ AU-R3 — PAPER PRESENTATION GRANT
 - Research Paper Information requires the abstract, followed by keywords, and supports adding or removing co-authors and students.
 - Journal Classification uses Journal Database / Index and its matching Classification, using the same database options as AU-R4.
 - There is no editable Conference Budget Information section.
-- Required evidence includes the full research article, a Turnitin result of no more than 20%, a Dean-signed memo, and peer-review comments when available.
+- Required evidence is the Full Conference Paper, Turnitin Report, and Conference Acceptance Letter.
 
 AU-R4 — PUBLICATION FEES AND REWARD
 - Use AU-R4 for a published article or an article accepted for publication.
@@ -48,7 +48,7 @@ AU-R4 — PUBLICATION FEES AND REWARD
 - Publication Status = Published: include Publication Date, Volume, Issue, and Page Number(s). Academic Year is AD and uses a single year, for example 2025.
 - Publication Status = Accepted for Publication: Article URL, DOI, ISSN/eISSN, and Expected Publication Date are not required. An Acceptance Letter upload is required instead.
 - Journal Classification uses two fields: Journal Database / Index and its matching Classification. The Beall's List link is for checking predatory journals. The confirmation checkbox appears at the bottom with the other confirmations.
-- The author section uses First Author and Corresponding Author only. Author Email Address is used instead of AU ID. An Author Contribution File is required. When exactly two authors are listed, changing one contribution automatically makes the other value equal 100 minus that value.
+- The author section uses First Author and Co-author only. Author Email Address is used instead of AU ID. An Author Contribution File is required only when a second author is listed. When exactly two authors are listed, changing one contribution automatically makes the other value equal 100 minus that value.
 - The Publication Fee and Claim Information section is shown only when TCI Tier 1 or TCI Tier 2 is selected. It uses a manually entered Publication Fee and has no receipt-number field.
 
 PRIVACY AND PERMISSIONS

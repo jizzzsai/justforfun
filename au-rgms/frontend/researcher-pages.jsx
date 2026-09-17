@@ -1420,7 +1420,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
 
   const [authors, setAuthors] = useState([{ name: "", type: "First Author", email: "", contribution: "100" }]);
-  const addAuthor = () => setAuthors(a => a.concat([{ name: "", type: "Corresponding Author", email: "", contribution: "" }]));
+  const addAuthor = () => setAuthors(a => a.concat([{ name: "", type: "Co-author", email: "", contribution: "" }]));
   const setAuthor = (i, k, v) => setAuthors(list => {
     if (k !== "contribution") return list.map((r, j) => j === i ? { ...r, [k]: v } : r);
     const cleaned = (v + "").replace(/[^0-9.]/g, "");
@@ -1531,6 +1531,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         setDraft(d => ({ ...d, ...pi,
           journalDb: loadedDb,
           journalClassification: loadedClassification,
+          applicantRole: /corresponding|co-?author/i.test(pi.applicantRole || "") ? "Co-author" : "First Author",
           pubStatus: /^accepted for publication$/i.test(pi.pubStatus || "") ? "Accepted for Publication" : (pi.pubStatus || d.pubStatus),
           academicYear: ((String(pi.academicYear || d.academicYear).match(/\d{4}/) || ["2025"])[0]),
           joinedDate: researcherInfo.joinedDate || "",
@@ -1549,7 +1550,9 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         if (Array.isArray(app.co_members) && app.co_members.length) {
           setAuthors(app.co_members.map((a, i) => ({
             name: a.name || "",
-            type: /corresponding/i.test(a.type || "") ? "Corresponding Author" : "First Author",
+            // Keep older drafts usable while presenting the current AU-R4 role
+            // name.  "Corresponding Author" was retired in favour of Co-author.
+            type: /corresponding|co-?author/i.test(a.type || "") ? "Co-author" : "First Author",
             email: a.email || "",
             contribution: a.contribution === undefined || a.contribution === null ? (i === 0 ? "100" : "") : String(a.contribution),
           })));
@@ -1595,6 +1598,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       if (turnitinBad) return setErr("Turnitin similarity exceeds the 20% limit — it must be 20% or lower.");
       if (draft.turnitin === "") return setErr("Enter the Turnitin similarity percentage.");
       if (Math.round(totalContrib) !== 100) return setErr("Author contribution percentages must total 100% (currently " + totalContrib + "%).");
+      if (authors.filter(a => a.type === "First Author").length !== 1) return setErr("List exactly one First Author; every additional author must be a Co-author.");
       if (firstContrib < 50) return setErr("The first author must have at least 50% contribution.");
       const lowCo = authors.some(a => Number(a.contribution) > 0 && Number(a.contribution) < 5);
       if (lowCo) return setErr("Each listed author must have at least 5% contribution.");
@@ -1750,7 +1754,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         {                              }
         <div className="form-section">
           <h4><span className="num">3</span> Author and Contribution Information</h4>
-          <p className="section-sub">Provide the First Author and Corresponding Author. Contributions must total 100%; the First Author needs ≥ 50%. With two authors, changing one percentage automatically balances the other.</p>
+          <p className="section-sub">Provide the First Author and any Co-author. Contributions must total 100%; the First Author needs ≥ 50%. With two authors, changing one percentage automatically balances the other.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field"><label>Your Author Role *</label>
@@ -1875,7 +1879,6 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
                 {hasSecondAuthor && <li><b>Author Contribution Statement</b> — required when a second author is listed</li>}
                 <li><b>Turnitin Report</b> — similarity ≤ 20%</li>
                 <li><b>Original Publication Fee Receipt</b></li>
-                <li><b>Memo for Dean Approval</b></li>
               </ul>
             </div>
             {otherExistingDocs.length > 0 && (

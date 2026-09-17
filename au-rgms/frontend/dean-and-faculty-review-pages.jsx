@@ -501,7 +501,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
       status="submitted"
       applicationId={applicationId}
       title="AU-R4 Screening"
-      desc="Review the publication, journal, author, claim and documents; digitally approve the memo, then forward to IRAS."
+      desc="Review the publication, journal, author, claim and supporting documents, then forward the application to IRAS."
       render={(app, load) => {
         const docs = app.documents || [];
         const pi = app.pub_info || {};
@@ -514,7 +514,6 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
           { label: "Full Research Article", req: true, ok: hasDoc("article") },
           { label: "Turnitin Report", req: true, ok: hasDoc("turnitin") },
           { label: "Original Publication Fee Receipt", req: true, ok: hasDoc("receipt") },
-          { label: "Memo for Dean Approval", req: true, ok: hasDoc("memo") },
           { label: "Author Contribution Statement", req: authors.length > 1, ok: authors.length <= 1 || hasDoc("author contribution") },
           { label: "Acceptance Letter", req: pi.pubStatus !== "Published", ok: pi.pubStatus === "Published" || hasDoc("acceptance") },
         ];
@@ -525,7 +524,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
         const forward = () => setConfirm({
           kind: "success",
           title: "Confirm AU-R4 Approval",
-          message: "By approving, you confirm the Dean screening is complete and the memo is digitally approved. IRAS will verify the application next.",
+          message: "By approving, you confirm the Dean screening is complete. IRAS will verify the application next.",
           confirmLabel: "Confirm & Forward to IRAS", withReason: true, reasonLabel: "Dean comment",
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "advance", reason || ""); toast(app.code + " approved — forwarded to IRAS."); navigate("d-r4-screen"); }
@@ -585,7 +584,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                     <table className="tbl">
                       <thead><tr><th>Author</th><th>Role</th><th>Email Address</th><th style={{ textAlign: "right" }}>Contrib %</th></tr></thead>
                       <tbody>
-                        {authors.map((a, i) => <tr key={i}><td>{a.name}</td><td style={{ fontSize: 12 }}>{a.type}</td><td style={{ fontSize: 12 }}>{a.email || "—"}</td><td style={{ textAlign: "right" }}>{a.contribution || 0}%</td></tr>)}
+                        {authors.map((a, i) => <tr key={i}><td>{a.name}</td><td style={{ fontSize: 12 }}>{/corresponding/i.test(a.type || "") ? "Co-author" : a.type}</td><td style={{ fontSize: 12 }}>{a.email || "—"}</td><td style={{ textAlign: "right" }}>{a.contribution || 0}%</td></tr>)}
                         <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}><td colSpan="3">Total</td><td style={{ textAlign: "right", color: totalContrib === 100 ? "inherit" : "var(--au-crimson)" }}>{totalContrib}%</td></tr>
                       </tbody>
                     </table>

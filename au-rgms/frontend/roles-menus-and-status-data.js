@@ -364,8 +364,8 @@ const R4_JOURNAL_CLASSIFICATIONS = {
 };
 const R4_WOS_INDEXES = ["SCIE", "SSCI", "AHCI"];
 const R4_OPEN_ACCESS = ["Open Access", "Subscription", "Hybrid"];
-const R4_AUTHOR_TYPES = ["First Author", "Corresponding Author"];
-const R4_APPLICANT_ROLES = ["First Author", "Corresponding Author"];
+const R4_AUTHOR_TYPES = ["First Author", "Co-author"];
+const R4_APPLICANT_ROLES = ["First Author", "Co-author"];
 const R4_CLAIM_TYPES = ["Publication Fee Reimbursement", "Publication Reward", "Publication Fee and Reward"];
 const R4_DECLARATIONS = [
   "I confirmed that this article was not part of a senior project, thesis, dissertation, or independent study for which I claimed an ineligible advisor reward.",
@@ -397,7 +397,6 @@ const R4_DOC_TYPES = [
   "Author Contribution Statement",
   "Turnitin Result (≤ 20%)",
   "Receipt of Publication Fee",
-  "Dean-signed Memo",
   "Other supporting document",
 ];
 
@@ -406,7 +405,6 @@ const R4_REQUIRED_DOCS = [
   { id: "r4-contribution", name: "Author Contribution Statement", role: "the signed author-contribution information" },
   { id: "r4-turnitin", name: "Turnitin Result", role: "similarity must not exceed 20%" },
   { id: "r4-receipt", name: "Receipt of Publication Fee", role: "the original receipt of the fee you paid" },
-  { id: "r4-memo", name: "Dean-signed Memo", role: "a memo signed by your Dean" },
 ];
 
 window.AU = {
