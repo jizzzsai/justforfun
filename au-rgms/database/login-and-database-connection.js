@@ -101,7 +101,7 @@
     },
     async requestPasswordReset(email) {
       var normalized = String(email || "").trim().toLowerCase();
-      if (normalized !== "u6430040@au.edu") throw new Error("Contact the system administrator to reset this account.");
+      if (!/^[^@\s]+@au\.edu$/i.test(normalized)) throw new Error("Enter the AU email address registered for your account.");
       // Password recovery must always return to the production portal. Using the
       // current origin can accidentally generate localhost links when a reset is
       // requested from a development or preview build.
@@ -111,10 +111,6 @@
       return true;
     },
     async updatePassword(password) {
-      var profile = await window.AUTH.profile();
-      if (!profile || String(profile.email || "").toLowerCase() !== "u6430040@au.edu") {
-        throw new Error("Self-service password reset is not enabled for this account.");
-      }
       var r = await sb.auth.updateUser({ password: password });
       if (r.error) throw r.error;
       return true;

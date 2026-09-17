@@ -142,8 +142,6 @@ const NAV_RESEARCHER = [
   { key: "r-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { key: "r-submit", label: "Submit Application", icon: "FilePlus" },
   { key: "r-applications", label: "My Applications", icon: "Folder" },
-  { section: "GRANT SYSTEM" },
-  { key: "r-switch-system", label: "Switch Grant System", icon: "Repeat" },
   { section: "RESOURCES" },
   { key: "r-ai-assistant", label: "AI Assistant", icon: "Bot" },
   { key: "forms", label: "Forms & Templates", icon: "FileText" },
@@ -154,13 +152,9 @@ const NAV_RESEARCHER_R3 = [
   { key: "r-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
   { key: "r-submit", label: "Submit Application", icon: "FilePlus" },
   { key: "r-applications", label: "My Applications", icon: "Folder" },
-  { section: "FINANCE" },
-  { key: "r-payments", label: "Payment Status", icon: "Coins" },
   { section: "RESOURCES" },
   { key: "r-ai-assistant", label: "AI Assistant", icon: "Bot" },
   { key: "forms", label: "Forms & Templates", icon: "FileText" },
-  { section: "GRANT SYSTEM" },
-  { key: "r-switch-system", label: "Switch Grant System", icon: "Repeat" },
 ];
 
 const NAV_DEAN = [

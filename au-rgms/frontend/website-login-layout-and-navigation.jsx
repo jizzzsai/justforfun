@@ -5,7 +5,6 @@
 
 const APP = window.AU;
 const TEST_PASSWORD = "123456789";
-const SELF_SERVICE_RESET_EMAIL = "u6430040@au.edu";
 const DEMO_MODE_KEY = "au-rgms-demo-mode";
 function isPasswordRecoveryRoute() {
   return new URLSearchParams(window.location.search).get("reset-password") === "1" || /(?:^|[&#])type=recovery(?:&|$)/.test(window.location.hash || "");
@@ -99,14 +98,11 @@ function LoginPage({ onLogin }) {
   async function requestPasswordReset() {
     const auEmail = email.trim().toLowerCase();
     setErr(""); setResetSent("");
-    if (auEmail !== SELF_SERVICE_RESET_EMAIL) {
-      setHelpTopic("access");
-      return;
-    }
+    if (!/^[^@\s]+@au\.edu$/i.test(auEmail)) return setErr("Enter the AU email address registered for your account.");
     setBusy(true);
     try {
       await window.AUTH.requestPasswordReset(auEmail);
-      setResetSent("Password reset email sent to " + auEmail + ". Open the link in that email to choose a new password.");
+      setResetSent("If an AU-RGMS account exists for " + auEmail + ", a password-reset email has been sent. Open its link to choose a new password.");
     } catch (ex) {
       setErr((ex && ex.message) || "Could not send the password reset email.");
     } finally { setBusy(false); }
@@ -118,10 +114,6 @@ function LoginPage({ onLogin }) {
     if (newPassword !== confirmPassword) return setErr("The two passwords do not match.");
     setBusy(true);
     try {
-      const prof = await window.AUTH.profile();
-      if (!prof || String(prof.email || "").toLowerCase() !== SELF_SERVICE_RESET_EMAIL) {
-        throw new Error("This password-reset link is not valid for this account.");
-      }
       await window.AUTH.updatePassword(newPassword);
       setPasswordChanged(true);
     } catch (ex) {
