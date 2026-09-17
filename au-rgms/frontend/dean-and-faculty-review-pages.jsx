@@ -219,7 +219,7 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
           kind: "danger",
           title: "Return to researcher?",
           message: app.code + " will be marked returned for revision.",
-          confirmLabel: "Return", withReason: true, reasonLabel: "Dean comment", reasonRequired: true,
+          confirmLabel: "Return", withReason: true, reasonLabel: "Dean comment", reasonRequired: true, finalConfirm: false,
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -364,7 +364,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
           kind: "danger",
           title: "Return for revision?",
           message: app.code + " will be sent back to the researcher. Explain what needs to be fixed (for example, a clearer Turnitin report or corrected conference classification).",
-          confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment",
+          confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment", finalConfirm: false,
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-r3-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -555,7 +555,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
         const ret = () => setConfirm({
           kind: "danger", title: "Return for Revision?",
           message: app.code + " will be returned to the researcher. State what must be corrected (e.g. upload the original receipt, fix the author contribution percentages).",
-          confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment",
+          confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment", finalConfirm: false,
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-r4-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -711,7 +711,7 @@ function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, s
           kind: form.recommendation === "favorable" ? "success" : "danger",
           title: "Submit Committee Decision?",
           message: app.code + " will be " + (recLabel[form.recommendation] || "moved") + ".",
-          confirmLabel: "Submit Decision", withReason: true, reasonLabel: "Committee comment", reasonRequired: form.recommendation !== "favorable",
+          confirmLabel: "Submit Decision", withReason: true, reasonLabel: "Committee comment", reasonRequired: form.recommendation !== "favorable", finalConfirm: form.recommendation === "unfavorable",
           onConfirm: async (reason) => {
             try {
               await window.DB.submitCommitteeReview(app.id, Object.assign({}, form, { comments: reason.trim() }));
@@ -778,7 +778,7 @@ function FacultyDean({ onDownload, onView, toast, setConfirm }) {
           title: kind === "advance" ? "Approve and forward to RASSC?" : kind === "reject" ? "Reject application?" : "Return for revision?",
           message: app.code + " will be " + (kind === "advance" ? "sent to RASSC." : kind === "reject" ? "rejected. This is a final decision." : "returned for revision."),
           confirmLabel: kind === "advance" ? "Approve & Forward" : kind === "reject" ? "Reject Application" : "Return",
-          withReason: true, reasonLabel: kind === "reject" ? "Dean rejection reason" : "Dean comment", reasonRequired: kind !== "advance",
+          withReason: true, reasonLabel: kind === "reject" ? "Dean rejection reason" : "Dean comment", reasonRequired: kind !== "advance", finalConfirm: kind === "reject",
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "dean_sign", kind, reason || ""); toast(app.code + " updated."); load(); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }

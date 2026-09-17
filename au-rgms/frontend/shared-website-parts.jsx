@@ -354,7 +354,7 @@ function ApplicationEventTimeline({ app }) {
     const actor = roleName(event.actor_role);
     if (event.to_status === "rejected") return actor + " rejected the application";
     if (event.to_status === "returned") return actor + " requested revision";
-    if (/resubmitted/i.test(event.action || "")) return "Researcher resubmitted the application";
+    if (event.from_status === "returned" || /resubmitted/i.test(event.action || "")) return "Researcher resubmitted the application";
     if (/submitted application/i.test(event.action || "")) return "Researcher submitted the application";
     return event.action || actor + " action recorded";
   };
