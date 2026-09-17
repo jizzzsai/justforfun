@@ -538,6 +538,12 @@
       var me = await uid();
       var role = await myRole();
       if (!me) throw new Error("You must be signed in.");
+      if (role !== "committee" && role !== "admin") throw new Error("Only a Faculty Committee account can submit an AU-R1 committee review.");
+      var application = await sb.from("applications").select("grant_type,status").eq("id", appId).maybeSingle();
+      if (application.error) throw application.error;
+      if (!application.data || application.data.grant_type !== "au_r1" || application.data.status !== "committee_review") {
+        throw new Error("Faculty Committee review is available only for AU-R1 applications awaiting committee review.");
+      }
       var score = Math.max(0, Math.min(100, parseInt(payload.score, 10) || 0));
       // Reviewer decisions now use the two outcomes shown in the UI.  Treat a
       // stale client sending the former "unfavorable" value as a revision,
@@ -610,12 +616,9 @@
         if (["submitted", "committee_review", "iras_review"].indexOf(fromStatus) >= 0) {
           try {
             var grantType = scopedGrantType;
-            if (fromStatus === "submitted" && grantType === "au_r3") {
+            if (fromStatus === "submitted" && (grantType === "au_r3" || grantType === "au_r4")) {
               to = "iras_review";
               labelOverride = "Dean approved — forwarded to IRAS";
-            }
-            if (fromStatus === "committee_review" && grantType === "au_r4") {
-              labelOverride = "Committee recommended — forwarded to IRAS";
             }
             if (fromStatus === "iras_review" && (grantType === "au_r3" || grantType === "au_r4")) {
               labelOverride = "IRAS approved — sent to Finance Office";
@@ -1256,7 +1259,7 @@
           var deanRejected = dsc.rejected || 0;
           if (deanRejected) push("dean-rejected", "AlertCircle", "Rejected", deanRejected + " proposal(s) from your faculty were rejected.", "d-history", false);
         } else if (role === "committee") {
-          var cq = await this.queue("committee_review"); if (cq.length) push("committee", "Users", "Committee", cq.length + " proposal(s) awaiting review.", "c-queue", true);
+          var cq = await this.queue("committee_review", "au_r1"); if (cq.length) push("committee", "Users", "Committee", cq.length + " AU-R1 proposal(s) awaiting review.", "c-queue", true);
           var mine = await this.myReviews();
           var cseen = {}, cdecided = 0;
           (mine || []).forEach(function (r) {

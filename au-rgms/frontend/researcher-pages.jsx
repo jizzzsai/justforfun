@@ -50,15 +50,14 @@ function buildR3Timeline(statusKey) {
 const R4_PIPELINE = [
   { key: "submission", label: "Submitted" },
   { key: "dean", label: "Dean Review" },
-  { key: "committee", label: "Faculty Committee Review" },
   { key: "iras", label: "IRAS Verification" },
   { key: "approved", label: "Approved by Research Office" },
   { key: "payment", label: "Finance Payment" },
   { key: "completed", label: "Completed" },
 ];
 function buildR4Timeline(statusKey) {
-  const order = ["submission", "dean", "committee", "iras", "approved", "payment", "completed"];
-  const idxMap = { draft: 0, submitted: 1, committee_review: 2, iras_review: 3, approved: 5, active: 5, completed: 7, returned: 0, rejected: 0 };
+  const order = ["submission", "dean", "iras", "approved", "payment", "completed"];
+  const idxMap = { draft: 0, submitted: 1, iras_review: 2, approved: 4, active: 4, completed: 6, returned: 0, rejected: 0 };
   let idx = idxMap[statusKey]; if (idx === undefined) idx = 0;
   const tl = {};
   const currentLabel = statusKey === "draft" ? "Draft" : statusKey === "returned" ? "Returned for revision" : statusKey === "rejected" ? "Not approved" : "In progress";
@@ -1860,7 +1859,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         {                           }
         <div className="form-section">
           <h4><span className="num">6</span> Required Documents</h4>
-          <p className="section-sub">Upload the supporting documents required for Dean, Faculty Committee, and research-office review.</p>
+          <p className="section-sub">Upload the supporting documents required for Dean and IRAS review.</p>
           <div className="section-body">
             <div className="form-grid" style={{ marginBottom: 10 }}>
               <div className="field"><label>Turnitin Similarity % *</label>
@@ -2376,7 +2375,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
           </div>
 
           <div className="card mb-4">
-            <ReviewCommentHistory app={app} roles={app.grant_type === "au_r3" ? ["dean", "iras"] : (!app.grant_type || app.grant_type === "au_r1") ? ["dean", "committee", "rassc"] : ["dean", "committee", "iras"]} />
+            <ReviewCommentHistory app={app} roles={app.grant_type === "au_r3" || app.grant_type === "au_r4" ? ["dean", "iras"] : ["dean", "committee", "rassc"]} />
           </div>
 
           <div className="card card-pad-0 mb-4">

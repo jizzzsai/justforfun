@@ -457,7 +457,7 @@ const ROLE_CONFIG = {
 const SYSTEM_ROLE_KEYS = {
   au_r1: ["researcher", "dean", "committee", "rassc", "ofm", "admin"],
   au_r3: ["researcher", "dean", "iras", "ofm", "admin"],
-  au_r4: ["researcher", "dean", "committee", "iras", "ofm", "admin"],
+  au_r4: ["researcher", "dean", "iras", "ofm", "admin"],
 };
 function rolesForSystem(sys) {
   const all = APP.ROLES || [];

@@ -107,7 +107,7 @@ function DeanDashboard({ navigate }) {
       <PageHeader
         title={isR4 ? "AU-R4 · Dean's Dashboard" : isR3 ? "AU-R3 · Dean's Dashboard" : "Dean's Dashboard"}
         desc={isR4
-          ? "Review your faculty's AU-R4 applications before forwarding eligible claims to the Faculty Committee."
+          ? "Review your faculty's AU-R4 applications before forwarding eligible claims directly to IRAS."
           : isR3
           ? "Review your faculty's paper presentation grant applications and forward eligible applications to RASSC for verification."
           : "Screen new proposals from your faculty, then forward them to your Faculty Committee."}
@@ -124,9 +124,9 @@ function DeanDashboard({ navigate }) {
       {isR4 ? (
         <div className="stats">
           <Stat label="Pending Dean Review"    value={n("submitted")} icon="ClipboardCheck" tone="gold" />
-          <Stat label="At Faculty Committee"   value={n("committee_review")} icon="Users" tone="navy" />
-          <Stat label="At Research Office"     value={n("iras_review")} icon="Send" />
-          <Stat label="Approved / Paid" value={(c ? (c.approved || 0) + (c.active || 0) + (c.completed || 0) : "…")} icon="CheckCircle" tone="green" />
+          <Stat label="Awaiting IRAS Verification" value={n("iras_review")} icon="Send" tone="navy" />
+          <Stat label="At Finance"              value={n("approved")} icon="Coins" />
+          <Stat label="Paid / Completed" value={(c ? (c.active || 0) + (c.completed || 0) : "…")} icon="CheckCircle" tone="green" />
         </div>
       ) : isR3 ? (
         <div className="stats">
@@ -455,15 +455,15 @@ function CommitteeDashboard({ navigate, setSelectedApplicationId }) {
   const [c, setC] = useState(null);
   const [rows, setRows] = useState(null);
   const [members, setMembers] = useState(null);
-  useEffect(() => { window.DB.statusCounts().then(setC).catch(() => setC({})); }, []);
-  useEffect(() => { window.DB.queue("committee_review").then(setRows).catch(() => setRows([])); }, []);
+  useEffect(() => { window.DB.statusCounts("au_r1").then(setC).catch(() => setC({})); }, []);
+  useEffect(() => { window.DB.queue("committee_review", "au_r1").then(setRows).catch(() => setRows([])); }, []);
   useEffect(() => { window.DB.profilesByRole("committee").then(setMembers).catch(() => setMembers([])); }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
   return (
     <>
       <PageHeader
-        title="Faculty Committee Dashboard"
-        desc="Review proposals from your faculty forwarded by the Dean and record recommendations."
+        title="AU-R1 Faculty Committee Dashboard"
+        desc="Review AU-R1 proposals from your faculty forwarded by the Dean and record recommendations."
         actions={
           <button className="btn btn-primary" onClick={() => navigate("c-queue")}>
             <Icon name="Inbox" size={14} /> Open Review Queue
@@ -531,14 +531,14 @@ function CommitteeDashboard({ navigate, setSelectedApplicationId }) {
 
 function CommitteeQueue({ navigate, setSelectedApplicationId }) {
   const [rows, setRows] = useState(null);
-  useEffect(() => { window.DB.queue("committee_review").then(setRows).catch(() => setRows([])); }, []);
+  useEffect(() => { window.DB.queue("committee_review", "au_r1").then(setRows).catch(() => setRows([])); }, []);
   const openReview = (row) => {
     if (setSelectedApplicationId) setSelectedApplicationId(row._uuid);
     navigate("c-review");
   };
   return (
     <>
-      <PageHeader title="Review Queue" desc="Proposals from your faculty awaiting committee review." />
+      <PageHeader title="AU-R1 Review Queue" desc="AU-R1 proposals from your faculty awaiting committee review." />
       <div className="card card-pad-0">
         <div className="toolbar">
           <div className="search">
@@ -559,7 +559,7 @@ function CommitteeQueue({ navigate, setSelectedApplicationId }) {
 
 function CommitteeHistory({ onDownload }) {
   const [rows, setRows] = useState(null);
-  useEffect(() => { window.DB.byStatuses(["dean_sign", "iras_review", "expert_review", "president_review", "approved", "active", "completed", "rejected", "returned"]).then(setRows).catch(() => setRows([])); }, []);
+  useEffect(() => { window.DB.byStatuses(["dean_sign", "iras_review", "expert_review", "president_review", "approved", "active", "completed", "rejected", "returned"], "au_r1").then(setRows).catch(() => setRows([])); }, []);
   return (
     <>
       <PageHeader title="Past Reviews" desc="Proposals you've reviewed previously." />
@@ -601,7 +601,7 @@ function IRASGrantDashboard({ navigate, setSelectedApplicationId, sys }) {
           <thead><tr><th>Application ID</th><th>{isR4 ? "Article" : "Paper"} Title</th><th>{isR4 ? "Journal / Category" : "Conference"}</th><th>Researcher</th><th style={{ textAlign: "right" }}>Requested</th><th style={{ textAlign: "right" }}>Actions</th></tr></thead>
           <tbody>
             {rows === null && <tr><td colSpan="6" style={{ textAlign: "center", padding: "28px", color: "var(--ink-3)" }}>Loading…</td></tr>}
-            {rows && rows.length === 0 && <tr><td colSpan="6" style={{ textAlign: "center", padding: "36px", color: "var(--ink-3)" }}>No {isR4 ? "Committee-recommended AU-R4" : "Dean-approved AU-R3"} applications waiting.</td></tr>}
+            {rows && rows.length === 0 && <tr><td colSpan="6" style={{ textAlign: "center", padding: "36px", color: "var(--ink-3)" }}>No {isR4 ? "Dean-approved AU-R4" : "Dean-approved AU-R3"} applications waiting.</td></tr>}
             {(rows || []).map(a => {
               const pi = a.pub_info || {}, ci = a.conference_info || {};
               return (
@@ -651,7 +651,7 @@ function RASSCDashboardV2({ navigate, setSelectedApplicationId, officeRole = "ra
         <PageHeader
           title={(isR4 ? "AU-R4" : "AU-R3") + " · IRAS Dashboard"}
           desc={isR4
-            ? "Verify Committee-recommended AU-R4 publication-fee applications before forwarding eligible claims to Finance."
+            ? "Verify Dean-approved AU-R4 publication-fee applications before forwarding eligible claims to Finance."
             : "Verify Dean-approved paper presentation applications before forwarding them to Finance."}
           actions={sysToggle}
         />
@@ -930,7 +930,7 @@ function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setC
               <div>
                 <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Publication &amp; Journal</h3></div><div className="card-body">
                   {row("Article", app.title)}{row("Publication status", pi.pubStatus)}{row("Journal", pi.journal)}{row("Publisher", pi.publisher)}{pi.pubStatus === "Published" && <>{row("Article URL", pi.articleUrl)}{row("DOI", pi.doi)}{row("ISSN / eISSN", pi.issn)}{row("Page number(s)", pi.pageNumber || [pi.startPage, pi.endPage].filter(Boolean).join("–"))}</>}{row("Database / index", pi.journalDb)}{row("Classification", pi.journalClassification || pi.openAccess)}{row("Academic year (AD)", pi.academicYear)}{row("Publication fee", fmtBaht(Number(pi.feePaid || 0)))}
-                  <ReviewCommentHistory app={app} roles={["dean", "committee"]} />
+                  <ReviewCommentHistory app={app} roles={["dean"]} />
                 </div></div>
                 <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Authors &amp; Eligibility</h3></div><div className="card-body" style={{ padding: 0 }}>
                   <div style={{ padding: "12px 20px", borderBottom: "1px solid var(--line-2)", fontSize: 13 }}>{row("Applicant role", pi.applicantRole)}</div>
@@ -1792,7 +1792,7 @@ function OFMHistory({ grantType, onGrantSwitch }) {
 
 
 
-const ADMIN_R4_ROLES = ["researcher", "dean", "committee", "iras", "ofm", "admin"];
+const ADMIN_R4_ROLES = ["researcher", "dean", "iras", "ofm", "admin"];
 function AdminDashboard({ navigate }) {
   const [sys, setSys] = useState("all");
   const isR4 = sys === "au_r4";
@@ -1839,7 +1839,7 @@ function AdminDashboard({ navigate }) {
         <div className="stats">
           <Stat label="Total Users"        value={profiles ? totalUsers : "…"} icon="Users" tone="gold" />
           <Stat label="AU-R4 Applications" value={n("_total")} icon="Award" tone="navy" />
-          <Stat label="Under Review"       value={(c ? (c.submitted || 0) + (c.committee_review || 0) + (c.iras_review || 0) + (c.approved || 0) : "…")} icon="FileSearch" tone="gold" />
+          <Stat label="Under Review"       value={(c ? (c.submitted || 0) + (c.iras_review || 0) + (c.approved || 0) : "…")} icon="FileSearch" tone="gold" />
           <Stat label="Paid / Completed" value={(c ? (c.active || 0) + (c.completed || 0) : "…")} icon="CheckCircle" tone="green" />
         </div>
       ) : (
