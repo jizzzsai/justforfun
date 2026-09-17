@@ -705,12 +705,11 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
 }
 
 function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
-  const [form, setForm] = useState({ score: "", recommendation: "favorable" });
-  const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
   return (
     <LiveAppLoader
       status="committee_review"
       grantType="au_r1"
+      strictStatus={true}
       applicationId={applicationId}
       title="Academic Committee Review"
       desc="Submit committee evaluation and recommendation."
@@ -718,21 +717,40 @@ function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, s
         if (app.grant_type !== "au_r1") {
           return <><PageHeader title="AU-R1 Faculty Committee Review" desc="Faculty Committee review is available only for AU-R1 applications." /><div className="card"><Empty title="AU-R1 review only" desc="AU-R3 and AU-R4 applications go directly from Dean review to IRAS." icon="Lock" /></div></>;
         }
-        const recLabel = { favorable: "approved and forwarded", revise: "returned to the researcher for revision", unfavorable: "rejected" };
-        const submit = () => setConfirm({
-          kind: form.recommendation === "favorable" ? "success" : "danger",
-          title: "Submit Committee Decision?",
-          message: app.code + " will be " + (recLabel[form.recommendation] || "moved") + ".",
-          confirmLabel: "Submit Decision", withReason: true, reasonLabel: "Committee comment", reasonRequired: form.recommendation !== "favorable", finalConfirm: form.recommendation === "unfavorable",
-          onConfirm: async (reason) => {
-            try {
-              await window.DB.submitCommitteeReview(app.id, Object.assign({}, form, { comments: reason.trim() }));
-              toast(app.code + " committee decision submitted.");
-              if (navigate) navigate("c-queue"); else load();
-            }
-            catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
+        const decisionConfig = {
+          favorable: {
+            kind: "success", title: "Approve & forward to RASSC?",
+            message: app.code + " will be approved by the Faculty Committee and forwarded to RASSC.",
+            confirmLabel: "Approve & Forward",
           },
-        });
+          revise: {
+            kind: "danger", title: "Return for revision?",
+            message: app.code + " will be returned to the researcher. State what must be corrected.",
+            confirmLabel: "Return",
+          },
+          unfavorable: {
+            kind: "danger", title: "Reject application?",
+            message: app.code + " will be rejected. This is a final decision and will close the application.",
+            confirmLabel: "Reject Application",
+          },
+        };
+        const decide = (recommendation) => {
+          const config = decisionConfig[recommendation];
+          setConfirm({
+            kind: config.kind,
+            title: config.title,
+            message: config.message,
+            confirmLabel: config.confirmLabel, withReason: true, reasonLabel: "Committee comment", reasonRequired: recommendation !== "favorable", finalConfirm: recommendation === "unfavorable",
+            onConfirm: async (reason) => {
+              try {
+                await window.DB.submitCommitteeReview(app.id, { recommendation: recommendation, comments: (reason || "").trim() });
+                toast(app.code + (recommendation === "favorable" ? " approved and forwarded to RASSC." : recommendation === "revise" ? " returned for revision." : " rejected."));
+                if (navigate) navigate("c-queue"); else load();
+              }
+              catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
+            },
+          });
+        };
         return (
           <>
             <PageHeader
@@ -765,9 +783,11 @@ function FacultyAcademic({ applicationId, navigate, onDownload, onView, toast, s
               <div className="card card-pad-0">
                 <div className="card-head"><h3>Committee Decision</h3></div>
                 <div className="card-body">
-                  <div className="field"><label>Score (0-100)</label><input type="number" min="0" max="100" value={form.score} onChange={e => setField("score", e.target.value)} /></div>
-                  <div className="field"><label>Decision</label><select value={form.recommendation} onChange={e => setField("recommendation", e.target.value)}><option value="favorable">Approve &amp; Forward</option><option value="revise">Return for Revision</option><option value="unfavorable">Reject Application</option></select></div>
-                  <button className="btn btn-primary btn-block" onClick={submit}><Icon name="Send" size={14} /> Submit Decision</button>
+                  <div className="flex flex-col gap-2">
+                    <button className="btn btn-primary btn-block" onClick={() => decide("favorable")}><Icon name="Send" size={14} /> Approve &amp; Forward to RASSC</button>
+                    <button className="btn btn-secondary btn-block" onClick={() => decide("revise")}><Icon name="Repeat" size={14} /> Return for Revision</button>
+                    <button className="btn btn-danger btn-block" onClick={() => decide("unfavorable")}><Icon name="X" size={14} /> Reject Application</button>
+                  </div>
                 </div>
               </div>
             </div>

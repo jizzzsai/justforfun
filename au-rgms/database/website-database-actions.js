@@ -544,8 +544,9 @@
       if (!application.data || application.data.grant_type !== "au_r1" || application.data.status !== "committee_review") {
         throw new Error("Faculty Committee review is available only for AU-R1 applications awaiting committee review.");
       }
-      var score = Math.max(0, Math.min(100, parseInt(payload.score, 10) || 0));
-      var recommendation = payload.recommendation || (score >= 70 ? "favorable" : "revise");
+      var hasScore = payload.score !== undefined && payload.score !== null && payload.score !== "";
+      var score = hasScore ? Math.max(0, Math.min(100, parseInt(payload.score, 10) || 0)) : null;
+      var recommendation = payload.recommendation || (score !== null && score >= 70 ? "favorable" : "revise");
       var committeeComment = String(payload.comments || "").trim();
       var row = {
         application_id: appId,
@@ -571,7 +572,7 @@
           application_id: appId, actor_id: me, actor_role: role || "committee",
           action: "Faculty Committee review submitted",
           from_status: "committee_review", to_status: reviewToStatus,
-          note: "Score " + score + " / 100; recommendation: " + recommendation + "." + (committeeComment ? " Comment: " + committeeComment : ""),
+          note: (score === null ? "Decision: " : "Score " + score + " / 100; recommendation: ") + recommendation + "." + (committeeComment ? " Comment: " + committeeComment : ""),
         });
       } catch (e) {}
       if (recommendation === "unfavorable") return await this.transition(appId, "committee_review", "reject", committeeComment);
