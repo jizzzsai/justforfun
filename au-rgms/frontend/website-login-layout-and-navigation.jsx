@@ -24,7 +24,6 @@ function writeDemoMode(enabled, persist = false) {
 const FACULTY_TEST_ROLES = [
   { key: "researcher", label: "Researcher" },
   { key: "dean", label: "Dean" },
-  { key: "committee", label: "Committee" },
 ];
 function facultyTestEmail(code, role) {
   return String(code || "VMES").toLowerCase() + role + "@au.edu";
@@ -32,8 +31,6 @@ function facultyTestEmail(code, role) {
 const TEST_EMAIL_FOR = {
   researcher: "vmesresearcher@au.edu",
   dean: "vmesdean@au.edu",
-  committee: "vmescommittee@au.edu",
-  rassc: "rassc@au.edu",
   iras: "iras@au.edu",
   ofm: "finance@au.edu",
   admin: "admin@au.edu",
@@ -70,6 +67,10 @@ function LoginPage({ onLogin }) {
     try {
       const prof = await window.AUTH.signIn(em, pw, remember);
       if (!prof) throw new Error("No profile found for this account.");
+      if (prof.is_active === false || !["researcher", "dean", "iras", "ofm", "admin"].includes(prof.role)) {
+        try { await window.AUTH.signOut(); } catch (e) {}
+        throw new Error("This account belongs to an inactive role and no longer has portal access.");
+      }
       onLogin(prof, { isDemo, persistDemo: isDemo && remember });
     } catch (ex) {
       const message = String((ex && ex.message) || "");
@@ -229,7 +230,6 @@ function LoginPage({ onLogin }) {
                 </div>
                 <div className="au-login-demo-section">University-wide</div>
                 <div className="au-login-demo-grid au-login-demo-grid-wide">
-                  <button type="button" disabled={busy} title="rassc@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.rassc)}><strong>rassc</strong><span>AU-R1 Office</span></button>
                   <button type="button" disabled={busy} title="iras@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.iras)}><strong>iras</strong><span>AU-R3 / AU-R4 Office</span></button>
                   <button type="button" disabled={busy} title="finance@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.ofm)}><strong>finance</strong><span>OFM / Finance</span></button>
                   <button type="button" disabled={busy} title="admin@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.admin)}><strong>admin</strong><span>Administrator</span></button>
@@ -260,7 +260,7 @@ function LoginHelpDialog({ topic, onClose }) {
       </>}
       {topic === "help" && <>
         <p>Enter your registered email ending in @au.edu and your password. Your account determines which role and workspace you can access.</p>
-        <p>Researchers can select AU-R1, AU-R3, or AU-R4 after signing in. Developer Demo Access opens shared test accounts and is separate from your personal account.</p>
+        <p>Researchers can select AU-R3 or AU-R4 after signing in. Developer Demo Access opens shared test accounts and is separate from your personal account.</p>
         <p>Select Remember me only on your own device. Leave it unchecked on shared computers and sign out when you finish.</p>
       </>}
       {topic === "privacy" && <>
@@ -274,9 +274,9 @@ function LoginHelpDialog({ topic, onClose }) {
 }
 
 
-const CHOOSER_INTRO = "Hi, I'm AU AI. Not sure which grant fits you? Ask me what each one is for, how they differ, the amounts, or what documents you'll need — I'll help you pick.";
+const CHOOSER_INTRO = "Hi, I'm AU AI. Not sure whether AU-R3 or AU-R4 fits you? Ask me about the purpose, amount, or required documents and I'll help you pick.";
 const CHOOSER_CHIPS = [
-  "What's the difference between AU-R1, AU-R3 and AU-R4?",
+  "What's the difference between AU-R3 and AU-R4?",
   "Which grant is for presenting a paper at a conference?",
   "How do I submit an AU-R4 publication fee application?",
   "Can students apply together with me?",
@@ -348,9 +348,8 @@ function GrantHelperChat({ profile }) {
 
 
 function GrantSystemChooser({ profile, onPick, onLogout }) {
-  const systems = APP.GRANT_SYSTEMS || [];
+  const systems = (APP.GRANT_SYSTEMS || []).filter(sys => ["au_r3", "au_r4"].includes(sys.id));
   const summaries = {
-    au_r1: "Research and creative work at AU.",
     au_r3: "Present your paper at a conference.",
     au_r4: "Journal publication fees and rewards.",
   };
@@ -386,7 +385,7 @@ function GrantSystemChooser({ profile, onPick, onLogout }) {
           {systems.map(sys => {
             const disabled = !sys.enabled;
             return (
-              <section key={sys.id} className={`grant-choice-card${sys.id === "au_r3" ? " grant-choice-card-center" : ""}${disabled ? " is-disabled" : ""}`} aria-labelledby={`grant-title-${sys.id}`}>
+              <section key={sys.id} className={`grant-choice-card${disabled ? " is-disabled" : ""}`} aria-labelledby={`grant-title-${sys.id}`}>
                 <div className="grant-choice-icon" aria-hidden="true">
                   <Icon name={sys.icon} size={48} />
                 </div>
@@ -418,16 +417,6 @@ const ROLE_CONFIG = {
     homeKey: "d-dashboard",
     crumbRoot: "Dean's Office",
   },
-  committee: {
-    nav: APP.NAV_COMMITTEE,
-    homeKey: "c-dashboard",
-    crumbRoot: "Faculty Committee",
-  },
-  rassc: {
-    nav: APP.NAV_RASSC,
-    homeKey: "i-dashboard",
-    crumbRoot: "RASSC",
-  },
   iras: {
     nav: APP.NAV_IRAS,
     homeKey: "i-dashboard",
@@ -447,7 +436,6 @@ const ROLE_CONFIG = {
 
 
 const SYSTEM_ROLE_KEYS = {
-  au_r1: ["researcher", "dean", "committee", "rassc", "ofm", "admin"],
   au_r3: ["researcher", "dean", "iras", "ofm", "admin"],
   au_r4: ["researcher", "dean", "iras", "ofm", "admin"],
 };
@@ -529,7 +517,7 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSys
             <div className="dropdown" onClick={e => e.stopPropagation()} style={{minWidth: 320}}>
               {demoMode && <>
                 <div className="dropdown-section">
-                  Switch test account{grantSystem ? " · " + (grantSystem === "au_r1" ? "AU-R1" : grantSystem === "au_r3" ? "AU-R3" : "AU-R4") : ""}
+                  Switch test account{grantSystem ? " · " + (grantSystem === "au_r3" ? "AU-R3" : "AU-R4") : ""}
                 </div>
                 {rolesForSystem(grantSystem).map(r => (
                   <div
@@ -643,41 +631,21 @@ function PageRouter({ pageKey, navigate, ctx }) {
                               ? <ResearcherSubmitR4 applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} />
                               : c.grantType === "au_r3"
                               ? <ResearcherSubmitR3 applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} />
-                              : <ResearcherSubmit applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} />;
+                              : <Empty title="Choose AU-R3 or AU-R4" desc="Return to the grant selector and choose an active grant." icon="Folder" />;
     case "r-applications":  return <ResearcherApplications navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} toast={c.toast} setConfirm={c.setConfirm} onGrantSwitch={c.onGrantSwitch} openDraft={(id) => { c.setSelectedApplicationId(id); navigate("r-submit", { keepSelection: true }); }} openDetail={(id) => { c.setSelectedApplicationId(id); navigate("r-detail"); }} />;
     case "r-detail":        return <ResearcherApplicationDetail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "r-progress":      return <ResearcherProgress applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
-    case "r-final":         return <ResearcherFinal applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} />;
-    case "r-payments":      return <ResearcherPayments onDownload={c.onDownload} toast={c.toast} grantType={c.grantType} />;
     case "d-dashboard":      return <DeanDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
-    case "d-screen":         return <DeanScreenQueue navigate={navigate} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} setSelectedApplicationId={c.setSelectedApplicationId} />;
-    case "d-screen-detail":  return <FacultyChecklist applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-r3-screen":      return <DeanR3Queue navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "d-r3-detail":      return <DeanR3Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-r4-screen":      return <DeanR4Queue navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "d-r4-detail":      return <DeanR4Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-history":        return <DeanHistory navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "d-history-detail": return <DeanDecisionTimeline applicationId={c.selectedApplicationId} navigate={navigate} />;
-
-
-    case "c-dashboard":      return <CommitteeDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
-    case "c-queue":          return <CommitteeQueue navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
-    case "c-review":         return <FacultyAcademic applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "c-history":        return <CommitteeHistory onDownload={c.onDownload} />;
-
-
-    case "i-dashboard":      return <RASSCDashboardV2 navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} officeRole={c.role} grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} />;
+    case "i-dashboard":      return <IRASDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} />;
     case "i-r3-verify":      return c.role === "iras" ? <IRASr3Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} /> : <Empty title="IRAS access required" desc="AU-R3 verification is available only to IRAS." icon="Lock" />;
     case "i-r4-verify":      return c.role === "iras" ? <IRASr4Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} /> : <Empty title="IRAS access required" desc="AU-R4 verification is available only to IRAS." icon="Lock" />;
-    case "i-received":       return c.role === "rassc" ? <RASSCReceived navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} grantType="au_r1" /> : <Empty title="RASSC access required" desc="AU-R1 applications are available only to RASSC." icon="Lock" />;
-    case "i-screen":         return c.role === "rassc" ? <RASSCScreen applicationId={c.selectedApplicationId} setSelectedApplicationId={c.setSelectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} grantType="au_r1" /> : <Empty title="RASSC access required" desc="AU-R1 screening is available only to RASSC." icon="Lock" />;
-    case "i-reports":        return c.role === "rassc" ? <RASSCReports onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} /> : <Empty title="RASSC access required" desc="AU-R1 report review is available only to RASSC." icon="Lock" />;
-
-
-    case "o-dashboard":      return <OFMDashboard navigate={navigate} toast={c.toast} setConfirm={c.setConfirm} grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} />;
-    case "o-summary":        return <OFMTotalSummary onDownload={c.onDownload} />;
-    case "o-payments":       return <OFMPaymentQueue grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
-    case "o-detail":         return <OFMPaymentQueue grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} onDownload={c.onDownload} toast={c.toast} setConfirm={c.setConfirm} />;
+    case "o-dashboard":      return <OFMDashboard navigate={navigate} toast={c.toast} setConfirm={c.setConfirm} grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} onDownload={c.onDownload} onView={c.onView} />;
+    case "o-summary":        return <OFMTotalSummary onDownload={c.onDownload} onView={c.onView} />;
     case "o-history":        return <OFMHistory grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} />;
 
 
@@ -712,13 +680,21 @@ function readHash() {
   } catch (e) { return {}; }
 }
 
-const LEGACY_PUBLICATION_PAGES = ["r-publications", "i-publications", "o-publications"];
+const ACTIVE_GRANT_TYPES = ["au_r3", "au_r4"];
+const RETIRED_PAGES = [
+  "r-publications", "i-publications", "o-publications",
+  "r-progress", "r-final", "r-payments",
+  "d-screen", "d-screen-detail", "d-sign", "d-sign-detail",
+  "c-dashboard", "c-queue", "c-review", "c-history",
+  "i-received", "i-screen", "i-reports",
+  "o-payments", "o-detail",
+];
 
 
 function App() {
   const initial = readHash();
   const startingRole = initial.role && ROLE_CONFIG[initial.role] ? initial.role : "researcher";
-  const startingPage = initial.page && !LEGACY_PUBLICATION_PAGES.includes(initial.page)
+  const startingPage = initial.page && !RETIRED_PAGES.includes(initial.page)
     ? initial.page
     : ROLE_CONFIG[startingRole].homeKey;
 
@@ -728,12 +704,16 @@ function App() {
   const [profile, setProfile] = useState(null);
   const [demoMode, setDemoMode] = useState(() => !!initial.skipLogin || readDemoMode());
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
-  const [rSystem, setRSystem] = useState(() => { try { return localStorage.getItem("au-rgms-r-system") || null; } catch (e) { return null; } });
-  const chooseSystem = (sys, nextPage) => { try { localStorage.setItem("au-rgms-r-system", sys); } catch (e) {} setSelectedApplicationId(null); setRSystem(sys); setPage(nextPage || "r-dashboard"); };
+  const [rSystem, setRSystem] = useState(() => { try { const stored = localStorage.getItem("au-rgms-r-system"); return ACTIVE_GRANT_TYPES.includes(stored) ? stored : null; } catch (e) { return null; } });
+  const chooseSystem = (sys, nextPage) => {
+    if (!ACTIVE_GRANT_TYPES.includes(sys)) return;
+    try { localStorage.setItem("au-rgms-r-system", sys); } catch (e) {}
+    setSelectedApplicationId(null); setRSystem(sys); setPage(nextPage || "r-dashboard");
+  };
   const switchSystem = () => { try { localStorage.removeItem("au-rgms-r-system"); } catch (e) {} setRSystem(null); };
   const navigate = (key, opts) => {
     if (key === "r-switch-system") { switchSystem(); return; }
-    if (LEGACY_PUBLICATION_PAGES.includes(key)) {
+    if (RETIRED_PAGES.includes(key)) {
       setPage(ROLE_CONFIG[role].homeKey);
       return;
     }
@@ -790,7 +770,12 @@ function App() {
   };
 
   const onLogin = (prof, opts = {}) => {
-    const r = prof && ROLE_CONFIG[prof.role] ? prof.role : "researcher";
+    if (!prof || prof.is_active === false || !ROLE_CONFIG[prof.role]) {
+      window.AUTH.signOut().catch(() => {});
+      setProfile(null); setLoggedIn(false);
+      return;
+    }
+    const r = prof.role;
     const nextDemoMode = opts.isDemo === true;
     const persistDemo = opts.persistDemo === true || (nextDemoMode && !!(window.AUTH && window.AUTH.remembersSession()));
     writeDemoMode(nextDemoMode, persistDemo);
@@ -830,6 +815,11 @@ function App() {
         }
         const prof = await window.AUTH.profile();
         if (!prof) return;
+        if (prof.is_active === false || !ROLE_CONFIG[prof.role]) {
+          await window.AUTH.signOut();
+          setProfile(null); setLoggedIn(false);
+          return;
+        }
         if (initial.skipLogin) {
           if (initial.role && ROLE_CONFIG[initial.role] && prof.role !== initial.role) {
             await switchToTestRole(initial.role, { keepPage: true });
@@ -858,6 +848,11 @@ function App() {
         window.setTimeout(() => {
           window.AUTH.profile().then(prof => {
             if (!prof) { setProfile(null); setLoggedIn(false); return; }
+            if (prof.is_active === false || !ROLE_CONFIG[prof.role]) {
+              window.AUTH.signOut().catch(() => {});
+              setProfile(null); setLoggedIn(false);
+              return;
+            }
             setProfile(prof);
             if (ROLE_CONFIG[prof.role]) setRole(prof.role);
             if (event === "SIGNED_IN" && ROLE_CONFIG[prof.role]) {
@@ -875,7 +870,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const supportedSystem = ["au_r1", "au_r3", "au_r4"].includes(rSystem);
+    const supportedSystem = ACTIVE_GRANT_TYPES.includes(rSystem);
     const researcherAI = !!(loggedIn && profile && profile.role === "researcher" && role === "researcher" && supportedSystem);
     const adminAnalyticsAI = !!(loggedIn && profile && profile.role === "admin" && role === "admin" && page === "a-analytics");
     const visible = researcherAI || adminAnalyticsAI;
@@ -887,14 +882,11 @@ function App() {
     }));
   }, [loggedIn, profile, role, page, rSystem]);
 
-  const effectiveGrantSystem = role === "rassc"
-    ? "au_r1"
-    : role === "iras"
-      ? (["au_r3", "au_r4"].includes(rSystem) ? rSystem : "au_r3")
-      : rSystem;
+  const effectiveGrantSystem = ["iras", "ofm"].includes(role)
+    ? (ACTIVE_GRANT_TYPES.includes(rSystem) ? rSystem : "au_r3")
+    : rSystem;
   const cfg = ROLE_CONFIG[role];
-  const researcherTrimmed = role === "researcher" && (effectiveGrantSystem === "au_r3" || effectiveGrantSystem === "au_r4");
-  const navForRole = researcherTrimmed ? (APP.NAV_RESEARCHER_R3 || cfg.nav) : cfg.nav;
+  const navForRole = role === "researcher" ? (APP.NAV_RESEARCHER_R3 || cfg.nav) : cfg.nav;
 
   const pageLabel = useMemo(() => {
     const navItem = navForRole.find(n => n.key === page);
@@ -942,7 +934,7 @@ function App() {
         <PageRouter
           pageKey={page}
           navigate={navigate}
-          ctx={{ role, onDownload, onView, toast, setConfirm, profile, selectedApplicationId, setSelectedApplicationId, grantType: ["researcher", "ofm", "rassc", "iras"].includes(role) ? effectiveGrantSystem : null, onGrantSwitch: chooseSystem }}
+          ctx={{ role, onDownload, onView, toast, setConfirm, profile, selectedApplicationId, setSelectedApplicationId, grantType: ["researcher", "ofm", "iras"].includes(role) ? effectiveGrantSystem : null, onGrantSwitch: chooseSystem }}
         />
       </main>
       {previewDoc && (

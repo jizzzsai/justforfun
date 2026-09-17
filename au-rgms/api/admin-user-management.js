@@ -1,4 +1,4 @@
-const ROLES = ["researcher", "dean", "committee", "rassc", "iras", "ofm", "admin"];
+const ROLES = ["researcher", "dean", "iras", "ofm", "admin"];
 const NULLABLE_PROFILE_REFERENCES = [
   ["app_settings", "updated_by"],
   ["application_documents", "uploaded_by"],
@@ -60,7 +60,7 @@ function validateProfile(body, requirePassword) {
   if (joinedDate && joinedDate > new Date().toISOString().slice(0, 10)) return { error: "Date joined cannot be in the future." };
   if (ROLES.indexOf(role) === -1) return { error: "Invalid role." };
   if ((requirePassword || password) && password.length < 8) return { error: "Password must be at least 8 characters." };
-  if ((role === "dean" || role === "committee") && !faculty) return { error: "Dean and Committee accounts need a faculty." };
+  if (role === "dean" && !faculty) return { error: "Dean accounts need a faculty." };
 
   return {
     email, fullName, role, password, faculty, department, nameTitle, auId, phone, officeRoom, joinedDate,

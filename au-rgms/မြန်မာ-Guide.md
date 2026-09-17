@@ -22,15 +22,14 @@
 | --- | --- |
 | `frontend/website-login-layout-and-navigation.jsx` | Login၊ grant system ရွေးချယ်မှု၊ header၊ sidebar၊ notification၊ page navigation နှင့် main application |
 | `frontend/shared-website-parts.jsx` | Button၊ icon၊ badge၊ modal၊ timeline၊ date picker နှင့် file preview ကဲ့သို့ ပြန်သုံးသော UI အစိတ်အပိုင်းများ |
-| `frontend/researcher-pages.jsx` | Researcher dashboard၊ AU-R1/AU-R3/AU-R4 application forms၊ reports၊ payment နှင့် application detail စာမျက်နှာများ |
-| `frontend/dean-and-faculty-review-pages.jsx` | Dean screening၊ Faculty Committee review၊ comments နှင့် decision စာမျက်နှာများ |
-| `frontend/rassc-iras-ofm-workflow-pages.jsx` | RASSC၊ IRAS၊ Finance/OFM review၊ approval၊ report နှင့် payment workflow |
-| `frontend/role-dashboards.jsx` | Dean၊ Committee၊ RASSC/IRAS၊ Finance နှင့် Admin dashboard များ |
+| `frontend/researcher-pages.jsx` | Researcher dashboard၊ AU-R3/AU-R4 application forms၊ payment နှင့် application detail စာမျက်နှာများ |
+| `frontend/dean-and-faculty-review-pages.jsx` | AU-R3/AU-R4 Dean review၊ comments နှင့် decision စာမျက်နှာများ |
+| `frontend/role-dashboards.jsx` | Dean၊ IRAS၊ Finance နှင့် Admin dashboard များ |
 | `frontend/forms-and-templates-page.jsx` | Forms & Templates စာမျက်နှာနှင့် PDF download လုပ်ဆောင်ချက်များ |
 | `frontend/roles-menus-and-status-data.js` | User roles၊ sidebar menus၊ grant systems၊ journal options နှင့် application status သတ်မှတ်ချက်များ |
 | `frontend/website-layout-and-design.css` | Website layout၊ AU အနီ/ရွှေရောင် theme၊ cards၊ tables၊ forms၊ print နှင့် responsive design |
 | `frontend/login-page-design.css` | Login စာမျက်နှာ၏ university header၊ login form၊ mobile layout နှင့် help dialog design |
-| `frontend/researcher-ai-assistant.jsx` | Researcher AU-R1/AU-R3/AU-R4 အတွက် AI Assistant chat |
+| `frontend/researcher-ai-assistant.jsx` | Researcher AU-R3/AU-R4 အတွက် AI Assistant chat |
 | `frontend/ai-assistant-design.css` | AI Assistant button နှင့် chat window design |
 
 ## Database files
@@ -55,8 +54,8 @@ Backend secret key များကို frontend code သို့မဟုတ�
 
 - Login၊ header သို့မဟုတ် sidebar ကိုမေးလျှင် `frontend/website-login-layout-and-navigation.jsx` ကိုရှာပါ။
 - Researcher form သို့မဟုတ် report ကိုမေးလျှင် `frontend/researcher-pages.jsx` ကိုရှာပါ။
-- Dean သို့မဟုတ် Committee review ကိုမေးလျှင် `frontend/dean-and-faculty-review-pages.jsx` ကိုရှာပါ။
-- RASSC၊ IRAS သို့မဟုတ် Finance workflow ကိုမေးလျှင် `frontend/rassc-iras-ofm-workflow-pages.jsx` ကိုရှာပါ။
+- Dean review ကိုမေးလျှင် `frontend/dean-and-faculty-review-pages.jsx` ကိုရှာပါ။
+- IRAS သို့မဟုတ် Finance workflow ကိုမေးလျှင် `frontend/role-dashboards.jsx` ကိုရှာပါ။
 - Login/database connection ကိုမေးလျှင် `database/login-and-database-connection.js` ကိုရှာပါ။
 - Application၊ payment သို့မဟုတ် report database action ကိုမေးလျှင် `database/website-database-actions.js` ကိုရှာပါ။
 - AI backend ကိုမေးလျှင် `api/ai-chat-response.js` ကိုရှာပါ။

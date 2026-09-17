@@ -347,7 +347,7 @@ function ApplicationDecisionNotice({ app }) {
 
 function grantSystemFor(id) {
   const list = (RA && RA.GRANT_SYSTEMS) || [];
-  return list.find(s => s.id === id) || list[0] || { id: "au_r1", code: "AU-R1", name: "Research Grant", maxAmount: 100000, collaborative: false };
+  return list.find(s => s.id === id) || list[0] || { id: "au_r3", code: "AU-R3", name: "Paper Presentation Grant", maxAmount: 3500, collaborative: true };
 }
 
 function fmtNiceDate(iso) {
@@ -355,6 +355,12 @@ function fmtNiceDate(iso) {
   var d = new Date(iso + "T00:00:00");
   if (isNaN(d)) return "";
   return d.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+}
+
+function safeDocumentDisplayName(doc) {
+  const name = String((doc && doc.name) || "");
+  if (/\bau[-_\s]?r1\b/i.test(name)) return (doc && doc.doc_type) || "Uploaded document";
+  return name || (doc && doc.doc_type) || "Uploaded document";
 }
 
 function monthsBetween(startISO, endISO) {
@@ -893,7 +899,7 @@ function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, 
                   <div className="file-row" key={d.id || d.name}>
                     <div className="ficon"><Icon name="FileText" size={18} /></div>
                     <div className="fmeta">
-                      <div className="fn">{d.name}{d.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{d.doc_type}</span>}</div>
+                      <div className="fn">{safeDocumentDisplayName(d)}{d.doc_type && safeDocumentDisplayName(d) !== d.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{d.doc_type}</span>}</div>
                       <div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div>
                     </div>
                     <div className="factions">
@@ -1347,7 +1353,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
                   <div className="file-row" key={d.id || d.name}>
                     <div className="ficon"><Icon name="FileText" size={18} /></div>
                     <div className="fmeta">
-                      <div className="fn">{d.name}{d.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{d.doc_type}</span>}</div>
+                      <div className="fn">{safeDocumentDisplayName(d)}{d.doc_type && safeDocumentDisplayName(d) !== d.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{d.doc_type}</span>}</div>
                       <div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div>
                     </div>
                     <div className="factions">
@@ -1886,7 +1892,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
                 {otherExistingDocs.map(d => (
                   <div className="file-row" key={d.id || d.name}>
                     <div className="ficon"><Icon name="FileText" size={18} /></div>
-                    <div className="fmeta"><div className="fn">{d.name}{d.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{d.doc_type}</span>}</div><div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div></div>
+                    <div className="fmeta"><div className="fn">{safeDocumentDisplayName(d)}{d.doc_type && safeDocumentDisplayName(d) !== d.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{d.doc_type}</span>}</div><div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div></div>
                     <div className="factions">
                       <button className="btn btn-secondary btn-sm" onClick={() => onView(d)}><Icon name="Eye" size={13} /> View</button>
                       <button className="btn btn-secondary btn-sm" onClick={() => onDownload(d)}><Icon name="Download" size={13} /> Download</button>

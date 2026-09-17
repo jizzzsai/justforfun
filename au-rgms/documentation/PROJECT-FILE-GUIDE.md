@@ -23,9 +23,9 @@ au-rgms/
 | --- | --- |
 | Login page, grant chooser, header, sidebar, navigation, page routing | `frontend/website-login-layout-and-navigation.jsx` |
 | Shared buttons, icons, badges, modal, timeline, date picker, file preview | `frontend/shared-website-parts.jsx` |
-| Researcher dashboard, AU-R1, AU-R3, AU-R4 forms, reports, payments | `frontend/researcher-pages.jsx` |
-| Dean screening and Faculty Committee review pages | `frontend/dean-and-faculty-review-pages.jsx` |
-| RASSC/IRAS review, expert, president, contract, Finance/OFM workflow | `frontend/rassc-iras-ofm-workflow-pages.jsx` |
+| Researcher dashboard and AU-R3/AU-R4 forms, application details, and payments | `frontend/researcher-pages.jsx` |
+| AU-R3/AU-R4 Dean review pages | `frontend/dean-and-faculty-review-pages.jsx` |
+| IRAS verification and Finance/OFM workflow | `frontend/role-dashboards.jsx` |
 | Role dashboards, queues, histories, admin user-management UI | `frontend/role-dashboards.jsx` |
 | Forms & Templates page | `frontend/forms-and-templates-page.jsx` |
 | Roles, sidebar menus, statuses, grant types, journal options | `frontend/roles-menus-and-status-data.js` |
@@ -47,9 +47,8 @@ au-rgms/
 | --- | --- |
 | `frontend/website-login-layout-and-navigation.jsx` | Login, grant-system chooser, header, sidebar, notifications, page router, and application shell. |
 | `frontend/shared-website-parts.jsx` | Reusable UI pieces used across every role. |
-| `frontend/researcher-pages.jsx` | Researcher-facing AU-R1, AU-R3, and AU-R4 screens and their application details. |
-| `frontend/dean-and-faculty-review-pages.jsx` | Dean and Faculty Committee queues, reviews, comments, and decisions. |
-| `frontend/rassc-iras-ofm-workflow-pages.jsx` | RASSC/IRAS verification, expert/president steps, Finance approval, and report workflow. |
+| `frontend/researcher-pages.jsx` | Researcher-facing AU-R3 and AU-R4 screens and their application details. |
+| `frontend/dean-and-faculty-review-pages.jsx` | AU-R3 and AU-R4 Dean reviews, comments, and decisions. |
 | `frontend/role-dashboards.jsx` | Dashboards and management pages for non-researcher roles, including Admin. |
 | `frontend/forms-and-templates-page.jsx` | Official forms list and download actions. |
 | `frontend/roles-menus-and-status-data.js` | Shared roles, menus, status labels, grant configuration, and option lists. |
@@ -81,7 +80,7 @@ Backend secrets are read from Vercel environment variables. They must never be p
 | Folder | Contents |
 | --- | --- |
 | `assets/` | AU logo and future website images. |
-| `forms/` | AU-R1 contract, submission, progress-report, and final-report PDF templates. |
+| `forms/` | AU-R3 and AU-R4 reference forms; the live Forms & Templates page links to official IRAS resources. |
 | `documentation/` | This project map and future technical documentation. |
 
 ## Fast exam searches
@@ -92,17 +91,17 @@ Use GitHub's **Go to file** box for filenames, or search inside the project with
 # Find AU-R4 form code
 rg -n "AU-R4|ResearcherR4" frontend/researcher-pages.jsx
 
-# Find Dean and Committee comment/review code
+# Find Dean comment/review code
 rg -n "comment|review|decision" frontend/dean-and-faculty-review-pages.jsx
 
 # Find Finance/payment workflow
-rg -n "Finance|payment|phase" frontend/rassc-iras-ofm-workflow-pages.jsx database/website-database-actions.js
+rg -n "Finance|payment" frontend/role-dashboards.jsx database/website-database-actions.js
 
 # Find Admin user-management backend
 rg -n "POST|PATCH|DELETE|validateProfile" api/admin-user-management.js
 
 # Find AI rules and API call
-rg -n "AU-R1|AU-R3|AU-R4|Gemini" api/ai-chat-response.js
+rg -n "AU-R3|AU-R4|Gemini" api/ai-chat-response.js
 ```
 
 ## မြန်မာအတိုချုံး

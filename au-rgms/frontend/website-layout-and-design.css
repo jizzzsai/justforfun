@@ -114,7 +114,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .chooser-intro p { margin: 0; font-size: 13px; color: #fff4e5; letter-spacing: .08em; }
 .grant-choice-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: stretch;
   gap: 16px;
   width: 100%;
@@ -1101,6 +1101,10 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
   display: flex; gap: 8px; justify-content: flex-end;
   background: var(--paper-warm);
 }
+
+.modal.finance-detail-modal { max-width: 760px; }
+.finance-detail-modal .modal-body { text-align: left; }
+.finance-detail-modal .file-row { align-items: center; }
 
 
 .modal-sm { max-width: 440px; }

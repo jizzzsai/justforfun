@@ -5,12 +5,12 @@ const { useState, useRef, useEffect } = React;
 const ROLE_INTRO = {
   researcher: "Hi, I'm AU AI. Ask me about your applications, forms, documents, authors, reviews, reports, or payments.",
   admin: "Hi, I'm AU AI for Admin Analytics. Ask me to summarize or compare live applications, faculties, budgets, users, workflows, and payments.",
-  _default: "Hi, I'm AU AI — Assumption University's research-grant assistant. Ask me about the workflow, AU-R1 documents, payment stages (30/40/30), or publication rewards.",
+  _default: "Hi, I'm AU AI — Assumption University's research-grant assistant. Ask me about AU-R3 conference grants, AU-R4 publication rewards, reviews, documents, or payments.",
 };
 const ROLE_SUGGEST = {
   researcher: ["What needs my action now?", "Give me a resubmission checklist", "Which documents am I missing?"],
   admin: ["Give me a management summary", "Which faculty has the most applications?", "What needs attention now?"],
-  _default: ["What are the 14 workflow stages?", "What documents do I need to apply?", "Reward for a Scopus Q1 paper?"],
+  _default: ["How does the AU-R3 workflow work?", "What documents do I need to apply?", "Reward for a Scopus Q1 paper?"],
 };
 const ROLE_LABEL = {
   researcher: "Researcher assistant",
@@ -41,7 +41,10 @@ async function buildAIContext(grantSystem, mode) {
         approvedAmount: a.approved_amount == null ? null : Number(a.approved_amount),
         submittedAt: a.submitted_at || null,
         updatedAt: a.updated_at || null,
-        documents: (a.documents || []).map(d => ({ name: d.name, type: d.doc_type || null })),
+        documents: (a.documents || []).map(d => ({
+          name: /\bau[-_\s]?r1\b/i.test(String(d.name || "")) ? (d.doc_type || "Uploaded document") : d.name,
+          type: d.doc_type || null,
+        })),
         authors: (a.co_members || []).map(member => ({ name: member.name, email: member.email, type: member.authorType || member.type || member.kind || "Author" })),
         reviews: (a.reviews || []).map(review => ({ type: review.kind, recommendation: review.recommendation, comments: review.comments, submittedAt: review.submitted_at })),
         recentEvents: (a.events || []).slice(-12).map(event => ({ action: event.action, note: event.note, date: event.created_at })),
@@ -182,7 +185,7 @@ function AIChat() {
             </div>
             <div className="ai-head-t">
               <b>AU AI</b>
-              <span>{role ? ROLE_LABEL[role] || "AU research grants" : "AU research grants · RASSC"}</span>
+              <span>{role ? ROLE_LABEL[role] || "AU research grants" : "AU research grants · IRAS"}</span>
             </div>
             <button className="ai-x" onClick={() => setOpen(false)} aria-label="Close">
               <Icon name="X" size={16} />

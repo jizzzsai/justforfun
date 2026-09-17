@@ -64,6 +64,10 @@
       try {
         var profile = await window.AUTH.profile();
         if (!profile) throw new Error("No profile found for this account. Contact your administrator.");
+        if (profile.is_active === false) throw new Error("This account is inactive. Contact your administrator.");
+        if (["researcher", "dean", "iras", "ofm", "admin"].indexOf(profile.role) === -1) {
+          throw new Error("This account belongs to a retired role and no longer has portal access.");
+        }
         return profile;
       } catch (error) {
         try { await sb.auth.signOut({ scope: "local" }); } catch (e) {}

@@ -3,13 +3,18 @@
 (function () {
   var sb = window.sb;
   if (!sb) { console.error("[AU] window.sb not ready for DB layer"); return; }
+  var ACTIVE_GRANT_TYPES = ["au_r3", "au_r4"];
+  function requireActiveGrant(grantType) {
+    if (ACTIVE_GRANT_TYPES.indexOf(grantType) === -1) throw new Error("Choose AU-R3 or AU-R4.");
+    return grantType;
+  }
 
   var STATUS_MAP = {
     draft:            { label: "Draft",               cls: "badge-draft" },
     submitted:        { label: "Submitted",           cls: "badge-submitted" },
-    committee_review: { label: "Committee Review",    cls: "badge-academic" },
+    committee_review: { label: "Retired workflow stage", cls: "badge-draft" },
     dean_sign:        { label: "Dean Sign & Forward", cls: "badge-dean" },
-    iras_review:      { label: "RASSC Screening",     cls: "badge-iras" },
+    iras_review:      { label: "IRAS Verification",   cls: "badge-iras" },
     expert_review:    { label: "Under Expert Review", cls: "badge-expert" },
     president_review: { label: "President Approval",  cls: "badge-president" },
     approved:         { label: "Approved",            cls: "badge-signed" },
@@ -20,9 +25,8 @@
   };
 
   var NEXT = {
-    submitted:        { to: "committee_review", verb: "Dean approved — sent to Faculty Committee" },
-    committee_review: { to: "iras_review",      verb: "Committee recommended — forwarded to RASSC" },
-    iras_review:      { to: "approved",          verb: "RASSC approved — contract issued, sent to Finance Office" },
+    submitted:        { to: "iras_review",      verb: "Dean approved — forwarded to IRAS" },
+    iras_review:      { to: "approved",         verb: "IRAS verified — sent to Finance Office" },
     approved:         { to: "active",           verb: "Contract signed — project active" },
     active:           { to: "completed",        verb: "Payment completed — application closed" },
   };
@@ -47,16 +51,14 @@
   }
   function roleLabel(role) {
     var labels = {
-      researcher: "Researcher", dean: "Dean", committee: "Faculty Committee",
-      rassc: "RASSC", iras: "IRAS", ofm: "Finance", admin: "Administrator",
+      researcher: "Researcher", dean: "Dean", iras: "IRAS", ofm: "Finance", admin: "Administrator",
       expert: "Expert Reviewer", president: "President"
     };
     return labels[role] || (role ? String(role) : "an unassigned account");
   }
   function expectedRoles(app, fromStatus) {
     if (fromStatus === "submitted" || fromStatus === "dean_sign") return ["dean"];
-    if (fromStatus === "committee_review") return ["committee"];
-    if (fromStatus === "iras_review") return app && app.grant_type === "au_r1" ? ["rassc"] : ["iras"];
+    if (fromStatus === "iras_review") return ["iras"];
     if (fromStatus === "expert_review") return ["expert"];
     if (fromStatus === "president_review") return ["president"];
     if (fromStatus === "approved" || fromStatus === "active") return ["ofm"];
@@ -73,7 +75,7 @@
     var id = await uid();
     if (!id) return null;
     var r = await sb.from("profiles").select("role,faculty").eq("id", id).single();
-    if (!r.data || ["dean", "committee"].indexOf(r.data.role) === -1) return null;
+    if (!r.data || r.data.role !== "dean") return null;
     return r.data.faculty || null;
   }
   async function genPublicationCode() {
@@ -239,7 +241,7 @@
     async createApplication(payload, submit, appId) {
       var me = await uid();
       if (!me) throw new Error("You must be signed in.");
-      var grantType = payload.grant_type || "au_r1";
+      var grantType = requireActiveGrant(payload.grant_type);
       var profileResult = await sb.from("profiles")
         .select("full_name,email,name_title,au_id,phone,office_room,joined_date,faculty,department")
         .eq("id", me).single();
@@ -317,7 +319,7 @@
         end_date: payload.end_date || null,
         budget_breakdown: payload.budget_breakdown || null,
         budget_items: payload.budget_items || null,
-        grant_type: payload.grant_type || "au_r1",
+        grant_type: grantType,
         co_members: payload.co_members || null,
         pub_info: payload.pub_info || null,
         conference_info: payload.conference_info || null,
@@ -392,8 +394,9 @@
       var me = await uid();
       var ownQuery = sb.from("applications")
         .select("*, researcher:profiles(full_name,email), events:application_events(id,action,to_status,note,actor_role,created_at,actor:profiles(full_name))")
-        .eq("researcher_id", me);
-      if (grantType) ownQuery = ownQuery.eq("grant_type", grantType);
+        .eq("researcher_id", me)
+        .in("grant_type", ACTIVE_GRANT_TYPES);
+      if (grantType) ownQuery = ownQuery.eq("grant_type", requireActiveGrant(grantType));
       var result = await ownQuery.order("created_at", { ascending: false });
       if (result.error) throw result.error;
       return (result.data || []).map(function (app) {
@@ -407,18 +410,17 @@
     async queue(status, grantType) {
       var q = sb.from("applications")
         .select("*, researcher:profiles(full_name)")
-        .eq("status", status);
+        .eq("status", status)
+        .in("grant_type", ACTIVE_GRANT_TYPES);
       var faculty = await currentFacultyScope();
       if (faculty) q = q.eq("faculty", faculty);
-      if (grantType) {
-        if (grantType.charAt(0) === "!") q = q.neq("grant_type", grantType.slice(1));
-        else q = q.eq("grant_type", grantType);
-      }
+      if (grantType) q = q.eq("grant_type", requireActiveGrant(grantType));
       var res = await q.order("submitted_at", { ascending: true });
       if (res.error) throw res.error;
       return (res.data || []).map(mapRow);
     },
     async grantPaymentQueue(grantType) {
+      grantType = requireActiveGrant(grantType);
       var res = await sb.from("applications")
         .select("*, researcher:profiles(full_name), events:application_events(action,note,created_at)")
         .eq("grant_type", grantType)
@@ -429,13 +431,14 @@
     },
     async financeSummaryApplications() {
       var res = await sb.from("applications")
-        .select("*, researcher:profiles(full_name,email,phone,office_room), payments(*), reports(kind,status), documents:application_documents(id,name,doc_type)")
+        .select("*, researcher:profiles(full_name,email,phone,office_room), payments(*), reports(kind,status), documents:application_documents(id,name,doc_type,storage_path,created_at)")
+        .in("grant_type", ACTIVE_GRANT_TYPES)
         .in("status", ["approved", "active", "completed"])
         .order("created_at", { ascending: false });
       if (res.error) throw res.error;
       return (res.data || []).map(function (app) {
-        app.grant_type = app.grant_type || "au_r1";
         app.statusBadge = badge(app.status, app.grant_type);
+        app.documents = (app.documents || []).map(mapDocument);
         return app;
       });
     },
@@ -443,7 +446,7 @@
       var role = await myRole();
       if (role !== "ofm" && role !== "admin") throw new Error("Finance access required.");
       var app = await this.applicationDetail(appId);
-      if (!app || ["approved", "active", "completed"].indexOf(app.status) < 0) {
+      if (!app || ACTIVE_GRANT_TYPES.indexOf(app.grant_type) < 0 || ["approved", "active", "completed"].indexOf(app.status) < 0) {
         throw new Error("This application has not been forwarded to Finance.");
       }
       return app;
@@ -455,7 +458,8 @@
       var isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(appId || "");
       var q = sb.from("applications")
         .select("*, researcher:profiles(full_name,email,name_title,title,au_id,phone,office_room,joined_date,faculty,department), documents:application_documents(*), reviews(*, reviewer:profiles(full_name,email,title,faculty,department)), events:application_events(*, actor:profiles(full_name)), payments(*), reports(*)")
-        .eq(isUuid ? "id" : "code", appId);
+        .eq(isUuid ? "id" : "code", appId)
+        .in("grant_type", ACTIVE_GRANT_TYPES);
       var faculty = await currentFacultyScope();
       if (faculty) q = q.eq("faculty", faculty);
       var res = await q.single();
@@ -1253,29 +1257,15 @@
           var apps = await this.myApplications();
           apps.slice(0, 4).forEach(function (a) { push("app-" + a.id, "Folder", a.code, badge(a.status).label, "r-applications", a.status !== "completed"); });
         } else if (role === "dean") {
-          var s = await this.queue("submitted"); if (s.length) push("dean-screen", "ClipboardCheck", "Dean queue", s.length + " proposal(s) awaiting first screening.", "d-screen", true);
-          var ds = await this.queue("dean_sign"); if (ds.length) push("dean-sign", "FileSignature", "Dean sign", ds.length + " proposal(s) awaiting sign and forward.", "d-sign", true);
+          var s3 = await this.queue("submitted", "au_r3"); if (s3.length) push("dean-r3", "ClipboardCheck", "AU-R3 Dean queue", s3.length + " application(s) awaiting review.", "d-r3-screen", true);
+          var s4 = await this.queue("submitted", "au_r4"); if (s4.length) push("dean-r4", "ClipboardCheck", "AU-R4 Dean queue", s4.length + " application(s) awaiting review.", "d-r4-screen", true);
           var dsc = await this.statusCounts();
-          var atRassc = dsc.iras_review || 0;
-          if (atRassc) push("dean-rassc", "Send", "Now at RASSC", atRassc + " proposal(s) from your faculty passed committee and are with RASSC.", "d-history", true);
+          var atIras = dsc.iras_review || 0;
+          if (atIras) push("dean-iras", "Send", "Now at IRAS", atIras + " application(s) from your faculty are with IRAS.", "d-history", true);
           var deanApproved = (dsc.approved || 0) + (dsc.active || 0) + (dsc.completed || 0);
           if (deanApproved) push("dean-approved", "Award", "Approved", deanApproved + " proposal(s) from your faculty have been approved.", "d-history", true);
           var deanRejected = dsc.rejected || 0;
           if (deanRejected) push("dean-rejected", "AlertCircle", "Rejected", deanRejected + " proposal(s) from your faculty were rejected.", "d-history", false);
-        } else if (role === "committee") {
-          var cq = await this.queue("committee_review", "au_r1"); if (cq.length) push("committee", "Users", "Committee", cq.length + " AU-R1 proposal(s) awaiting review.", "c-queue", true);
-          var mine = await this.myReviews();
-          var cseen = {}, cdecided = 0;
-          (mine || []).forEach(function (r) {
-            if (r.recommendation === "favorable" && r.application && r.application_id && !cseen[r.application_id]
-                && ["approved", "active", "completed", "rejected", "returned"].indexOf(r.application.status) >= 0) {
-              cseen[r.application_id] = true; cdecided++;
-            }
-          });
-          if (cdecided) push("committee-decided", "Bell", "RASSC outcome", cdecided + " proposal(s) you recommended now have a RASSC decision.", "c-history", true);
-        } else if (role === "rassc") {
-          var iq = await this.queue("iras_review", "au_r1"); if (iq.length) push("rassc-screen", "Inbox", "RASSC", iq.length + " AU-R1 proposal(s) awaiting screening.", "i-received", true);
-          var reports = await this.reportQueue(); if (reports.length) push("reports", "FileCheck", "Reports", reports.length + " report(s) awaiting RASSC acceptance.", "i-reports", true);
         } else if (role === "iras") {
           var iras3 = await this.queue("iras_review", "au_r3");
           var iras4 = await this.queue("iras_review", "au_r4");
@@ -1285,16 +1275,10 @@
         } else if (role === "president") {
           var pq = await this.queue("president_review"); if (pq.length) push("president", "Award", "President", pq.length + " proposal(s) awaiting final approval.", "p-queue", true);
         } else if (role === "ofm") {
-          var pay = await this.ofmPayments();
-          var readyPhases = [];
-          for (var payIndex = 0; payIndex < (pay || []).length; payIndex++) {
-            var payApp = pay[payIndex];
-            for (var phaseIndex = 0; phaseIndex < (payApp.payments || []).length; phaseIndex++) {
-              var payPhase = payApp.payments[phaseIndex];
-              if (payPhase.status !== "paid" && this.payable(payApp, payPhase.instalment)) readyPhases.push(payPhase);
-            }
-          }
-          if (readyPhases.length) push("ofm", "Coins", "Finance Office", readyPhases.length + " AU-R1 phase(s) ready for Finance approval after RASSC release.", "o-payments", true);
+          var finance3 = await this.grantPaymentQueue("au_r3");
+          var finance4 = await this.grantPaymentQueue("au_r4");
+          var readyGrants = finance3.concat(finance4).filter(function (a) { return a.statusKey === "approved" || a.statusKey === "active"; });
+          if (readyGrants.length) push("ofm", "Coins", "Finance Office", readyGrants.length + " AU-R3/AU-R4 payment(s) ready for completion.", "o-dashboard", true);
         } else if (role === "admin") {
           var ev = await this.auditEvents(); ev.slice(0, 5).forEach(function (e) { push("audit-" + e.id, "Clock", e.application ? e.application.code : "System", e.action, "a-audit", false); });
         }
@@ -1309,13 +1293,10 @@
     },
 
     async statusCounts(grantType) {
-      var q = sb.from("applications").select("status");
+      var q = sb.from("applications").select("status").in("grant_type", ACTIVE_GRANT_TYPES);
       var faculty = await currentFacultyScope();
       if (faculty) q = q.eq("faculty", faculty);
-      if (grantType) {
-        if (grantType.charAt(0) === "!") q = q.neq("grant_type", grantType.slice(1));
-        else q = q.eq("grant_type", grantType);
-      }
+      if (grantType) q = q.eq("grant_type", requireActiveGrant(grantType));
       var r = await q;
       if (r.error) throw r.error;
       var c = { _total: 0 };
@@ -1325,7 +1306,7 @@
       return c;
     },
     async facultyStats() {
-      var r = await sb.from("applications").select("faculty,status,requested_amount,approved_amount,grant_type");
+      var r = await sb.from("applications").select("faculty,status,requested_amount,approved_amount,grant_type").in("grant_type", ACTIVE_GRANT_TYPES);
       if (r.error) throw r.error;
       var map = {};
       (r.data || []).forEach(function (a) {
@@ -1343,14 +1324,13 @@
       return Object.keys(map).map(function (k) { return map[k]; }).sort(function (a, b) { return b.total - a.total; });
     },
     async profileCount() {
-      var r = await sb.from("profiles").select("id", { count: "exact", head: true });
+      var r = await sb.from("profiles").select("id", { count: "exact", head: true }).in("role", ["researcher", "dean", "iras", "ofm", "admin"]);
       if (r.error) throw r.error;
       return r.count || 0;
     },
     async byStatuses(arr, grantType) {
-      var q = sb.from("applications").select("*, researcher:profiles(full_name)").in("status", arr);
-      if (grantType === "au_r1") q = q.or("grant_type.eq.au_r1,grant_type.is.null");
-      else if (grantType) q = q.eq("grant_type", grantType);
+      var q = sb.from("applications").select("*, researcher:profiles(full_name)").in("status", arr).in("grant_type", ACTIVE_GRANT_TYPES);
+      if (grantType) q = q.eq("grant_type", requireActiveGrant(grantType));
       var faculty = await currentFacultyScope();
       if (faculty) q = q.eq("faculty", faculty);
       var res = await q.order("decided_at", { ascending: false, nullsFirst: false });
@@ -1383,12 +1363,12 @@
       results.forEach(function (result) { if (result.error) throw result.error; });
 
       var rows = (results[0].data || []).filter(function (payment) {
-        return !payment.application || !payment.application.grant_type || payment.application.grant_type === "au_r1";
+        return payment.application && ACTIVE_GRANT_TYPES.indexOf(payment.application.grant_type) >= 0;
       }).map(function (payment) {
         var app = payment.application || {};
         return {
           key: "payment-" + payment.id,
-          grant_type: app.grant_type || "au_r1",
+          grant_type: app.grant_type,
           code: app.code || "—",
           researcher: app.researcher ? app.researcher.full_name : "—",
           payment_label: payment.instalment === 1 ? "Phase 1 · 30%" : payment.instalment === 2 ? "Phase 2 · 40%" : "Phase 3 · 30%",
@@ -1416,15 +1396,15 @@
           status: app.status === "completed" ? "completed" : "paid",
         });
       });
-      if (grantType) rows = rows.filter(function (row) { return row.grant_type === grantType; });
+      if (grantType) rows = rows.filter(function (row) { return row.grant_type === requireActiveGrant(grantType); });
       return rows.sort(function (a, b) { return String(b.paid_at || "").localeCompare(String(a.paid_at || "")); });
     },
     async adminAnalyticsSnapshot() {
       var role = await myRole();
       if (role !== "admin") throw new Error("Administrator access required.");
       var results = await Promise.all([
-        sb.from("applications").select("code,title,grant_type,status,faculty,department,requested_amount,approved_amount,created_at,submitted_at,decided_at"),
-        sb.from("profiles").select("role,faculty,department,is_active,created_at"),
+        sb.from("applications").select("code,title,grant_type,status,faculty,department,requested_amount,approved_amount,created_at,submitted_at,decided_at").in("grant_type", ACTIVE_GRANT_TYPES),
+        sb.from("profiles").select("role,faculty,department,is_active,created_at").in("role", ["researcher", "dean", "iras", "ofm", "admin"]),
         sb.from("payments").select("amount,pct,instalment,status,paid_at,application:applications(code,grant_type,faculty,status)"),
         sb.from("publication_grants").select("code,article_title,status,faculty,department,requested_amount,approved_amount,indexing,quartile,publication_type,submitted_at,paid_at"),
         sb.from("reimbursements").select("code,title,status,faculty,department,requested_amount,approved_amount,category,submitted_at,paid_at"),
@@ -1449,13 +1429,13 @@
           byRole: usersByRole,
           byFaculty: usersByFaculty,
         },
-        payments: results[2].data || [],
+        payments: (results[2].data || []).filter(function (payment) { return payment.application && ACTIVE_GRANT_TYPES.indexOf(payment.application.grant_type) >= 0; }),
         publicationRewards: results[3].data || [],
         reimbursements: results[4].data || [],
       };
     },
     async allProfiles() {
-      var res = await sb.from("profiles").select("*").order("role", { ascending: true }).order("full_name", { ascending: true });
+      var res = await sb.from("profiles").select("*").in("role", ["researcher", "dean", "iras", "ofm", "admin"]).order("role", { ascending: true }).order("full_name", { ascending: true });
       if (res.error) throw res.error;
       return res.data || [];
     },
@@ -1466,7 +1446,8 @@
     },
     async auditEvents() {
       var res = await sb.from("application_events")
-        .select("*, actor:profiles(full_name,email), application:applications(code,title)")
+        .select("*, actor:profiles(full_name,email), application:applications!inner(code,title,grant_type)")
+        .in("application.grant_type", ACTIVE_GRANT_TYPES)
         .order("created_at", { ascending: false }).limit(80);
       if (res.error) throw res.error;
       return res.data || [];

@@ -17,7 +17,7 @@ function FormsLibrary() {
             <div className="eyebrow" style={{ marginBottom: 7 }}>Official IRAS resource</div>
             <h3 style={{ margin: "0 0 8px" }}>All AU Research Grant Forms</h3>
             <p className="text-sm text-muted" style={{ margin: "0 0 18px", lineHeight: 1.65 }}>
-              Open the IRAS website to access the current documents for AU-R1, AU-R3, and AU-R4.
+              Open the IRAS website to access the current documents for AU-R3 and AU-R4.
             </p>
             <a className="btn btn-primary" href={officialFormsUrl} target="_blank" rel="noopener noreferrer">
               Open Official Forms <Icon name="ExternalLink" size={14} />

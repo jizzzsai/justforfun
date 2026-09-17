@@ -34,7 +34,7 @@ function QueueTable({ rows, openLabel = "Review", onOpen, columns = "full", show
         {rows.map(a => (
           <tr key={a.id}>
             <td><span className="id">{a.id}</span></td>
-            {showGrant && <td><span className="badge badge-draft">{a.grant_type === "au_r3" ? "AU-R3" : a.grant_type === "au_r4" ? "AU-R4" : "AU-R1"}</span></td>}
+            {showGrant && <td><span className="badge badge-draft">{a.grant_type === "au_r4" ? "AU-R4" : "AU-R3"}</span></td>}
             <td className="title-cell">
               <div className="t" style={{ maxWidth: 260 }}>{a.title}</div>
             </td>
@@ -77,8 +77,7 @@ function WiredQueue({ status, openLabel, confirmTitle, confirmLabel, onDownload,
 
 
 function DeanDashboard({ navigate, setSelectedApplicationId }) {
-  const [sys, setSys] = useState("au_r1");
-  const isR3 = sys === "au_r3";
+  const [sys, setSys] = useState("au_r3");
   const isR4 = sys === "au_r4";
   const [c, setC] = useState(null);
   const [screenRows, setScreenRows] = useState(null);
@@ -88,15 +87,15 @@ function DeanDashboard({ navigate, setSelectedApplicationId }) {
     window.DB.queue("submitted", sys).then(setScreenRows).catch(() => setScreenRows([]));
   }, [sys]);
   const n = (k) => (c ? (c[k] || 0) : "…");
-  const openQueue = () => navigate(isR4 ? "d-r4-screen" : isR3 ? "d-r3-screen" : "d-screen");
-  const rowPage = isR4 ? "d-r4-detail" : isR3 ? "d-r3-detail" : "d-screen-detail";
+  const openQueue = () => navigate(isR4 ? "d-r4-screen" : "d-r3-screen");
+  const rowPage = isR4 ? "d-r4-detail" : "d-r3-detail";
   const openApplication = (application) => {
     if (setSelectedApplicationId) setSelectedApplicationId(application._uuid);
     navigate(rowPage);
   };
   const sysToggle = (
     <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden", marginRight: 8 }}>
-      {[{ id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
+      {[{ id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
         <button key={t.id} onClick={() => setSys(t.id)}
           style={{ padding: "7px 15px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer",
             background: sys === t.id ? "var(--au-crimson)" : "transparent",
@@ -109,12 +108,12 @@ function DeanDashboard({ navigate, setSelectedApplicationId }) {
   return (
     <>
       <PageHeader
-        title={isR4 ? "AU-R4 Dean Dashboard" : isR3 ? "AU-R3 Dean Dashboard" : "AU-R1 Dean Dashboard"}
+        title={isR4 ? "AU-R4 Dean Dashboard" : "AU-R3 Dean Dashboard"}
         actions={
           <>
             {sysToggle}
             <button className="btn btn-primary" onClick={openQueue}>
-              <Icon name="Inbox" size={14} /> {isR4 ? "Open AU-R4 Screening Queue" : isR3 ? "Open AU-R3 Screening Queue" : "Open AU-R1 Screening Queue"}
+              <Icon name="Inbox" size={14} /> {isR4 ? "Open AU-R4 Screening Queue" : "Open AU-R3 Screening Queue"}
             </button>
           </>
         }
@@ -127,25 +126,18 @@ function DeanDashboard({ navigate, setSelectedApplicationId }) {
           <Stat label="At Finance"              value={n("approved")} icon="Coins" />
           <Stat label="Paid / Completed" value={(c ? (c.active || 0) + (c.completed || 0) : "…")} icon="CheckCircle" tone="green" />
         </div>
-      ) : isR3 ? (
+      ) : (
         <div className="stats">
           <Stat label="Pending Dean Review" value={n("submitted")} icon="ClipboardCheck" tone="gold" />
           <Stat label="Forwarded to IRAS"   value={n("iras_review")} icon="Send" tone="navy" />
           <Stat label="At Finance"          value={n("approved")} icon="Coins" />
           <Stat label="Paid / Completed" value={(c ? (c.active || 0) + (c.completed || 0) : "…")} icon="CheckCircle" tone="green" />
         </div>
-      ) : (
-        <div className="stats">
-          <Stat label="Pending Screening"      value={n("submitted")} icon="ClipboardCheck" tone="gold" />
-          <Stat label="At Faculty Committee"   value={n("committee_review")} icon="Users" tone="navy" />
-          <Stat label="At RASSC"               value={n("iras_review")} icon="Landmark" />
-          <Stat label="Approved (system)"      value={n("_approved")} icon="CheckCircle" tone="green" />
-        </div>
       )}
 
       <div className="card card-pad-0">
         <div className="card-head">
-          <h3>{isR4 ? "AU-R4 Screening Queue" : isR3 ? "AU-R3 Screening Queue" : "AU-R1 Screening Queue"}</h3>
+          <h3>{isR4 ? "AU-R4 Screening Queue" : "AU-R3 Screening Queue"}</h3>
           <div className="grow"></div>
           <button className="btn btn-ghost btn-sm" onClick={openQueue}>
             Open queue <Icon name="ArrowRight" size={12} />
@@ -185,7 +177,7 @@ function DeanR3Queue({ navigate, setSelectedApplicationId }) {
     <>
       <PageHeader
         title="AU-R3 Screening Queue"
-        desc="Paper presentation grant requests from your faculty awaiting Dean review before RASSC."
+        desc="Paper presentation grant requests from your faculty awaiting Dean review before IRAS."
       />
       <div className="card card-pad-0">
         <div className="toolbar">
@@ -372,7 +364,7 @@ function DeanHistory({ navigate, setSelectedApplicationId }) {
   };
   return (
     <>
-      <PageHeader title="Decision History" desc="Read-only Dean decisions for AU-R1, AU-R3, and AU-R4 applications." />
+      <PageHeader title="Decision History" desc="Read-only Dean decisions for AU-R3 and AU-R4 applications." />
       <div className="card card-pad-0">
         {rows && rows.length === 0
           ? <div style={{ padding: "44px", textAlign: "center", color: "var(--ink-3)" }}>No decisions yet.</div>
@@ -409,7 +401,7 @@ function DeanDecisionTimeline({ applicationId, navigate }) {
     return <><PageHeader title="Dean Decision Timeline" desc="Select an application from Decision History." actions={backButton} /><div className="card"><Empty title="No application selected" desc="Return to Decision History and choose View Timeline." icon="Clock" /></div></>;
   }
 
-  const grantLabel = app.grant_type === "au_r3" ? "AU-R3" : app.grant_type === "au_r4" ? "AU-R4" : "AU-R1";
+  const grantLabel = app.grant_type === "au_r4" ? "AU-R4" : "AU-R3";
   return (
     <>
       <PageHeader
@@ -621,9 +613,9 @@ function IRASGrantDashboard({ navigate, setSelectedApplicationId, sys }) {
   );
 }
 
-function RASSCDashboardV2({ navigate, setSelectedApplicationId, officeRole = "rassc", grantType = "au_r1", onGrantSwitch }) {
-  const isIras = officeRole === "iras";
-  const sys = isIras && ["au_r3", "au_r4"].includes(grantType) ? grantType : "au_r1";
+function IRASDashboard({ navigate, setSelectedApplicationId, grantType = "au_r3", onGrantSwitch }) {
+  const isIras = true;
+  const sys = ["au_r3", "au_r4"].includes(grantType) ? grantType : "au_r3";
   const isR4 = sys === "au_r4", isR3 = sys === "au_r3";
   const [c, setC] = useState(null);
   const [rows, setRows] = useState(null);
@@ -1441,9 +1433,10 @@ function PresidentQueue({ navigate, onDownload, onView, toast, setConfirm }) {
 
 
 
-function OFMGrantPayments({ sys, toast, setConfirm }) {
+function OFMGrantPayments({ sys, toast, setConfirm, onDownload, onView }) {
   const isR4 = sys === "au_r4";
   const [rows, setRows] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
   const load = () => {
     window.DB.grantPaymentQueue(sys).then(setRows).catch(() => setRows([]));
   };
@@ -1458,29 +1451,35 @@ function OFMGrantPayments({ sys, toast, setConfirm }) {
     },
   });
   return (
-    <div className="card card-pad-0">
-      <div className="card-head"><h3>{isR4 ? "AU-R4" : "AU-R3"} Payment Queue</h3></div>
-      <table className="tbl">
+    <>
+      <div className="card card-pad-0">
+        <div className="card-head"><h3>{isR4 ? "AU-R4" : "AU-R3"} Payment Queue</h3><div className="grow"></div><span className="text-sm text-muted">Select an application to review its information and files.</span></div>
+        <table className="tbl">
         <thead><tr><th>Application ID</th><th>{isR4 ? "Article" : "Paper"}</th><th>Researcher</th><th style={{ textAlign: "right" }}>Approved Amount</th><th>Status</th><th style={{ textAlign: "right" }}>Action</th></tr></thead>
         <tbody>
           {rows === null && <tr><td colSpan="6" style={{ textAlign: "center", padding: "28px", color: "var(--ink-3)" }}>Loading…</td></tr>}
           {rows && rows.length === 0 && <tr><td colSpan="6" style={{ textAlign: "center", padding: "36px", color: "var(--ink-3)" }}>No {isR4 ? "AU-R4" : "AU-R3"} payments waiting.</td></tr>}
           {(rows || []).map(a => (
-            <tr key={a.id}>
+            <tr key={a.id} style={{ cursor: "pointer" }} onClick={() => setSelectedId(a._uuid)}>
               <td><span className="id">{a.id}</span></td>
               <td className="title-cell"><div className="t" style={{ maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div></td>
               <td style={{ fontSize: 12 }}>{a.researcher?.name}</td>
               <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{fmtBaht(Number(a.approved_amount || a.requested_amount || 0))}</td>
               <td><Badge status={a.statusKey === "completed" ? { key: "completed", cls: "badge-check", label: "Completed" } : { key: "approved", cls: "badge-contract", label: "At Finance" }} /></td>
               <td className="actions">
-                {(a.statusKey === "approved" || a.statusKey === "active") && <button className="btn btn-primary btn-sm" onClick={() => complete(a)}><Icon name="CheckCircle" size={12} /> Complete</button>}
-                {a.statusKey === "completed" && <span className="text-sm text-muted">Completed</span>}
+                <div className="flex justify-end gap-2">
+                  <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); setSelectedId(a._uuid); }}><Icon name="Eye" size={12} /> View</button>
+                  {(a.statusKey === "approved" || a.statusKey === "active") && <button className="btn btn-primary btn-sm" onClick={e => { e.stopPropagation(); complete(a); }}><Icon name="CheckCircle" size={12} /> Complete</button>}
+                  {a.statusKey === "completed" && <span className="text-sm text-muted" style={{ alignSelf: "center" }}>Completed</span>}
+                </div>
               </td>
             </tr>
           ))}
         </tbody>
-      </table>
-    </div>
+        </table>
+      </div>
+      <FinanceApplicationDetailsModal applicationId={selectedId} onClose={() => setSelectedId(null)} onDownload={onDownload} onView={onView} />
+    </>
   );
 }
 
@@ -1490,14 +1489,14 @@ function OFMGrantPayments({ sys, toast, setConfirm }) {
 function FinanceGrantTabs({ sys, onChange }) {
   return (
     <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden", marginRight: 8 }}>
-      {[{ id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
+      {[{ id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
         <button key={t.id} onClick={() => onChange(t.id)} style={{ padding: "7px 15px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: sys === t.id ? "var(--au-crimson)" : "transparent", color: sys === t.id ? "#fff" : "var(--ink-2)" }}>{t.label}</button>
       ))}
     </div>
   );
 }
 
-function FinanceApplicationDetailsModal({ applicationId, onClose, onDownload }) {
+function FinanceApplicationDetailsModal({ applicationId, onClose, onDownload, onView }) {
   const [app, setApp] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -1505,9 +1504,9 @@ function FinanceApplicationDetailsModal({ applicationId, onClose, onDownload }) 
     setApp(null); setError("");
     window.DB.financeApplicationDetail(applicationId).then(setApp).catch(e => setError((e && e.message) || "Could not load application details."));
   }, [applicationId]);
-  const grantLabel = app => app && app.grant_type === "au_r3" ? "AU-R3" : app && app.grant_type === "au_r4" ? "AU-R4" : "AU-R1";
+  const grantLabel = app => app && app.grant_type === "au_r4" ? "AU-R4" : "AU-R3";
   return (
-    <Modal open={!!applicationId} onClose={onClose} title={app ? grantLabel(app) + " · " + app.code : "Application Details"} size="sm"
+    <Modal open={!!applicationId} onClose={onClose} title={app ? grantLabel(app) + " · " + app.code : "Application Details"} className="finance-detail-modal"
       footer={<button className="btn btn-secondary" onClick={onClose}>Close</button>}>
       {!app && !error && <div style={{ padding: "16px 0", textAlign: "center", color: "var(--ink-3)" }}>Loading application details…</div>}
       {error && <div style={{ color: "var(--au-crimson)", lineHeight: 1.55 }}>{error}</div>}
@@ -1522,32 +1521,35 @@ function FinanceApplicationDetailsModal({ applicationId, onClose, onDownload }) 
         <div className="meta-row"><span className="l">Faculty / Department</span><span className="r">{[app.faculty, app.department].filter(Boolean).join(" / ") || "-"}</span></div>
         <div className="meta-row"><span className="l">Submitted</span><span className="r">{window.DB.fmtDate(app.submitted_at || app.created_at)}</span></div>
         <div className="meta-row"><span className="l">Approved amount</span><span className="r">{fmtBaht(Number(app.approved_amount || app.requested_amount || 0))}</span></div>
-        <div className="meta-row"><span className="l">Disbursed</span><span className="r">{fmtBaht((app.payments || []).filter(p => p.status === "paid").reduce((sum, p) => sum + Number(p.amount || 0), 0))}</span></div>
+        <div className="meta-row"><span className="l">Disbursed</span><span className="r">{fmtBaht(["active", "completed"].includes(app.status) ? Number(app.approved_amount || app.requested_amount || 0) : 0)}</span></div>
         <div style={{ borderTop: "1px solid var(--line-2)", marginTop: 14, paddingTop: 12 }}>
           <div className="eyebrow mb-2">Files</div>
           {(app.documents || []).length === 0 && <div className="text-sm text-muted">No files attached to this application.</div>}
-          {(app.documents || []).map(doc => <FileRow key={doc.id} doc={doc} compact onDownload={onDownload} />)}
+          {(app.documents || []).map(doc => <FileRow key={doc.id} doc={doc} onDownload={onDownload} onView={onView} />)}
         </div>
       </>}
     </Modal>
   );
 }
 
-function OFMTotalSummary({ onDownload }) {
+function OFMTotalSummary({ onDownload, onView }) {
   const [apps, setApps] = useState(null);
   const [filter, setFilter] = useState("all");
   const [selectedId, setSelectedId] = useState(null);
   useEffect(() => { window.DB.financeSummaryApplications().then(setApps).catch(() => setApps([])); }, []);
   const rows = (apps || []).filter(app => filter === "all" || app.grant_type === filter);
-  const grantLabel = app => app.grant_type === "au_r3" ? "AU-R3" : app.grant_type === "au_r4" ? "AU-R4" : "AU-R1";
+  const grantLabel = app => app.grant_type === "au_r4" ? "AU-R4" : "AU-R3";
+  const summaryApps = apps || [];
+  const allocated = summaryApps.reduce((sum, app) => sum + Number(app.approved_amount || app.requested_amount || 0), 0);
+  const disbursed = summaryApps.filter(app => ["active", "completed"].includes(app.status)).reduce((sum, app) => sum + Number(app.approved_amount || app.requested_amount || 0), 0);
   const summary = [
-    { label: "Total Allocated", value: "1,290,000 THB", icon: "Coins" },
-    { label: "Disbursed", value: "602,000 THB", icon: "TrendingUp", tone: "green" },
-    { label: "Active Grants", value: "14", icon: "Briefcase", tone: "navy" },
+    { label: "Total Allocated", value: apps === null ? "…" : fmtBaht(allocated), icon: "Coins" },
+    { label: "Disbursed", value: apps === null ? "…" : fmtBaht(disbursed), icon: "TrendingUp", tone: "green" },
+    { label: "Active Grants", value: apps === null ? "…" : summaryApps.filter(app => ["approved", "active"].includes(app.status)).length, icon: "Briefcase", tone: "navy" },
   ];
   return (
     <>
-      <PageHeader title="Total Summary" desc="Today’s finance summary across AU-R1, AU-R3, and AU-R4 applications." />
+      <PageHeader title="Total Summary" desc="Today’s finance summary for AU-R3 and AU-R4 applications forwarded to Finance." />
       <div className="stats" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
         {summary.map(item => <Stat key={item.label} label={item.label} value={item.value} icon={item.icon} tone={item.tone} />)}
       </div>
@@ -1555,7 +1557,7 @@ function OFMTotalSummary({ onDownload }) {
         <div className="card-head">
           <h3>Applications Forwarded to Finance</h3><div className="grow"></div>
           <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden" }}>
-            {[{ id: "all", label: "All" }, { id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(tab => (
+            {[{ id: "all", label: "All" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(tab => (
               <button key={tab.id} onClick={() => setFilter(tab.id)} style={{ padding: "7px 12px", fontSize: 11, fontWeight: 700, border: "none", cursor: "pointer", background: filter === tab.id ? "var(--au-crimson)" : "transparent", color: filter === tab.id ? "#fff" : "var(--ink-2)" }}>{tab.label}</button>
             ))}
           </div>
@@ -1581,39 +1583,34 @@ function OFMTotalSummary({ onDownload }) {
           </table>
         </div>
       </div>
-      <FinanceApplicationDetailsModal applicationId={selectedId} onClose={() => setSelectedId(null)} onDownload={onDownload} />
+      <FinanceApplicationDetailsModal applicationId={selectedId} onClose={() => setSelectedId(null)} onDownload={onDownload} onView={onView} />
     </>
   );
 }
 
-function OFMDashboard({ navigate, toast, setConfirm, grantType, onGrantSwitch }) {
-  const sys = ["au_r1", "au_r3", "au_r4"].includes(grantType) ? grantType : "au_r1";
+function OFMDashboard({ navigate, toast, setConfirm, grantType, onGrantSwitch, onDownload, onView }) {
+  const sys = ["au_r3", "au_r4"].includes(grantType) ? grantType : "au_r3";
   const isR3 = sys === "au_r3", isR4 = sys === "au_r4";
   const [gc, setGc] = useState(null);
   useEffect(() => {
-    if (sys !== "au_r1") {
-      setGc(null);
-      window.DB.statusCounts(sys).then(setGc).catch(() => setGc({}));
-    }
+    setGc(null);
+    window.DB.statusCounts(sys).then(setGc).catch(() => setGc({}));
   }, [sys]);
   const gn = (k) => (gc ? (gc[k] || 0) : "…");
   const sysToggle = <FinanceGrantTabs sys={sys} onChange={next => onGrantSwitch(next, "o-dashboard")} />;
-  if (isR3 || isR4) {
-    return (
-      <>
-        <PageHeader title={(isR4 ? "AU-R4" : "AU-R3") + " · Finance Dashboard"}
-          desc={"Process payments for IRAS-approved " + (isR4 ? "publication fee and reward" : "paper presentation grant") + " applications."}
-          actions={sysToggle} />
-        <div className="stats">
-          <Stat label="At Finance"      value={gc ? (gc.approved || 0) + (gc.active || 0) : "…"} icon="Clock" tone="gold" />
-          <Stat label="Completed" value={gn("completed")} icon="CheckCircle" tone="navy" />
-          <Stat label="Total"           value={(gc ? (gc.approved || 0) + (gc.active || 0) + (gc.completed || 0) : "…")} icon="Coins" />
-        </div>
-        <OFMGrantPayments sys={sys} toast={toast} setConfirm={setConfirm} />
-      </>
-    );
-  }
-  return <OFMDashboardR1 navigate={navigate} sysToggle={sysToggle} />;
+  return (
+    <>
+      <PageHeader title={(isR4 ? "AU-R4" : "AU-R3") + " · Finance Dashboard"}
+        desc={"Process payments for IRAS-approved " + (isR4 ? "publication fee and reward" : "paper presentation grant") + " applications."}
+        actions={sysToggle} />
+      <div className="stats">
+        <Stat label="At Finance" value={gc ? (gc.approved || 0) + (gc.active || 0) : "…"} icon="Clock" tone="gold" />
+        <Stat label="Completed" value={gn("completed")} icon="CheckCircle" tone="navy" />
+        <Stat label="Total" value={(gc ? (gc.approved || 0) + (gc.active || 0) + (gc.completed || 0) : "…")} icon="Coins" />
+      </div>
+      <OFMGrantPayments sys={sys} toast={toast} setConfirm={setConfirm} onDownload={onDownload} onView={onView} />
+    </>
+  );
 }
 
 function OFMDashboardR1({ navigate, sysToggle }) {
@@ -1772,7 +1769,7 @@ function OFMPaymentQueue({ onDownload, toast, setConfirm }) {
 }
 
 function OFMHistory({ grantType, onGrantSwitch }) {
-  const sys = ["au_r1", "au_r3", "au_r4"].includes(grantType) ? grantType : "au_r1";
+  const sys = ["au_r3", "au_r4"].includes(grantType) ? grantType : "au_r3";
   const [rows, setRows] = useState(null);
   useEffect(() => {
     setRows(null);
@@ -1793,7 +1790,7 @@ function OFMHistory({ grantType, onGrantSwitch }) {
             {(rows || []).map(r => (
               <tr key={r.key}>
                 <td style={{fontSize: 12}}>{window.DB.fmtDate(r.paid_at)}</td>
-                <td><span className="badge badge-submitted"><span className="dot"></span>{String(r.grant_type || "au_r1").replace("au_r", "AU-R").toUpperCase()}</span></td>
+                <td><span className="badge badge-submitted"><span className="dot"></span>{String(r.grant_type || "au_r3").replace("au_r", "AU-R").toUpperCase()}</span></td>
                 <td><span className="id">{r.code}</span></td>
                 <td style={{fontSize: 12}}>{r.researcher}</td>
                 <td style={{fontSize: 12}}>{r.payment_label}</td>
@@ -1812,7 +1809,7 @@ function OFMHistory({ grantType, onGrantSwitch }) {
 
 
 
-const ADMIN_R4_ROLES = ["researcher", "dean", "iras", "ofm", "admin"];
+const ADMIN_ACTIVE_ROLES = ["researcher", "dean", "iras", "ofm", "admin"];
 function AdminDashboard({ navigate }) {
   const [sys, setSys] = useState("all");
   const isR4 = sys === "au_r4";
@@ -1829,13 +1826,13 @@ function AdminDashboard({ navigate }) {
   }, []);
   const n = (k) => (c ? (c[k] || 0) : "…");
   const totalUsers = profiles ? profiles.length : 0;
-  const codePrefix = sys === "au_r4" ? "AU-R4-" : sys === "au_r3" ? "AU-R3-" : sys === "au_r1" ? "RG-" : null;
+  const codePrefix = sys === "au_r4" ? "AU-R4-" : sys === "au_r3" ? "AU-R3-" : null;
   const evFiltered = events === null ? null : (codePrefix ? events.filter(e => e.application && (e.application.code || "").indexOf(codePrefix) === 0) : events);
-  const roleList = isR4 ? D.ROLES.filter(r => ADMIN_R4_ROLES.indexOf(r.key) >= 0) : D.ROLES;
+  const roleList = D.ROLES.filter(r => ADMIN_ACTIVE_ROLES.indexOf(r.key) >= 0);
   const roleRows = profiles === null ? null : roleList.map(r => ({ key: r.key, name: r.name, count: profiles.filter(p => p.role === r.key).length })).filter(r => r.count > 0);
   const sysToggle = (
     <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden", marginRight: 8 }}>
-      {[{ id: "all", label: "All" }, { id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
+      {[{ id: "all", label: "All" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
         <button key={t.id} onClick={() => setSys(t.id)} style={{ padding: "7px 13px", fontSize: 12, fontWeight: 700, border: "none", cursor: "pointer", background: sys === t.id ? "var(--au-crimson)" : "transparent", color: sys === t.id ? "#fff" : "var(--ink-2)" }}>{t.label}</button>
       ))}
     </div>
@@ -1920,7 +1917,6 @@ function AdminDashboard({ navigate }) {
 
 const ADMIN_ROLE_OPTIONS = [
   { key: "researcher", label: "Researcher" }, { key: "dean", label: "Dean" },
-  { key: "committee", label: "Faculty Committee" }, { key: "rassc", label: "RASSC (AU-R1)" },
   { key: "iras", label: "IRAS (AU-R3 / AU-R4)" },
   { key: "ofm", label: "OFM / Finance" }, { key: "admin", label: "Administrator" },
 ];
@@ -1930,13 +1926,13 @@ function AdminAddUserForm({ onCreated, onClose, toast }) {
   const [f, setF] = useState(blank);
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setF(s => Object.assign({}, s, k === "faculty" ? { faculty: v, department: "" } : { [k]: v }));
-  const needsFaculty = f.role === "dean" || f.role === "committee";
+  const needsFaculty = f.role === "dean";
   const depts = (D.FACULTIES.find(x => x.name === f.faculty) || { departments: [] }).departments;
   const submit = async () => {
     if (!f.full_name.trim()) return toast("Enter the full name.");
     if (!/^[^@\s]+@au\.edu$/i.test(f.email.trim())) return toast("Email must end in @au.edu.");
     if (f.phone && !isValidThaiPhone(f.phone)) return toast("Phone must be a Thai number with 9–10 digits starting with 0.");
-    if (needsFaculty && !f.faculty) return toast("Pick a faculty for a Dean/Committee account.");
+    if (needsFaculty && !f.faculty) return toast("Pick a faculty for a Dean account.");
     if ((f.password || "").length < 8) return toast("Temp password must be at least 8 characters.");
     setBusy(true);
     try {
@@ -1998,13 +1994,13 @@ function AdminEditUserForm({ user, onSaved, onClose, toast }) {
   });
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setF(s => Object.assign({}, s, k === "faculty" ? { faculty: v, department: "" } : { [k]: v }));
-  const needsFaculty = f.role === "dean" || f.role === "committee";
+  const needsFaculty = f.role === "dean";
   const depts = (D.FACULTIES.find(x => x.name === f.faculty) || { departments: [] }).departments;
   const submit = async () => {
     if (!f.full_name.trim()) return toast("Enter the full name.");
     if (!/^[^@\s]+@au\.edu$/i.test(f.email.trim())) return toast("Email must end in @au.edu.");
     if (f.phone && !isValidThaiPhone(f.phone)) return toast("Phone must be a Thai number with 9–10 digits starting with 0.");
-    if (needsFaculty && !f.faculty) return toast("Pick a faculty for a Dean/Committee account.");
+    if (needsFaculty && !f.faculty) return toast("Pick a faculty for a Dean account.");
     if (f.password && f.password.length < 8) return toast("A new password must be at least 8 characters.");
     setBusy(true);
     try {
@@ -2096,7 +2092,7 @@ function AdminUsers({ toast, setConfirm, profile }) {
             {users === null && <tr><td colSpan="8" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading users...</td></tr>}
             {users && filtered.length === 0 && <tr><td colSpan="8"><Empty title="No users found" desc="Try another search." icon="Users" /></td></tr>}
             {filtered.map(u => {
-              const grantAccess = u.role === "committee" ? "AU-R1" : "All Grants";
+              const grantAccess = u.role === "iras" ? "AU-R3 / AU-R4" : "AU-R3 / AU-R4";
               return (
               <tr key={u.id}>
                 <td><div style={{display: "flex", alignItems: "center", gap: 8}}><Avatar initials={(u.full_name || "U").split(" ").map(p => p[0]).join("").slice(0,2).toUpperCase()} size={28} color="var(--au-navy)" /><div><div style={{fontSize: 13, fontWeight: 600}}>{u.full_name}</div><div style={{fontSize: 11, color: "var(--ink-3)"}} className="id">{String(u.id).slice(0, 8)}</div></div></div></td>
@@ -2304,7 +2300,7 @@ function AnalyticsDashboard({ role }) {
     <>
       <PageHeader
         title="AI Analytics"
-        desc="Live Supabase analytics for AU-R1, AU-R3, and AU-R4 applications and payments."
+        desc="Live Supabase analytics for AU-R3 and AU-R4 applications and payments."
         actions={<>
           <Badge status={{ label: "Live data", cls: "badge-academic" }} />
           <button className="btn btn-primary" onClick={() => window.dispatchEvent(new CustomEvent("au-ai-toggle"))}><Icon name="Bot" size={14} /> Ask AU AI</button>
@@ -2379,10 +2375,9 @@ function Toggle({ defaultOn = false }) {
 }
 
 Object.assign(window, {
-  DeanDashboard, DeanScreenQueue, DeanSignQueue, DeanHistory, DeanR3Queue, DeanR4Queue,
-  CommitteeDashboard, CommitteeQueue, CommitteeHistory,
-  RASSCDashboardV2, RASSCScreen, IRASr3Detail, IRASr4Detail,
-  OFMDashboard, OFMTotalSummary, OFMPaymentQueue, OFMDetail, OFMHistory,
+  DeanDashboard, DeanHistory, DeanR3Queue, DeanR4Queue,
+  IRASDashboard, IRASr3Detail, IRASr4Detail,
+  OFMDashboard, OFMTotalSummary, OFMHistory,
   AdminDashboard, AdminUsers, AdminAudit,
   AnalyticsDashboard, AccountSettings,
 });

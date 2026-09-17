@@ -864,6 +864,5 @@ function FacultyDean({ onDownload, onView, toast, setConfirm }) {
 }
 
 Object.assign(window, {
-  FacultyDashboard, FacultyIncoming, FacultyChecklist, DeanR3Detail, DeanR4Detail,
-  FacultyAcademic, FacultyDean,
+  DeanR3Detail, DeanR4Detail,
 });
