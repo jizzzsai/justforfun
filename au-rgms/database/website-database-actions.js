@@ -430,6 +430,7 @@
     async financeSummaryApplications() {
       var res = await sb.from("applications")
         .select("*, researcher:profiles(full_name,email,phone,office_room), payments(*), reports(kind,status), documents:application_documents(id,name,doc_type)")
+        .in("status", ["approved", "active", "completed"])
         .order("created_at", { ascending: false });
       if (res.error) throw res.error;
       return (res.data || []).map(function (app) {
@@ -437,6 +438,15 @@
         app.statusBadge = badge(app.status, app.grant_type);
         return app;
       });
+    },
+    async financeApplicationDetail(appId) {
+      var role = await myRole();
+      if (role !== "ofm" && role !== "admin") throw new Error("Finance access required.");
+      var app = await this.applicationDetail(appId);
+      if (!app || ["approved", "active", "completed"].indexOf(app.status) < 0) {
+        throw new Error("This application has not been forwarded to Finance.");
+      }
+      return app;
     },
     async deanQueue() { return this.queue("submitted"); },
 

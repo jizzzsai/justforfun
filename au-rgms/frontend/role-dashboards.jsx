@@ -1503,7 +1503,7 @@ function FinanceApplicationDetailsModal({ applicationId, onClose, onDownload }) 
   useEffect(() => {
     if (!applicationId) return;
     setApp(null); setError("");
-    window.DB.applicationDetail(applicationId).then(setApp).catch(e => setError((e && e.message) || "Could not load application details."));
+    window.DB.financeApplicationDetail(applicationId).then(setApp).catch(e => setError((e && e.message) || "Could not load application details."));
   }, [applicationId]);
   const grantLabel = app => app && app.grant_type === "au_r3" ? "AU-R3" : app && app.grant_type === "au_r4" ? "AU-R4" : "AU-R1";
   return (
@@ -1553,7 +1553,7 @@ function OFMTotalSummary({ onDownload }) {
       </div>
       <div className="card card-pad-0">
         <div className="card-head">
-          <h3>All Grant Applications</h3><div className="grow"></div>
+          <h3>Applications Forwarded to Finance</h3><div className="grow"></div>
           <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden" }}>
             {[{ id: "all", label: "All" }, { id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(tab => (
               <button key={tab.id} onClick={() => setFilter(tab.id)} style={{ padding: "7px 12px", fontSize: 11, fontWeight: 700, border: "none", cursor: "pointer", background: filter === tab.id ? "var(--au-crimson)" : "transparent", color: filter === tab.id ? "#fff" : "var(--ink-2)" }}>{tab.label}</button>
@@ -1565,7 +1565,7 @@ function OFMTotalSummary({ onDownload }) {
             <thead><tr><th>Application</th><th>Researcher</th><th>Grant</th><th>Submitted</th><th style={{ textAlign: "right" }}>Amount</th><th>Status</th><th style={{ textAlign: "right" }}>Details</th></tr></thead>
             <tbody>
               {apps === null && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading applications…</td></tr>}
-              {apps && rows.length === 0 && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No applications in this view.</td></tr>}
+              {apps && rows.length === 0 && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No applications have reached Finance in this view.</td></tr>}
               {rows.map(app => (
                 <tr key={app.id} style={{ cursor: "pointer" }} onClick={() => setSelectedId(app.id)}>
                   <td><div className="id">{app.code || "-"}</div><div style={{ fontSize: 12, fontWeight: 600, marginTop: 3, maxWidth: 260, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{app.title || "Untitled application"}</div></td>
