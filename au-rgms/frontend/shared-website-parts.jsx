@@ -225,11 +225,11 @@ function Stat({ label, value, icon, tone = "", delta, deltaTone }) {
     </div>
   );
 }
-function Modal({ open, onClose, title, children, footer, size }) {
+function Modal({ open, onClose, title, children, footer, size, className = "" }) {
   if (!open) return null;
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className={`modal ${size === "sm" ? "modal-sm" : ""}`} onClick={e => e.stopPropagation()}>
+      <div className={`modal ${size === "sm" ? "modal-sm" : ""} ${className}`.trim()} onClick={e => e.stopPropagation()}>
         {title && (
           <div className="modal-head">
             <h3>{title}</h3>
@@ -283,7 +283,13 @@ function FilePreviewModal({ doc, onClose, onDownload }) {
 function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primary", confirmLabel = "Confirm", withReason = false, reasonLabel = "Reason / note", reasonPlaceholder = "Add a comment for the record — the researcher and next reviewers can see this.", reasonRequired = false, finalConfirm }) {
   const [reason, setReason] = useState("");
   const [step, setStep] = useState(1);
-  useEffect(() => { if (open) { setReason(""); setStep(1); } }, [open]);
+  const [finalReady, setFinalReady] = useState(false);
+  useEffect(() => { if (open) { setReason(""); setStep(1); setFinalReady(false); } }, [open]);
+  useEffect(() => {
+    if (step !== 2) { setFinalReady(false); return; }
+    const timer = setTimeout(() => setFinalReady(true), 650);
+    return () => clearTimeout(timer);
+  }, [step]);
   if (!open) return null;
   const icons = { primary: "Info", success: "CheckCircle", danger: "AlertCircle" };
   const iconCls = { primary: "", success: "gold", danger: "red" }[kind];
@@ -292,7 +298,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
   const twoStep = finalConfirm === undefined ? withReason : finalConfirm;
   if (step === 2) {
     return (
-      <Modal open={true} onClose={onClose} size="sm">
+      <Modal open={true} onClose={onClose} size="sm" className="confirm-modal-final">
         <div className={`conf-icon ${iconCls}`}>
           <Icon name="AlertCircle" size={26} />
         </div>
@@ -309,7 +315,7 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
         </p>
         <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8 }}>
           <button className="btn btn-secondary" onClick={() => setStep(1)}><Icon name="ChevronLeft" size={14} /> Back</button>
-          <button className={`btn ${btnCls}`} onClick={() => onConfirm(reason)}>Yes, {confirmLabel}</button>
+          <button className={`btn ${btnCls}`} disabled={!finalReady} onClick={() => onConfirm(reason)}>Yes, {confirmLabel}</button>
         </div>
       </Modal>
     );

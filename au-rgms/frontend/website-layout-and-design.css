@@ -1116,6 +1116,21 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .modal-sm h3 { font-family: var(--font-serif); font-size: 22px; margin: 0 0 8px; font-weight: 500; }
 .modal-sm p { color: var(--ink-3); margin: 0 0 16px; font-size: 13px; }
 
+/* Keep the irreversible second confirmation away from the first button's
+   pointer position, preventing an accidental rapid double-click. */
+.modal.confirm-modal-final {
+  --final-confirm-shift: -72px;
+  transform: translateX(var(--final-confirm-shift));
+  animation: confirm-shift-left .25s ease-out;
+}
+@keyframes confirm-shift-left {
+  from { transform: translate(calc(var(--final-confirm-shift) + 24px), 12px); opacity: 0; }
+  to { transform: translateX(var(--final-confirm-shift)); opacity: 1; }
+}
+@media (max-width: 700px) {
+  .modal.confirm-modal-final { --final-confirm-shift: -24px; }
+}
+
 
 .pdf-preview {
   background: #f3f4f6; border-radius: var(--r-md);
