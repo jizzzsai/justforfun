@@ -109,12 +109,7 @@ function DeanDashboard({ navigate, setSelectedApplicationId }) {
   return (
     <>
       <PageHeader
-        title={isR4 ? "AU-R4 · Dean's Dashboard" : isR3 ? "AU-R3 · Dean's Dashboard" : "Dean's Dashboard"}
-        desc={isR4
-          ? "Review your faculty's AU-R4 applications before forwarding eligible claims directly to IRAS."
-          : isR3
-          ? "Review your faculty's paper presentation grant applications and forward eligible applications to RASSC for verification."
-          : "Screen new proposals from your faculty, then forward them to your Faculty Committee."}
+        title={isR4 ? "AU-R4 Dean Dashboard" : isR3 ? "AU-R3 Dean Dashboard" : "AU-R1 Dean Dashboard"}
         actions={
           <>
             {sysToggle}
