@@ -171,15 +171,21 @@ function FacultyIncoming({ navigate, onDownload }) {
 
 
 
-function LiveAppLoader({ status, grantType, applicationId, title, desc, render }) {
+function LiveAppLoader({ status, grantType, applicationId, strictStatus, title, desc, render }) {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
   const load = () => {
     setLoading(true);
     const req = applicationId ? window.DB.applicationDetail(applicationId) : window.DB.firstApplicationForStatus(status, grantType);
-    req.then(setApp).catch(() => setApp(null)).finally(() => setLoading(false));
+    req.then(result => {
+      // A stale selection must never let a reviewer act on an application from
+      // another grant queue (or one which has already left this workflow step).
+      const wrongGrant = !!(result && grantType && result.grant_type !== grantType);
+      const wrongStatus = !!(result && strictStatus && status && result.status !== status);
+      setApp(wrongGrant || wrongStatus ? null : result);
+    }).catch(() => setApp(null)).finally(() => setLoading(false));
   };
-  useEffect(() => { load(); }, [status, applicationId]);
+  useEffect(() => { load(); }, [status, grantType, applicationId, strictStatus]);
   if (loading) {
     return <><PageHeader title={title} desc={desc} /><div className="card" style={{ padding: 44, textAlign: "center", color: "var(--ink-3)" }}>Loading...</div></>;
   }
@@ -193,6 +199,8 @@ function FacultyChecklist({ applicationId, navigate, onDownload, onView, toast, 
   return (
     <LiveAppLoader
       status="submitted"
+      grantType="au_r1"
+      strictStatus={true}
       applicationId={applicationId}
       title="AU-R1 Dean Screening"
       desc="Review the live application and uploaded PDF documents before forwarding to the Faculty Committee."
@@ -335,6 +343,8 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
   return (
     <LiveAppLoader
       status="submitted"
+      grantType="au_r3"
+      strictStatus={true}
       applicationId={applicationId}
       title="AU-R3 Screening"
       desc="Review the conference, paper, conference classification, and documents before forwarding to IRAS."
@@ -520,6 +530,8 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
   return (
     <LiveAppLoader
       status="submitted"
+      grantType="au_r4"
+      strictStatus={true}
       applicationId={applicationId}
       title="AU-R4 Screening"
       desc="Review the publication, journal, author, claim and supporting documents, then forward the application to IRAS."

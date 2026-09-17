@@ -76,7 +76,7 @@ function WiredQueue({ status, openLabel, confirmTitle, confirmLabel, onDownload,
 
 
 
-function DeanDashboard({ navigate }) {
+function DeanDashboard({ navigate, setSelectedApplicationId }) {
   const [sys, setSys] = useState("au_r1");
   const isR3 = sys === "au_r3";
   const isR4 = sys === "au_r4";
@@ -89,7 +89,11 @@ function DeanDashboard({ navigate }) {
   }, [sys]);
   const n = (k) => (c ? (c[k] || 0) : "…");
   const openQueue = () => navigate(isR4 ? "d-r4-screen" : isR3 ? "d-r3-screen" : "d-screen");
-  const rowPage = isR4 ? "d-r4-screen" : isR3 ? "d-r3-screen" : "d-screen-detail";
+  const rowPage = isR4 ? "d-r4-detail" : isR3 ? "d-r3-detail" : "d-screen-detail";
+  const openApplication = (application) => {
+    if (setSelectedApplicationId) setSelectedApplicationId(application._uuid);
+    navigate(rowPage);
+  };
   const sysToggle = (
     <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden", marginRight: 8 }}>
       {[{ id: "au_r1", label: "AU-R1" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(t => (
@@ -158,7 +162,7 @@ function DeanDashboard({ navigate }) {
             {screenRows === null && <tr><td colSpan="4" style={{ textAlign: "center", padding: "24px", color: "var(--ink-3)" }}>Loading...</td></tr>}
             {screenRows && screenRows.length === 0 && <tr><td colSpan="4"><Empty title="Nothing to screen" desc="New submissions will appear here." icon="ClipboardCheck" /></td></tr>}
             {(screenRows || []).slice(0, 8).map(a => (
-              <tr key={a.id} style={{ cursor: "pointer" }} onClick={() => navigate(rowPage)}>
+              <tr key={a.id} style={{ cursor: "pointer" }} onClick={() => openApplication(a)}>
                 <td><span className="id">{a.id}</span></td>
                 <td className="title-cell"><div className="t" style={{ maxWidth: 300, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div></td>
                 <td style={{ fontSize: 12 }}>{a.researcher?.name}</td>
