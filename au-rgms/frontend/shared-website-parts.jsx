@@ -370,6 +370,15 @@ function ApplicationEventTimeline({ app }) {
   };
   let events = (app && app.events ? app.events : [])
     .filter(event => event.action !== "Saved draft")
+    .map(event => {
+      if (event.actor_role === "dean" && event.to_status === "committee_review") {
+        return { ...event, action: "Dean approved — forwarded to IRAS", to_status: "iras_review" };
+      }
+      return event;
+    })
+    .filter(event => event.actor_role !== "committee"
+      && event.from_status !== "committee_review"
+      && !/faculty committee|committee recommended|committee review/i.test(event.action || ""))
     .slice()
     .sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
   if (app && app.submitted_at && !events.some(event => event.actor_role === "researcher" && /submit/i.test(event.action || ""))) {
@@ -403,6 +412,7 @@ function ApplicationEventTimeline({ app }) {
 
 function ReviewCommentHistory({ app, roles = ["dean", "iras"] }) {
   const items = [];
+  const seenComments = new Set();
   const eventRoles = {
     dean: { label: "Dean comment", author: "Dean", initials: "DN" },
     iras: { label: "IRAS comment", author: "IRAS", initials: "IR" },
@@ -413,11 +423,15 @@ function ReviewCommentHistory({ app, roles = ["dean", "iras"] }) {
     const meta = eventRoles[role] || { label: role + " comment", author: role, initials: role.slice(0, 2).toUpperCase() };
     (app.events || []).forEach(event => {
       if (event.actor_role !== role || !event.note || !event.note.trim()) return;
+      const body = event.note.trim();
+      const signature = role + "|" + body.toLowerCase().replace(/\s+/g, " ");
+      if (seenComments.has(signature)) return;
+      seenComments.add(signature);
       items.push({
         key: role + "-" + event.id,
         role: meta.label,
         author: event.actor && event.actor.full_name ? event.actor.full_name : meta.author,
-        body: event.note.trim(),
+        body,
         at: event.created_at,
         initials: meta.initials,
       });

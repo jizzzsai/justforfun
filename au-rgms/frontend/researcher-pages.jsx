@@ -203,17 +203,6 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
   );
 }
 
-const RESEARCHER_DEFAULT_DRAFT = {
-  title: "",
-  field: "",
-  type: "Individual Research",
-  startDate: "", endDate: "", duration: "12",
-  keywords: "",
-  name: "", title2: "", academicPosition: "", auId: "", email: "", phone: "", office: "", joinedDate: "",
-  school: "",
-  department: "",
-  outcome: "",
-};
 function researcherSnapshotFromDraft(draft) {
   return {
     nameTitle: String(draft.title2 || "").trim(),
@@ -228,24 +217,6 @@ function researcherSnapshotFromDraft(draft) {
     department: draft.department || "",
   };
 }
-const RESEARCHER_DEFAULT_SPLIT = { remuneration: 30, equipment: 40, travel: 18, misc: 12 };
-const RESEARCHER_BUDGET_LABELS = [
-  "Remuneration (research assistant)",
-  "Research equipment",
-  "Travel for off-campus data collection",
-  "Miscellaneous (postage, photocopying, binding)",
-];
-function scaledBudgetRows(total, split) {
-  const t = Number(total) || 0;
-  const s = split || RESEARCHER_DEFAULT_SPLIT;
-  const a = Math.round(t * (s.remuneration || 0) / 100);
-  const b = Math.round(t * (s.equipment || 0) / 100);
-  const c = Math.round(t * (s.travel || 0) / 100);
-  const amts = [a, b, c, t - a - b - c];
-  return RESEARCHER_BUDGET_LABELS.map((item, i) => ({ item: item, amount: amts[i], purpose: "" }));
-}
-const RESEARCHER_DEFAULT_BUDGET_ROWS = scaledBudgetRows(100000, RESEARCHER_DEFAULT_SPLIT);
-
 const roStyle = { background: "var(--paper-warm)", color: "var(--ink-2)", cursor: "not-allowed" };
 
 
@@ -367,6 +338,13 @@ function UniversityJoinedDateField({ value, onChange, readOnly = false }) {
   );
 }
 
+
+const R3_DEFAULT_DRAFT = {
+  confName: "", organizer: "", website: "", confType: "International", conferenceLocation: "",
+  presentationDate: "", presentation: "Oral Presentation", journalDb: "", journalClassification: "",
+  paperTitle: "", field: "", keywords: "", corresponding: "", paperAbstract: "", authorType: "Lead Author",
+  name: "", title2: "", academicPosition: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
+};
 
 function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
   const fixedGrantAmount = 3500;
