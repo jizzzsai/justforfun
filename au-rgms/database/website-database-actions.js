@@ -12,11 +12,7 @@
   var STATUS_MAP = {
     draft:            { label: "Draft",               cls: "badge-draft" },
     submitted:        { label: "Submitted",           cls: "badge-submitted" },
-    committee_review: { label: "Retired workflow stage", cls: "badge-draft" },
-    dean_sign:        { label: "Dean Sign & Forward", cls: "badge-dean" },
     iras_review:      { label: "IRAS Verification",   cls: "badge-iras" },
-    expert_review:    { label: "Under Expert Review", cls: "badge-expert" },
-    president_review: { label: "President Approval",  cls: "badge-president" },
     approved:         { label: "Approved",            cls: "badge-signed" },
     active:           { label: "Active",              cls: "badge-paid" },
     completed:        { label: "Completed",           cls: "badge-check" },
@@ -56,11 +52,19 @@
     };
     return labels[role] || (role ? String(role) : "an unassigned account");
   }
+  function badge(status, grantType) {
+    var base = STATUS_MAP[status] || { label: status || "—", cls: "badge-draft" };
+    if (status === "iras_review" && ACTIVE_GRANT_TYPES.indexOf(grantType) >= 0) {
+      return { label: "IRAS Screening", cls: base.cls };
+    }
+    if (status === "active" && ACTIVE_GRANT_TYPES.indexOf(grantType) >= 0) {
+      return { label: "At Finance", cls: "badge-contract" };
+    }
+    return base;
+  }
   function expectedRoles(app, fromStatus) {
-    if (fromStatus === "submitted" || fromStatus === "dean_sign") return ["dean"];
+    if (fromStatus === "submitted") return ["dean"];
     if (fromStatus === "iras_review") return ["iras"];
-    if (fromStatus === "expert_review") return ["expert"];
-    if (fromStatus === "president_review") return ["president"];
     if (fromStatus === "approved" || fromStatus === "active") return ["ofm"];
     return [];
   }
@@ -77,66 +81,6 @@
     var r = await sb.from("profiles").select("role,faculty").eq("id", id).single();
     if (!r.data || r.data.role !== "dean") return null;
     return r.data.faculty || null;
-  }
-  async function genPublicationCode() {
-    var year = new Date().getFullYear();
-    var r = await sb.from("publication_grants").select("id", { count: "exact", head: true });
-    return "PG-" + year + "-" + String((r.count || 0) + 1).padStart(3, "0");
-  }
-  async function genReimbursementCode() {
-    var year = new Date().getFullYear();
-    var r = await sb.from("reimbursements").select("id", { count: "exact", head: true });
-    return "RB-" + year + "-" + String((r.count || 0) + 1).padStart(3, "0");
-  }
-  function reimbursementBadge(s) {
-    var m = {
-      draft: { label: "Draft", cls: "badge-draft" },
-      submitted: { label: "Submitted to Dean", cls: "badge-submitted" },
-      rassc_review: { label: "RASSC Review", cls: "badge-iras" },
-      payment_pending: { label: "OFM Payment Pending", cls: "badge-pending" },
-      paid: { label: "Paid", cls: "badge-paid" },
-      returned: { label: "Returned", cls: "badge-revision" },
-      rejected: { label: "Rejected", cls: "badge-rejected" },
-    };
-    return m[s] || { label: s || "Reimbursement", cls: "badge-draft" };
-  }
-  function badge(s, grantType) {
-    var base = STATUS_MAP[s] || { label: s || "—", cls: "badge-draft" };
-    if (s === "iras_review" && (grantType === "au_r3" || grantType === "au_r4")) {
-      return { label: "IRAS Screening", cls: base.cls };
-    }
-    if (s === "active" && (grantType === "au_r3" || grantType === "au_r4")) {
-      return { label: "At Finance", cls: "badge-contract" };
-    }
-    return base;
-  }
-  function publicationBadge(s) {
-    var m = {
-      draft: { label: "Draft", cls: "badge-draft" },
-      submitted: { label: "Submitted to RASSC", cls: "badge-submitted" },
-      returned: { label: "Returned", cls: "badge-revision" },
-      rejected: { label: "Rejected", cls: "badge-rejected" },
-      payment_pending: { label: "OFM Payment Pending", cls: "badge-pending" },
-      paid: { label: "Paid", cls: "badge-paid" },
-    };
-    return m[s] || { label: s || "Publication Grant", cls: "badge-draft" };
-  }
-  function publicationAmount(indexing, quartile, type, requested) {
-    var idx = (indexing || "").toLowerCase();
-    var q = (quartile || "").toUpperCase();
-    var t = (type || "").toLowerCase();
-    if (t === "creative") return 25000;
-    if (t === "patent") return 10000;
-    if (t === "petty") return 3000;
-    if (idx === "scopus") {
-      if (q === "Q1") return 80000;
-      if (q === "Q2") return 60000;
-      if (q === "Q3") return 50000;
-      if (q === "Q4") return 40000;
-    }
-    if (idx === "wos") return 80000;
-    if (idx === "tci") return Math.max(0, Number(requested || 0));
-    return Math.max(0, Number(requested || 0));
   }
   function fmtDate(iso) {
     if (!iso) return "—";
@@ -189,50 +133,14 @@
       submittedAt: a.submitted_at ? fmtDate(a.submitted_at) : fmtDate(a.created_at),
       budgetTotal: requested, requested_amount: requested,
       status: badge(a.status, a.grant_type), statusKey: a.status,
-      grant_type: a.grant_type || "au_r1", conference_info: a.conference_info || null, pub_info: a.pub_info || null,
+      grant_type: a.grant_type || "au_r3", conference_info: a.conference_info || null, pub_info: a.pub_info || null,
       approved_amount: approved,
       events: a.events || [],
     };
   }
 
-  function mapPublicationGrant(g) {
-    return {
-      id: g.code, _uuid: g.id, title: g.article_title,
-      researcher: { name: g.researcher ? g.researcher.full_name : "-" },
-      faculty: g.faculty, department: g.department,
-      submittedAt: g.submitted_at ? fmtDate(g.submitted_at) : fmtDate(g.created_at),
-      budgetTotal: Number(g.approved_amount || g.requested_amount || 0),
-      requested_amount: Number(g.requested_amount || 0),
-      status: publicationBadge(g.status), statusKey: g.status,
-      indexing: g.indexing, quartile: g.quartile, publication_type: g.publication_type,
-      journal_name: g.journal_name, doi: g.doi, evidence_name: g.evidence_name,
-      evidence_path: g.evidence_path, review_note: g.review_note, payment_note: g.payment_note,
-      paid_at: g.paid_at, raw: g,
-    };
-  }
-
-  function mapReimbursement(r) {
-    return {
-      id: r.code, _uuid: r.id, title: r.title,
-      researcher: { name: r.researcher ? r.researcher.full_name : "-" },
-      faculty: r.faculty, department: r.department,
-      submittedAt: r.submitted_at ? fmtDate(r.submitted_at) : fmtDate(r.created_at),
-      budgetTotal: Number(r.approved_amount || r.requested_amount || 0),
-      requested_amount: Number(r.requested_amount || 0),
-      approved_amount: r.approved_amount != null ? Number(r.approved_amount) : null,
-      status: reimbursementBadge(r.status), statusKey: r.status,
-      category: r.category, description: r.description,
-      evidence_name: r.evidence_name, evidence_path: r.evidence_path,
-      dean_note: r.dean_note, review_note: r.review_note, payment_note: r.payment_note,
-      paid_at: r.paid_at, raw: r,
-    };
-  }
-
   window.DB = {
     statusBadge: badge,
-    publicationStatusBadge: publicationBadge,
-    reimbursementStatusBadge: reimbursementBadge,
-    publicationAwardAmount: publicationAmount,
     fmtDate: fmtDate,
     mapRow: mapRow,
     applicationResearcherInfo: applicationResearcherInfo,
@@ -486,113 +394,14 @@
 
     async firstApplicationForStatus(status, grantType) {
       var q = sb.from("applications").select("id").eq("status", status);
-      if (grantType === "au_r1") q = q.or("grant_type.eq.au_r1,grant_type.is.null");
-      else if (grantType) q = q.eq("grant_type", grantType);
+      if (grantType) q = q.eq("grant_type", requireActiveGrant(grantType));
+      else q = q.in("grant_type", ACTIVE_GRANT_TYPES);
       var faculty = await currentFacultyScope();
       if (faculty) q = q.eq("faculty", faculty);
       var res = await q.order("submitted_at", { ascending: true }).limit(1);
       if (res.error) throw res.error;
       var first = res.data && res.data[0];
       return first ? this.applicationDetail(first.id) : null;
-    },
-
-    async profilesByRole(role) {
-      var q = sb.from("profiles").select("*").eq("role", role);
-      var faculty = await currentFacultyScope();
-      if (faculty) q = q.eq("faculty", faculty);
-      var res = await q.order("full_name", { ascending: true });
-      if (res.error) throw res.error;
-      return res.data || [];
-    },
-
-    async myExpertAssignments() {
-      var me = await uid();
-      if (!me) throw new Error("You must be signed in.");
-      var res = await sb.from("expert_assignments")
-        .select("status,due_date, application:applications(*, researcher:profiles(full_name))")
-        .eq("expert_id", me).neq("status", "completed").order("due_date", { ascending: true });
-      if (res.error) throw res.error;
-      return (res.data || []).filter(function (x) {
-        return x.application && x.application.status === "expert_review";
-      }).map(function (x) {
-        var row = mapRow(x.application);
-        row.dueDate = fmtDate(x.due_date);
-        row.assignmentStatus = x.status;
-        return row;
-      });
-    },
-
-    async assignExperts(appId, expertIds, dueDate) {
-      var me = await uid();
-      if (!me) throw new Error("You must be signed in.");
-      if (!expertIds || expertIds.length === 0) throw new Error("Select at least one expert reviewer.");
-      var rows = expertIds.map(function (expertId) {
-        return {
-          application_id: appId,
-          expert_id: expertId,
-          assigned_by: me,
-          status: "pending",
-          due_date: dueDate || null,
-        };
-      });
-      var ins = await sb.from("expert_assignments").upsert(rows, {
-        onConflict: "application_id,expert_id",
-      }).select();
-      if (ins.error) throw ins.error;
-      return await this.transition(appId, "iras_review", "advance");
-    },
-
-    async countByStatus(status) {
-      var r = await sb.from("applications").select("id", { count: "exact", head: true }).eq("status", status);
-      if (r.error) throw r.error;
-      return r.count || 0;
-    },
-
-    async submitCommitteeReview(appId, payload) {
-      var me = await uid();
-      var role = await myRole();
-      if (!me) throw new Error("You must be signed in.");
-      if (role !== "committee" && role !== "admin") throw new Error("Only a Faculty Committee account can submit an AU-R1 committee review.");
-      var application = await sb.from("applications").select("grant_type,status").eq("id", appId).maybeSingle();
-      if (application.error) throw application.error;
-      if (!application.data || application.data.grant_type !== "au_r1" || application.data.status !== "committee_review") {
-        throw new Error("Faculty Committee review is available only for AU-R1 applications awaiting committee review.");
-      }
-      var hasScore = payload.score !== undefined && payload.score !== null && payload.score !== "";
-      var score = hasScore ? Math.max(0, Math.min(100, parseInt(payload.score, 10) || 0)) : null;
-      var recommendation = payload.recommendation || (score !== null && score >= 70 ? "favorable" : "revise");
-      var committeeComment = String(payload.comments || "").trim();
-      var row = {
-        application_id: appId,
-        kind: "committee",
-        reviewer_id: me,
-        recommendation: recommendation,
-        score: score,
-        comments: committeeComment || null,
-        submitted_at: new Date().toISOString(),
-      };
-      var existing = await sb.from("reviews").select("id")
-        .eq("application_id", appId).eq("kind", "committee").eq("reviewer_id", me).maybeSingle();
-      if (existing.error) throw existing.error;
-      var res = existing.data
-        ? await sb.from("reviews").update(row).eq("id", existing.data.id).select().single()
-        : await sb.from("reviews").insert(row).select().single();
-      if (res.error) throw res.error;
-      try {
-        var reviewToStatus = recommendation === "unfavorable"
-          ? "rejected"
-          : recommendation === "revise" ? "returned" : "iras_review";
-        await sb.from("application_events").insert({
-          application_id: appId, actor_id: me, actor_role: role || "committee",
-          action: "Faculty Committee review submitted",
-          from_status: "committee_review", to_status: reviewToStatus,
-          note: (score === null ? "Decision: " : "Score " + score + " / 100; recommendation: ") + recommendation + "." + (committeeComment ? " Comment: " + committeeComment : ""),
-        });
-      } catch (e) {}
-      if (recommendation === "unfavorable") return await this.transition(appId, "committee_review", "reject", committeeComment);
-      if (recommendation === "revise") return await this.transition(appId, "committee_review", "return", committeeComment);
-      await this.transition(appId, "committee_review", "advance", committeeComment);
-      return res.data;
     },
 
     async transition(appId, fromStatus, kind, note, requestedLabel) {
@@ -621,7 +430,7 @@
       else if (kind === "reject") to = "rejected";
       else {
         var n = NEXT[fromStatus]; if (!n) throw new Error("No next step from " + fromStatus); to = n.to;
-        if (["submitted", "committee_review", "iras_review"].indexOf(fromStatus) >= 0) {
+        if (["submitted", "iras_review"].indexOf(fromStatus) >= 0) {
           try {
             var grantType = scopedGrantType;
             if (fromStatus === "submitted" && (grantType === "au_r3" || grantType === "au_r4")) {
@@ -708,102 +517,6 @@
       return updated.data;
     },
 
-    async submitExpertReview(appId, payload) {
-      var me = await uid();
-      var role = await myRole();
-      if (!me) throw new Error("You must be signed in.");
-      var score = Math.max(0, Math.min(100, parseInt(payload.score, 10) || 0));
-      var recommendation = payload.recommendation || (score >= 70 ? "favorable" : "unfavorable");
-      var row = {
-        application_id: appId,
-        kind: "expert",
-        reviewer_id: me,
-        recommendation: recommendation,
-        score: score,
-        strengths: payload.strengths || null,
-        weaknesses: payload.weaknesses || null,
-        comments: payload.comments || null,
-        submitted_at: new Date().toISOString(),
-      };
-      var existing = await sb.from("reviews").select("id")
-        .eq("application_id", appId).eq("kind", "expert").eq("reviewer_id", me).maybeSingle();
-      if (existing.error) throw existing.error;
-      var res = existing.data
-        ? await sb.from("reviews").update(row).eq("id", existing.data.id).select().single()
-        : await sb.from("reviews").insert(row).select().single();
-      if (res.error) throw res.error;
-      try {
-        await sb.from("expert_assignments").update({ status: "completed" })
-          .eq("application_id", appId).eq("expert_id", me);
-      } catch (e) {}
-      var rem = await sb.from("expert_assignments")
-        .select("id").eq("application_id", appId).neq("status", "completed");
-      if (rem.error) throw rem.error;
-      var remaining = rem.data || [];
-      if (remaining.length === 0) {
-        try {
-          await sb.from("application_events").insert({
-            application_id: appId, actor_id: me, actor_role: role || "expert",
-            action: "All expert reviews complete",
-            from_status: "expert_review", to_status: "president_review",
-            note: "Final expert score " + score + " / 100; recommendation: " + recommendation + ".",
-          });
-        } catch (e) {}
-        await this.transition(appId, "expert_review", "advance");
-      } else {
-        try {
-          await sb.from("application_events").insert({
-            application_id: appId, actor_id: me, actor_role: role || "expert",
-            action: "Expert review submitted",
-            from_status: "expert_review", to_status: "expert_review",
-            note: "Score " + score + " / 100; recommendation: " + recommendation + ". Waiting for " + remaining.length + " expert review(s).",
-          });
-        } catch (e) {}
-      }
-      return res.data;
-    },
-
-    async presidentDecision(appId, approved, conditions) {
-      var me = await uid();
-      if (!me) throw new Error("You must be signed in.");
-      if (!approved) return await this.transition(appId, "president_review", "reject");
-      var app = await this.transition(appId, "president_review", "advance");
-      try {
-        await sb.from("approvals").insert({
-          application_id: appId,
-          president_id: me,
-          approved: true,
-          approved_amount: app.approved_amount || app.requested_amount,
-          conditions: conditions || null,
-        });
-      } catch (e) {}
-      return app;
-    },
-
-    async contractQueue() {
-      var res = await sb.from("applications")
-        .select("*, researcher:profiles(full_name), contracts(*)")
-        .in("status", ["approved", "active"]).order("decided_at", { ascending: false });
-      if (res.error) throw res.error;
-      return res.data || [];
-    },
-    async signContract(appId) {
-      var me = await uid();
-      var role = await myRole();
-      var cres = await sb.from("contracts").update({ status: "active" }).eq("application_id", appId).select();
-      if (cres.error) throw cres.error;
-      var upd = await sb.from("applications").update({ status: "active" }).eq("id", appId).eq("status", "approved").select();
-      if (upd.error) throw upd.error;
-      if (!upd.data || upd.data.length === 0) throw new Error("No approved application was updated. Refresh if it already moved.");
-      try {
-        await sb.from("application_events").insert({
-          application_id: appId, actor_id: me, actor_role: role,
-          action: "Contract signed and project activated",
-          from_status: "approved", to_status: "active",
-        });
-      } catch (e) {}
-      return upd.data[0];
-    },
     async lastReturnReason(appId) {
       var res = await sb.from("application_events")
         .select("action, note, actor_role, created_at, actor:profiles(full_name)")
@@ -813,220 +526,15 @@
       var returnEvent = (res.data && res.data[0]) || null;
       if (returnEvent && String(returnEvent.note || "").trim()) return returnEvent;
 
-      // Older committee returns stored the reason on the review but not on the
-      // return event. Preserve those records by falling back to that review.
-      var review = await sb.from("reviews")
-        .select("comments, submitted_at, reviewer:profiles(full_name)")
-        .eq("application_id", appId).eq("kind", "committee")
-        .not("comments", "is", null)
-        .order("submitted_at", { ascending: false }).limit(1);
-      if (!review.error && review.data && review.data[0] && String(review.data[0].comments || "").trim()) {
-        return {
-          action: returnEvent ? returnEvent.action : "Returned to researcher",
-          note: review.data[0].comments,
-          actor_role: (returnEvent && returnEvent.actor_role) || "committee",
-          created_at: (returnEvent && returnEvent.created_at) || review.data[0].submitted_at,
-          actor: (returnEvent && returnEvent.actor) || review.data[0].reviewer || null,
-        };
-      }
       return returnEvent;
     },
 
-    async ofmPayments() {
-      var res = await sb.from("applications")
-        .select("*, researcher:profiles(full_name), payments(*), reports(kind,status), contracts(contract_no,status), events:application_events(action,note,created_at)")
-        .in("status", ["approved", "active", "completed"])
-        .or("grant_type.eq.au_r1,grant_type.is.null")
-        .order("decided_at", { ascending: false });
-      if (res.error) throw res.error;
-      var apps = res.data || [];
-      for (var i = 0; i < apps.length; i++) {
-        var a = apps[i];
-        var amount = Number(a.approved_amount || a.requested_amount || 0);
-        var p1 = Math.round(amount * 0.30), p3 = Math.round(amount * 0.30), p2 = amount - p1 - p3;
-        var expectedPayments = [
-          { application_id: a.id, instalment: 1, pct: 30, amount: p1, trigger: "After grant approval", status: "pending" },
-          { application_id: a.id, instalment: 2, pct: 40, amount: p2, trigger: "After accepted progress report", status: "pending" },
-          { application_id: a.id, instalment: 3, pct: 30, amount: p3, trigger: "After accepted final report", status: "pending" },
-        ];
-        var existingInstalments = {};
-        (a.payments || []).forEach(function (payment) {
-          existingInstalments[Number(payment.instalment)] = true;
-        });
-        var missingPayments = expectedPayments.filter(function (payment) {
-          return !existingInstalments[payment.instalment];
-        });
-        if (missingPayments.length) {
-          // Several Finance widgets can request this list at the same time. The
-          // database unique key plus an idempotent upsert prevents those reads
-          // from creating duplicate phase rows for one AU-R1 application.
-          var ins = await sb.from("payments").upsert(missingPayments, {
-            onConflict: "application_id,instalment",
-            ignoreDuplicates: true,
-          }).select();
-          if (ins.error) throw ins.error;
-          var refreshed = await sb.from("payments").select("*").eq("application_id", a.id);
-          if (refreshed.error) throw refreshed.error;
-          a.payments = refreshed.data || [];
-        }
-        var uniquePayments = {};
-        (a.payments || []).forEach(function (payment) {
-          var previous = uniquePayments[payment.instalment];
-          if (!previous || (payment.status === "paid" && previous.status !== "paid")) uniquePayments[payment.instalment] = payment;
-        });
-        a.payments = Object.keys(uniquePayments).map(function (key) { return uniquePayments[key]; });
-        a.payments.sort(function (x, y) { return x.instalment - y.instalment; });
-      }
-      return apps;
-    },
-    payable: function (app, inst) {
-      if (!app) return false;
-      var reps = app.reports || [];
-      var paid = function (i) { return (app.payments || []).some(function (p) { return p.instalment === i && p.status === "paid"; }); };
-      if (inst === 1) return app.status === "approved" || app.status === "active" || app.status === "completed";
-      if (inst === 2) return paid(1) && reps.some(function (r) { return r.kind === "progress" && r.status === "accepted"; });
-      if (inst === 3) return paid(2) && reps.some(function (r) { return r.kind === "final" && r.status === "accepted"; });
-      return false;
-    },
-    payBlockedReason: function (app, inst) {
-      if (!app) return "";
-      var reps = app.reports || [];
-      var paid = function (i) { return (app.payments || []).some(function (p) { return p.instalment === i && p.status === "paid"; }); };
-      if (inst === 1) return "Waiting for RASSC / IRAS approval.";
-      if (inst === 2) {
-        if (!paid(1)) return "Phase 1 must be marked paid by Finance first.";
-        return "Waiting for the progress report to be accepted.";
-      }
-      if (inst === 3) {
-        if (!paid(2)) return "Phase 2 must be marked paid by Finance first.";
-        return "Waiting for the final report to be accepted.";
-      }
-      return "";
-    },
-    async markPaid(paymentId, instalment, appId, note) {
-      var me = await uid();
-      if (!me) throw new Error("You must be signed in.");
-      var currentPayment = await sb.from("payments").select("status,application_id").eq("id", paymentId).single();
-      if (currentPayment.error) throw currentPayment.error;
-      if (!currentPayment.data || currentPayment.data.application_id !== appId) throw new Error("Payment phase does not match this application.");
-      if (currentPayment.data.status === "paid") return currentPayment.data;
-      if (["pending", "scheduled"].indexOf(currentPayment.data.status) < 0) throw new Error("This payment phase cannot be paid.");
-      var gate = await sb.from("applications").select("status,payments(instalment,status),reports(kind,status)").eq("id", appId).single();
-      if (gate.error) throw gate.error;
-      if (!this.payable(gate.data, instalment)) throw new Error(this.payBlockedReason(gate.data, instalment) || "This phase is not ready for payment.");
-      var paidAt = new Date().toISOString();
-      var r = await sb.from("payments").update({ status: "paid", paid_at: paidAt, processed_by: me }).eq("id", paymentId).select().single();
-      if (r.error) throw r.error;
-      if (instalment === 1) await sb.from("applications").update({ status: "active" }).eq("id", appId);
-      if (instalment === 3) await sb.from("applications").update({ status: "completed" }).eq("id", appId);
-      await sb.from("application_events").insert({
-        application_id: appId,
-        actor_id: me,
-        actor_role: "ofm",
-        action: "Finance paid Phase " + instalment,
-        from_status: instalment === 1 ? "approved" : "active",
-        to_status: instalment === 3 ? "completed" : "active",
-        note: note || null,
-      });
-      return r.data;
-    },
-    async submitReport(appId, kind, details) {
-      var me = await uid();
-      if (["progress", "final"].indexOf(kind) < 0) throw new Error("Unknown AU-R1 report type.");
-      var appCheck = await sb.from("applications")
-        .select("researcher_id,grant_type,status,payments(instalment,status),reports(id,kind,status)")
-        .eq("id", appId).single();
-      if (appCheck.error) throw appCheck.error;
-      var checkedApp = appCheck.data;
-      if (checkedApp.researcher_id !== me) throw new Error("You can submit reports only for your own AU-R1 grant.");
-      if (checkedApp.grant_type && checkedApp.grant_type !== "au_r1") throw new Error("Progress and final reports are available only for AU-R1 grants.");
-      var requiredPhase = kind === "progress" ? 1 : 2;
-      var priorApproved = (checkedApp.payments || []).some(function (payment) {
-        return Number(payment.instalment) === requiredPhase && payment.status === "paid";
-      });
-      if (!priorApproved) throw new Error("Finance must mark Phase " + requiredPhase + " as paid before you can submit this report.");
-      var existing = (checkedApp.reports || []).find(function (report) {
-        return report.kind === kind && ["submitted", "accepted"].indexOf(report.status) >= 0;
-      });
-      if (existing) throw new Error((kind === "progress" ? "Progress" : "Final") + " report is already " + (existing.status === "accepted" ? "accepted" : "waiting for RASSC review") + ".");
-      var reportDetails = details || {};
-      var reportSummary = (kind === "progress" ? "Progress" : "Final") + " report submitted by researcher and routed to RASSC.";
-      if (kind === "progress" && reportDetails.reporting_period) reportSummary += " Reporting period: " + reportDetails.reporting_period + ".";
-      if (reportDetails.summary) reportSummary += " Summary: " + String(reportDetails.summary).replace(/[\r\n]+/g, " ").slice(0, 1000);
-      if (kind === "progress" && reportDetails.budget_utilisation) reportSummary += " Budget utilisation: " + String(reportDetails.budget_utilisation).replace(/[\r\n]+/g, " ").slice(0, 500);
-      var r = await sb.from("reports").insert({
-        application_id: appId, kind: kind, status: "submitted",
-        summary: reportSummary,
-      }).select().single();
-      if (r.error) throw r.error;
-      try { await sb.from("application_events").insert({
-        application_id: appId, actor_id: me, actor_role: "researcher",
-        action: (kind === "progress" ? "Progress" : "Final") + " report submitted to RASSC",
-        note: "Waiting for RASSC acceptance before routing Phase " + (kind === "progress" ? "2 (40%)" : "3 (30%)") + " to Finance.",
-      }); } catch (e) {}
-      return r.data;
-    },
-    async myReports(kind, appId) {
-      var apps = await this.myApplications();
-      var ids = (apps || []).filter(function (a) {
-        return !a.grant_type || a.grant_type === "au_r1";
-      }).map(function (a) { return a.id; });
-      if (!ids.length) return [];
-      if (appId && ids.indexOf(appId) < 0) throw new Error("This AU-R1 project does not belong to the signed-in researcher.");
-      var q = sb.from("reports")
-        .select("*, application:applications(code,title)")
-        .order("submitted_at", { ascending: false });
-      q = appId ? q.eq("application_id", appId) : q.in("application_id", ids);
-      if (kind) q = q.eq("kind", kind);
-      var res = await q;
-      if (res.error) throw res.error;
-      return res.data || [];
-    },
-    async reportQueue() {
-      var res = await sb.from("reports")
-        .select("*, application:applications(code,title,grant_type,researcher:profiles(full_name),documents:application_documents(*))")
-        .eq("status", "submitted").order("submitted_at", { ascending: true });
-      if (res.error) throw res.error;
-      return (res.data || []).filter(function (report) {
-        return report.application && (!report.application.grant_type || report.application.grant_type === "au_r1");
-      }).map(function (report) {
-        if (report.application) report.application.documents = (report.application.documents || []).map(mapDocument);
-        return report;
-      });
-    },
-    async acceptReport(reportId) {
-      var me = await uid();
-      var role = await myRole();
-      if (role !== "rassc" && role !== "admin") throw new Error("Only RASSC can accept milestone reports and release them to Finance.");
-      var current = await sb.from("reports")
-        .select("id,kind,status,application_id,application:applications(id,code,grant_type)")
-        .eq("id", reportId).single();
-      if (current.error) throw current.error;
-      if (!current.data.application || (current.data.application.grant_type && current.data.application.grant_type !== "au_r1")) {
-        throw new Error("Only AU-R1 milestone reports can be forwarded to Finance.");
-      }
-      if (current.data.status !== "submitted") throw new Error("This report is no longer awaiting RASSC review.");
-      var r = await sb.from("reports").update({ status: "accepted" }).eq("id", reportId).eq("status", "submitted")
-        .select("*, application:applications(id,code,grant_type)").single();
-      if (r.error) throw r.error;
-      try {
-        await sb.from("application_events").insert({
-          application_id: r.data.application_id,
-          actor_id: me,
-          actor_role: role,
-          action: (r.data.kind === "progress" ? "Progress" : "Final") + " report accepted by RASSC and forwarded to Finance",
-          note: "Finance payment gate opened for Phase " + (r.data.kind === "progress" ? "2 (40%)" : "3 (30%)") + ".",
-        });
-      } catch (e) {}
-      return r.data;
-    },
     async myGrant(grantType) {
       var me = await uid();
       var q = sb.from("applications")
         .select("*, payments(*), reports(kind,status), contracts(contract_no,status,amount), events:application_events(action,note,created_at)")
         .eq("researcher_id", me).in("status", ["approved", "active", "completed"]);
-      if (grantType === "au_r1") q = q.or("grant_type.eq.au_r1,grant_type.is.null");
-      else if (grantType) q = q.eq("grant_type", grantType);
+      q = q.eq("grant_type", requireActiveGrant(grantType || "au_r3"));
       var res = await q.order("decided_at", { ascending: false }).limit(1);
       if (res.error) throw res.error;
       var a = (res.data && res.data[0]) || null;
@@ -1036,212 +544,6 @@
       }
       if (a && a.payments) a.payments.sort(function (x, y) { return x.instalment - y.instalment; });
       return a;
-    },
-
-    async createPublicationGrant(payload, submit, grantId) {
-      var me = await uid();
-      if (!me) throw new Error("You must be signed in.");
-      var prof = await sb.from("profiles").select("faculty,department").eq("id", me).single();
-      var existing = null;
-      if (grantId) {
-        var ex = await sb.from("publication_grants").select("*").eq("id", grantId).eq("researcher_id", me).single();
-        if (ex.error) throw ex.error;
-        existing = ex.data;
-        if (["draft", "returned"].indexOf(existing.status) === -1) throw new Error("Only draft or returned publication grants can be edited.");
-      }
-      var estimate = publicationAmount(payload.indexing, payload.quartile, payload.publication_type, payload.requested_amount);
-      var row = {
-        article_title: payload.article_title || "Untitled publication",
-        journal_name: payload.journal_name || null,
-        indexing: payload.indexing || "scopus",
-        quartile: payload.quartile || null,
-        publication_type: payload.publication_type || "journal",
-        doi: payload.doi || null,
-        published_on: payload.published_on || null,
-        requested_amount: Number(payload.requested_amount || estimate || 0),
-        faculty: payload.faculty || (prof.data && prof.data.faculty) || null,
-        department: payload.department || (prof.data && prof.data.department) || null,
-        status: submit ? "submitted" : "draft",
-        submitted_at: submit ? new Date().toISOString() : (existing ? existing.submitted_at : null),
-        updated_at: new Date().toISOString(),
-      };
-      if (!existing) {
-        row.code = await genPublicationCode();
-        row.researcher_id = me;
-      }
-      var res = existing
-        ? await sb.from("publication_grants").update(row).eq("id", grantId).eq("researcher_id", me).select().single()
-        : await sb.from("publication_grants").insert(row).select().single();
-      if (res.error) throw res.error;
-      return res.data;
-    },
-
-    async uploadPublicationEvidence(grantId, file) {
-      var safe = (file.name || "publication_evidence.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
-      var key = "publication_grants/" + grantId + "/" + Date.now() + "_" + safe;
-      var up = await sb.storage.from("documents").upload(key, file, { contentType: file.type || "application/pdf", upsert: false });
-      if (up.error) throw up.error;
-      var r = await sb.from("publication_grants").update({
-        evidence_name: file.name, evidence_path: key, updated_at: new Date().toISOString(),
-      }).eq("id", grantId).select().single();
-      if (r.error) throw r.error;
-      return r.data;
-    },
-
-    async publicationEvidenceUrl(grant, download) {
-      if (!grant || !grant.evidence_path) throw new Error("No uploaded publication evidence file is attached.");
-      var res = await sb.storage.from("documents").createSignedUrl(grant.evidence_path, 60 * 5, {
-        download: download ? (grant.evidence_name || true) : false,
-      });
-      if (res.error) throw res.error;
-      return res.data.signedUrl;
-    },
-
-    async myPublicationGrants() {
-      var me = await uid();
-      var res = await sb.from("publication_grants").select("*, researcher:profiles(full_name)")
-        .eq("researcher_id", me).order("created_at", { ascending: false });
-      if (res.error) throw res.error;
-      return (res.data || []).map(mapPublicationGrant);
-    },
-
-    async publicationGrantQueue(statuses) {
-      var q = sb.from("publication_grants").select("*, researcher:profiles(full_name)")
-        .order("submitted_at", { ascending: true, nullsFirst: false });
-      if (statuses && statuses.length) q = q.in("status", statuses);
-      var res = await q;
-      if (res.error) throw res.error;
-      return (res.data || []).map(mapPublicationGrant);
-    },
-
-    async reviewPublicationGrant(grantId, decision, note, amount) {
-      var status = decision === "return" ? "returned" : decision === "reject" ? "rejected" : "payment_pending";
-      var row = {
-        status: status,
-        review_note: note || null,
-        decided_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-      };
-      if (status === "payment_pending") row.approved_amount = Number(amount || 0);
-      var res = await sb.from("publication_grants").update(row).eq("id", grantId).select().single();
-      if (res.error) throw res.error;
-      return res.data;
-    },
-
-    async payPublicationGrant(grantId, note) {
-      var res = await sb.from("publication_grants").update({
-        status: "paid", paid_at: new Date().toISOString(), payment_note: note || null,
-        updated_at: new Date().toISOString(),
-      }).eq("id", grantId).select().single();
-      if (res.error) throw res.error;
-      return res.data;
-    },
-
-    async publicationGrantStats() {
-      var res = await sb.from("publication_grants").select("faculty,status,requested_amount,approved_amount,indexing,publication_type");
-      if (res.error) throw res.error;
-      var out = { total: 0, submitted: 0, payment_pending: 0, paid: 0, rejected: 0, requested_sum: 0, approved_sum: 0, byFaculty: {}, byIndex: {} };
-      (res.data || []).forEach(function (g) {
-        out.total++;
-        out[g.status] = (out[g.status] || 0) + 1;
-        out.requested_sum += Number(g.requested_amount || 0);
-        out.approved_sum += Number(g.approved_amount || 0);
-        var f = g.faculty || "Unspecified";
-        if (!out.byFaculty[f]) out.byFaculty[f] = { faculty: f, total: 0, paid: 0, approved_sum: 0 };
-        out.byFaculty[f].total++;
-        if (g.status === "paid") out.byFaculty[f].paid++;
-        out.byFaculty[f].approved_sum += Number(g.approved_amount || 0);
-        var idx = g.indexing || g.publication_type || "Other";
-        out.byIndex[idx] = (out.byIndex[idx] || 0) + 1;
-      });
-      out.byFaculty = Object.keys(out.byFaculty).map(function (k) { return out.byFaculty[k]; }).sort(function (a, b) { return b.total - a.total; });
-      return out;
-    },
-
-    async createReimbursement(payload, submit, id) {
-      var me = await uid();
-      if (!me) throw new Error("You must be signed in.");
-      var prof = await sb.from("profiles").select("faculty,department").eq("id", me).single();
-      var existing = null;
-      if (id) {
-        var ex = await sb.from("reimbursements").select("*").eq("id", id).eq("researcher_id", me).single();
-        if (ex.error) throw ex.error;
-        existing = ex.data;
-        if (["draft", "returned"].indexOf(existing.status) === -1) throw new Error("Only draft or returned claims can be edited.");
-      }
-      var row = {
-        title: payload.title || "Untitled claim",
-        description: payload.description || null,
-        category: payload.category || null,
-        requested_amount: Number(payload.requested_amount || 0),
-        faculty: payload.faculty || (prof.data && prof.data.faculty) || null,
-        department: payload.department || (prof.data && prof.data.department) || null,
-        status: submit ? "submitted" : "draft",
-        submitted_at: submit ? new Date().toISOString() : (existing ? existing.submitted_at : null),
-        updated_at: new Date().toISOString(),
-      };
-      if (!existing) { row.code = await genReimbursementCode(); row.researcher_id = me; }
-      var res = existing
-        ? await sb.from("reimbursements").update(row).eq("id", id).eq("researcher_id", me).select().single()
-        : await sb.from("reimbursements").insert(row).select().single();
-      if (res.error) throw res.error;
-      return res.data;
-    },
-    async uploadReimbursementEvidence(id, file) {
-      var safe = (file.name || "receipt.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
-      var key = "reimbursements/" + id + "/" + Date.now() + "_" + safe;
-      var up = await sb.storage.from("documents").upload(key, file, { contentType: file.type || "application/pdf", upsert: false });
-      if (up.error) throw up.error;
-      var r = await sb.from("reimbursements").update({ evidence_name: file.name, evidence_path: key, updated_at: new Date().toISOString() }).eq("id", id).select().single();
-      if (r.error) throw r.error;
-      return r.data;
-    },
-    async reimbursementEvidenceUrl(claim, download) {
-      var path = claim && (claim.evidence_path || (claim.raw && claim.raw.evidence_path));
-      if (!path) throw new Error("No receipt file is attached.");
-      var res = await sb.storage.from("documents").createSignedUrl(path, 60 * 5, { download: download ? (claim.evidence_name || true) : false });
-      if (res.error) throw res.error;
-      return res.data.signedUrl;
-    },
-    async myReimbursements() {
-      var me = await uid();
-      var res = await sb.from("reimbursements").select("*, researcher:profiles(full_name)").eq("researcher_id", me).order("created_at", { ascending: false });
-      if (res.error) throw res.error;
-      return (res.data || []).map(mapReimbursement);
-    },
-    async reimbursementQueue(statuses) {
-      var q = sb.from("reimbursements").select("*, researcher:profiles(full_name)").order("submitted_at", { ascending: true, nullsFirst: false });
-      if (statuses && statuses.length) q = q.in("status", statuses);
-      var res = await q;
-      if (res.error) throw res.error;
-      return (res.data || []).map(mapReimbursement);
-    },
-    async reviewReimbursement(id, stage, decision, note, amount) {
-      var row = { updated_at: new Date().toISOString() };
-      if (decision === "return") row.status = "returned";
-      else if (decision === "reject") row.status = "rejected";
-      else if (stage === "dean") { row.status = "rassc_review"; row.dean_at = new Date().toISOString(); }
-      else { row.status = "payment_pending"; row.decided_at = new Date().toISOString(); row.approved_amount = Number(amount || 0); }
-      if (stage === "dean") row.dean_note = note || null; else row.review_note = note || null;
-      var res = await sb.from("reimbursements").update(row).eq("id", id).select().single();
-      if (res.error) throw res.error;
-      return res.data;
-    },
-    async payReimbursement(id, note) {
-      var res = await sb.from("reimbursements").update({ status: "paid", paid_at: new Date().toISOString(), payment_note: note || null, updated_at: new Date().toISOString() }).eq("id", id).select().single();
-      if (res.error) throw res.error;
-      return res.data;
-    },
-    async reimbursementStats() {
-      var res = await sb.from("reimbursements").select("faculty,status,requested_amount,approved_amount");
-      if (res.error) throw res.error;
-      var out = { total: 0, submitted: 0, rassc_review: 0, payment_pending: 0, paid: 0, requested_sum: 0, approved_sum: 0 };
-      (res.data || []).forEach(function (r) {
-        out.total++; out[r.status] = (out[r.status] || 0) + 1;
-        out.requested_sum += Number(r.requested_amount || 0);
-        out.approved_sum += Number(r.approved_amount || 0);
-      });
-      return out;
     },
 
     async notifications() {
@@ -1301,7 +603,7 @@
       if (r.error) throw r.error;
       var c = { _total: 0 };
       (r.data || []).forEach(function (a) { c[a.status] = (c[a.status] || 0) + 1; c._total++; });
-      c._underReview = (c.submitted || 0) + (c.committee_review || 0) + (c.dean_sign || 0) + (c.iras_review || 0) + (c.expert_review || 0) + (c.president_review || 0);
+      c._underReview = (c.submitted || 0) + (c.iras_review || 0);
       c._approved = (c.approved || 0) + (c.active || 0) + (c.completed || 0);
       return c;
     },
@@ -1336,19 +638,6 @@
       var res = await q.order("decided_at", { ascending: false, nullsFirst: false });
       if (res.error) throw res.error;
       return (res.data || []).map(mapRow);
-    },
-    async myReviews() {
-      var me = await uid();
-      var res = await sb.from("reviews").select("*, application:applications(code,title,status)")
-        .eq("reviewer_id", me).order("submitted_at", { ascending: false });
-      if (res.error) throw res.error;
-      return res.data || [];
-    },
-    async paidPayments() {
-      var res = await sb.from("payments").select("*, application:applications(code, researcher:profiles(full_name))")
-        .eq("status", "paid").order("paid_at", { ascending: false });
-      if (res.error) throw res.error;
-      return res.data || [];
     },
     async financePaymentHistory(grantType) {
       var results = await Promise.all([
@@ -1436,11 +725,6 @@
     },
     async allProfiles() {
       var res = await sb.from("profiles").select("*").in("role", ["researcher", "dean", "iras", "ofm", "admin"]).order("role", { ascending: true }).order("full_name", { ascending: true });
-      if (res.error) throw res.error;
-      return res.data || [];
-    },
-    async journalTiers() {
-      var res = await sb.from("journal_tiers").select("*").order("sort_order", { ascending: true });
       if (res.error) throw res.error;
       return res.data || [];
     },

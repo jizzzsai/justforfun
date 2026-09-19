@@ -348,11 +348,11 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
 }
 
 function ApplicationEventTimeline({ app }) {
-  const grantType = app && app.grant_type ? app.grant_type : "au_r1";
-  const officeName = grantType === "au_r1" ? "RASSC" : "IRAS";
+  const grantType = app && app.grant_type ? app.grant_type : "au_r3";
+  const officeName = "IRAS";
   const roleName = role => ({
-    researcher: "Researcher", dean: "Dean", committee: "Faculty Committee",
-    rassc: "RASSC", iras: officeName, ofm: "Finance Office", admin: "Administrator",
+    researcher: "Researcher", dean: "Dean", iras: officeName,
+    ofm: "Finance Office", admin: "Administrator",
   })[role] || "System";
   const statusName = value => value ? window.DB.statusBadge(value, grantType).label : "";
   const dateTime = value => {
@@ -369,7 +369,7 @@ function ApplicationEventTimeline({ app }) {
     return event.action || actor + " action recorded";
   };
   let events = (app && app.events ? app.events : [])
-    .filter(event => event.action !== "Saved draft" && event.action !== "Faculty Committee review submitted")
+    .filter(event => event.action !== "Saved draft")
     .slice()
     .sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
   if (app && app.submitted_at && !events.some(event => event.actor_role === "researcher" && /submit/i.test(event.action || ""))) {
@@ -401,75 +401,34 @@ function ApplicationEventTimeline({ app }) {
 }
 
 
-function ReviewCommentHistory({ app, roles = ["dean", "committee"] }) {
-  const wantsCommittee = roles.includes("committee");
+function ReviewCommentHistory({ app, roles = ["dean", "iras"] }) {
   const items = [];
-  const officeName = app && app.grant_type === "au_r1" ? "RASSC" : "IRAS";
   const eventRoles = {
     dean: { label: "Dean comment", author: "Dean", initials: "DN" },
-    rassc: { label: "RASSC comment", author: "RASSC", initials: "RS" },
-    iras: { label: officeName + " comment", author: officeName, initials: officeName === "RASSC" ? "RS" : "IR" },
+    iras: { label: "IRAS comment", author: "IRAS", initials: "IR" },
     ofm: { label: "Finance comment", author: "Finance Office", initials: "FN" },
   };
 
-  roles.filter(role => role !== "committee").forEach(role => {
+  roles.forEach(role => {
     const meta = eventRoles[role] || { label: role + " comment", author: role, initials: role.slice(0, 2).toUpperCase() };
-    (app.events || []).forEach(e => {
-      const roleMatches = e.actor_role === role || (role === "rassc" && (!app.grant_type || app.grant_type === "au_r1") && e.actor_role === "iras");
-      if (!roleMatches || !e.note || !e.note.trim()) return;
+    (app.events || []).forEach(event => {
+      if (event.actor_role !== role || !event.note || !event.note.trim()) return;
       items.push({
-        key: role + "-" + e.id,
+        key: role + "-" + event.id,
         role: meta.label,
-        author: e.actor && e.actor.full_name ? e.actor.full_name : meta.author,
-        body: e.note.trim(),
-        at: e.created_at,
+        author: event.actor && event.actor.full_name ? event.actor.full_name : meta.author,
+        body: event.note.trim(),
+        at: event.created_at,
         initials: meta.initials,
       });
     });
   });
 
-  if (wantsCommittee) {
-    const committeeEvents = (app.events || []).filter(e =>
-      e.actor_role === "committee"
-      && e.action !== "Faculty Committee review submitted"
-      && e.note
-      && e.note.trim()
-    );
-    committeeEvents.forEach(e => {
-      items.push({
-        key: "committee-event-" + e.id,
-        role: "Committee comment",
-        author: e.actor && e.actor.full_name ? e.actor.full_name : "Faculty Committee",
-        body: e.note.trim(),
-        at: e.created_at,
-        initials: "CT",
-      });
-    });
-
-    // Older records may have a review row without a matching transition event.
-    // Use those comments only as a fallback, preserving history without duplicates.
-    if (committeeEvents.length === 0) {
-      (app.reviews || []).forEach(r => {
-        if (r.kind !== "committee" || !r.comments || !r.comments.trim()) return;
-        items.push({
-          key: "committee-review-" + r.id,
-          role: "Committee comment",
-          author: r.reviewer && r.reviewer.full_name ? r.reviewer.full_name : "Faculty Committee",
-          body: r.comments.trim(),
-          at: r.submitted_at,
-          initials: "CT",
-        });
-      });
-    }
-  }
-
   items.sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
-  const empty = "No review comments were submitted.";
-
   return (
     <div style={{ borderTop: "1px solid var(--line-2)", marginTop: 16, paddingTop: 16 }}>
       <div className="eyebrow mb-2">Review comments</div>
-      {items.length === 0 && <div className="text-sm text-muted">{empty}</div>}
+      {items.length === 0 && <div className="text-sm text-muted">No review comments were submitted.</div>}
       {items.map(item => (
         <div key={item.key} className="comment">
           <div className="head">
@@ -485,6 +444,7 @@ function ReviewCommentHistory({ app, roles = ["dean", "committee"] }) {
     </div>
   );
 }
+
 
 function NotifPanel({ items, onClose, onOpen }) {
   const unread = items.filter(n => n.unread).length;

@@ -32,7 +32,7 @@ async function buildAIContext(grantSystem, mode) {
       ctx.myApplications = details.map(a => ({
         code: a.code,
         title: a.title,
-        grantSystem: (a.grant_type || "au_r1").replace("au_r", "AU-R").toUpperCase(),
+        grantSystem: (a.grant_type || "au_r3").replace("au_r", "AU-R").toUpperCase(),
         status: a.status,
         statusLabel: window.DB.statusBadge(a.status).label,
         faculty: a.faculty,
@@ -52,12 +52,8 @@ async function buildAIContext(grantSystem, mode) {
         reports: (a.reports || []).map(report => ({ type: report.kind, status: report.status, submittedAt: report.submitted_at })),
       }));
       try {
-        const g = await window.DB.myGrant(grantSystem || "au_r1");
+        const g = await window.DB.myGrant(grantSystem || "au_r3");
         if (g) ctx.myGrant = { code: g.code, approvedAmount: g.approved_amount, requestedAmount: g.requested_amount, status: g.status, payments: (g.payments || []).map(p => ({ phase: p.instalment, percent: p.pct, amount: p.amount, status: p.status, paidAt: p.paid_at })), reports: g.reports || [] };
-      } catch (e) {}
-      try {
-        const reimbursements = await window.DB.myReimbursements();
-        ctx.myReimbursements = (reimbursements || []).map(item => ({ code: item.id, title: item.title, category: item.category, status: item.status.label, requestedAmount: item.requested_amount, approvedAmount: item.approved_amount }));
       } catch (e) {}
     } else if (role === "admin" && mode === "analytics") {
       ctx.analytics = await window.DB.adminAnalyticsSnapshot();

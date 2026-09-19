@@ -680,7 +680,7 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .tbl .title-cell .s { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
 .tbl .actions { display: flex; gap: 4px; justify-content: flex-end; }
 
-/* My Applications is shared by AU-R1, AU-R3, and AU-R4. Keep table cells as
+/* My Applications is shared by AU-R3 and AU-R4. Keep table cells as
    native table cells: changing a td to flex causes its action column to split
    away from the header in Chromium. */
 .my-applications-table { table-layout: fixed; }
@@ -736,7 +736,6 @@ input, textarea, select { font-family: inherit; font-size: 14px; }
 .badge-dean      { background: #DBEAFE; color: #1E40AF; }
 .badge-iras      { background: #E0E7FF; color: #3730A3; }
 .badge-expert    { background: var(--au-gold-soft); color: #92590B; }
-.badge-committee { background: #FFE4D6; color: #9A3412; }
 .badge-president { background: var(--au-crimson-soft); color: var(--au-crimson); }
 .badge-contract  { background: #FFEDD5; color: #9A3412; }
 .badge-signed    { background: #DCFCE7; color: #166534; }

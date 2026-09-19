@@ -4,31 +4,6 @@
 
 const RA = window.AU;
 
-const R1_DASHBOARD_PIPELINE = [
-  { key: "submission", label: "Researcher Submission" },
-  { key: "deanScreen", label: "Dean Screening" },
-  { key: "committee", label: "Faculty Committee Review" },
-  { key: "iras", label: "RASSC Approval" },
-  { key: "contract", label: "Contract Signed" },
-  { key: "pay1", label: "Phase 1" },
-  { key: "progress", label: "Progress Report" },
-  { key: "pay2", label: "Phase 2" },
-  { key: "final", label: "Final Report" },
-  { key: "pay3", label: "Phase 3" },
-  { key: "closed", label: "Project Closed" },
-];
-
-
-function buildResearcherTimeline(statusKey) {
-  const order = R1_DASHBOARD_PIPELINE.map(step => step.key);
-  const idxMap = { draft: 0, submitted: 1, committee_review: 2, dean_sign: 3, iras_review: 3, approved: 4, active: 5, completed: 10, returned: 0, rejected: 0 };
-  let idx = idxMap[statusKey]; if (idx === undefined) idx = 0;
-  const tl = {};
-  const currentLabel = statusKey === "draft" ? "Draft" : statusKey === "returned" ? "Returned for revision" : statusKey === "rejected" ? "Not approved" : "In progress";
-  order.forEach((k, i) => { tl[k] = i < idx ? { done: true, date: "Completed" } : (i === idx ? { current: true, date: currentLabel } : { date: "Not started" }); });
-  return tl;
-}
-
 const R3_PIPELINE = [
   { key: "submission", label: "Submitted" },
   { key: "dean", label: "Dean Review" },
@@ -66,7 +41,7 @@ function buildR4Timeline(statusKey) {
 }
 
 function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicationId, grantType }) {
-  const sys = grantSystemFor(grantType || "au_r1");
+  const sys = grantSystemFor(grantType || "au_r3");
   const [me, setMe] = useState(null);
   const [grant, setGrant] = useState(null);
   const [apps, setApps] = useState(null);
@@ -76,7 +51,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
     setApps(null);
     setAppsError(false);
     window.AUTH.profile().then(setMe).catch(() => {});
-    window.DB.myGrant(grantType || "au_r1").then(g => setGrant(g || false)).catch(() => setGrant(false));
+    window.DB.myGrant(grantType || "au_r3").then(g => setGrant(g || false)).catch(() => setGrant(false));
     window.DB.myApplications(grantType || undefined)
       .then(items => { if (active) setApps(items || []); })
       .catch(() => { if (active) setAppsError(true); });
@@ -85,7 +60,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
   const isR3 = grantType === "au_r3";
   const isR4 = grantType === "au_r4";
   const isSingle = isR3 || isR4;
-  const exampleSteps = isR4 ? R4_PIPELINE : isR3 ? R3_PIPELINE : R1_DASHBOARD_PIPELINE;
+  const exampleSteps = isR4 ? R4_PIPELINE : R3_PIPELINE;
   const singleGrant = isSingle && grant && grant.grant_type === grantType ? grant : null;
   const r3PayLabel = { approved: "Awaiting Finance Completion", active: "At Finance", completed: "Completed" };
   const pays = grant && grant.payments && grant.payments.length ? grant.payments.slice().sort((a, b) => a.instalment - b.instalment) : [];
@@ -149,9 +124,6 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
                   <div className="meta-row"><span className="l">{isR4 ? "IRAS-approved amount" : "Approved amount"}</span><span className="r">{singleGrant.approved_amount ? fmtBaht(Number(singleGrant.approved_amount)) : "—"}</span></div>
                   <div className="meta-row"><span className="l">Payment status</span><span className="r">{r3PayLabel[singleGrant.status] || "Pending"}</span></div>
                   <div className="meta-row"><span className="l">Payment date</span><span className="r">{["active", "completed"].includes(singleGrant.status) ? window.DB.fmtDate(singleGrant.updated_at || singleGrant.decided_at) : "—"}</span></div>
-                  <button className="btn btn-secondary mt-4" onClick={() => navigate("r-payments")}>
-                    View payment status <Icon name="ArrowRight" size={13} />
-                  </button>
                 </>
               )}
             </div>
@@ -293,7 +265,7 @@ async function uploadAllDocuments(appId, files) {
 
 function ReturnNotice({ info }) {
   if (!info) return null;
-  const who = (info.actor && info.actor.full_name) || ({ dean: "The Dean", committee: "The Faculty Committee", iras: "The research office" }[info.actor_role] || "A reviewer");
+  const who = (info.actor && info.actor.full_name) || ({ dean: "The Dean", iras: "IRAS" }[info.actor_role] || "A reviewer");
   return (
     <div style={{ border: "1px solid var(--au-gold)", background: "var(--au-gold-soft)", borderRadius: "var(--r-md)", padding: "14px 16px", marginBottom: 18, display: "flex", gap: 12 }}>
       <Icon name="AlertCircle" size={20} style={{ color: "var(--au-gold-deep)", flexShrink: 0, marginTop: 2 }} />
@@ -317,10 +289,9 @@ function ApplicationDecisionNotice({ app }) {
   const events = (app.events || []).filter(event => event.to_status === app.status);
   events.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
   const decision = events[0] || null;
-  const office = app.grant_type === "au_r1" ? "RASSC" : "IRAS";
   const actorName = decision && decision.actor && decision.actor.full_name
     ? decision.actor.full_name
-    : ({ dean: "Dean", committee: "Faculty Committee", iras: office, ofm: "Finance Office" }[(decision && decision.actor_role) || ""] || "Reviewer");
+    : ({ dean: "Dean", iras: "IRAS", ofm: "Finance Office" }[(decision && decision.actor_role) || ""] || "Reviewer");
   const rejected = app.status === "rejected";
   const reason = decision && String(decision.note || "").trim();
   return (
@@ -397,576 +368,6 @@ function UniversityJoinedDateField({ value, onChange, readOnly = false }) {
 }
 
 
-function ResearcherSubmit({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId, grantType }) {
-  const sys = grantSystemFor(grantType || "au_r1");
-  const isR3 = !!sys.collaborative;
-  const maxAmount = sys.maxAmount || 100000;
-
-  const [draft, setDraft] = useState({ ...RESEARCHER_DEFAULT_DRAFT });
-  const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
-
-  const [coMembers, setCoMembers] = useState([]);
-  const addMember = () => setCoMembers(m => m.concat([{ name: "", kind: "Researcher", auId: "", email: "" }]));
-  const setMember = (i, k, v) => setCoMembers(m => m.map((r, j) => j === i ? { ...r, [k]: v } : r));
-  const removeMember = (i) => setCoMembers(m => m.filter((_, j) => j !== i));
-
-  const [budgetRows, setBudgetRows] = useState(scaledBudgetRows(maxAmount, RESEARCHER_DEFAULT_SPLIT));
-  const total = budgetRows.reduce((s, b) => s + (Number(b.amount) || 0), 0);
-  const [reqTotal, setReqTotal] = useState(String(maxAmount));
-  const setAmt = (i, v) => setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, amount: (v + "").replace(/[^0-9]/g, "") } : r));
-  const setPct = (i, v) => {
-    const pct = Math.max(0, Math.min(100, Number((v + "").replace(/[^0-9.]/g, "")) || 0));
-    const t = Number(reqTotal) || 0;
-    setBudgetRows(rows => rows.map((r, j) => j === i ? { ...r, amount: Math.round(t * pct / 100) } : r));
-  };
-
-  const [items, setItems] = useState([{ purpose: "", amount: "" }]);
-  const itemsTotal = items.reduce((s, it) => s + (Number(it.amount) || 0), 0);
-  const setItem = (i, k, v) => setItems(rows => rows.map((r, j) => j === i ? { ...r, [k]: k === "amount" ? (v + "").replace(/[^0-9]/g, "") : v } : r));
-  const addItem = () => setItems(rows => rows.concat([{ purpose: "", amount: "" }]));
-  const removeItem = (i) => setItems(rows => rows.length > 1 ? rows.filter((_, j) => j !== i) : rows);
-
-  const [files, setFiles] = useState([]);
-  const onFiles = (e) => { const fs = Array.from(e.target.files || []); setFiles(prev => prev.concat(fs.map(f => ({ file: f, docType })))); e.target.value = ""; };
-  const [editingId, setEditingId] = useState(applicationId || null);
-  const [existingDocs, setExistingDocs] = useState([]);
-  const [loadingDraft, setLoadingDraft] = useState(!!applicationId);
-  const [returnInfo, setReturnInfo] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [busyKind, setBusyKind] = useState(null);
-  const [err, setErr] = useState("");
-  const docTypeOptions = isR3 ? (RA.R3_DOC_TYPES || RA.DOC_TYPES) : RA.DOC_TYPES;
-  const [docType, setDocType] = useState(isR3 ? "Full Conference Paper" : "Research Proposal");
-  const [caps, setCaps] = useState(RA.DEFAULT_BUDGET_CAPS || { remuneration: 30, equipment: 50, travel: 40, misc: 20 });
-  const [split, setSplit] = useState({ remuneration: 30, equipment: 40, travel: 18, misc: 12 });
-  const capArr = [caps.remuneration, caps.equipment, caps.travel, caps.misc];
-  const autoDuration = monthsBetween(draft.startDate, draft.endDate);
-
-  useEffect(() => { window.DB.budgetCaps().then(setCaps).catch(() => {}); }, []);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const p = await window.AUTH.profile();
-        if (p && p.budget_split) setSplit(s => ({ ...s, ...p.budget_split }));
-        if (p && p.office_room) setDraft(d => ({ ...d, office: d.office || p.office_room }));
-        if (p && !applicationId) setDraft(d => ({ ...d, name: p.full_name || d.name, title2: p.name_title || p.title || d.title2, auId: p.au_id || d.auId, email: p.email || d.email, joinedDate: p.joined_date || d.joinedDate, school: (RA.FACULTIES.some(f => f.name === p.faculty) ? p.faculty : d.school), department: (RA.FACULTIES.some(f => f.name === p.faculty) ? (p.department || d.department) : d.department), phone: normalizeThaiPhone(p.phone || d.phone), office: p.office_room || d.office }));
-      } catch (e) {}
-    })();
-  }, [applicationId]);
-
-  useEffect(() => {
-    let cancelled = false;
-    async function loadDraft() {
-      if (!applicationId) {
-        setEditingId(null);
-        setExistingDocs([]);
-        setFiles([]);
-        setReqTotal(String(maxAmount));
-        setBudgetRows(scaledBudgetRows(maxAmount, RESEARCHER_DEFAULT_SPLIT));
-        setItems([{ purpose: "", amount: "" }]);
-        setCoMembers([]);
-        setDraft(d => ({
-          ...RESEARCHER_DEFAULT_DRAFT,
-          name: d.name,
-          title2: d.title2,
-          email: d.email,
-          phone: d.phone,
-          office: d.office,
-        }));
-        setLoadingDraft(false);
-        return;
-      }
-      setLoadingDraft(true);
-      setErr("");
-      try {
-        const app = await window.DB.applicationDetail(applicationId);
-        if (!app || ["draft", "returned"].indexOf(app.status) === -1) {
-          if (!cancelled) {
-            setEditingId(null);
-            setExistingDocs([]);
-            setErr("Only draft or returned applications can be edited here.");
-          }
-          return;
-        }
-        if (cancelled) return;
-        setEditingId(app.id);
-        const researcherInfo = submittedResearcherInfo(app);
-        if (app.status === "returned") { window.DB.lastReturnReason(app.id).then(r => { if (!cancelled) setReturnInfo(r); }).catch(() => {}); } else setReturnInfo(null);
-        setExistingDocs(app.documents || []);
-        setDraft(d => ({
-          ...d,
-          title: app.title || "",
-          field: app.field || "",
-          keywords: app.keywords || "",
-          duration: String(app.duration_months || 12),
-          startDate: app.start_date || "",
-          endDate: app.end_date || "",
-          school: researcherInfo.faculty || app.faculty || "",
-          department: researcherInfo.department || app.department || "",
-          outcome: app.abstract || "",
-          joinedDate: researcherInfo.joinedDate || "",
-          name: researcherInfo.fullName || d.name,
-          title2: researcherInfo.nameTitle || d.title2,
-          academicPosition: researcherInfo.academicPosition || d.academicPosition,
-          auId: researcherInfo.auId || d.auId,
-          email: researcherInfo.email || d.email,
-          phone: researcherInfo.phone || d.phone,
-          office: researcherInfo.officeRoom || d.office,
-        }));
-        setReqTotal(String(Number(app.requested_amount || 0)));
-        setBudgetRows(Array.isArray(app.budget_breakdown) && app.budget_breakdown.length ? app.budget_breakdown : scaledBudgetRows(maxAmount, RESEARCHER_DEFAULT_SPLIT));
-        setItems(Array.isArray(app.budget_items) && app.budget_items.length ? app.budget_items : [{ purpose: "", amount: "" }]);
-        setCoMembers(Array.isArray(app.co_members) ? app.co_members : []);
-      } catch (e) {
-        if (!cancelled) setErr((e && e.message) || "Could not load this draft.");
-      } finally {
-        if (!cancelled) setLoadingDraft(false);
-      }
-    }
-    loadDraft();
-    return () => { cancelled = true; };
-  }, [applicationId]);
-
-  const deleteExistingDoc = (doc) => {
-    const runDelete = async () => {
-      try {
-        await window.DB.deleteDocument(doc);
-        setExistingDocs(ds => ds.filter(d => d.id !== doc.id));
-        toast(doc.name + " deleted.");
-      } catch (ex) {
-        toast("Delete error: " + ((ex && ex.message) || ex));
-      }
-    };
-    if (setConfirm) {
-      setConfirm({
-        kind: "danger",
-        title: "Delete uploaded file?",
-        message: doc.name + " will be removed from this draft and from storage.",
-        confirmLabel: "Delete File",
-        onConfirm: runDelete,
-      });
-    } else {
-      runDelete();
-    }
-  };
-
-  async function save(submit) {
-    setErr("");
-    if (submit && !draft.title.trim()) { setErr("Research title is required."); return; }
-    if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
-    if (submit && !draft.joinedDate) { setErr("Your account has no Date Joined AU. Ask the administrator to add it in User Management."); return; }
-    if (submit && !universityServiceEligibility(draft.joinedDate).eligible) { setErr("You are not eligible yet. Researchers must have at least one year of service at Assumption University."); return; }
-    if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
-    if (submit && draft.phone && !isValidThaiPhone(draft.phone)) { setErr("Phone must be a Thai number with 9–10 digits starting with 0."); return; }
-    if (submit && (!draft.startDate || !draft.endDate)) { setErr("Select the project start and expected end dates."); return; }
-    if (submit && autoDuration <= 0) { setErr("The expected end date must be after the start date."); return; }
-    if (submit && Number(reqTotal) > maxAmount) { setErr("Requested amount (" + Number(reqTotal).toLocaleString() + " THB) exceeds the " + maxAmount.toLocaleString() + " THB maximum for " + sys.code + " grants."); return; }
-    if (submit && Number(reqTotal) <= 0) { setErr("Enter the grant amount you are requesting."); return; }
-    if (submit && total !== Number(reqTotal)) { setErr("Budget breakdown (" + total.toLocaleString() + " THB) must equal the requested total (" + Number(reqTotal).toLocaleString() + " THB)."); return; }
-    if (submit) {
-      const overIdx = budgetRows.findIndex((b, i) => Number(reqTotal) > 0 && Math.round((Number(b.amount) || 0) / Number(reqTotal) * 100) > capArr[i]);
-      if (overIdx !== -1) { setErr(budgetRows[overIdx].item + " exceeds its AU cap of " + capArr[overIdx] + "% of the total budget."); return; }
-    }
-    setBusy(true); setBusyKind(submit ? "submit" : "draft");
-    try {
-      try { await window.DB.updateMyProfile({ full_name: draft.name, name_title: draft.title2, au_id: draft.auId, phone: draft.phone, department: draft.department, office_room: draft.office }); } catch (e) {}
-      const researcherSnapshot = researcherSnapshotFromDraft(draft);
-      const app = await window.DB.createApplication({
-        title: draft.title, abstract: draft.outcome, field: draft.field,
-        faculty: draft.school, department: draft.department, keywords: draft.keywords,
-        requested_amount: Number(reqTotal), duration_months: autoDuration || draft.duration,
-        start_date: draft.startDate || null, end_date: draft.endDate || null,
-        budget_breakdown: budgetRows,
-        budget_items: items.filter(it => (it.purpose || "").trim() || Number(it.amount) > 0),
-        grant_type: sys.id,
-        pub_info: {
-          researcherSnapshot,
-          researcherName: researcherSnapshot.fullName,
-          researcherEmail: researcherSnapshot.email,
-          researcherTitle: researcherSnapshot.nameTitle,
-          researcherAuId: researcherSnapshot.auId,
-          researcherPhone: researcherSnapshot.phone,
-          researcherOffice: researcherSnapshot.officeRoom,
-          researcherJoinedDate: researcherSnapshot.joinedDate,
-        },
-        co_members: isR3 ? coMembers.filter(m => (m.name || "").trim()) : null,
-      }, submit, editingId);
-      const failedUploads = await uploadAllDocuments(app.id, files);
-      if (!submit) {
-        setEditingId(app.id);
-        if (setSelectedApplicationId) setSelectedApplicationId(app.id);
-      } else if (setSelectedApplicationId) {
-        setSelectedApplicationId(null);
-      }
-      if (failedUploads.length) {
-        toast(failedUploads.length + " file(s) could not be uploaded: " + failedUploads.join(", ") + ". Open the application and add them again.");
-      } else {
-        toast(submit ? ("Application " + app.code + " submitted") : ("Draft " + app.code + " saved"));
-      }
-      navigate("r-applications");
-    } catch (ex) { setErr((ex && ex.message) || "Could not save the application."); setBusy(false); }
-  }
-
-  if (loadingDraft) {
-    return <><PageHeader title="Edit Draft" desc="Loading saved draft." /><div className="card" style={{ padding: 44, textAlign: "center", color: "var(--ink-3)" }}>Loading draft...</div></>;
-  }
-
-  return (
-    <>
-      <PageHeader
-        title={(editingId ? "Edit " : "Submit ") + sys.code + " Application"}
-        desc={sys.name + (isR3 ? " — present a paper with your collaborators. " : " — ") + (editingId ? "Update this saved or returned application, then submit it to Dean screening." : "Complete each section and upload the required documents before submitting.")}
-        actions={
-          <>
-            <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
-            <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
-              <Icon name="Send" size={13} /> {busy ? (busyKind === "submit" ? (files.length ? "Uploading " + files.length + " file(s)…" : "Submitting…") : "Saving draft…") : "Submit Application"}
-            </button>
-          </>
-        }
-      />
-
-      <ReturnNotice info={returnInfo} />
-
-      <div className="card card-pad-0">
-        <div className="form-section">
-          <h4><span className="num">1</span> Research Information</h4>
-          <p className="section-sub">Title, field, type and timing of the proposed research.</p>
-          <div className="section-body">
-            <div className="form-grid">
-              <div className="field full">
-                <label>Research Title</label>
-                <input value={draft.title} onChange={e => upd("title", e.target.value)} />
-              </div>
-              <div className="field">
-                <label>Field / Discipline</label>
-                <input value={draft.field} onChange={e => upd("field", e.target.value)} />
-              </div>
-              <div className="field">
-                <label>Work Type</label>
-                <select value={draft.type} onChange={e => upd("type", e.target.value)}>
-                  {RA.WORK_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label>Keywords</label>
-                <input value={draft.keywords} onChange={e => upd("keywords", e.target.value)} />
-              </div>
-              <div className="field">
-                <label>Start Date</label>
-                <AUDatePicker value={draft.startDate} max={draft.endDate || undefined}
-                  onChange={v => upd("startDate", v)} placeholder="Select start date…" />
-              </div>
-              <div className="field">
-                <label>Expected End Date</label>
-                <AUDatePicker value={draft.endDate} min={draft.startDate || undefined}
-                  onChange={v => upd("endDate", v)} placeholder="Select end date…" />
-              </div>
-              <div className="field">
-                <label>Duration</label>
-                <input readOnly value={autoDuration ? autoDuration + (autoDuration === 1 ? " month" : " months") : "—"}
-                  style={{ background: "var(--paper-warm)", color: "var(--ink-2)", cursor: "not-allowed" }}
-                  title="Calculated automatically from the start and expected end dates" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="form-section">
-          <h4><span className="num">2</span> Researcher Information</h4>
-          <p className="section-sub">Identity details come from your account. You may update your academic title, position, phone, and office / room here.</p>
-          <div className="section-body">
-            <div className="form-grid">
-              <div className="field">
-                <label>Academic Title</label>
-                <select value={draft.title2} onChange={e => upd("title2", e.target.value)}>
-                  <option value="">Select title…</option>
-                  {RA.AU_TITLES.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label>Academic / Administrative Position</label>
-                <select value={draft.academicPosition} onChange={e => upd("academicPosition", e.target.value)}>
-                  <option value="">Select position…</option>
-                  {(RA.AU_ACADEMIC_POSITIONS || []).map(position => <option key={position} value={position}>{position}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label>Full Name</label>
-                <input value={draft.name} readOnly style={roStyle} />
-              </div>
-              <div className="field">
-                <label>AU ID</label>
-                <input value={draft.auId} readOnly style={roStyle} />
-              </div>
-              <div className="field">
-                <label>Email (AU only)</label>
-                <input type="email" value={draft.email} readOnly style={roStyle} />
-              </div>
-              <div className="field">
-                <label>Phone</label>
-                <ThaiPhoneInput value={draft.phone} onChange={value => upd("phone", value)} />
-              </div>
-              <div className="field">
-                <label>Office / Room</label>
-                <input value={draft.office} onChange={e => upd("office", e.target.value)} placeholder="e.g. Building A, Room 512" />
-              </div>
-              <UniversityJoinedDateField value={draft.joinedDate} onChange={v => upd("joinedDate", v)} readOnly />
-              <div className="field">
-                <label>Faculty</label>
-                <select value={draft.school} disabled style={roStyle}>
-                  <option value="">Select your faculty…</option>
-                  {RA.FACULTIES.map(f => <option key={f.code} value={f.name}>{f.name}</option>)}
-                </select>
-              </div>
-              <div className="field">
-                <label>Department</label>
-                <select value={draft.department} disabled style={roStyle}>
-                  <option value="">{draft.school ? "Select department…" : "Select a faculty first"}</option>
-                  {(RA.FACULTIES.find(f => f.name === draft.school) || { departments: [] }).departments.map(d => <option key={d} value={d}>{d}</option>)}
-                </select>
-              </div>
-            </div>
-
-            {isR3 && (
-              <div style={{ marginTop: 18, borderTop: "1px solid var(--line-2)", paddingTop: 16 }}>
-                <div className="eyebrow" style={{ marginBottom: 4 }}>Collaborators (Co-members)</div>
-                <p className="section-sub" style={{ marginTop: 0 }}>Add the other researchers and students collaborating on this paper. Leave empty if you are applying alone.</p>
-                <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
-                  <table className="tbl">
-                    <thead>
-                      <tr><th>Name</th><th style={{ width: 130 }}>Role</th><th style={{ width: 120 }}>AU ID</th><th>Email</th><th style={{ width: 48 }}></th></tr>
-                    </thead>
-                    <tbody>
-                      {coMembers.length === 0 && (
-                        <tr><td colSpan="5" style={{ color: "var(--ink-3)", textAlign: "center", padding: "14px" }}>No collaborators added — you are applying as the sole applicant.</td></tr>
-                      )}
-                      {coMembers.map((m, i) => (
-                        <tr key={i}>
-                          <td><input value={m.name} onChange={e => setMember(i, "name", e.target.value)} placeholder="Full name" style={{ width: "100%", minWidth: 140 }} /></td>
-                          <td>
-                            <select value={m.kind} onChange={e => setMember(i, "kind", e.target.value)}>
-                              <option value="Researcher">Researcher</option>
-                              <option value="Student">Student</option>
-                            </select>
-                          </td>
-                          <td><input value={m.auId} onChange={e => setMember(i, "auId", e.target.value)} placeholder="ID" style={{ width: "100%", minWidth: 90 }} /></td>
-                          <td><input type="email" value={m.email} onChange={e => setMember(i, "email", e.target.value)} placeholder="name@au.edu" style={{ width: "100%", minWidth: 150 }} /></td>
-                          <td style={{ textAlign: "center" }}><button type="button" className="btn btn-ghost btn-sm" onClick={() => removeMember(i)} title="Remove collaborator"><Icon name="Trash2" size={13} /></button></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <button type="button" className="btn btn-secondary btn-sm mt-1" onClick={addMember}><Icon name="Plus" size={13} /> Add collaborator</button>
-              </div>
-            )}
-          </div>
-        </div>
-
-        <div className="form-section">
-          <h4><span className="num">3</span> Budget Information</h4>
-          <p className="section-sub">Enter any amount up to the {maxAmount.toLocaleString()} THB {sys.code} maximum, then itemise it below. Caps: remuneration ≤{caps.remuneration}%, equipment ≤{caps.equipment}%, travel ≤{caps.travel}%, misc ≤{caps.misc}%.</p>
-          <div className="section-body">
-            <div className="form-grid">
-              <div className="field">
-                <label>Total Grant Requested (THB)</label>
-                <input value={Number(reqTotal || 0).toLocaleString()}
-                  onChange={e => {
-                    const v = (e.target.value + "").replace(/[^0-9]/g, ""); setReqTotal(v);
-                    const t = Number(v) || 0;
-                    const a = Math.round(t * (split.remuneration || 0) / 100), b = Math.round(t * (split.equipment || 0) / 100), c = Math.round(t * (split.travel || 0) / 100);
-                    const amts = [a, b, c, t - a - b - c];
-                    setBudgetRows(rows => rows.map((r, i) => ({ ...r, amount: amts[i] })));
-                  }}
-                  title="Enter any amount up to 100,000 THB — the breakdown below divides automatically"
-                  style={Number(reqTotal) > 100000 ? { borderColor: "var(--au-crimson)", color: "var(--au-crimson)", fontWeight: 600 } : {}} />
-              </div>
-              <div className="field">
-                <label>Currency</label>
-                <select><option>Thai Baht (THB)</option></select>
-              </div>
-              <div className="field full">
-                <label>Budget Breakdown — divides automatically from the total above (edit any amount to customise)</label>
-                <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
-                  <table className="tbl">
-                    <thead>
-                      <tr><th>Budget Item</th><th style={{ textAlign: "center" }}>% of total</th><th style={{ textAlign: "center" }}>AU cap</th><th style={{ width: 150, textAlign: "right" }}>Amount (THB)</th></tr>
-                    </thead>
-                    <tbody>
-                      {budgetRows.map((b, i) => {
-                        const reqNum = Number(reqTotal) || 0;
-                        const pct = reqNum > 0 ? Math.round((Number(b.amount) || 0) / reqNum * 100) : 0;
-                        const over = pct > capArr[i];
-                        return (
-                          <tr key={i}>
-                            <td>{b.item}</td>
-                            <td style={{ textAlign: "center" }}>
-                              <input value={pct} onChange={e => setPct(i, e.target.value)}
-                                style={{ width: 48, textAlign: "center", fontFamily: "ui-monospace, monospace", color: over ? "var(--au-crimson)" : "inherit", fontWeight: over ? 600 : 400 }} />
-                              <span style={{ color: over ? "var(--au-crimson)" : "var(--ink-3)" }}>%</span>
-                            </td>
-                            <td style={{ textAlign: "center", fontSize: 12, color: "var(--ink-3)" }}>≤ {capArr[i]}%</td>
-                            <td style={{ textAlign: "right" }}>
-                              <input value={(Number(b.amount) || 0).toLocaleString()} onChange={e => setAmt(i, e.target.value)}
-                                style={{ width: 120, textAlign: "right", fontFamily: "ui-monospace, monospace" }} />
-                            </td>
-                          </tr>
-                        );
-                      })}
-                      <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}>
-                        <td>Total of breakdown</td><td></td><td></td>
-                        <td style={{ textAlign: "right", color: total !== Number(reqTotal) ? "var(--au-crimson)" : "inherit" }}>{fmtBaht(total)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                {total !== Number(reqTotal) && <div style={{ fontSize: 12, color: "var(--au-crimson)", marginTop: 6 }}>Breakdown ({fmtBaht(total)}) doesn't match your requested total ({fmtBaht(Number(reqTotal))}) — adjust the amounts.</div>}
-              </div>
-              <div className="field full">
-                <label>Itemized Budget Breakdown — list what each amount is for (e.g. transport, materials, software)</label>
-                <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)" }}>
-                  <table className="tbl">
-                    <thead>
-                      <tr><th>Purpose / Note</th><th style={{ width: 160, textAlign: "right" }}>Amount (THB)</th><th style={{ width: 56 }}></th></tr>
-                    </thead>
-                    <tbody>
-                      {items.map((it, i) => (
-                        <tr key={i}>
-                          <td><input value={it.purpose} onChange={e => setItem(i, "purpose", e.target.value)} placeholder="e.g. Transport to off-campus data collection site" style={{ width: "100%", minWidth: 200 }} /></td>
-                          <td style={{ textAlign: "right" }}><input value={(Number(it.amount) || 0).toLocaleString()} onChange={e => setItem(i, "amount", e.target.value)} style={{ width: 120, textAlign: "right", fontFamily: "ui-monospace, monospace" }} /></td>
-                          <td style={{ textAlign: "center" }}><button type="button" className="btn btn-ghost btn-sm" onClick={() => removeItem(i)} title="Remove item"><Icon name="Trash2" size={13} /></button></td>
-                        </tr>
-                      ))}
-                      <tr style={{ background: "var(--paper-warm)", fontWeight: 600 }}>
-                        <td>Itemized total</td>
-                        <td style={{ textAlign: "right" }}>{fmtBaht(itemsTotal)}</td>
-                        <td></td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-                <button type="button" className="btn btn-secondary btn-sm mt-1" onClick={addItem}><Icon name="Plus" size={13} /> Add item</button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="form-section">
-          <h4><span className="num">4</span> Expected Outcomes</h4>
-          <p className="section-sub">Deliverables, publications, and downstream artefacts.</p>
-          <div className="section-body">
-            <div className="field">
-              <textarea
-                className="comment-input"
-                style={{ minHeight: 120 }}
-                value={draft.outcome}
-                onChange={e => upd("outcome", e.target.value)}
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="form-section">
-          <h4><span className="num">5</span> Required Documents</h4>
-          <p className="section-sub">Upload the {sys.code} PDF documents. You can add or delete files while the application is still waiting for Dean screening.</p>
-          <div className="section-body">
-            {isR3 ? (
-              <div style={{ background: "var(--paper-warm)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "12px 14px", marginBottom: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--ink-2)" }}>Documents required for an {sys.code} Paper Presentation Grant:</div>
-                <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink-2)", lineHeight: 1.7 }}>
-                  {(RA.PAPER_PRESENTATION_DOCS || []).map(d => (
-                    <li key={d.id}><b>{d.name.replace(/_/g, " ").replace(/\.pdf$/i, "")}</b> — {d.role.replace(/^AU-R3 requirement:?\s*/i, "")}</li>
-                  ))}
-                </ul>
-              </div>
-            ) : (
-              <div style={{ background: "var(--paper-warm)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "12px 14px", marginBottom: 14 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--ink-2)" }}>Download the blank AU forms you need (opens in a new tab):</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                  {RA.NECESSARY_DOCS.map(d => (
-                    <a key={d.file} href={d.file} target="_blank" rel="noopener noreferrer" className="btn btn-secondary btn-sm" style={{ textDecoration: "none" }}>
-                      <Icon name="Download" size={13} /> {d.name}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-            {existingDocs.length > 0 && (
-              <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
-                {existingDocs.map(d => (
-                  <div className="file-row" key={d.id || d.name}>
-                    <div className="ficon"><Icon name="FileText" size={18} /></div>
-                    <div className="fmeta">
-                      <div className="fn">{safeDocumentDisplayName(d)}{d.doc_type && safeDocumentDisplayName(d) !== d.doc_type && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{d.doc_type}</span>}</div>
-                      <div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div>
-                    </div>
-                    <div className="factions">
-                      <button className="btn btn-secondary btn-sm" onClick={() => onView(d)}><Icon name="Eye" size={13} /> View</button>
-                      <button className="btn btn-secondary btn-sm" onClick={() => onDownload(d)}><Icon name="Download" size={13} /> Download</button>
-                      <button className="btn btn-danger btn-sm" onClick={() => deleteExistingDoc(d)}><Icon name="Trash2" size={13} /> Delete</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            {files.length > 0 && (
-              <div style={{ border: "1px solid var(--line)", borderRadius: "var(--r-md)", marginBottom: 12 }}>
-                {files.map((it, i) => (
-                  <div className="file-row" key={i}>
-                    <div className="ficon"><Icon name="FileText" size={18} /></div>
-                    <div className="fmeta">
-                      <div className="fn">{it.file.name}{it.docType && <span style={{ marginLeft: 8, fontSize: 10, fontWeight: 700, color: "var(--au-crimson)", background: "var(--au-crimson-soft)", padding: "2px 8px", borderRadius: 999 }}>{it.docType}</span>}</div>
-                      <div className="fs">{(it.file.size / 1024).toFixed(0)} KB · ready to upload</div>
-                    </div>
-                    <div className="factions">
-                      <button className="btn btn-secondary btn-sm" onClick={() => setFiles(fs => fs.filter((_, j) => j !== i))}>
-                        <Icon name="X" size={13} /> Remove
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            <div className="field" style={{ maxWidth: 360, marginBottom: 10 }}>
-              <label>Document type for the next upload</label>
-              <select value={docType} onChange={e => setDocType(e.target.value)}>
-                {docTypeOptions.map(t => <option key={t} value={t}>{t === "Other supporting document" && !isR3 ? t + " (optional)" : t}</option>)}
-              </select>
-            </div>
-            <label className="upload-box mt-1" style={{ cursor: "pointer", display: "block" }}>
-              <input type="file" accept="application/pdf,.pdf" multiple style={{ display: "none" }} onChange={onFiles} />
-              <Icon name="Upload" size={26} className="icon" />
-              <div className="t">Click to upload your <b>{docType}</b></div>
-              <div className="s">PDF · max 10 MB per file</div>
-            </label>
-          </div>
-        </div>
-
-        <div style={{
-          padding: "16px 24px", borderTop: "1px solid var(--line)",
-          background: "var(--paper-warm)",
-          display: "flex", gap: 8, justifyContent: "flex-end",
-        }}>
-          {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, alignSelf: "center", marginRight: "auto" }}>{err}</div>}
-          <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
-          <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
-            <Icon name="Send" size={13} /> {busy ? (busyKind === "submit" ? (files.length ? "Uploading " + files.length + " file(s)…" : "Submitting…") : "Saving draft…") : "Submit Application"}
-          </button>
-        </div>
-      </div>
-    </>
-  );
-}
-
-
-const R3_DEFAULT_DRAFT = {
-  confName: "", organizer: "", website: "", confType: "International", conferenceLocation: "",
-  presentationDate: "", presentation: "Oral Presentation", journalDb: "", journalClassification: "",
-  paperTitle: "", field: "", keywords: "", corresponding: "", paperAbstract: "", authorType: "Lead Author",
-  name: "", title2: "", academicPosition: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
-};
 function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
   const fixedGrantAmount = 3500;
   const [draft, setDraft] = useState({ ...R3_DEFAULT_DRAFT });
@@ -1956,7 +1357,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
 
 
 function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, setSelectedApplicationId, grantType, toast, setConfirm, onGrantSwitch }) {
-  const sys = grantSystemFor(grantType || "au_r1");
+  const sys = grantSystemFor(grantType || "au_r3");
   const [myApps, setMyApps] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -1972,7 +1373,7 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
         submittedAt: a.submitted_at ? window.DB.fmtDate(a.submitted_at) : "—",
         stage: (a.statusBadge || window.DB.statusBadge(a.status, a.grant_type)).label, status: a.statusBadge || window.DB.statusBadge(a.status, a.grant_type), statusKey: a.status,
         grantType: a.grant_type,
-        grantCode: grantSystemFor(a.grant_type || "au_r1").code,
+        grantCode: grantSystemFor(a.grant_type || "au_r3").code,
         decisionReason: decision && String(decision.note || "").trim(),
         decisionRole: decision && decision.actor_role,
       };
@@ -2074,110 +1475,6 @@ function ResearcherApplications({ navigate, onDownload, openDetail, openDraft, s
 }
 
 
-function ProjectPrintSheet({ app, status }) {
-  const sys = grantSystemFor(app.grant_type || "au_r1");
-  const researcher = app.researcher || {};
-  const applicationContact = app.grant_type === "au_r3" ? (app.conference_info || {}) : (app.pub_info || {});
-  const researcherName = applicationContact.researcherName
-    ? applicationContact.researcherName
-    : ([researcher.name_title, researcher.full_name].filter(Boolean).join(" ") || "-");
-  const researcherEmail = applicationContact.researcherEmail || applicationContact.contactEmail || researcher.email;
-  const payments = (app.payments || []).slice().sort((a, b) => Number(a.instalment) - Number(b.instalment));
-  const show = value => value === 0 || value ? value : "-";
-  const date = value => value ? window.DB.fmtDate(value) : "-";
-  const amount = value => value === 0 || value ? fmtBaht(Number(value)) : "-";
-  const isR1 = (app.grant_type || "au_r1") === "au_r1";
-  const joinedDate = researcherJoinedDate(app);
-  const service = universityServiceEligibility(joinedDate);
-  const paymentRows = isR1
-    ? [1, 2, 3].map(phase => {
-        const payment = payments.find(p => Number(p.instalment) === phase);
-        return {
-          key: "phase-" + phase,
-          label: "Phase " + phase,
-          note: (phase === 2 ? 40 : 30) + "% milestone",
-          amount: payment && payment.amount,
-          paid: !!(payment && payment.status === "paid"),
-          paidAt: payment && payment.paid_at,
-        };
-      })
-    : [{
-        key: "single-payment",
-        label: sys.code + " payment",
-        note: "Single payment",
-        amount: app.approved_amount || app.requested_amount,
-        paid: ["active", "completed"].includes(app.status),
-        paidAt: ["active", "completed"].includes(app.status) ? (app.updated_at || app.decided_at) : null,
-      }];
-  const printDate = new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
-  return (
-    <section className="project-print-sheet">
-      <header className="project-print-header">
-        <img src="assets/au-logo.png" alt="Assumption University" />
-        <div>
-          <div className="project-print-university">Assumption University</div>
-          <div className="project-print-office">Office of Research Affairs | Research Grant Management System</div>
-        </div>
-        <div className="project-print-meta"><b>PROJECT SUMMARY</b><span>Printed {printDate}</span></div>
-      </header>
-
-      <div className="project-print-titlebar">
-        <div>
-          <span>Application ID</span>
-          <b>{show(app.code)}</b>
-        </div>
-        <div>
-          <span>Grant</span>
-          <b>{sys.code} - {sys.name}</b>
-        </div>
-        <div>
-          <span>Status</span>
-          <b>{status && status.label ? status.label : show(app.status)}</b>
-        </div>
-      </div>
-
-      <div className="project-print-section">
-        <h2>Researcher and Project</h2>
-        <div className="project-print-grid">
-          <div className="left"><span>Researcher</span><b>{researcherName}</b></div>
-          <div><span>AU ID</span><b>{show(researcher.au_id)}</b></div>
-          <div className="wide"><span>Research title</span><b>{show(app.title)}</b></div>
-          <div className="left"><span>Email</span><b>{show(researcherEmail)}</b></div>
-          <div><span>Faculty / Department</span><b>{show(app.faculty)}{app.department ? " - " + app.department : ""}</b></div>
-          <div className="left"><span>Joined Assumption University</span><b>{date(joinedDate)}{joinedDate ? " · " + service.months + " months" : ""}</b></div>
-          <div><span>Service eligibility</span><b>{joinedDate ? (service.eligible ? "Eligible" : "Not eligible until " + date(service.eligibleOn)) : "Not recorded"}</b></div>
-          <div className="left"><span>Submitted</span><b>{date(app.submitted_at || app.created_at)}</b></div>
-          <div><span>Approved amount</span><b>{amount(app.approved_amount || app.requested_amount)}</b></div>
-        </div>
-      </div>
-
-      <div className="project-print-section project-print-payment">
-        <h2>{isR1 ? "Payment Phases" : "Payment Status"}</h2>
-        <table>
-          <thead><tr><th>Payment</th><th>Amount</th><th>Status</th><th>Payment date</th></tr></thead>
-          <tbody>{paymentRows.map(row => <tr key={row.key}>
-            <td><b>{row.label}</b><small>{row.note}</small></td>
-            <td>{amount(row.amount)}</td>
-            <td>{row.paid ? "Paid" : "Pending"}</td>
-            <td>{date(row.paidAt)}</td>
-          </tr>)}</tbody>
-        </table>
-      </div>
-
-      <div className="project-print-verification">
-        <div><span>Researcher signature</span></div>
-        <div><span>Finance officer</span></div>
-        <div><span>Payment date</span></div>
-      </div>
-      <footer className="project-print-footer">
-        <span>AU-RGMS | {show(app.code)} | Project information</span>
-        <span>Page <i className="project-print-page"></i></span>
-      </footer>
-    </section>
-  );
-}
-
-
 function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
   const [app, setApp] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -2194,7 +1491,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
       }
       if (!id) { setApp(null); return; }
       setApp(await window.DB.applicationDetail(id));
-    } catch (e) {
+    } catch (error) {
       setApp(null);
     } finally {
       setLoading(false);
@@ -2203,23 +1500,23 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
 
   useEffect(() => { load(); }, [applicationId]);
 
-  const uploadMore = async (e) => {
-    const files = Array.from(e.target.files || []);
-    e.target.value = "";
+  const uploadMore = async event => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
     if (!files.length || !app || busy) return;
     setBusy(true);
     try {
-      for (const f of files) await window.DB.uploadDocument(app.id, f, null);
+      for (const file of files) await window.DB.uploadDocument(app.id, file, null);
       toast(files.length + " file(s) uploaded.");
       await load();
-    } catch (ex) {
-      toast("Upload error: " + ((ex && ex.message) || ex));
+    } catch (error) {
+      toast("Upload error: " + ((error && error.message) || error));
     } finally {
       setBusy(false);
     }
   };
 
-  const deleteDoc = (doc) => {
+  const deleteDoc = doc => {
     if (!canEditDocs) return;
     setConfirm({
       kind: "danger",
@@ -2228,7 +1525,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
       confirmLabel: "Delete File",
       onConfirm: async () => {
         try { await window.DB.deleteDocument(doc); toast(doc.name + " deleted."); await load(); }
-        catch (ex) { toast("Delete error: " + ((ex && ex.message) || ex)); }
+        catch (error) { toast("Delete error: " + ((error && error.message) || error)); }
       },
     });
   };
@@ -2250,12 +1547,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
     : app.grant_type === "au_r3" && app.conference_info && app.conference_info.authorType
       ? app.conference_info.authorType
       : "Lead Author";
-  const ownerParticipant = {
-    id: "owner",
-    name: researcherName,
-    email: researcherEmail,
-    authorRole: applicantAuthorRole,
-  };
+  const ownerParticipant = { id: "owner", name: researcherName, email: researcherEmail, authorRole: applicantAuthorRole };
   const listedAuthorParticipants = (app.co_members || []).map((member, index) => ({
     id: "author-" + index,
     name: member.name || member.email || "Researcher",
@@ -2268,38 +1560,6 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
   const status = app.statusBadge || window.DB.statusBadge(app.status, app.grant_type);
   const joinedDate = researcherJoinedDate(app);
   const service = universityServiceEligibility(joinedDate);
-  const isR1 = !app.grant_type || app.grant_type === "au_r1";
-  const payments = app.payments || [];
-  const reports = app.reports || [];
-  const phaseApproved = n => payments.some(p => Number(p.instalment) === n && p.status === "paid");
-  const milestoneReport = kind => reports.find(r => r.kind === kind && r.status === "accepted") || reports.find(r => r.kind === kind && r.status === "submitted");
-  const progressReport = milestoneReport("progress");
-  const finalReport = milestoneReport("final");
-  const progressAccepted = progressReport && progressReport.status === "accepted";
-  const finalAccepted = finalReport && finalReport.status === "accepted";
-  const openProjectReport = kind => navigate(kind === "progress" ? "r-progress" : "r-final", { keepSelection: true });
-  const printProject = () => {
-    const previousTitle = document.title;
-    const safeCode = String(app.code || "AU-Research-Project").replace(/[^a-zA-Z0-9_-]+/g, "-");
-    document.title = safeCode + "-Project-Summary";
-    window.print();
-    document.title = previousTitle;
-  };
-  const timelineApp = {
-    timeline: {
-      submission: { done: !["draft", "returned"].includes(app.status), current: ["draft", "returned"].includes(app.status), date: app.status === "returned" ? "Returned for revision" : app.status === "draft" ? "Draft" : window.DB.fmtDate(app.submitted_at || app.created_at), who: researcherName },
-      deanScreen: { current: app.status === "submitted", done: !["draft", "submitted", "returned"].includes(app.status), date: app.status === "submitted" ? "In progress" : !["draft", "submitted", "returned"].includes(app.status) ? "Completed" : "Not started" },
-      committee: { current: app.status === "committee_review", done: ["dean_sign", "iras_review", "approved", "active", "completed"].includes(app.status), date: app.status === "committee_review" ? "In progress" : ["dean_sign", "iras_review", "approved", "active", "completed"].includes(app.status) ? "Completed" : "Not started" },
-      iras: { current: ["dean_sign", "iras_review"].includes(app.status), done: ["approved", "active", "completed"].includes(app.status), date: ["dean_sign", "iras_review"].includes(app.status) ? "In progress" : ["approved", "active", "completed"].includes(app.status) ? "Completed" : "Not started" },
-      contract: { current: app.status === "approved", done: ["active", "completed"].includes(app.status), date: app.status === "approved" ? "In progress" : ["active", "completed"].includes(app.status) ? "Completed" : "Not started" },
-      pay1: { current: ["approved", "active"].includes(app.status) && !phaseApproved(1), done: phaseApproved(1), date: phaseApproved(1) ? "Completed" : ["approved", "active"].includes(app.status) ? "In progress" : "Not started" },
-      progress: { current: phaseApproved(1) && !progressAccepted, done: !!progressAccepted, date: progressAccepted ? "Accepted by RASSC · click to view" : progressReport ? "At RASSC review · click to view" : phaseApproved(1) ? "Ready to submit · click to open" : "Opens after Phase 1 approval" },
-      pay2: { current: !!progressAccepted && !phaseApproved(2), done: phaseApproved(2), date: phaseApproved(2) ? "Paid by Finance" : progressAccepted ? "Ready at Finance" : "After RASSC accepts progress report" },
-      final: { current: phaseApproved(2) && !finalAccepted, done: !!finalAccepted, date: finalAccepted ? "Accepted by RASSC · click to view" : finalReport ? "At RASSC review · click to view" : phaseApproved(2) ? "Ready to submit · click to open" : "Opens after Phase 2 approval" },
-      pay3: { current: !!finalAccepted && !phaseApproved(3), done: phaseApproved(3), date: phaseApproved(3) ? "Paid by Finance" : finalAccepted ? "Ready at Finance" : "After RASSC accepts final report" },
-      closed: { current: phaseApproved(3) && app.status !== "completed", done: app.status === "completed", date: app.status === "completed" ? "Project completed" : "After Phase 3 approval" },
-    },
-  };
 
   return (
     <>
@@ -2308,14 +1568,11 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
         desc={(app.code || "Application") + " - Submitted " + window.DB.fmtDate(app.submitted_at || app.created_at)}
         actions={
           <>
-            <button className="btn btn-secondary" onClick={printProject} title="Open the print dialog, then choose Save as PDF"><Icon name="Printer" size={13} /> Print PDF</button>
             <Badge status={status} />
             {["draft", "returned"].includes(app.status) && <button className="btn btn-secondary" onClick={() => navigate("r-submit", { keepSelection: true })}><Icon name="Edit3" size={13} /> {app.status === "returned" ? "Edit & Resubmit" : "Edit Draft"}</button>}
           </>
         }
       />
-
-      <ProjectPrintSheet app={app} status={status} />
 
       <ApplicationDecisionNotice app={app} />
 
@@ -2384,7 +1641,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
           </div>
 
           <div className="card mb-4">
-            <ReviewCommentHistory app={app} roles={app.grant_type === "au_r3" || app.grant_type === "au_r4" ? ["dean", "iras"] : ["dean", "committee", "rassc"]} />
+            <ReviewCommentHistory app={app} roles={["dean", "iras"]} />
           </div>
 
           <div className="card card-pad-0 mb-4">
@@ -2409,7 +1666,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
               {docs.map(d => (
                 <div className="file-row" key={d.id || d.name}>
                   <div className="ficon"><Icon name="FileText" size={18} /></div>
-                  <div className="fmeta"><div className="fn">{d.name}</div><div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div></div>
+                  <div className="fmeta"><div className="fn">{safeDocumentDisplayName(d)}</div><div className="fs">{d.size || "PDF"} - Uploaded {d.uploadedAt || "-"}</div></div>
                   <div className="factions">
                     <button className="btn btn-secondary btn-sm" onClick={() => onView(d)}><Icon name="Eye" size={13} /> View</button>
                     <button className="btn btn-secondary btn-sm" onClick={() => onDownload(d)}><Icon name="Download" size={13} /> Download</button>
@@ -2436,752 +1693,14 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
             <div className="card-body"><ApplicationEventTimeline app={app} /></div>
           </div>
 
-          {isR1 && <div className="card card-pad-0">
-            <div className="card-head"><h3>Project Reports</h3></div>
-            <div className="card-body">
-              <p className="text-sm text-muted" style={{ marginTop: 0 }}>Reports here belong only to <b>{app.code}</b> · {app.title}.</p>
-              <button className="btn btn-secondary" style={{ width: "100%", justifyContent: "space-between", marginBottom: 10 }} onClick={() => openProjectReport("progress")}>
-                <span><Icon name="FileText" size={14} /> Progress Report</span>
-                <span>{progressAccepted ? "Accepted" : progressReport ? "At RASSC" : phaseApproved(1) ? "Ready" : "Locked"} →</span>
-              </button>
-              <button className="btn btn-secondary" style={{ width: "100%", justifyContent: "space-between" }} onClick={() => openProjectReport("final")}>
-                <span><Icon name="FileCheck" size={14} /> Final Report</span>
-                <span>{finalAccepted ? "Accepted" : finalReport ? "At RASSC" : phaseApproved(2) ? "Ready" : "Locked"} →</span>
-              </button>
-            </div>
-          </div>}
         </div>
       </div>
     </>
   );
 }
 
-
-function ResearcherProgress({ applicationId, navigate, onDownload, onView, toast }) {
-  const [grant, setGrant] = useState(null);
-  const [reports, setReports] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [reportingPeriod, setReportingPeriod] = useState("Month 1 — Month 6");
-  const [customPeriod, setCustomPeriod] = useState("");
-  const [progressSummary, setProgressSummary] = useState("");
-  const [budgetUtilisation, setBudgetUtilisation] = useState("");
-  const [reportFile, setReportFile] = useState(null);
-  const [fileError, setFileError] = useState("");
-  const reload = async () => {
-    if (!applicationId) { setGrant(false); setReports([]); return; }
-    try {
-      const project = await window.DB.applicationDetail(applicationId);
-      if (project.grant_type && project.grant_type !== "au_r1") throw new Error("Progress reports are available only for AU-R1 projects.");
-      setGrant(project);
-      setReports(await window.DB.myReports("progress", applicationId));
-    } catch (e) { setGrant(false); setReports([]); }
-  };
-  useEffect(() => { reload(); }, [applicationId]);
-  const chooseReportFile = (event) => {
-    const file = event.target.files && event.target.files[0];
-    setFileError("");
-    if (!file) { setReportFile(null); return; }
-    if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
-      setReportFile(null);
-      setFileError("Please select a PDF file.");
-      event.target.value = "";
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      setReportFile(null);
-      setFileError("The progress report must be 10 MB or smaller.");
-      event.target.value = "";
-      return;
-    }
-    setReportFile(file);
-  };
-  const submit = async () => {
-    if (!grant) { toast("Open an AU-R1 project from My Applications first."); return; }
-    if (!reportFile) { toast("Select the progress report PDF before submitting."); return; }
-    const existingReport = (reports || []).find(r => r.status === "submitted" || r.status === "accepted");
-    const existingReportFile = (grant.documents || []).some(d => d.doc_type === "Progress Report");
-    if (existingReport && existingReport.status === "submitted" && !existingReportFile) {
-      setBusy(true);
-      let attachedDocument = null;
-      let attachmentSaved = false;
-      try {
-        attachedDocument = await window.DB.uploadDocument(grant.id, reportFile, "Progress Report");
-        attachmentSaved = true;
-        toast("Progress report PDF attached. RASSC can now review the submitted report.");
-        setReportFile(null);
-        await reload();
-      } catch (e) {
-        if (attachedDocument && !attachmentSaved) {
-          try { await window.DB.deleteDocument(attachedDocument); } catch (_) {}
-        }
-        toast("Error: " + (e.message || e));
-      }
-      setBusy(false);
-      return;
-    }
-    const finalPeriod = reportingPeriod === "custom" ? customPeriod.trim() : reportingPeriod;
-    if (!finalPeriod) { toast("Enter the reporting period."); return; }
-    setBusy(true);
-    let uploadedDocument = null;
-    let reportCreated = false;
-    try {
-      uploadedDocument = await window.DB.uploadDocument(grant.id, reportFile, "Progress Report");
-      await window.DB.submitReport(grant.id, "progress", {
-        reporting_period: finalPeriod,
-        summary: progressSummary.trim(),
-        budget_utilisation: budgetUtilisation.trim(),
-        document_id: uploadedDocument.id,
-      });
-      reportCreated = true;
-      toast("Progress report submitted. RASSC must accept it before Finance can approve the 40% phase.");
-      setReportFile(null);
-      setProgressSummary("");
-      setBudgetUtilisation("");
-      await reload();
-    } catch (e) {
-      if (uploadedDocument && !reportCreated) {
-        try { await window.DB.deleteDocument(uploadedDocument); } catch (_) {}
-      }
-      toast("Error: " + (e.message || e));
-    }
-    setBusy(false);
-  };
-  if (grant === null) return <><PageHeader title="Project Progress Report" desc="Loading the selected AU-R1 project." /><div className="card" style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>Loading project…</div></>;
-  if (!grant) return <><PageHeader title="Project Progress Report" desc="Choose the research project this report belongs to." /><div className="card"><Empty title="No project selected" desc="Open My Applications, choose View or Files, then open Progress Report from that project's timeline." icon="Folder" /><div style={{ textAlign: "center", paddingBottom: 24 }}><button className="btn btn-primary" onClick={() => navigate("r-applications")}><Icon name="ArrowLeft" size={13} /> My Applications</button></div></div></>;
-  const phaseOneApproved = (grant.payments || []).some(p => Number(p.instalment) === 1 && p.status === "paid");
-  const currentReport = (reports || []).find(r => r.status === "submitted" || r.status === "accepted");
-  const hasReportFile = (grant.documents || []).some(d => d.doc_type === "Progress Report");
-  const canAttachMissingFile = currentReport && currentReport.status === "submitted" && !hasReportFile;
-  const canSubmit = phaseOneApproved && !currentReport;
-  return (
-    <>
-      <PageHeader
-        title={"Progress Report · " + grant.title}
-        desc={(grant.code || "AU-R1 project") + " — this report belongs only to this selected research project."}
-        actions={<><button className="btn btn-secondary" onClick={() => navigate("r-detail", { keepSelection: true })}><Icon name="ArrowLeft" size={13} /> Back to Project</button><Badge status={{ label: "Routes to RASSC", cls: "badge-iras" }} /></>}
-      />
-
-      <div className="card card-pad-0 mb-4">
-        <div className="card-head"><h3>Selected Research Project</h3><div className="grow"></div><Badge status={window.DB.statusBadge(grant.status)} /></div>
-        <div className="card-body">
-          <div className="meta-row"><span className="l">Application ID</span><span className="r"><b>{grant.code}</b></span></div>
-          <div className="meta-row"><span className="l">Research title</span><span className="r"><b>{grant.title}</b></span></div>
-          <div className="meta-row"><span className="l">Faculty / Department</span><span className="r">{grant.faculty || "—"}{grant.department ? " · " + grant.department : ""}</span></div>
-          <div className="meta-row"><span className="l">Report unlock</span><span className="r">{phaseOneApproved ? "Phase 1 approved — report is available" : "Locked until Finance approves Phase 1"}</span></div>
-        </div>
-      </div>
-
-      <div className="grid-2">
-        <div>
-          <div className="card card-pad-0 mb-4">
-            <div className="card-head"><h3>Submit Progress Report</h3></div>
-            <div className="card-body">
-              <div className="field">
-                <label>Reporting period</label>
-                <select value={reportingPeriod} onChange={e => setReportingPeriod(e.target.value)}>
-                  <option value="Month 1 — Month 6">Month 1 — Month 6</option>
-                  <option value="Month 7 — Month 9">Month 7 — Month 9</option>
-                  <option value="custom">Enter manually</option>
-                </select>
-              </div>
-              {reportingPeriod === "custom" && <div className="field">
-                <label>Custom reporting period *</label>
-                <input value={customPeriod} onChange={e => setCustomPeriod(e.target.value)} placeholder="Example: Month 4 — Month 8" />
-              </div>}
-              <div className="field">
-                <label>Summary of progress</label>
-                <textarea className="comment-input" style={{minHeight: 120}} value={progressSummary} onChange={e => setProgressSummary(e.target.value)} placeholder="Enter progress summary for this reporting period."></textarea>
-              </div>
-              <div className="field">
-                <label>Budget utilisation</label>
-                <textarea className="comment-input" value={budgetUtilisation} onChange={e => setBudgetUtilisation(e.target.value)} placeholder="Summarize spending for this reporting period."></textarea>
-              </div>
-              <div className="field">
-                <label>Upload progress report (PDF) *</label>
-                <label className={"upload-box" + (reportFile ? " has-file" : "")} style={{display: "block"}}>
-                  <input key={reportFile ? reportFile.name + reportFile.lastModified : "empty-progress-file"} type="file" accept="application/pdf,.pdf" style={{display: "none"}} onChange={chooseReportFile} />
-                  <Icon name="Upload" size={24} className="icon" />
-                  <div className="t">{reportFile ? reportFile.name : hasReportFile ? "Progress report PDF is attached" : "Click to select the progress report"}</div>
-                  <div className="s">{reportFile ? (reportFile.size / 1024 / 1024).toFixed(2) + " MB · Click to replace" : "PDF · max 10 MB"}</div>
-                </label>
-                {fileError && <div className="form-error" style={{marginTop: 7}}>{fileError}</div>}
-              </div>
-              <div className="flex justify-between items-center mt-4">
-                <span className="text-sm text-muted">Submitted first to RASSC. Finance receives Phase 2 only after RASSC accepts the report.</span>
-                <button className="btn btn-primary" onClick={submit} disabled={busy || (!canSubmit && !canAttachMissingFile) || !reportFile || (!currentReport && reportingPeriod === "custom" && !customPeriod.trim())}>
-                  <Icon name="Send" size={13} /> {busy ? "Uploading…" : canAttachMissingFile ? (reportFile ? "Attach PDF to Submitted Report" : "Select PDF to Attach") : currentReport ? (currentReport.status === "accepted" ? "Report Accepted" : "At RASSC Review") : !phaseOneApproved ? "Locked · Phase 1 Required" : !reportFile ? "Select PDF to Submit" : "Submit Report"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div className="card card-pad-0">
-            <div className="card-head"><h3>Submitted Progress Reports</h3></div>
-            <div className="card-body">
-              {reports === null && <div className="text-sm text-muted">Loading reports...</div>}
-              {reports && reports.length === 0 && <div className="text-sm text-muted">No progress reports submitted yet.</div>}
-              {(reports || []).map(r => (
-                <div key={r.id} className="flex justify-between items-center" style={{padding: "10px 0", borderBottom: "1px solid var(--line-2)"}}>
-                  <div>
-                  <div style={{fontWeight: 600}}>{grant.code} · {grant.title}</div>
-                    <div className="text-sm text-muted">Status: {r.status}</div>
-                  </div>
-                  <Badge status={r.status === "accepted" ? { label: "Accepted · Sent to Finance", cls: "badge-paid" } : { label: "At RASSC Review", cls: "badge-iras" }} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="card card-pad-0 mt-4">
-            <div className="card-head"><h3>Reporting Schedule</h3></div>
-            <div className="card-body">
-              <Timeline
-                steps={[
-                  { key: "k1", label: "Project kickoff" },
-                  { key: "p1", label: "Progress Report (Month 6)" },
-                  { key: "p2", label: "Phase 2 Finance Approval (40%)" },
-                  { key: "f1", label: "Final Report (Month 12)" },
-                  { key: "f2", label: "Phase 3 Finance Approval (30%)" },
-                ]}
-                app={{ timeline: {
-                  k1: { done: phaseOneApproved, date: phaseOneApproved ? "Phase 1 approved" : "Waiting for Phase 1" },
-                  p1: { current: phaseOneApproved && !(currentReport && currentReport.status === "accepted"), done: currentReport && currentReport.status === "accepted", date: currentReport ? (currentReport.status === "accepted" ? "Accepted by RASSC" : "At RASSC review") : phaseOneApproved ? "Ready to submit for " + grant.code : "Locked" },
-                  p2: { current: currentReport && currentReport.status === "accepted", date: "After RASSC accepts progress report" },
-                  f1: { date: "At project completion" },
-                  f2: { date: "After RASSC accepts final report" },
-                }}}
-              />
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-
-function ResearcherFinal({ applicationId, navigate, onDownload, onView, toast }) {
-  const [grant, setGrant] = useState(null);
-  const [reports, setReports] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [finalFile, setFinalFile] = useState(null);
-  const [fileError, setFileError] = useState("");
-  const [totalSpent, setTotalSpent] = useState("");
-  const [completion, setCompletion] = useState("");
-  const [outcomes, setOutcomes] = useState("");
-  const [lessons, setLessons] = useState("");
-  const reload = async () => {
-    if (!applicationId) { setGrant(false); setReports([]); return; }
-    try {
-      const project = await window.DB.applicationDetail(applicationId);
-      if (project.grant_type && project.grant_type !== "au_r1") throw new Error("Final reports are available only for AU-R1 projects.");
-      setGrant(project);
-      setReports(await window.DB.myReports("final", applicationId));
-    } catch (e) { setGrant(false); setReports([]); }
-  };
-  useEffect(() => { reload(); }, [applicationId]);
-  const chooseFinalFile = (event) => {
-    const file = event.target.files && event.target.files[0];
-    setFileError("");
-    if (!file) { setFinalFile(null); return; }
-    if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) {
-      setFinalFile(null);
-      setFileError("Please select a PDF file.");
-      event.target.value = "";
-      return;
-    }
-    if (file.size > 15 * 1024 * 1024) {
-      setFinalFile(null);
-      setFileError("The final report must be 15 MB or smaller.");
-      event.target.value = "";
-      return;
-    }
-    setFinalFile(file);
-  };
-  const submit = async () => {
-    if (!grant) { toast("Open an AU-R1 project from My Applications first."); return; }
-    if (!finalFile) { toast("Select the final report PDF before submitting."); return; }
-    const existingReport = (reports || []).find(r => r.status === "submitted" || r.status === "accepted");
-    const existingReportFile = (grant.documents || []).some(d => d.doc_type === "Final Report");
-    if (existingReport && existingReport.status === "submitted" && !existingReportFile) {
-      setBusy(true);
-      let attachedDocument = null;
-      let attachmentSaved = false;
-      try {
-        attachedDocument = await window.DB.uploadDocument(grant.id, finalFile, "Final Report");
-        attachmentSaved = true;
-        toast("Final report PDF attached. RASSC can now review the submitted report.");
-        setFinalFile(null);
-        await reload();
-      } catch (e) {
-        if (attachedDocument && !attachmentSaved) {
-          try { await window.DB.deleteDocument(attachedDocument); } catch (_) {}
-        }
-        toast("Error: " + (e.message || e));
-      }
-      setBusy(false);
-      return;
-    }
-    setBusy(true);
-    let uploadedDocument = null;
-    let reportCreated = false;
-    try {
-      uploadedDocument = await window.DB.uploadDocument(grant.id, finalFile, "Final Report");
-      await window.DB.submitReport(grant.id, "final", {
-        summary: [completion && "Completion: " + completion + "%.", outcomes && "Outcomes: " + outcomes.trim(), lessons && "Lessons: " + lessons.trim()].filter(Boolean).join(" "),
-        total_spent: totalSpent,
-        completion: completion,
-        outcomes: outcomes.trim(),
-        lessons: lessons.trim(),
-        document_id: uploadedDocument.id,
-      });
-      reportCreated = true;
-      toast("Final report submitted. RASSC must accept it before Finance can approve the final 30% phase.");
-      setFinalFile(null);
-      setTotalSpent("");
-      setCompletion("");
-      setOutcomes("");
-      setLessons("");
-      await reload();
-    } catch (e) {
-      if (uploadedDocument && !reportCreated) {
-        try { await window.DB.deleteDocument(uploadedDocument); } catch (_) {}
-      }
-      toast("Error: " + (e.message || e));
-    }
-    setBusy(false);
-  };
-  if (grant === null) return <><PageHeader title="Project Final Report" desc="Loading the selected AU-R1 project." /><div className="card" style={{ padding: 40, textAlign: "center", color: "var(--ink-3)" }}>Loading project…</div></>;
-  if (!grant) return <><PageHeader title="Project Final Report" desc="Choose the research project this report belongs to." /><div className="card"><Empty title="No project selected" desc="Open My Applications, choose View or Files, then open Final Report from that project's timeline." icon="Folder" /><div style={{ textAlign: "center", paddingBottom: 24 }}><button className="btn btn-primary" onClick={() => navigate("r-applications")}><Icon name="ArrowLeft" size={13} /> My Applications</button></div></div></>;
-  const phaseTwoApproved = (grant.payments || []).some(p => Number(p.instalment) === 2 && p.status === "paid");
-  const currentReport = (reports || []).find(r => r.status === "submitted" || r.status === "accepted");
-  const hasReportFile = (grant.documents || []).some(d => d.doc_type === "Final Report");
-  const canAttachMissingFile = currentReport && currentReport.status === "submitted" && !hasReportFile;
-  const canSubmit = phaseTwoApproved && !currentReport;
-  return (
-    <>
-      <PageHeader
-        title={"Final Report · " + grant.title}
-        desc={(grant.code || "AU-R1 project") + " — this report belongs only to this selected research project."}
-        actions={<><button className="btn btn-secondary" onClick={() => navigate("r-detail", { keepSelection: true })}><Icon name="ArrowLeft" size={13} /> Back to Project</button><Badge status={{ label: "Routes to RASSC", cls: "badge-iras" }} /></>}
-      />
-
-      <div className="card card-pad-0 mb-4">
-        <div className="card-head"><h3>Selected Research Project</h3><div className="grow"></div><Badge status={window.DB.statusBadge(grant.status)} /></div>
-        <div className="card-body">
-          <div className="meta-row"><span className="l">Application ID</span><span className="r"><b>{grant.code}</b></span></div>
-          <div className="meta-row"><span className="l">Research title</span><span className="r"><b>{grant.title}</b></span></div>
-          <div className="meta-row"><span className="l">Faculty / Department</span><span className="r">{grant.faculty || "—"}{grant.department ? " · " + grant.department : ""}</span></div>
-          <div className="meta-row"><span className="l">Report unlock</span><span className="r">{phaseTwoApproved ? "Phase 2 approved — report is available" : "Locked until Finance approves Phase 2"}</span></div>
-        </div>
-      </div>
-
-      <div className="grid-2">
-        <div>
-          <div className="card card-pad-0">
-            <div className="card-head"><h3>Submit Final Report</h3></div>
-            <div className="card-body">
-              <div className="field">
-                <label>Final report PDF *</label>
-                <label className={"upload-box" + (finalFile ? " has-file" : "")} style={{display: "block"}}>
-                  <input key={finalFile ? finalFile.name + finalFile.lastModified : "empty-final-file"} type="file" accept="application/pdf,.pdf" style={{display: "none"}} onChange={chooseFinalFile} />
-                  <Icon name="Upload" size={24} className="icon" />
-                  <div className="t">{finalFile ? finalFile.name : hasReportFile ? "Final report PDF is attached" : "Click to select the final report"}</div>
-                  <div className="s">{finalFile ? (finalFile.size / 1024 / 1024).toFixed(2) + " MB · Click to replace" : "PDF · max 15 MB"}</div>
-                </label>
-                {fileError && <div className="form-error" style={{marginTop: 7}}>{fileError}</div>}
-              </div>
-              <div className="form-grid">
-                <div className="field">
-                  <label>Total spent (THB)</label>
-                  <input type="number" min="0" value={totalSpent} onChange={e => setTotalSpent(e.target.value)} placeholder="Enter total spent" />
-                </div>
-                <div className="field">
-                  <label>Project completion (%)</label>
-                  <input type="number" min="0" max="100" value={completion} onChange={e => setCompletion(e.target.value)} placeholder="Enter completion percentage" />
-                </div>
-                <div className="field full">
-                  <label>Outcomes delivered</label>
-                  <textarea className="comment-input" value={outcomes} onChange={e => setOutcomes(e.target.value)} placeholder="List final outcomes delivered."></textarea>
-                </div>
-                <div className="field full">
-                  <label>Lessons learned</label>
-                  <textarea className="comment-input" value={lessons} onChange={e => setLessons(e.target.value)} placeholder="Summarize lessons learned, issues, and follow-up actions."></textarea>
-                </div>
-              </div>
-              <div className="flex justify-between items-center mt-4">
-                <span className="text-sm text-muted">Submitted first to RASSC. Finance receives Phase 3 only after RASSC accepts the report.</span>
-                <button className="btn btn-primary" onClick={submit} disabled={busy || (!canSubmit && !canAttachMissingFile) || !finalFile}>
-                  <Icon name="Send" size={13} /> {busy ? "Uploading…" : canAttachMissingFile ? (finalFile ? "Attach PDF to Submitted Report" : "Select PDF to Attach") : currentReport ? (currentReport.status === "accepted" ? "Report Accepted" : "At RASSC Review") : !phaseTwoApproved ? "Locked · Phase 2 Required" : !finalFile ? "Select PDF to Submit" : "Submit Final Report"}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div>
-          <div className="card card-pad-0">
-            <div className="card-head"><h3>Submitted Final Reports</h3></div>
-            <div className="card-body">
-              {reports === null && <div className="text-sm text-muted">Loading reports...</div>}
-              {reports && reports.length === 0 && <div className="text-sm text-muted">No final reports submitted yet.</div>}
-              {(reports || []).map(r => (
-                <div key={r.id} className="flex justify-between items-center" style={{padding: "10px 0", borderBottom: "1px solid var(--line-2)"}}>
-                  <div>
-                    <div style={{fontWeight: 600}}>{grant.code} · {grant.title}</div>
-                    <div className="text-sm text-muted">Status: {r.status}</div>
-                  </div>
-                  <Badge status={r.status === "accepted" ? { label: "Accepted · Sent to Finance", cls: "badge-paid" } : { label: "At RASSC Review", cls: "badge-iras" }} />
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="card card-pad-0 mt-4">
-            <div className="card-head"><h3>Required Attachments</h3></div>
-            <div className="card-body" style={{paddingTop: 8}}>
-              {[
-                "Final outcomes report (PDF)",
-                "Final financial statement",
-                "Publication or conference proofs",
-                "Dataset / artefact links",
-              ].map((t, i) => (
-                <div key={i} style={{
-                  display: "flex", alignItems: "center", gap: 10,
-                  padding: "8px 0", borderBottom: i < 3 ? "1px solid var(--line-2)" : "none",
-                }}>
-                  <span style={{
-                    width: 18, height: 18, borderRadius: "50%",
-                    background: "var(--line-2)",
-                    color: "var(--ink-4)",
-                    display: "grid", placeItems: "center",
-                  }}>
-                    <Icon name="Clock" size={11} />
-                  </span>
-                  <span style={{fontSize: 13}}>{t}</span>
-                  <span className="badge badge-pending" style={{marginLeft: "auto"}}><span className="dot"></span>Pending</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-
-function SingleGrantPaymentStatus({ grantType }) {
-  const isR4 = grantType === "au_r4";
-  const [grant, setGrant] = useState(null);
-  useEffect(() => { window.DB.myGrant(grantType).then(g => setGrant(g || false)).catch(() => setGrant(false)); }, [grantType]);
-  const STEPS = ["Not yet approved", "Approved for Payment", "Finance Processing", "Completed"];
-  const stepIdx = { approved: 1, active: 2, completed: 3 };
-  if (grant === null) {
-    return (<><PageHeader title="Payment Status" desc="Your publication reward payment status." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "40px" }}>Loading…</div></>);
-  }
-  if (!grant) {
-    return (<><PageHeader title="Payment Status" desc={isR4 ? "Your publication reward payment status." : "Your paper presentation grant payment status."} /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "48px" }}>{isR4 ? "No approved claim yet. Once IRAS approves your publication claim, its payment status appears here." : "No approved grant yet. Once your paper presentation grant is approved, its payment status appears here."}</div></>);
-  }
-  const idx = stepIdx[grant.status] != null ? stepIdx[grant.status] : 0;
-  const pi = grant.pub_info || {}, ci = grant.conference_info || {};
-  return (
-    <>
-      <PageHeader title="Payment Status" desc={(isR4 ? "Publication reward · " : "Paper presentation grant · ") + grant.code} actions={<Badge status={window.DB.statusBadge(grant.status, grant.grant_type)} />} />
-      <div className="card card-pad-0 mb-6">
-        <div className="card-head"><h3>{grant.title}</h3></div>
-        <div className="card-body">
-          <div className="meta-row"><span className="l">Application ID</span><span className="r">{grant.code}</span></div>
-          {isR4 && <div className="meta-row"><span className="l">Journal</span><span className="r">{pi.journal || "-"}{pi.indexLabel ? " · " + pi.indexLabel : ""}</span></div>}
-          {!isR4 && <div className="meta-row"><span className="l">Conference</span><span className="r">{ci.confName || "-"}</span></div>}
-          <div className="meta-row"><span className="l">{isR4 ? "Requested claim" : "Requested amount"}</span><span className="r">{fmtBaht(Number(grant.requested_amount || 0))}</span></div>
-          <div className="meta-row"><span className="l">{isR4 ? "IRAS-approved amount" : "Approved amount"}</span><span className="r">{grant.approved_amount ? fmtBaht(Number(grant.approved_amount)) : "—"}</span></div>
-          <div className="meta-row"><span className="l">Payment status</span><span className="r">{grant.status === "approved" ? "Awaiting Finance Completion" : grant.status === "active" ? "At Finance" : grant.status === "completed" ? "Completed" : "Not yet approved"}</span></div>
-          <div className="meta-row"><span className="l">Completion date</span><span className="r">{grant.status === "completed" ? window.DB.fmtDate(grant.updated_at || grant.decided_at) : "—"}</span></div>
-        </div>
-      </div>
-      <div className="card card-pad-0">
-        <div className="card-head"><h3>Payment Progress</h3></div>
-        <div className="card-body">
-          <div style={{ display: "flex", gap: 0 }}>
-            {STEPS.map((s, i) => (
-              <div key={s} style={{ flex: 1, textAlign: "center", position: "relative" }}>
-                <div style={{ height: 4, background: i <= idx ? "var(--au-crimson)" : "var(--line)", margin: "0 0 10px" }}></div>
-                <div style={{ width: 12, height: 12, borderRadius: "50%", background: i <= idx ? "var(--au-crimson)" : "var(--line)", margin: "-17px auto 8px", border: "2px solid var(--paper)" }}></div>
-                <div style={{ fontSize: 11, color: i === idx ? "var(--au-crimson)" : "var(--ink-3)", fontWeight: i === idx ? 700 : 400 }}>{s}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-function ResearcherPayments({ onDownload, toast, grantType }) {
-  if (grantType === "au_r3" || grantType === "au_r4") return <SingleGrantPaymentStatus grantType={grantType} />;
-  return <R1PaymentStatus onDownload={onDownload} toast={toast} />;
-}
-
-function R1PaymentStatus({ onDownload, toast }) {
-  const [grant, setGrant] = useState(null);
-  useEffect(() => { window.DB.myGrant("au_r1").then(g => setGrant(g || false)).catch(() => setGrant(false)); }, []);
-  const triggers = { 1: "Available after grant approval", 2: "After Phase 1 is paid + accepted progress report", 3: "After Phase 2 is paid + accepted final report" };
-  const trName = { 1: "Phase 1 · 30%", 2: "Phase 2 · 40%", 3: "Phase 3 · 30%" };
-
-  if (grant === null) {
-    return (<><PageHeader title="Payment Status" desc="Your AU-R1 grant is paid in three phases." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "40px" }}>Loading…</div></>);
-  }
-  if (!grant) {
-    return (<><PageHeader title="Payment Status" desc="Your AU-R1 grant is paid in three phases." /><div className="card" style={{ textAlign: "center", color: "var(--ink-3)", padding: "48px" }}>No approved grant yet. Once your application is approved, the 30 / 40 / 30 payment phases will appear here.</div></>);
-  }
-
-  const pays = grant.payments || [];
-  return (
-    <>
-      <PageHeader
-        title="Payment Status"
-        desc={"Three-phase payment for " + grant.code + " · Total grant " + fmtBaht(grant.approved_amount || grant.requested_amount)}
-      />
-
-      <div className="grid-3 mb-6">
-        {pays.map(p => (
-          <div key={p.id} className="pay-card">
-            <div className="pay-num">{p.pct}%</div>
-            <div className="pct">Phase {p.instalment}</div>
-            <div className="amt">{fmtBaht(p.amount)}</div>
-            <span className={"badge " + (p.status === "paid" ? "badge-paid" : "badge-pending")}><span className="dot"></span>{p.status === "paid" ? "Paid" : "Pending Payment"}</span>
-            <div className="meta-row mt-4"><span className="l">Condition</span><span className="r">{triggers[p.instalment]}</span></div>
-            <div className="meta-row"><span className="l">Paid on</span><span className="r">{p.paid_at ? window.DB.fmtDate(p.paid_at) : "—"}</span></div>
-          </div>
-        ))}
-      </div>
-
-      <div className="card card-pad-0">
-        <div className="card-head"><h3>Payment Log</h3></div>
-        <table className="tbl">
-          <thead>
-            <tr><th>Phase</th><th>Amount</th><th>Condition</th><th>Status</th><th>Paid on</th></tr>
-          </thead>
-          <tbody>
-            {pays.map(p => (
-              <tr key={p.id}>
-                <td>{trName[p.instalment]}</td>
-                <td>{fmtBaht(p.amount)}</td>
-                <td style={{ fontSize: 12, color: "var(--ink-3)" }}>{triggers[p.instalment]}</td>
-                <td><span className={"badge " + (p.status === "paid" ? "badge-paid" : "badge-pending")}><span className="dot"></span>{p.status === "paid" ? "Paid" : "Pending"}</span></td>
-                <td style={{ fontSize: 12 }}>{p.paid_at ? window.DB.fmtDate(p.paid_at) : "—"}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </>
-  );
-}
-
-function ResearcherPublicationGrants({ toast }) {
-  const [me, setMe] = useState(null);
-  const [rows, setRows] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const [file, setFile] = useState(null);
-  const [form, setForm] = useState({
-    article_title: "",
-    journal_name: "",
-    indexing: "scopus",
-    quartile: "Q1",
-    publication_type: "journal",
-    doi: "",
-    published_on: "",
-    requested_amount: 0,
-  });
-  const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const load = () => {
-    window.AUTH.profile().then(setMe).catch(() => {});
-    window.DB.myPublicationGrants().then(setRows).catch(() => setRows([]));
-  };
-  useEffect(() => { load(); }, []);
-  const estimate = window.DB.publicationAwardAmount(form.indexing, form.quartile, form.publication_type, form.requested_amount);
-  const needsActual = form.indexing === "tci" || form.indexing === "other" || ["other"].includes(form.publication_type);
-  const submit = async (saveDraft) => {
-    setErr("");
-    if (!form.article_title.trim()) { setErr("Publication title is required."); return; }
-    if (!form.journal_name.trim() && form.publication_type === "journal") { setErr("Journal name is required."); return; }
-    if (!saveDraft && !file) { setErr("Attach a PDF evidence file before submitting."); return; }
-    if (needsActual && !Number(form.requested_amount || 0)) { setErr("Enter the publication fee for this publication type."); return; }
-    setBusy(true);
-    try {
-      const g = await window.DB.createPublicationGrant({
-        ...form,
-        faculty: me && me.faculty,
-        department: me && me.department,
-        requested_amount: estimate,
-      }, !saveDraft);
-      if (file) await window.DB.uploadPublicationEvidence(g.id, file);
-      toast(saveDraft ? "Publication grant draft saved." : g.code + " submitted to RASSC.");
-      setForm({ article_title: "", journal_name: "", indexing: "scopus", quartile: "Q1", publication_type: "journal", doi: "", published_on: "", requested_amount: 0 });
-      setFile(null);
-      load();
-    } catch (e) {
-      setErr((e && e.message) || "Could not save publication grant.");
-    } finally {
-      setBusy(false);
-    }
-  };
-  const openEvidence = async (g, download) => {
-    try {
-      const url = await window.DB.publicationEvidenceUrl(g, download);
-      window.open(url, "_blank", "noopener,noreferrer");
-    } catch (e) {
-      toast("No evidence PDF is attached to this publication grant.");
-    }
-  };
-  return (
-    <>
-      <PageHeader
-        title="Paper Publication Grant"
-        desc="Apply for AU publication rewards under Announcement No.16/2024."
-        actions={<Badge status={{ label: "Scopus Q1 80k · Q2 60k · Q3 50k · Q4 40k", cls: "badge-academic" }} />}
-      />
-      <div className="grid-2">
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>Publication Grant Application</h3></div>
-          <div className="card-body">
-            <div className="field"><label>Publication title</label><input value={form.article_title} onChange={e => setField("article_title", e.target.value)} /></div>
-            <div className="form-grid">
-              <div className="field"><label>Journal / venue</label><input value={form.journal_name} onChange={e => setField("journal_name", e.target.value)} /></div>
-              <div className="field"><label>DOI / reference</label><input value={form.doi} onChange={e => setField("doi", e.target.value)} /></div>
-            </div>
-            <div className="form-grid">
-              <div className="field"><label>Publication type</label><select value={form.publication_type} onChange={e => setField("publication_type", e.target.value)}><option value="journal">Journal article</option><option value="creative">Creative work</option><option value="patent">Patent</option><option value="petty">Petty patent</option><option value="other">Other reimbursable fee</option></select></div>
-              <div className="field"><label>Indexing</label><select value={form.indexing} onChange={e => setField("indexing", e.target.value)}><option value="scopus">Scopus</option><option value="wos">Web of Science</option><option value="tci">TCI</option><option value="other">Other</option></select></div>
-            </div>
-            <div className="form-grid">
-              <div className="field"><label>Quartile / tier</label><select value={form.quartile} onChange={e => setField("quartile", e.target.value)} disabled={form.indexing !== "scopus"}><option value="Q1">Q1</option><option value="Q2">Q2</option><option value="Q3">Q3</option><option value="Q4">Q4</option></select></div>
-              <div className="field"><label>Published date</label><AUDatePicker value={form.published_on} onChange={v => setField("published_on", v)} placeholder="Select published date…" /></div>
-            </div>
-            {needsActual && <div className="field"><label>Publication Fee (THB)</label><input value={form.requested_amount} onChange={e => setField("requested_amount", e.target.value.replace(/[^0-9]/g, ""))} /></div>}
-            <div className="field"><label>Evidence PDF</label><input type="file" accept="application/pdf,.pdf" onChange={e => setFile((e.target.files || [])[0] || null)} /></div>
-            <div style={{ padding: 14, border: "1px solid var(--line)", borderRadius: "var(--r-md)", background: "var(--paper-warm)", marginBottom: 12 }}>
-              <div className="text-sm text-muted">Estimated AU reward</div>
-              <div style={{ fontFamily: "var(--font-serif)", fontSize: 28 }}>{fmtBaht(estimate)}</div>
-            </div>
-            {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, marginBottom: 10 }}>{err}</div>}
-            <div className="flex gap-2 justify-end">
-              <button className="btn btn-secondary" disabled={busy} onClick={() => submit(true)}>Save Draft</button>
-              <button className="btn btn-primary" disabled={busy} onClick={() => submit(false)}><Icon name="Send" size={14} /> Submit to RASSC</button>
-            </div>
-          </div>
-        </div>
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>My Publication Grants</h3></div>
-          <div>
-            {rows === null && <div style={{ padding: 32, textAlign: "center", color: "var(--ink-3)" }}>Loading publication grants...</div>}
-            {rows && rows.length === 0 && <Empty title="No publication grants yet" desc="Submitted publication rewards will appear here." icon="FileText" />}
-            {(rows || []).map(g => (
-              <div key={g._uuid} style={{ padding: "16px 20px", borderBottom: "1px solid var(--line-2)" }}>
-                <div className="flex items-center gap-2 mb-2"><span className="id">{g.id}</span><Badge status={g.status} /></div>
-                <div style={{ fontWeight: 600, fontSize: 13 }}>{g.title}</div>
-                <div className="text-sm text-muted">{g.indexing}{g.quartile ? " · " + g.quartile : ""} · {fmtBaht(g.budgetTotal)}</div>
-                <div className="flex gap-2 mt-3">
-                  <button className="btn btn-secondary btn-sm" onClick={() => openEvidence(g, false)}><Icon name="Eye" size={12} /> Evidence</button>
-                  <button className="btn btn-secondary btn-sm" onClick={() => openEvidence(g, true)}><Icon name="Download" size={12} /> Download</button>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-function ResearcherReimbursements({ toast }) {
-  const [me, setMe] = useState(null);
-  const [rows, setRows] = useState(null);
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState("");
-  const [file, setFile] = useState(null);
-  const [form, setForm] = useState({ title: "", category: RA.REIMBURSE_CATEGORIES[0], description: "", requested_amount: "" });
-  const setField = (k, v) => setForm(f => ({ ...f, [k]: v }));
-  const load = () => {
-    window.AUTH.profile().then(setMe).catch(() => {});
-    window.DB.myReimbursements().then(setRows).catch(() => setRows([]));
-  };
-  useEffect(() => { load(); }, []);
-  const submit = async (saveDraft) => {
-    setErr("");
-    if (!form.title.trim()) { setErr("A short title for the claim is required."); return; }
-    if (!Number(form.requested_amount || 0)) { setErr("Enter the amount you are claiming back."); return; }
-    if (!saveDraft && !file) { setErr("Attach a PDF of your receipts before submitting."); return; }
-    setBusy(true);
-    try {
-      const r = await window.DB.createReimbursement({
-        title: form.title, category: form.category, description: form.description,
-        requested_amount: Number(form.requested_amount), faculty: me && me.faculty, department: me && me.department,
-      }, !saveDraft);
-      if (file) await window.DB.uploadReimbursementEvidence(r.id, file);
-      toast(saveDraft ? "Reimbursement draft saved." : r.code + " submitted to your Dean.");
-      setForm({ title: "", category: RA.REIMBURSE_CATEGORIES[0], description: "", requested_amount: "" });
-      setFile(null); load();
-    } catch (e) { setErr((e && e.message) || "Could not save the claim."); }
-    finally { setBusy(false); }
-  };
-  const openEvidence = async (r, download) => {
-    try { window.open(await window.DB.reimbursementEvidenceUrl(r, download), "_blank", "noopener,noreferrer"); }
-    catch (e) { toast("No receipt PDF is attached to this claim."); }
-  };
-  return (
-    <>
-      <PageHeader title="Reimbursement Claim" desc="Claim research expenses back after spending, with receipts. Routed: Dean → RASSC → OFM." actions={<Badge status={{ label: "Spend first · claim back", cls: "badge-academic" }} />} />
-      <div className="grid-2">
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>New Claim</h3></div>
-          <div className="card-body">
-            <div className="field"><label>Claim title</label><input value={form.title} onChange={e => setField("title", e.target.value)} placeholder="e.g. Conference travel reimbursement" /></div>
-            <div className="form-grid">
-              <div className="field"><label>Category</label><select value={form.category} onChange={e => setField("category", e.target.value)}>{RA.REIMBURSE_CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-              <div className="field"><label>Amount claimed (THB)</label><input value={form.requested_amount} onChange={e => setField("requested_amount", e.target.value.replace(/[^0-9]/g, ""))} placeholder="e.g. 8500" /></div>
-            </div>
-            <div className="field"><label>Description / what you spent on</label><textarea className="comment-input" value={form.description} onChange={e => setField("description", e.target.value)} placeholder="Briefly itemise the expenses you are claiming." /></div>
-            <div className="field"><label>Receipts (PDF)</label><input type="file" accept="application/pdf,.pdf" onChange={e => setFile((e.target.files || [])[0] || null)} /></div>
-            {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, marginBottom: 10 }}>{err}</div>}
-            <div className="flex gap-2 justify-end">
-              <button className="btn btn-secondary" disabled={busy} onClick={() => submit(true)}>Save Draft</button>
-              <button className="btn btn-primary" disabled={busy} onClick={() => submit(false)}><Icon name="Send" size={14} /> Submit to Dean</button>
-            </div>
-          </div>
-        </div>
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>My Claims</h3></div>
-          <div>
-            {rows === null && <div style={{ padding: 32, textAlign: "center", color: "var(--ink-3)" }}>Loading claims…</div>}
-            {rows && rows.length === 0 && <Empty title="No reimbursement claims yet" desc="Your submitted claims will appear here." icon="Receipt" />}
-            {(rows || []).map(r => (
-              <div key={r._uuid} style={{ padding: "16px 20px", borderBottom: "1px solid var(--line-2)" }}>
-                <div className="flex items-center gap-2 mb-2"><span className="id">{r.id}</span><Badge status={r.status} /></div>
-                <div style={{ fontWeight: 600, fontSize: 13 }}>{r.title}</div>
-                <div className="text-sm text-muted">{r.category || "—"} · claimed {fmtBaht(r.requested_amount)}{r.approved_amount != null ? " · approved " + fmtBaht(r.approved_amount) : ""}</div>
-                {(r.dean_note || r.review_note) && <div className="text-sm" style={{ color: "var(--ink-2)", marginTop: 4 }}>{r.review_note || r.dean_note}</div>}
-                {r.evidence_name && <div className="flex gap-2 mt-3">
-                  <button className="btn btn-secondary btn-sm" onClick={() => openEvidence(r, false)}><Icon name="Eye" size={12} /> Receipts</button>
-                  <button className="btn btn-secondary btn-sm" onClick={() => openEvidence(r, true)}><Icon name="Download" size={12} /> Download</button>
-                </div>}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
 
 Object.assign(window, {
-  ResearcherDashboard, ResearcherSubmit, ResearcherApplications,
-  ResearcherApplicationDetail, ResearcherProgress, ResearcherFinal,
-  ResearcherReimbursements,
-  ResearcherPayments, ResearcherPublicationGrants,
+  ResearcherDashboard, ResearcherSubmitR3, ResearcherSubmitR4,
+  ResearcherApplications, ResearcherApplicationDetail,
 });
