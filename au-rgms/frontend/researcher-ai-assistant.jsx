@@ -99,6 +99,7 @@ function AIMessageContent({ content }) {
 }
 
 function AIChat() {
+  const initialRole = window.AU_AI_ROLE || null;
   const [available, setAvailable] = useState(!!window.AU_AI_VISIBLE);
   const [grantSystem, setGrantSystem] = useState(window.AU_AI_GRANT_SYSTEM || null);
   const [mode, setMode] = useState(window.AU_AI_MODE || null);
@@ -106,16 +107,20 @@ function AIChat() {
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [ctx, setCtx] = useState(null);
-  const [role, setRole] = useState(null);
-  const [msgs, setMsgs] = useState([{ role: "assistant", content: ROLE_INTRO._default }]);
+  const [role, setRole] = useState(initialRole);
+  const [msgs, setMsgs] = useState([{ role: "assistant", content: ROLE_INTRO[initialRole] || ROLE_INTRO._default }]);
   const bodyRef = useRef(null);
 
   useEffect(() => {
     const onVisibility = event => {
       const next = !!(event.detail && event.detail.visible);
+      const nextRole = next && event.detail ? event.detail.role || null : null;
       setAvailable(next);
       setGrantSystem(next && event.detail ? event.detail.grantSystem : null);
       setMode(next && event.detail ? event.detail.mode : null);
+      setRole(nextRole);
+      setCtx(null);
+      setMsgs([{ role: "assistant", content: ROLE_INTRO[nextRole] || ROLE_INTRO._default }]);
       if (!next) setOpen(false);
     };
     window.addEventListener("au-ai-visibility", onVisibility);

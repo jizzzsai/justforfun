@@ -884,8 +884,14 @@ function App() {
     window.AU_AI_VISIBLE = visible;
     window.AU_AI_GRANT_SYSTEM = researcherAI ? rSystem : null;
     window.AU_AI_MODE = adminAnalyticsAI ? "analytics" : (roleAI ? "role" : (researcherAI ? "researcher" : null));
+    window.AU_AI_ROLE = visible && profile ? profile.role : null;
     window.dispatchEvent(new CustomEvent("au-ai-visibility", {
-      detail: { visible, grantSystem: researcherAI ? rSystem : null, mode: adminAnalyticsAI ? "analytics" : (roleAI ? "role" : (researcherAI ? "researcher" : null)) },
+      detail: {
+        visible,
+        grantSystem: researcherAI ? rSystem : null,
+        mode: adminAnalyticsAI ? "analytics" : (roleAI ? "role" : (researcherAI ? "researcher" : null)),
+        role: visible && profile ? profile.role : null,
+      },
     }));
   }, [loggedIn, profile, role, page, rSystem]);
 
