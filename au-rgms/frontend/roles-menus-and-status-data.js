@@ -46,6 +46,7 @@ const NAV_RESEARCHER_R3 = [
 const NAV_DEAN = [
   { section: "WORKSPACE" },
   { key: "d-dashboard", label: "Summary", icon: "LayoutDashboard" },
+  { section: "TOTAL SUMMARY" },
   { key: "d-analytics", label: "Analytics", icon: "BarChart3" },
   { key: "d-ai", label: "AI Chatbot", icon: "Bot" },
   { section: "QUEUES" },
@@ -58,6 +59,7 @@ const NAV_DEAN = [
 const NAV_IRAS = [
   { section: "WORKSPACE" },
   { key: "i-dashboard", label: "Summary", icon: "LayoutDashboard" },
+  { section: "TOTAL SUMMARY" },
   { key: "i-analytics", label: "Analytics", icon: "BarChart3" },
   { key: "i-ai", label: "AI Chatbot", icon: "Bot" },
   { section: "REVIEW" },
@@ -67,7 +69,7 @@ const NAV_IRAS = [
 const NAV_OFM = [
   { section: "WORKSPACE" },
   { key: "o-dashboard", label: "Summary", icon: "LayoutDashboard" },
-  { key: "o-summary", label: "Total Summary", icon: "BarChart3" },
+  { section: "TOTAL SUMMARY" },
   { key: "o-analytics", label: "Analytics", icon: "TrendingUp" },
   { key: "o-ai", label: "AI Chatbot", icon: "Bot" },
   { section: "TRACKING" },
