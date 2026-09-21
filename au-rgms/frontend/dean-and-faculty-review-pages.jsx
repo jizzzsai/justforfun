@@ -102,6 +102,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
               desc={(ci.researcherName || r.full_name || "Researcher") + " · " + (app.faculty || "Faculty") + " · " + (app.department || "Department")}
               actions={<Badge status={r3Badge(app.status)} />}
             />
+            <div className="mb-4"><AnnualFundingSummaryCard summary={app.annual_funding} currentAmount={Number(app.requested_amount || 3500)} compact /></div>
             <div className="grid-2">
               <div>
                 <div className="card card-pad-0 mb-4">
@@ -292,6 +293,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
             <PageHeader title={"AU-R4 Screening — " + app.code}
               desc={(r.full_name || "Researcher") + " · " + (app.faculty || "Faculty") + " · " + (app.department || "Department") + " · " + (pi.journal || "")}
               actions={<Badge status={r4Badge(app.status)} />} />
+            <div className="mb-4"><AnnualFundingSummaryCard summary={app.annual_funding} currentAmount={Number(app.requested_amount || 0)} compact /></div>
             <div className="grid-2">
               <div>
                 <div className="card card-pad-0 mb-4">

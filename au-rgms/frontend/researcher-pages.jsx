@@ -367,6 +367,18 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
   const [busy, setBusy] = useState(false);
   const [busyKind, setBusyKind] = useState(null);
   const [err, setErr] = useState("");
+  const [annualFunding, setAnnualFunding] = useState(null);
+  const academicYear = window.DB.academicYearLabel("", draft.presentationDate || new Date());
+  const annualLimitExceeded = !!annualFunding && fixedGrantAmount > annualFunding.remaining;
+
+  useEffect(() => {
+    let cancelled = false;
+    setAnnualFunding(null);
+    window.DB.annualFundingSummary(academicYear, null, editingId).then(summary => {
+      if (!cancelled) setAnnualFunding(summary);
+    }).catch(() => { if (!cancelled) setAnnualFunding({ academicYear, limit: 100000, used: 0, remaining: 100000 }); });
+    return () => { cancelled = true; };
+  }, [academicYear, editingId]);
 
   useEffect(() => {
     (async () => {
@@ -451,6 +463,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
     if (submit && !universityServiceEligibility(draft.joinedDate).eligible) { setErr("You are not eligible yet. AU-R3 applicants must have at least one year of service at Assumption University."); return; }
     if (submit && draft.email && !/^[^@\s]+@au\.edu$/i.test(draft.email.trim())) { setErr("Email must be an Assumption University address ending in @au.edu."); return; }
     if (submit && draft.phone && !isValidThaiPhone(draft.phone)) { setErr("Phone must be a Thai number with 9–10 digits starting with 0."); return; }
+    if (submit && annualLimitExceeded) { setErr("This AU-R3 grant exceeds your remaining " + academicYear + " academic-year balance. The combined AU-R3/AU-R4 limit is 100,000 THB."); return; }
     if (submit) {
       const selectedTypes = existingDocs.map(d => d.doc_type).concat(files.map(f => f.docType));
       const missingDocs = (RA.R3_DOC_TYPES || []).filter(t => selectedTypes.indexOf(t) === -1);
@@ -464,6 +477,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         confName: draft.confName, organizer: draft.organizer, website: draft.website,
         confType: draft.confType, conferenceLocation: draft.conferenceLocation,
         presentationDate: draft.presentationDate || null,
+        academicYear,
         presentation: draft.presentation || "Oral Presentation",
         journalDb: draft.journalDb, journalClassification: draft.journalClassification,
         paperAbstract: draft.paperAbstract, authorType: draft.authorType,
@@ -483,6 +497,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         start_date: draft.presentationDate || null, end_date: draft.presentationDate || null,
         budget_breakdown: [{ item: "Fixed AU-R3 Grant", amount: fixedGrantAmount }],
         grant_type: "au_r3",
+        academic_year: academicYear,
         co_members: authors.filter(m => (m.name || "").trim()),
         conference_info: confInfo,
       }, submit, editingId);
@@ -515,7 +530,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         actions={
           <>
             <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
-            <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
+            <button className="btn btn-primary" disabled={busy || annualLimitExceeded} onClick={() => save(true)}>
               <Icon name="Send" size={13} /> {busy ? (busyKind === "submit" ? (files.length ? "Uploading " + files.length + " file(s)…" : "Submitting…") : "Saving draft…") : "Submit Application"}
             </button>
           </>
@@ -523,6 +538,8 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
       />
 
       <ReturnNotice info={returnInfo} />
+
+      <div className="mb-4"><AnnualFundingSummaryCard summary={annualFunding} currentAmount={fixedGrantAmount} /></div>
 
       <div className="card card-pad-0">
         <div className="form-section">
@@ -562,6 +579,10 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
               <div className="field">
                 <label>Presentation Date *</label>
                 <AUDatePicker value={draft.presentationDate} onChange={v => upd("presentationDate", v)} placeholder="Select presentation date…" />
+              </div>
+              <div className="field">
+                <label>Academic Year (AD)</label>
+                <input value={academicYear} readOnly style={roStyle} />
               </div>
             </div>
           </div>
@@ -773,7 +794,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         <div style={{ padding: "16px 24px", borderTop: "1px solid var(--line)", background: "var(--paper-warm)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
           {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, alignSelf: "center", marginRight: "auto" }}>{err}</div>}
           <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
-          <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
+          <button className="btn btn-primary" disabled={busy || annualLimitExceeded} onClick={() => save(true)}>
             <Icon name="Send" size={13} /> {busy ? (busyKind === "submit" ? (files.length ? "Uploading " + files.length + " file(s)…" : "Submitting…") : "Saving draft…") : "Submit Application"}
           </button>
         </div>
@@ -786,7 +807,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
 const R4_DEFAULT_DRAFT = {
   title: "", articleType: "Research Article", pubStatus: "Published",
   journal: "", publisher: "", website: "", articleUrl: "", doi: "", issn: "",
-  acceptDate: "", pubDate: "", volume: "", issue: "", pageNumber: "", academicYear: "2025",
+  acceptDate: "", pubDate: "", volume: "", issue: "", pageNumber: "", academicYear: "",
   journalDb: "", journalClassification: "", predatory: false,
   applicantRole: "First Author",
   name: "", title2: "", academicPosition: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
@@ -796,7 +817,7 @@ const R4_DEFAULT_DRAFT = {
 function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast, setConfirm, setSelectedApplicationId }) {
   const sys = grantSystemFor("au_r4");
   const MAX = 80000;
-  const [draft, setDraft] = useState({ ...R4_DEFAULT_DRAFT });
+  const [draft, setDraft] = useState({ ...R4_DEFAULT_DRAFT, academicYear: window.DB.academicYearLabel() });
   const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
 
   const [authors, setAuthors] = useState([{ name: "", type: "First Author", email: "", contribution: "100" }]);
@@ -831,6 +852,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const [busy, setBusy] = useState(false);
   const [busyKind, setBusyKind] = useState(null);
   const [err, setErr] = useState("");
+  const [annualFunding, setAnnualFunding] = useState(null);
 
   const published = draft.pubStatus === "Published";
   const classificationOptions = (RA.R4_JOURNAL_CLASSIFICATIONS || {})[draft.journalDb] || null;
@@ -840,6 +862,8 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
     : draft.journalDb === "Web of Science (WoS)" ? 80000
     : ["ERIC", "MathSciNet", "PubMed", "JSTOR", "Project MUSE"].includes(draft.journalDb) ? 25000 : 0;
   const requested = tierSelected ? Math.min(MAX, Number(draft.feePaid) || 0) : automaticReward;
+  const normalizedAcademicYear = window.DB.academicYearLabel(draft.academicYear, draft.pubDate || draft.acceptDate || new Date());
+  const annualLimitExceeded = !!annualFunding && requested > annualFunding.remaining;
   const catLabel = [draft.journalDb, draft.journalClassification].filter(Boolean).join(" — ");
   const showPreliminaryReward = !!draft.journalDb && !!draft.journalClassification.trim() && !tierSelected;
   const totalContrib = authors.reduce((s, a) => s + (Number(a.contribution) || 0), 0);
@@ -864,6 +888,15 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   useEffect(() => {
     if (!hasSecondAuthor && /author contribution/i.test(docType)) setDocType("Full Research Article");
   }, [hasSecondAuthor, docType]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setAnnualFunding(null);
+    window.DB.annualFundingSummary(normalizedAcademicYear, null, editingId).then(summary => {
+      if (!cancelled) setAnnualFunding(summary);
+    }).catch(() => { if (!cancelled) setAnnualFunding({ academicYear: normalizedAcademicYear, limit: 100000, used: 0, remaining: 100000 }); });
+    return () => { cancelled = true; };
+  }, [normalizedAcademicYear, editingId]);
 
   useEffect(() => {
     (async () => {
@@ -913,7 +946,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           journalClassification: loadedClassification,
           applicantRole: /corresponding|co-?author/i.test(pi.applicantRole || "") ? "Co-author" : "First Author",
           pubStatus: /^accepted for publication$/i.test(pi.pubStatus || "") ? "Accepted for Publication" : (pi.pubStatus || d.pubStatus),
-          academicYear: ((String(pi.academicYear || d.academicYear).match(/\d{4}/) || ["2025"])[0]),
+          academicYear: window.DB.academicYearLabel(app.academic_year || pi.academicYear || d.academicYear, pi.pubDate || pi.acceptDate),
           joinedDate: researcherInfo.joinedDate || "",
           pageNumber: pi.pageNumber || ([pi.startPage, pi.endPage].filter(Boolean).join("–")),
           title: app.title || "",
@@ -987,6 +1020,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       if (!published && !hasDocument("acceptance")) return setErr("Attach the Acceptance Letter.");
       if (requested > MAX) return setErr("The requested claim exceeds the AU-R4 maximum of 80,000 THB per article.");
       if (tierSelected && requested <= 0) return setErr("Enter the publication fee for the selected journal tier.");
+      if (annualLimitExceeded) return setErr("This claim exceeds your remaining " + normalizedAcademicYear + " academic-year balance. The combined AU-R3/AU-R4 limit is 100,000 THB.");
       if (!allDecl) return setErr("Read and accept the eligibility declaration before submitting.");
     }
     setBusy(true); setBusyKind(submit ? "submit" : "draft");
@@ -997,7 +1031,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         articleType: draft.articleType, pubStatus: draft.pubStatus, journal: draft.journal, publisher: draft.publisher,
         website: draft.website, articleUrl: published ? draft.articleUrl : null, doi: published ? draft.doi : null, issn: draft.issn || null,
         acceptDate: draft.acceptDate || null, pubDate: draft.pubDate || null,
-        volume: draft.volume, issue: draft.issue, pageNumber: draft.pageNumber, academicYear: draft.academicYear,
+        volume: draft.volume, issue: draft.issue, pageNumber: draft.pageNumber, academicYear: normalizedAcademicYear,
         journalDb: draft.journalDb, journalClassification: draft.journalClassification, indexLabel: catLabel, predatory: draft.predatory,
         applicantRole: draft.applicantRole,
         researcherSnapshot,
@@ -1017,6 +1051,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         title: draft.title, abstract: "AU-R4 publication reward — " + draft.journal + " (" + catLabel + ")",
         faculty: draft.school, department: draft.department,
         requested_amount: requested, duration_months: 12,
+        academic_year: normalizedAcademicYear,
         grant_type: "au_r4", pub_info: pubInfo, co_members: authors.filter(a => (a.name || "").trim()),
       }, submit, editingId);
       const failedUploads = await uploadAllDocuments(app.id, files);
@@ -1044,7 +1079,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         actions={
           <>
             <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
-            <button className="btn btn-primary" disabled={busy} onClick={() => save(true)}>
+            <button className="btn btn-primary" disabled={busy || annualLimitExceeded} onClick={() => save(true)}>
               <Icon name="Send" size={13} /> {busy ? (busyKind === "submit" ? (files.length ? "Uploading " + files.length + " file(s)…" : "Submitting…") : "Saving draft…") : "Submit Application"}
             </button>
           </>
@@ -1052,6 +1087,8 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       />
 
       <ReturnNotice info={returnInfo} />
+
+      <div className="mb-4"><AnnualFundingSummaryCard summary={annualFunding} currentAmount={requested} /></div>
 
       <div className="card card-pad-0">
         {                                }
@@ -1069,7 +1106,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
               <div className="field"><label>Publisher *</label><input value={draft.publisher} onChange={e => upd("publisher", e.target.value)} /></div>
               <div className="field"><label>Journal Website *</label><input value={draft.website} onChange={e => upd("website", e.target.value)} placeholder="https://…" /></div>
               <div className="field"><label>ISSN / eISSN *</label><input value={draft.issn} onChange={e => upd("issn", e.target.value)} placeholder="e.g. 1234-5678" /></div>
-              <div className="field"><label>Academic Year <span style={{ color: "var(--ink-3)", fontWeight: 700 }}>(AD)</span> *</label><input value={draft.academicYear} onChange={e => upd("academicYear", (e.target.value + "").replace(/[^0-9]/g, "").slice(0, 4))} placeholder="2025" inputMode="numeric" /></div>
+              <div className="field"><label>Academic Year <span style={{ color: "var(--ink-3)", fontWeight: 700 }}>(AD)</span> *</label><input value={draft.academicYear} onChange={e => upd("academicYear", (e.target.value + "").replace(/[^0-9/]/g, "").slice(0, 9))} onBlur={() => upd("academicYear", normalizedAcademicYear)} placeholder="2025/2026" inputMode="numeric" /></div>
               {published ? (
                 <>
                   <div className="field"><label>Article URL *</label><input value={draft.articleUrl} onChange={e => upd("articleUrl", e.target.value)} placeholder="https://…" /></div>
@@ -1319,7 +1356,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
         <div style={{ padding: "16px 24px", borderTop: "1px solid var(--line)", background: "var(--paper-warm)", display: "flex", gap: 8, justifyContent: "flex-end" }}>
           {err && <div style={{ color: "var(--au-crimson)", fontSize: 12, alignSelf: "center", marginRight: "auto" }}>{err}</div>}
           <button className="btn btn-secondary" disabled={busy} onClick={() => save(false)}>{busy && busyKind === "draft" ? "Saving draft…" : "Save as Draft"}</button>
-          <button className="btn btn-primary" disabled={busy || !allDecl || turnitinBad} onClick={() => save(true)}>
+          <button className="btn btn-primary" disabled={busy || !allDecl || turnitinBad || annualLimitExceeded} onClick={() => save(true)}>
             <Icon name="Send" size={13} /> {busy ? (busyKind === "submit" ? (files.length ? "Uploading " + files.length + " file(s)…" : "Submitting…") : "Saving draft…") : "Submit Application"}
           </button>
         </div>

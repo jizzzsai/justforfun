@@ -474,6 +474,7 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
         return (
           <>
             <PageHeader title={"AU-R3 Verification — " + app.code} desc={(ci.researcherName || (app.researcher ? app.researcher.full_name : "Researcher")) + " · " + (app.faculty || "") + " · " + (ci.confName || "")} actions={<Badge status={r3Badge(app.status)} />} />
+            <div className="mb-4"><AnnualFundingSummaryCard summary={app.annual_funding} currentAmount={Number(app.requested_amount || 3500)} compact /></div>
             <div className="grid-2">
               <div>
                 <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Conference</h3></div><div className="card-body">
@@ -551,6 +552,7 @@ function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setC
         return (
           <>
             <PageHeader title={"AU-R4 Verification — " + app.code} desc={(app.researcher ? app.researcher.full_name : "Researcher") + " · " + (pi.journal || "") + " · " + (pi.indexLabel || "")} actions={<Badge status={r4Badge(app.status)} />} />
+            <div className="mb-4"><AnnualFundingSummaryCard summary={app.annual_funding} currentAmount={finalNum} compact /></div>
             <div className="grid-2">
               <div>
                 <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Publication &amp; Journal</h3></div><div className="card-body">
@@ -685,6 +687,7 @@ function FinanceApplicationDetailsModal({ applicationId, onClose, onDownload, on
         <div className="meta-row"><span className="l">Submitted</span><span className="r">{window.DB.fmtDate(app.submitted_at || app.created_at)}</span></div>
         <div className="meta-row"><span className="l">Approved amount</span><span className="r">{fmtBaht(Number(app.approved_amount || app.requested_amount || 0))}</span></div>
         <div className="meta-row"><span className="l">Disbursed</span><span className="r">{fmtBaht(["active", "completed"].includes(app.status) ? Number(app.approved_amount || app.requested_amount || 0) : 0)}</span></div>
+        <div style={{ marginTop: 14 }}><AnnualFundingSummaryCard summary={app.annual_funding} currentAmount={Number(app.approved_amount != null ? app.approved_amount : app.requested_amount || 0)} compact /></div>
         <div style={{ borderTop: "1px solid var(--line-2)", marginTop: 14, paddingTop: 12 }}>
           <div className="eyebrow mb-2">Files</div>
           {(app.documents || []).length === 0 && <div className="text-sm text-muted">No files attached to this application.</div>}

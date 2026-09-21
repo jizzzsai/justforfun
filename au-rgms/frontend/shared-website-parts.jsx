@@ -230,6 +230,38 @@ function Stat({ label, value, icon, tone = "", delta, deltaTone }) {
     </div>
   );
 }
+function AnnualFundingSummaryCard({ summary, currentAmount = 0, title = "Academic-Year Funding Limit", compact = false }) {
+  if (!summary) {
+    return <div className="card" style={{ padding: compact ? 14 : 18, color: "var(--ink-3)", fontSize: 13 }}>Loading academic-year funding balance…</div>;
+  }
+  const limit = Number(summary.limit || 100000);
+  const previous = Number(summary.previousCommitted != null ? summary.previousCommitted : summary.used || 0);
+  const current = Math.max(0, Number(currentAmount != null ? currentAmount : summary.currentApplicationAmount || 0));
+  const total = previous + current;
+  const remaining = Math.max(0, limit - total);
+  const over = total > limit;
+  const cells = [
+    { label: "Annual limit", value: fmtBaht(limit) },
+    { label: "Already committed", value: fmtBaht(previous) },
+    { label: "This application", value: fmtBaht(current) },
+    { label: over ? "Over limit" : "Remaining after this application", value: fmtBaht(over ? total - limit : remaining), danger: over },
+  ];
+  return (
+    <div className="card card-pad-0" style={{ overflow: "hidden", borderColor: over ? "var(--au-crimson)" : undefined }}>
+      <div className="card-head" style={{ minHeight: 0, padding: compact ? "11px 14px" : undefined }}>
+        <div style={{ width: 30, height: 30, borderRadius: 9, background: over ? "var(--au-crimson-soft)" : "var(--au-gold-soft)", color: over ? "var(--au-crimson)" : "var(--au-gold-deep)", display: "grid", placeItems: "center" }}><Icon name="Coins" size={16} /></div>
+        <div><h3 style={{ margin: 0 }}>{title}</h3><div className="text-sm text-muted">Academic year {summary.academicYear || "—"} · AU-R3 and AU-R4 combined</div></div>
+      </div>
+      <div style={{ display: "grid", gridTemplateColumns: compact ? "repeat(2, minmax(0, 1fr))" : "repeat(4, minmax(0, 1fr))", borderTop: "1px solid var(--line-2)" }}>
+        {cells.map((cell, index) => <div key={cell.label} style={{ padding: compact ? "10px 14px" : "14px 16px", borderRight: index === cells.length - 1 ? "none" : "1px solid var(--line-2)" }}>
+          <div style={{ fontSize: 10, textTransform: "uppercase", letterSpacing: ".05em", color: "var(--ink-3)", fontWeight: 700 }}>{cell.label}</div>
+          <div style={{ marginTop: 4, fontWeight: 700, color: cell.danger ? "var(--au-crimson)" : "var(--ink-1)" }}>{cell.value}</div>
+        </div>)}
+      </div>
+      {over && <div style={{ padding: "9px 14px", background: "var(--au-crimson-soft)", color: "var(--au-crimson)", fontSize: 12, fontWeight: 600 }}>Reduce this request. A researcher cannot receive more than 100,000 THB in one academic year.</div>}
+    </div>
+  );
+}
 function Modal({ open, onClose, title, children, footer, size, className = "" }) {
   if (!open) return null;
   return (

@@ -4,9 +4,52 @@
   var sb = window.sb;
   if (!sb) { console.error("[AU] window.sb not ready for DB layer"); return; }
   var ACTIVE_GRANT_TYPES = ["au_r3", "au_r4"];
+  var ANNUAL_FUNDING_LIMIT = 100000;
+  var COMMITTED_STATUSES = ["submitted", "committee_review", "iras_review", "approved", "active", "completed"];
   function requireActiveGrant(grantType) {
     if (ACTIVE_GRANT_TYPES.indexOf(grantType) === -1) throw new Error("Choose AU-R3 or AU-R4.");
     return grantType;
+  }
+  function academicYearLabel(rawYear, referenceDate) {
+    var match = String(rawYear || "").match(/(\d{4})/);
+    var start;
+    if (match) start = Number(match[1]);
+    else {
+      var date = referenceDate ? new Date(referenceDate) : new Date();
+      if (isNaN(date.getTime())) date = new Date();
+      start = date.getFullYear() - (date.getMonth() < 5 ? 1 : 0);
+    }
+    return start + "/" + (start + 1);
+  }
+  function applicationAcademicYear(app) {
+    app = app || {};
+    var details = app.grant_type === "au_r3" ? (app.conference_info || {}) : (app.pub_info || {});
+    var referenceDate = details.presentationDate || details.pubDate || details.acceptDate || app.submitted_at || app.created_at;
+    return academicYearLabel(app.academic_year || details.academicYear, referenceDate);
+  }
+  function committedAmount(app) {
+    if (!app || COMMITTED_STATUSES.indexOf(app.status) === -1) return 0;
+    return Math.max(0, Number(app.approved_amount != null ? app.approved_amount : app.requested_amount) || 0);
+  }
+  async function annualFundingSummary(researcherId, academicYear, excludeApplicationId) {
+    var year = academicYearLabel(academicYear);
+    var q = sb.from("applications")
+      .select("id,status,grant_type,requested_amount,approved_amount,academic_year,pub_info,conference_info,submitted_at,created_at")
+      .eq("researcher_id", researcherId)
+      .in("grant_type", ACTIVE_GRANT_TYPES)
+      .in("status", COMMITTED_STATUSES);
+    if (excludeApplicationId) q = q.neq("id", excludeApplicationId);
+    var res = await q;
+    if (res.error) throw res.error;
+    var used = (res.data || []).reduce(function (sum, app) {
+      return applicationAcademicYear(app) === year ? sum + committedAmount(app) : sum;
+    }, 0);
+    return {
+      academicYear: year,
+      limit: ANNUAL_FUNDING_LIMIT,
+      used: used,
+      remaining: Math.max(0, ANNUAL_FUNDING_LIMIT - used),
+    };
   }
 
   var STATUS_MAP = {
@@ -134,6 +177,8 @@
       budgetTotal: requested, requested_amount: requested,
       status: badge(a.status, a.grant_type), statusKey: a.status,
       grant_type: a.grant_type || "au_r3", conference_info: a.conference_info || null, pub_info: a.pub_info || null,
+      researcher_id: a.researcher_id,
+      academic_year: applicationAcademicYear(a),
       approved_amount: approved,
       events: a.events || [],
     };
@@ -143,6 +188,14 @@
     statusBadge: badge,
     fmtDate: fmtDate,
     mapRow: mapRow,
+    academicYearLabel: academicYearLabel,
+    applicationAcademicYear: applicationAcademicYear,
+    annualFundingLimit: ANNUAL_FUNDING_LIMIT,
+    async annualFundingSummary(academicYear, researcherId, excludeApplicationId) {
+      var targetResearcher = researcherId || await uid();
+      if (!targetResearcher) throw new Error("You must be signed in.");
+      return annualFundingSummary(targetResearcher, academicYear, excludeApplicationId);
+    },
     applicationResearcherInfo: applicationResearcherInfo,
     nextStep: function (status) { return NEXT[status] || null; },
 
@@ -157,6 +210,11 @@
       var accountProfile = profileResult.data;
       var detailsKey = grantType === "au_r3" ? "conference_info" : "pub_info";
       var details = Object.assign({}, payload[detailsKey] || {});
+      var academicYear = academicYearLabel(
+        payload.academic_year || details.academicYear,
+        grantType === "au_r3" ? details.presentationDate : (details.pubDate || details.acceptDate)
+      );
+      details.academicYear = academicYear;
       var suppliedSnapshot = details.researcherSnapshot || {};
       var lockedSnapshot = {
         nameTitle: suppliedSnapshot.nameTitle !== undefined ? suppliedSnapshot.nameTitle : (accountProfile.name_title || ""),
@@ -216,6 +274,13 @@
           throw new Error("Only draft or returned applications can be edited from this form.");
         }
       }
+      if (submit) {
+        var annualSummary = await annualFundingSummary(me, academicYear, appId || null);
+        var requestedForLimit = grantType === "au_r3" ? 3500 : Math.max(0, Number(payload.requested_amount) || 0);
+        if (requestedForLimit > annualSummary.remaining) {
+          throw new Error("This application exceeds your " + academicYear + " AU-R3/AU-R4 balance. You have " + annualSummary.remaining.toLocaleString() + " THB remaining from the 100,000 THB academic-year limit.");
+        }
+      }
       var row = {
         title: payload.title || "Untitled application",
         abstract: payload.abstract || null, faculty: payload.faculty || null,
@@ -231,6 +296,7 @@
         co_members: payload.co_members || null,
         pub_info: payload.pub_info || null,
         conference_info: payload.conference_info || null,
+        academic_year: academicYear,
         status: submit ? "submitted" : "draft",
         submitted_at: submit ? new Date().toISOString() : (existing ? existing.submitted_at : null),
       };
@@ -389,6 +455,17 @@
       });
       a.is_owner = a.researcher_id === me;
       a.access_mode = a.is_owner ? "owner" : "reviewer";
+      a.academic_year = applicationAcademicYear(a);
+      try {
+        var funding = await annualFundingSummary(a.researcher_id, a.academic_year, a.id);
+        var currentAmount = Math.max(0, Number(a.approved_amount != null ? a.approved_amount : a.requested_amount) || 0);
+        a.annual_funding = Object.assign({}, funding, {
+          previousCommitted: funding.used,
+          currentApplicationAmount: currentAmount,
+          totalWithApplication: funding.used + currentAmount,
+          remainingAfterApplication: Math.max(0, funding.limit - funding.used - currentAmount),
+        });
+      } catch (e) { a.annual_funding = null; }
       return a;
     },
 
