@@ -706,14 +706,28 @@ function pageBelongsToRole(role, page) {
 
 function readLastPage(role) {
   try {
-    const saved = sessionStorage.getItem(LAST_PAGE_KEY_PREFIX + role);
+    const saved = sessionStorage.getItem(LAST_PAGE_KEY_PREFIX + role)
+      || localStorage.getItem(LAST_PAGE_KEY_PREFIX + role);
     return pageBelongsToRole(role, saved) ? saved : null;
   } catch (e) { return null; }
 }
 
 function rememberLastPage(role, page) {
   if (!pageBelongsToRole(role, page)) return;
-  try { sessionStorage.setItem(LAST_PAGE_KEY_PREFIX + role, page); } catch (e) {}
+  try {
+    sessionStorage.setItem(LAST_PAGE_KEY_PREFIX + role, page);
+    localStorage.setItem(LAST_PAGE_KEY_PREFIX + role, page);
+  } catch (e) {}
+}
+
+function writePageRoute(role, page) {
+  if (!pageBelongsToRole(role, page)) return;
+  try {
+    const params = new URLSearchParams();
+    params.set("role", role);
+    params.set("page", page);
+    window.history.replaceState(null, "", window.location.pathname + window.location.search + "#" + params.toString());
+  } catch (e) {}
 }
 
 
@@ -722,7 +736,7 @@ function App() {
   const startingRole = initial.role && ROLE_CONFIG[initial.role] ? initial.role : "researcher";
   const startingPage = initial.page && !RETIRED_PAGES.includes(initial.page)
     ? initial.page
-    : ROLE_CONFIG[startingRole].homeKey;
+    : (readLastPage(startingRole) || ROLE_CONFIG[startingRole].homeKey);
 
   const [loggedIn, setLoggedIn] = useState(!!initial.skipLogin);
   const [role, setRole] = useState(startingRole);
@@ -730,20 +744,29 @@ function App() {
   const [profile, setProfile] = useState(null);
   const [demoMode, setDemoMode] = useState(() => !!initial.skipLogin || readDemoMode());
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
+  const hiddenPageRef = useRef(null);
   const [rSystem, setRSystem] = useState(() => { try { const stored = localStorage.getItem("au-rgms-r-system"); return ACTIVE_GRANT_TYPES.includes(stored) ? stored : null; } catch (e) { return null; } });
   const chooseSystem = (sys, nextPage) => {
     if (!ACTIVE_GRANT_TYPES.includes(sys)) return;
     try { localStorage.setItem("au-rgms-r-system", sys); } catch (e) {}
-    setSelectedApplicationId(null); setRSystem(sys); setPage(nextPage || "r-dashboard");
+    const targetPage = nextPage || "r-dashboard";
+    rememberLastPage("researcher", targetPage);
+    writePageRoute("researcher", targetPage);
+    setSelectedApplicationId(null); setRSystem(sys); setPage(targetPage);
   };
   const switchSystem = () => { try { localStorage.removeItem("au-rgms-r-system"); } catch (e) {} setRSystem(null); };
   const navigate = (key, opts) => {
     if (key === "r-switch-system") { switchSystem(); return; }
     if (RETIRED_PAGES.includes(key)) {
-      setPage(ROLE_CONFIG[role].homeKey);
+      const homePage = ROLE_CONFIG[role].homeKey;
+      rememberLastPage(role, homePage);
+      writePageRoute(role, homePage);
+      setPage(homePage);
       return;
     }
     if (key === "r-submit" && !(opts && opts.keepSelection)) setSelectedApplicationId(null);
+    rememberLastPage(role, key);
+    writePageRoute(role, key);
     setPage(key);
   };
 
@@ -897,7 +920,30 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (loggedIn && profile && profile.role === role) rememberLastPage(role, page);
+    if (loggedIn && profile && profile.role === role && document.visibilityState !== "hidden") {
+      rememberLastPage(role, page);
+      writePageRoute(role, page);
+    }
+  }, [loggedIn, profile, role, page]);
+
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (!loggedIn || !profile || profile.role !== role) return;
+      if (document.visibilityState === "hidden") {
+        hiddenPageRef.current = pageBelongsToRole(role, page) ? page : null;
+        if (hiddenPageRef.current) rememberLastPage(role, hiddenPageRef.current);
+        return;
+      }
+      const targetPage = hiddenPageRef.current || readLastPage(role);
+      hiddenPageRef.current = null;
+      if (targetPage && pageBelongsToRole(role, targetPage)) {
+        rememberLastPage(role, targetPage);
+        writePageRoute(role, targetPage);
+        setPage(targetPage);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
   }, [loggedIn, profile, role, page]);
 
   useEffect(() => {
