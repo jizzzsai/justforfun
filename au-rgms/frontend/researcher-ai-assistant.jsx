@@ -188,56 +188,52 @@ function AIChat() {
 
   if (!available) return null;
 
+  const embedded = mode === "role";
+  const panel = (
+    <div className={`ai-panel${embedded ? " ai-page-panel" : ""}`} id="researcher-ai-dialog" role="dialog" aria-label="AU AI assistant">
+      <div className="ai-head">
+        <div className="ai-bot-ic">
+          <Icon name="Bot" size={18} />
+        </div>
+        <div className="ai-head-t">
+          <b>AU AI</b>
+          <span>{role ? ROLE_LABEL[role] || "AU research grants" : "AU research grants · IRAS"}</span>
+        </div>
+        {!embedded && <button className="ai-x" onClick={() => setOpen(false)} aria-label="Close"><Icon name="X" size={16} /></button>}
+      </div>
+
+      <div className="ai-body" ref={bodyRef}>
+        {msgs.map((m, i) => (
+          <div key={i} className={`ai-msg ${m.role}`}>
+            {m.role === "assistant" ? <AIMessageContent content={m.content} /> : m.content}
+          </div>
+        ))}
+        {busy && <div className="ai-msg assistant ai-typing">Thinking…</div>}
+        {msgs.length <= 1 && !busy && (
+          <div className="ai-suggest">
+            {suggestions.map((s, i) => <button key={i} className="ai-chip" onClick={() => setInput(s)}>{s}</button>)}
+          </div>
+        )}
+      </div>
+
+      <form className="ai-input" onSubmit={send}>
+        <input value={input} onChange={(e) => setInput(e.target.value)} placeholder="Ask AU AI…" />
+        <button type="submit" className="btn btn-primary" disabled={busy} aria-label="Send"><Icon name="Send" size={15} /></button>
+      </form>
+    </div>
+  );
+
+  if (embedded) {
+    const host = document.getElementById("role-ai-chat-host");
+    return host ? ReactDOM.createPortal(panel, host) : null;
+  }
+
   return (
     <>
       <button type="button" className="ai-launcher" onClick={() => setOpen(v => !v)} title="Ask AU AI" aria-label="Ask AU AI" aria-expanded={open} aria-controls={open ? "researcher-ai-dialog" : undefined}>
         <Icon name="Bot" size={20} />
       </button>
-      {open && (
-        <div className="ai-panel" id="researcher-ai-dialog" role="dialog" aria-label="AU AI assistant">
-          <div className="ai-head">
-            <div className="ai-bot-ic">
-              <Icon name="Bot" size={18} />
-            </div>
-            <div className="ai-head-t">
-              <b>AU AI</b>
-              <span>{role ? ROLE_LABEL[role] || "AU research grants" : "AU research grants · IRAS"}</span>
-            </div>
-            <button className="ai-x" onClick={() => setOpen(false)} aria-label="Close">
-              <Icon name="X" size={16} />
-            </button>
-          </div>
-
-          <div className="ai-body" ref={bodyRef}>
-            {msgs.map((m, i) => (
-              <div key={i} className={`ai-msg ${m.role}`}>
-                {m.role === "assistant" ? <AIMessageContent content={m.content} /> : m.content}
-              </div>
-            ))}
-            {busy && <div className="ai-msg assistant ai-typing">Thinking…</div>}
-            {msgs.length <= 1 && !busy && (
-              <div className="ai-suggest">
-                {suggestions.map((s, i) => (
-                  <button key={i} className="ai-chip" onClick={() => setInput(s)}>
-                    {s}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          <form className="ai-input" onSubmit={send}>
-            <input
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask AU AI…"
-            />
-            <button type="submit" className="btn btn-primary" disabled={busy} aria-label="Send">
-              <Icon name="Send" size={15} />
-            </button>
-          </form>
-        </div>
-      )}
+      {open && panel}
     </>
   );
 }

@@ -1434,33 +1434,14 @@ function RoleAnalyticsDashboard({ role }) {
 
 function RoleAIChatbotPage({ role }) {
   const config = {
-    dean: { title: "Dean AI Chatbot", scope: "Only your assigned faculty", prompts: ["What needs the Dean's attention now?", "Show the top approved spending by department", "Summarize AU-R3 and AU-R4 in my faculty"] },
-    iras: { title: "IRAS AI Chatbot", scope: "All faculties · IRAS verification data", prompts: ["What needs IRAS verification now?", "Which faculties have the highest approved amount?", "Give me an R3 and R4 management summary"] },
-    ofm: { title: "Finance AI Chatbot", scope: "All faculties · Finance-forwarded applications only", prompts: ["What payments need action now?", "Which faculties have the highest disbursement?", "Summarize completed R3 and R4 payments"] },
+    dean: { title: "Dean AI Chatbot", desc: "Chat with AU AI about live AU-R3 and AU-R4 data from your assigned faculty." },
+    iras: { title: "IRAS AI Chatbot", desc: "Chat with AU AI about university-wide AU-R3 and AU-R4 verification data." },
+    ofm: { title: "Finance AI Chatbot", desc: "Chat with AU AI about applications forwarded to Finance, payments, and disbursements." },
   }[role];
   return (
     <>
-      <PageHeader title={config.title} desc="Ask questions about live AU-R3 and AU-R4 data within your role permissions." />
-      <div className="grid-2">
-        <div className="card">
-          <div className="card-body" style={{ padding: 28 }}>
-            <div style={{ width: 48, height: 48, borderRadius: 16, display: "grid", placeItems: "center", color: "var(--au-crimson)", background: "var(--au-red-soft)", marginBottom: 18 }}><Icon name="Bot" size={24} /></div>
-            <h3 style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 25 }}>Role-limited AU AI</h3>
-            <p style={{ color: "var(--ink-3)", lineHeight: 1.6, margin: "10px 0 18px" }}>The chatbot is read-only and uses live data only within this account's permitted scope.</p>
-            <div style={{ padding: 14, border: "1px solid var(--line)", borderRadius: 12, background: "var(--paper-warm)", marginBottom: 18 }}>
-              <div style={{ fontSize: 10, letterSpacing: ".09em", fontWeight: 800, color: "var(--ink-3)" }}>DATA SCOPE</div>
-              <div style={{ marginTop: 5, fontWeight: 700 }}>{config.scope}</div>
-            </div>
-            <button className="btn btn-primary" onClick={() => window.dispatchEvent(new CustomEvent("au-ai-toggle"))}><Icon name="Bot" size={15} /> Open AI Chatbot</button>
-          </div>
-        </div>
-        <div className="card card-pad-0">
-          <div className="card-head"><h3>Try asking</h3></div>
-          <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {config.prompts.map(prompt => <button key={prompt} className="btn btn-secondary" style={{ justifyContent: "flex-start", textAlign: "left", padding: "13px 15px" }} onClick={() => window.dispatchEvent(new CustomEvent("au-ai-prompt", { detail: { prompt } }))}><Icon name="MessageCircle" size={14} /> {prompt}</button>)}
-          </div>
-        </div>
-      </div>
+      <PageHeader title={config.title} desc={config.desc} />
+      <div id="role-ai-chat-host" className="role-ai-chat-host" aria-live="polite"></div>
     </>
   );
 }
