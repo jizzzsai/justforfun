@@ -536,7 +536,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
               </div>
               <div className="field">
                 <label>Conference Organizer</label>
-                <input value={draft.organizer} onChange={e => upd("organizer", e.target.value)} placeholder="e.g. IEEE, ACM, professional association" />
+                <input value={draft.organizer} onChange={e => upd("organizer", e.target.value)} placeholder="e.g. IIIE, ACM, professional association" />
               </div>
               <div className="field">
                 <label>Conference Website</label>

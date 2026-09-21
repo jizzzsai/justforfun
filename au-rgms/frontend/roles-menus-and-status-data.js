@@ -143,7 +143,7 @@ const REIMBURSE_CATEGORIES = [
 const DOC_TYPES = ["Full Conference Paper", "Turnitin Report", "Conference Acceptance Letter"];
 
 const R3_CONFERENCE_TYPES = ["Domestic", "International"];
-const R3_CONFERENCE_DBS = ["SCOPUS", "Web of Science (WoS)", "IEEE", "TCI", "ERIC", "MathSciNet", "PubMed", "JSTOR", "Project MUSE", "Other"];
+const R3_CONFERENCE_DBS = ["SCOPUS", "Web of Science (WoS)", "IIIE", "TCI", "ERIC", "MathSciNet", "PubMed", "JSTOR", "Project MUSE", "Other"];
 
 const R3_DOC_TYPES = [
   "Full Conference Paper",
