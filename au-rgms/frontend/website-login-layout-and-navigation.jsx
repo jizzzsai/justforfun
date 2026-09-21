@@ -575,7 +575,7 @@ function Sidebar({ nav, current, onNavigate }) {
         return (
           <div
             key={item.key}
-            className={`nav-item ${isCurrent ? "active" : ""}${item.key === "r-ai-assistant" || item.key === "a-analytics" ? " ai-assistant-item" : ""}`}
+            className={`nav-item ${isCurrent ? "active" : ""}${item.key === "r-ai-assistant" || item.key === "a-analytics" || /-ai$/.test(item.key) ? " ai-assistant-item" : ""}`}
             aria-disabled={isDisabled || undefined}
             title={isDisabled ? item.hint : undefined}
             style={isDisabled ? { cursor: "not-allowed", opacity: 0.58 } : undefined}
@@ -635,6 +635,8 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "r-applications":  return <ResearcherApplications navigate={navigate} onDownload={c.onDownload} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} toast={c.toast} setConfirm={c.setConfirm} onGrantSwitch={c.onGrantSwitch} openDraft={(id) => { c.setSelectedApplicationId(id); navigate("r-submit", { keepSelection: true }); }} openDetail={(id) => { c.setSelectedApplicationId(id); navigate("r-detail"); }} />;
     case "r-detail":        return <ResearcherApplicationDetail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-dashboard":      return <DeanDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
+    case "d-analytics":      return c.profile && c.profile.role === "dean" ? <RoleAnalyticsDashboard role="dean" /> : <Empty title="Dean access required" desc="Dean Analytics is restricted to the signed-in Dean's faculty." icon="Lock" />;
+    case "d-ai":             return c.profile && c.profile.role === "dean" ? <RoleAIChatbotPage role="dean" /> : <Empty title="Dean access required" desc="This AI workspace is restricted to Dean accounts." icon="Lock" />;
     case "d-r3-screen":      return <DeanR3Queue navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "d-r3-detail":      return <DeanR3Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} />;
     case "d-r4-screen":      return <DeanR4Queue navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
@@ -642,10 +644,14 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "d-history":        return <DeanHistory navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} />;
     case "d-history-detail": return <DeanDecisionTimeline applicationId={c.selectedApplicationId} navigate={navigate} />;
     case "i-dashboard":      return <IRASDashboard navigate={navigate} setSelectedApplicationId={c.setSelectedApplicationId} grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} />;
+    case "i-analytics":      return c.profile && c.profile.role === "iras" ? <RoleAnalyticsDashboard role="iras" /> : <Empty title="IRAS access required" desc="IRAS Analytics is restricted to IRAS accounts." icon="Lock" />;
+    case "i-ai":             return c.profile && c.profile.role === "iras" ? <RoleAIChatbotPage role="iras" /> : <Empty title="IRAS access required" desc="This AI workspace is restricted to IRAS accounts." icon="Lock" />;
     case "i-r3-verify":      return c.role === "iras" ? <IRASr3Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} /> : <Empty title="IRAS access required" desc="AU-R3 verification is available only to IRAS." icon="Lock" />;
     case "i-r4-verify":      return c.role === "iras" ? <IRASr4Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} /> : <Empty title="IRAS access required" desc="AU-R4 verification is available only to IRAS." icon="Lock" />;
     case "o-dashboard":      return <OFMDashboard navigate={navigate} toast={c.toast} setConfirm={c.setConfirm} grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} onDownload={c.onDownload} onView={c.onView} />;
     case "o-summary":        return <OFMTotalSummary onDownload={c.onDownload} onView={c.onView} />;
+    case "o-analytics":      return c.profile && c.profile.role === "ofm" ? <RoleAnalyticsDashboard role="ofm" /> : <Empty title="Finance access required" desc="Finance Analytics is restricted to Finance accounts." icon="Lock" />;
+    case "o-ai":             return c.profile && c.profile.role === "ofm" ? <RoleAIChatbotPage role="ofm" /> : <Empty title="Finance access required" desc="This AI workspace is restricted to Finance accounts." icon="Lock" />;
     case "o-history":        return <OFMHistory grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} />;
 
 
@@ -873,12 +879,13 @@ function App() {
     const supportedSystem = ACTIVE_GRANT_TYPES.includes(rSystem);
     const researcherAI = !!(loggedIn && profile && profile.role === "researcher" && role === "researcher" && supportedSystem);
     const adminAnalyticsAI = !!(loggedIn && profile && profile.role === "admin" && role === "admin" && page === "a-analytics");
-    const visible = researcherAI || adminAnalyticsAI;
+    const roleAI = !!(loggedIn && profile && profile.role === role && ["dean", "iras", "ofm"].includes(role) && page === ({ dean: "d-ai", iras: "i-ai", ofm: "o-ai" }[role]));
+    const visible = researcherAI || adminAnalyticsAI || roleAI;
     window.AU_AI_VISIBLE = visible;
     window.AU_AI_GRANT_SYSTEM = researcherAI ? rSystem : null;
-    window.AU_AI_MODE = adminAnalyticsAI ? "analytics" : (researcherAI ? "researcher" : null);
+    window.AU_AI_MODE = adminAnalyticsAI ? "analytics" : (roleAI ? "role" : (researcherAI ? "researcher" : null));
     window.dispatchEvent(new CustomEvent("au-ai-visibility", {
-      detail: { visible, grantSystem: researcherAI ? rSystem : null, mode: adminAnalyticsAI ? "analytics" : (researcherAI ? "researcher" : null) },
+      detail: { visible, grantSystem: researcherAI ? rSystem : null, mode: adminAnalyticsAI ? "analytics" : (roleAI ? "role" : (researcherAI ? "researcher" : null)) },
     }));
   }, [loggedIn, profile, role, page, rSystem]);
 

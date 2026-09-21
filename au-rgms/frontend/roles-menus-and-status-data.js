@@ -45,7 +45,9 @@ const NAV_RESEARCHER_R3 = [
 
 const NAV_DEAN = [
   { section: "WORKSPACE" },
-  { key: "d-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+  { key: "d-dashboard", label: "Summary", icon: "LayoutDashboard" },
+  { key: "d-analytics", label: "Analytics", icon: "BarChart3" },
+  { key: "d-ai", label: "AI Chatbot", icon: "Bot" },
   { section: "QUEUES" },
   { key: "d-r3-screen", label: "AU-R3 Queue", icon: "Users" },
   { key: "d-r4-screen", label: "AU-R4 Queue", icon: "Award" },
@@ -55,15 +57,19 @@ const NAV_DEAN = [
 
 const NAV_IRAS = [
   { section: "WORKSPACE" },
-  { key: "i-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+  { key: "i-dashboard", label: "Summary", icon: "LayoutDashboard" },
+  { key: "i-analytics", label: "Analytics", icon: "BarChart3" },
+  { key: "i-ai", label: "AI Chatbot", icon: "Bot" },
   { section: "REVIEW" },
   { key: "i-screening", label: "IRAS Screening", icon: "ClipboardCheck", disabled: true, activeFor: ["i-r3-verify", "i-r4-verify"], hint: "Choose Verify from the AU-R3 or AU-R4 dashboard first." },
 ];
 
 const NAV_OFM = [
   { section: "WORKSPACE" },
-  { key: "o-dashboard", label: "Dashboard", icon: "LayoutDashboard" },
+  { key: "o-dashboard", label: "Summary", icon: "LayoutDashboard" },
   { key: "o-summary", label: "Total Summary", icon: "BarChart3" },
+  { key: "o-analytics", label: "Analytics", icon: "TrendingUp" },
+  { key: "o-ai", label: "AI Chatbot", icon: "Bot" },
   { section: "TRACKING" },
   { key: "o-history", label: "Payment History", icon: "Clock" },
 ];

@@ -688,6 +688,90 @@
       if (grantType) rows = rows.filter(function (row) { return row.grant_type === requireActiveGrant(grantType); });
       return rows.sort(function (a, b) { return String(b.paid_at || "").localeCompare(String(a.paid_at || "")); });
     },
+    async roleAnalyticsSnapshot() {
+      var actor = await currentActor();
+      if (["dean", "iras", "ofm"].indexOf(actor.role) < 0) throw new Error("Dean, IRAS, or Finance access required.");
+      if (actor.role === "dean" && !(actor.profile && actor.profile.faculty)) throw new Error("Your Dean account is not assigned to a faculty.");
+
+      var query = sb.from("applications")
+        .select("id,code,title,grant_type,status,faculty,department,requested_amount,approved_amount,created_at,submitted_at,updated_at")
+        .in("grant_type", ACTIVE_GRANT_TYPES)
+        .in("status", ["draft", "submitted", "iras_review", "approved", "active", "completed", "rejected", "returned"]);
+      if (actor.role === "dean") query = query.eq("faculty", actor.profile.faculty);
+      if (actor.role === "ofm") query = query.in("status", ["approved", "active", "completed"]);
+      var appResult = await query.order("updated_at", { ascending: false });
+      if (appResult.error) throw appResult.error;
+      var apps = appResult.data || [];
+
+      var paymentResult = await sb.from("payments")
+        .select("application_id,amount,status,paid_at,application:applications(id,grant_type,faculty,department,status)")
+        .eq("status", "paid");
+      var payments = paymentResult.error ? [] : (paymentResult.data || []).filter(function (payment) {
+        var application = payment.application;
+        if (!application || ACTIVE_GRANT_TYPES.indexOf(application.grant_type) < 0) return false;
+        return actor.role !== "dean" || application.faculty === actor.profile.faculty;
+      });
+      var paidByApplication = {};
+      payments.forEach(function (payment) {
+        paidByApplication[payment.application_id] = (paidByApplication[payment.application_id] || 0) + Number(payment.amount || 0);
+      });
+
+      var statusLabels = {};
+      var byGrantMap = { au_r3: { key: "au_r3", label: "AU-R3", total: 0, requested: 0, approved: 0, paid: 0 }, au_r4: { key: "au_r4", label: "AU-R4", total: 0, requested: 0, approved: 0, paid: 0 } };
+      var facultyMap = {};
+      var departmentMap = {};
+      var totals = { applications: apps.length, requested: 0, approved: 0, paid: 0, pendingReview: 0, pendingPayment: 0, completed: 0 };
+      apps.forEach(function (application) {
+        var requested = application.grant_type === "au_r3" ? 3500 : Number(application.requested_amount || 0);
+        var approved = application.approved_amount == null ? 0 : (application.grant_type === "au_r3" ? 3500 : Number(application.approved_amount || 0));
+        var paid = Number(paidByApplication[application.id] || 0);
+        if (!paid && application.status === "completed") paid = approved || requested;
+        totals.requested += requested;
+        totals.approved += approved;
+        totals.paid += paid;
+        if (application.status === "completed") totals.completed++;
+        if ((actor.role === "dean" && application.status === "submitted") || (actor.role === "iras" && application.status === "iras_review")) totals.pendingReview++;
+        if (actor.role === "ofm" && ["approved", "active"].indexOf(application.status) >= 0) totals.pendingPayment++;
+        statusLabels[application.status] = (statusLabels[application.status] || 0) + 1;
+
+        var grant = byGrantMap[application.grant_type];
+        grant.total++; grant.requested += requested; grant.approved += approved; grant.paid += paid;
+        var facultyName = application.faculty || "Unspecified faculty";
+        var departmentName = application.department || "Unspecified department";
+        if (!facultyMap[facultyName]) facultyMap[facultyName] = { label: facultyName, total: 0, requested: 0, approved: 0, paid: 0 };
+        if (!departmentMap[departmentName]) departmentMap[departmentName] = { label: departmentName, total: 0, requested: 0, approved: 0, paid: 0 };
+        [facultyMap[facultyName], departmentMap[departmentName]].forEach(function (group) {
+          group.total++; group.requested += requested; group.approved += approved; group.paid += paid;
+        });
+      });
+      function ranked(map) {
+        return Object.keys(map).map(function (key) { return map[key]; }).sort(function (a, b) {
+          var aValue = actor.role === "ofm" ? a.paid : (a.approved || a.requested);
+          var bValue = actor.role === "ofm" ? b.paid : (b.approved || b.requested);
+          return bValue - aValue || b.total - a.total;
+        });
+      }
+      return {
+        generatedAt: new Date().toISOString(),
+        role: actor.role,
+        scope: actor.role === "dean" ? actor.profile.faculty : "All Assumption University faculties",
+        totals: totals,
+        byStatus: Object.keys(statusLabels).map(function (key) { return { key: key, label: badge(key).label, value: statusLabels[key] }; }).sort(function (a, b) { return b.value - a.value; }),
+        byGrant: [byGrantMap.au_r3, byGrantMap.au_r4],
+        byFaculty: ranked(facultyMap),
+        byDepartment: ranked(departmentMap),
+        recentApplications: apps.slice(0, 8).map(function (application) {
+          return {
+            code: application.code, title: application.title,
+            grant: application.grant_type === "au_r4" ? "AU-R4" : "AU-R3",
+            status: badge(application.status, application.grant_type).label,
+            faculty: application.faculty, department: application.department,
+            amount: Number(application.approved_amount || (application.grant_type === "au_r3" ? 3500 : application.requested_amount) || 0),
+            updatedAt: application.updated_at || application.submitted_at || application.created_at,
+          };
+        }),
+      };
+    },
     async adminAnalyticsSnapshot() {
       var role = await myRole();
       if (role !== "admin") throw new Error("Administrator access required.");

@@ -108,7 +108,7 @@ function DeanDashboard({ navigate, setSelectedApplicationId }) {
   return (
     <>
       <PageHeader
-        title={isR4 ? "AU-R4 Dean Dashboard" : "AU-R3 Dean Dashboard"}
+        title={isR4 ? "AU-R4 Dean Summary" : "AU-R3 Dean Summary"}
         actions={
           <>
             {sysToggle}
@@ -438,7 +438,7 @@ function IRASDashboard({ navigate, setSelectedApplicationId, grantType = "au_r3"
   return (
     <>
       <PageHeader
-        title={(isR4 ? "AU-R4" : "AU-R3") + " · IRAS Dashboard"}
+        title={(isR4 ? "AU-R4" : "AU-R3") + " · IRAS Summary"}
         desc={isR4
           ? "Verify Dean-approved AU-R4 publication-fee applications before forwarding eligible claims to Finance."
           : "Verify Dean-approved paper presentation applications before forwarding them to Finance."}
@@ -763,7 +763,7 @@ function OFMDashboard({ navigate, toast, setConfirm, grantType, onGrantSwitch, o
   const sysToggle = <FinanceGrantTabs sys={sys} onChange={next => onGrantSwitch(next, "o-dashboard")} />;
   return (
     <>
-      <PageHeader title={(isR4 ? "AU-R4" : "AU-R3") + " · Finance Dashboard"}
+      <PageHeader title={(isR4 ? "AU-R4" : "AU-R3") + " · Finance Summary"}
         desc={"Process payments for IRAS-approved " + (isR4 ? "publication fee and reward" : "paper presentation grant") + " applications."}
         actions={sysToggle} />
       <div className="stats">
@@ -1358,6 +1358,113 @@ function AnalyticsDashboard({ role }) {
   );
 }
 
+function RoleAnalyticsDashboard({ role }) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  useEffect(() => {
+    let alive = true;
+    setData(null); setError("");
+    window.DB.roleAnalyticsSnapshot().then(result => { if (alive) setData(result); }).catch(err => {
+      if (alive) setError((err && err.message) || "Analytics could not be loaded.");
+    });
+    return () => { alive = false; };
+  }, [role]);
+  const config = {
+    dean: {
+      title: "Dean Analytics", desc: "Faculty-only analytics for AU-R3 and AU-R4 applications.",
+      pending: "Awaiting Dean Review", groupTitle: "Top Approved Spending by Department", groupKey: "byDepartment",
+    },
+    iras: {
+      title: "IRAS Analytics", desc: "University-wide AU-R3 and AU-R4 verification and funding analytics.",
+      pending: "Awaiting IRAS Verification", groupTitle: "Top Approved Spending by Faculty", groupKey: "byFaculty",
+    },
+    ofm: {
+      title: "Finance Analytics", desc: "University-wide analytics for applications forwarded to Finance.",
+      pending: "Awaiting Payment", groupTitle: "Top Disbursement by Faculty", groupKey: "byFaculty",
+    },
+  }[role] || { title: "Role Analytics", desc: "Role-scoped analytics.", pending: "Pending", groupTitle: "Top Spending", groupKey: "byFaculty" };
+  if (error) return <Empty title="Analytics unavailable" desc={error} icon="BarChart3" />;
+  const totals = data ? data.totals : {};
+  const groups = data ? (data[config.groupKey] || []) : [];
+  const spendKey = role === "ofm" ? "paid" : "approved";
+  return (
+    <>
+      <PageHeader title={config.title} desc={config.desc} actions={<Badge status={{ label: data ? data.scope : "Loading live data", cls: "badge-academic" }} />} />
+      <div className="stats">
+        <Stat label="Applications" value={data ? totals.applications : "…"} icon="Folder" />
+        <Stat label={config.pending} value={data ? (role === "ofm" ? totals.pendingPayment : totals.pendingReview) : "…"} icon="Clock" tone="gold" />
+        <Stat label={role === "ofm" ? "Disbursed" : "Approved Amount"} value={data ? fmtBaht(role === "ofm" ? totals.paid : totals.approved) : "…"} icon="Coins" tone="green" />
+      </div>
+      <div className="grid-2">
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Workflow Status</h3></div>
+          <AnalyticsBars rows={data ? data.byStatus : []} valueKey="value" renderValue={r => r.value + " apps"} emptyTitle="No workflow data yet" />
+        </div>
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>AU-R3 / AU-R4 Mix</h3></div>
+          <AnalyticsBars rows={data ? data.byGrant : []} valueKey="total" renderValue={r => r.total + " apps"} emptyTitle="No grant data yet" />
+        </div>
+      </div>
+      <div className="mt-4 grid-2">
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>{config.groupTitle}</h3></div>
+          <AnalyticsBars rows={groups.slice(0, 8)} valueKey={spendKey} renderValue={r => fmtBaht(r[spendKey])} emptyTitle="No spending data yet" />
+        </div>
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Recent Role Activity</h3></div>
+          <div className="card-body" style={{ padding: 0 }}>
+            {!data ? <div style={{ padding: 28, color: "var(--ink-3)" }}>Loading live records…</div> : !(data.recentApplications || []).length
+              ? <div style={{ padding: 28, color: "var(--ink-3)" }}>No applications in this role scope yet.</div>
+              : (data.recentApplications || []).map(app => (
+                <div key={app.code} style={{ display: "flex", gap: 12, alignItems: "center", padding: "13px 18px", borderBottom: "1px solid var(--line-2)" }}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 12, fontWeight: 700 }}>{app.code} · {app.title}</div>
+                    <div style={{ fontSize: 11, color: "var(--ink-3)", marginTop: 3 }}>{app.grant} · {role === "dean" ? app.department : app.faculty}</div>
+                  </div>
+                  <span style={{ fontSize: 11, color: "var(--ink-3)" }}>{app.status}</span>
+                  <span style={{ fontSize: 11, fontFamily: "ui-monospace, monospace", minWidth: 88, textAlign: "right" }}>{fmtBaht(app.amount)}</span>
+                </div>
+              ))}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
+function RoleAIChatbotPage({ role }) {
+  const config = {
+    dean: { title: "Dean AI Chatbot", scope: "Only your assigned faculty", prompts: ["What needs the Dean's attention now?", "Show the top approved spending by department", "Summarize AU-R3 and AU-R4 in my faculty"] },
+    iras: { title: "IRAS AI Chatbot", scope: "All faculties · IRAS verification data", prompts: ["What needs IRAS verification now?", "Which faculties have the highest approved amount?", "Give me an R3 and R4 management summary"] },
+    ofm: { title: "Finance AI Chatbot", scope: "All faculties · Finance-forwarded applications only", prompts: ["What payments need action now?", "Which faculties have the highest disbursement?", "Summarize completed R3 and R4 payments"] },
+  }[role];
+  return (
+    <>
+      <PageHeader title={config.title} desc="Ask questions about live AU-R3 and AU-R4 data within your role permissions." />
+      <div className="grid-2">
+        <div className="card">
+          <div className="card-body" style={{ padding: 28 }}>
+            <div style={{ width: 48, height: 48, borderRadius: 16, display: "grid", placeItems: "center", color: "var(--au-crimson)", background: "var(--au-red-soft)", marginBottom: 18 }}><Icon name="Bot" size={24} /></div>
+            <h3 style={{ margin: 0, fontFamily: "var(--serif)", fontSize: 25 }}>Role-limited AU AI</h3>
+            <p style={{ color: "var(--ink-3)", lineHeight: 1.6, margin: "10px 0 18px" }}>The chatbot is read-only and uses live data only within this account's permitted scope.</p>
+            <div style={{ padding: 14, border: "1px solid var(--line)", borderRadius: 12, background: "var(--paper-warm)", marginBottom: 18 }}>
+              <div style={{ fontSize: 10, letterSpacing: ".09em", fontWeight: 800, color: "var(--ink-3)" }}>DATA SCOPE</div>
+              <div style={{ marginTop: 5, fontWeight: 700 }}>{config.scope}</div>
+            </div>
+            <button className="btn btn-primary" onClick={() => window.dispatchEvent(new CustomEvent("au-ai-toggle"))}><Icon name="Bot" size={15} /> Open AI Chatbot</button>
+          </div>
+        </div>
+        <div className="card card-pad-0">
+          <div className="card-head"><h3>Try asking</h3></div>
+          <div className="card-body" style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {config.prompts.map(prompt => <button key={prompt} className="btn btn-secondary" style={{ justifyContent: "flex-start", textAlign: "left", padding: "13px 15px" }} onClick={() => window.dispatchEvent(new CustomEvent("au-ai-prompt", { detail: { prompt } }))}><Icon name="MessageCircle" size={14} /> {prompt}</button>)}
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
+
 
 function Toggle({ defaultOn = false }) {
   const [on, setOn] = useState(defaultOn);
@@ -1387,5 +1494,5 @@ Object.assign(window, {
   IRASDashboard, IRASr3Detail, IRASr4Detail,
   OFMDashboard, OFMTotalSummary, OFMHistory,
   AdminDashboard, AdminUsers, AdminAudit,
-  AnalyticsDashboard, AccountSettings,
+  AnalyticsDashboard, RoleAnalyticsDashboard, RoleAIChatbotPage, AccountSettings,
 });

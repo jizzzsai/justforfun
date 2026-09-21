@@ -4,16 +4,25 @@ const { useState, useRef, useEffect } = React;
 
 const ROLE_INTRO = {
   researcher: "Hi, I'm AU AI. Ask me about your applications, forms, documents, authors, reviews, reports, or payments.",
+  dean: "Hi, I'm AU AI for Deans. I can summarize only the AU-R3 and AU-R4 applications in your assigned faculty.",
+  iras: "Hi, I'm AU AI for IRAS. Ask me about university-wide R3/R4 verification queues, workflow totals, faculties, and approved funding.",
+  ofm: "Hi, I'm AU AI for Finance. Ask me about R3/R4 applications forwarded to Finance, pending payments, disbursements, and completed payments.",
   admin: "Hi, I'm AU AI for Admin Analytics. Ask me to summarize or compare live applications, faculties, budgets, users, workflows, and payments.",
   _default: "Hi, I'm AU AI — Assumption University's research-grant assistant. Ask me about AU-R3 conference grants, AU-R4 publication rewards, reviews, documents, or payments.",
 };
 const ROLE_SUGGEST = {
   researcher: ["What needs my action now?", "Give me a resubmission checklist", "Which documents am I missing?"],
+  dean: ["What needs my review now?", "Which department has the highest approved spending?", "Summarize my faculty's R3 and R4 applications"],
+  iras: ["What needs IRAS verification now?", "Which faculty has the highest approved amount?", "Give me an R3 and R4 management summary"],
+  ofm: ["What payments need action now?", "Which faculty has the highest disbursement?", "Summarize completed R3 and R4 payments"],
   admin: ["Give me a management summary", "Which faculty has the most applications?", "What needs attention now?"],
   _default: ["How does the AU-R3 workflow work?", "What documents do I need to apply?", "Reward for a Scopus Q1 paper?"],
 };
 const ROLE_LABEL = {
   researcher: "Researcher assistant",
+  dean: "Dean faculty assistant",
+  iras: "IRAS analytics assistant",
+  ofm: "Finance analytics assistant",
   admin: "Admin analytics assistant",
 };
 
@@ -55,6 +64,8 @@ async function buildAIContext(grantSystem, mode) {
         const g = await window.DB.myGrant(grantSystem || "au_r3");
         if (g) ctx.myGrant = { code: g.code, approvedAmount: g.approved_amount, requestedAmount: g.requested_amount, status: g.status, payments: (g.payments || []).map(p => ({ phase: p.instalment, percent: p.pct, amount: p.amount, status: p.status, paidAt: p.paid_at })), reports: g.reports || [] };
       } catch (e) {}
+    } else if (["dean", "iras", "ofm"].includes(role) && mode === "role") {
+      ctx.roleAnalytics = await window.DB.roleAnalyticsSnapshot();
     } else if (role === "admin" && mode === "analytics") {
       ctx.analytics = await window.DB.adminAnalyticsSnapshot();
     }
@@ -115,8 +126,17 @@ function AIChat() {
     const onToggle = () => {
       if (available) setOpen(v => !v);
     };
+    const onPrompt = event => {
+      if (!available) return;
+      setOpen(true);
+      setInput(String((event.detail && event.detail.prompt) || ""));
+    };
     window.addEventListener("au-ai-toggle", onToggle);
-    return () => window.removeEventListener("au-ai-toggle", onToggle);
+    window.addEventListener("au-ai-prompt", onPrompt);
+    return () => {
+      window.removeEventListener("au-ai-toggle", onToggle);
+      window.removeEventListener("au-ai-prompt", onPrompt);
+    };
   }, [available]);
 
   useEffect(() => {
