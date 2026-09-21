@@ -51,7 +51,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
       strictStatus={true}
       applicationId={applicationId}
       title="AU-R3 Screening"
-      desc="Review the conference, paper, conference classification, and documents before forwarding to IRAS."
+      desc="Review the conference, paper, conference qualities, and documents before forwarding to IRAS."
       render={(app, load) => {
         const docs = app.documents || [];
         const ci = app.conference_info || {};
@@ -77,7 +77,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
         const ret = () => setConfirm({
           kind: "danger",
           title: "Return for revision?",
-          message: app.code + " will be sent back to the researcher. Explain what needs to be fixed (for example, a clearer Turnitin report or corrected conference classification).",
+          message: app.code + " will be sent back to the researcher. Explain what needs to be fixed (for example, a clearer Turnitin report or corrected conference qualities).",
           confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment", finalConfirm: false,
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-r3-screen"); }
@@ -137,7 +137,6 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                     <div className="meta-row"><span className="l">Paper title</span><span className="r">{app.title}</span></div>
                     <div className="meta-row"><span className="l">Research field</span><span className="r">{app.field || "-"}</span></div>
                     <div className="meta-row"><span className="l">Author(s)</span><span className="r">{[(ci.researcherName || r.full_name) + " (" + (ci.authorType || "Lead Author") + ")"].concat((app.co_members || []).map(m => m.name + " (" + (m.authorType || "Co-author") + ")" + (m.kind === "Student" ? " · Student" : ""))).filter(Boolean).join(", ")}</span></div>
-                    <div className="meta-row"><span className="l">Corresponding author</span><span className="r">{ci.correspondingAuthor || "-"}</span></div>
                     {ci.paperAbstract && (
                       <>
                         <div className="eyebrow mt-4 mb-2">Abstract</div>
@@ -164,10 +163,10 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 </div>
 
                 <div className="card card-pad-0 mb-4">
-                  <div className="card-head"><h3>Conference Classification</h3></div>
+                  <div className="card-head"><h3>Conference Qualities</h3></div>
                   <div className="card-body">
                     <div className="meta-row"><span className="l">Conference Database / Index</span><span className="r">{ci.journalDb || "-"}</span></div>
-                    <div className="meta-row"><span className="l">Conference Classification</span><span className="r">{ci.journalClassification || "-"}</span></div>
+                    <div className="meta-row"><span className="l">Qualities</span><span className="r">{ci.journalClassification || "-"}</span></div>
                     <div className="meta-row"><span className="l">Fixed AU-R3 grant</span><span className="r">{fmtBaht(3500)}</span></div>
                   </div>
                 </div>

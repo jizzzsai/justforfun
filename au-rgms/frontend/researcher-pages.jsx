@@ -342,7 +342,7 @@ function UniversityJoinedDateField({ value, onChange, readOnly = false }) {
 const R3_DEFAULT_DRAFT = {
   confName: "", organizer: "", website: "", confType: "International", conferenceLocation: "",
   presentationDate: "", presentation: "Oral Presentation", journalDb: "", journalClassification: "",
-  paperTitle: "", field: "", keywords: "", corresponding: "", paperAbstract: "", authorType: "Lead Author",
+  paperTitle: "", field: "", keywords: "", paperAbstract: "", authorType: "Lead Author",
   name: "", title2: "", academicPosition: "", auId: "", email: "", phone: "", office: "", joinedDate: "", school: "", department: "",
 };
 
@@ -404,7 +404,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
           presentation: ci.presentation || "Oral Presentation",
           journalDb: ci.journalDb || "", journalClassification: ci.journalClassification || "",
           paperTitle: app.title || "", field: app.field || "", keywords: app.keywords || "",
-          corresponding: ci.correspondingAuthor || "", paperAbstract: ci.paperAbstract || "", authorType: ci.authorType || "Lead Author",
+          paperAbstract: ci.paperAbstract || "", authorType: ci.authorType || "Lead Author",
           joinedDate: researcherInfo.joinedDate || "",
           school: researcherInfo.faculty || app.faculty || d.school,
           department: researcherInfo.department || app.department || d.department,
@@ -441,10 +441,9 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
     if (submit && !draft.presentationDate) { setErr("Select the presentation date."); return; }
     if (submit && !draft.paperTitle.trim()) { setErr("Enter the paper title."); return; }
     if (submit && !draft.field.trim()) { setErr("Enter the research field."); return; }
-    if (submit && !draft.corresponding.trim()) { setErr("Enter the corresponding author."); return; }
     if (submit && !draft.paperAbstract.trim()) { setErr("Enter the paper abstract."); return; }
     if (submit && !draft.journalDb) { setErr("Select the Conference Database / Index."); return; }
-    if (submit && !draft.journalClassification.trim()) { setErr("Select or enter the conference classification."); return; }
+    if (submit && !draft.journalClassification.trim()) { setErr("Select or enter the conference qualities."); return; }
     if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
     if (submit && !draft.name.trim()) { setErr("Enter your full name."); return; }
     if (submit && !draft.email.trim()) { setErr("Enter your AU email address."); return; }
@@ -467,7 +466,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         presentationDate: draft.presentationDate || null,
         presentation: draft.presentation || "Oral Presentation",
         journalDb: draft.journalDb, journalClassification: draft.journalClassification,
-        correspondingAuthor: draft.corresponding, paperAbstract: draft.paperAbstract, authorType: draft.authorType,
+        paperAbstract: draft.paperAbstract, authorType: draft.authorType,
         researcherSnapshot,
         researcherName: researcherSnapshot.fullName,
         researcherEmail: researcherSnapshot.email,
@@ -589,10 +588,6 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
                 </select>
               </div>
               <div className="field full">
-                <label>Corresponding Author</label>
-                <input value={draft.corresponding} onChange={e => upd("corresponding", e.target.value)} placeholder="Name of the corresponding author" />
-              </div>
-              <div className="field full">
                 <label>Abstract *</label>
                 <textarea className="comment-input" style={{ minHeight: 90 }} value={draft.paperAbstract} onChange={e => upd("paperAbstract", e.target.value)} placeholder="Paste the paper abstract here." />
               </div>
@@ -689,25 +684,25 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
         </div>
 
         <div className="form-section">
-          <h4><span className="num">4</span> Conference Classification</h4>
-          <p className="section-sub">Select the conference proceedings database and its classification. The AU-R3 grant amount is fixed at 3,500 THB.</p>
+          <h4><span className="num">4</span> Conference Qualities</h4>
+          <p className="section-sub">Select the conference proceedings database and enter its qualities. The AU-R3 grant amount is fixed at 3,500 THB.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field"><label>Conference Database / Index *</label>
                 <select value={draft.journalDb} onChange={e => setDraft(d => ({ ...d, journalDb: e.target.value, journalClassification: "" }))}>
                   <option value="">Select database / index…</option>
-                  {(RA.R4_JOURNAL_DBS || []).map(t => <option key={t} value={t}>{t}</option>)}
+                  {(RA.R3_CONFERENCE_DBS || RA.R4_JOURNAL_DBS || []).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="field"><label>Conference Classification *</label>
+              <div className="field"><label>Qualities *</label>
                 {classificationOptions ? (
                   <select value={draft.journalClassification} onChange={e => upd("journalClassification", e.target.value)} disabled={!draft.journalDb}>
-                    <option value="">Select classification…</option>
+                    <option value="">Select qualities…</option>
                     {classificationOptions.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 ) : (
                   <input value={draft.journalClassification} onChange={e => upd("journalClassification", e.target.value)} disabled={!draft.journalDb}
-                    placeholder={draft.journalDb === "Other" ? "Enter database / index name manually" : draft.journalDb ? "Enter additional tier" : "Select a database / index first"} />
+                    placeholder={draft.journalDb === "Other" ? "Enter qualities manually" : draft.journalDb ? "Enter conference qualities" : "Select a database / index first"} />
                 )}
               </div>
             </div>
@@ -1599,9 +1594,8 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
                   <div className="meta-row"><span className="l">Conference location</span><span className="r">{app.conference_info.conferenceLocation || [app.conference_info.city, app.conference_info.country].filter(Boolean).join(", ") || "-"}</span></div>
                   <div className="meta-row"><span className="l">Presentation date</span><span className="r">{(app.conference_info.presentationDate || app.conference_info.confStart) ? fmtNiceDate(app.conference_info.presentationDate || app.conference_info.confStart) : "-"}</span></div>
                   <div className="meta-row"><span className="l">Presentation</span><span className="r">{app.conference_info.presentation || "Oral Presentation"}</span></div>
-                  <div className="meta-row"><span className="l">Corresponding</span><span className="r">{app.conference_info.correspondingAuthor || "-"}</span></div>
                   <div className="meta-row"><span className="l">Conference Database / Index</span><span className="r">{app.conference_info.journalDb || "-"}</span></div>
-                  <div className="meta-row"><span className="l">Conference Classification</span><span className="r">{app.conference_info.journalClassification || "-"}</span></div>
+                  <div className="meta-row"><span className="l">Qualities</span><span className="r">{app.conference_info.journalClassification || "-"}</span></div>
                 </div>
               )}
               {app.pub_info && (

@@ -696,6 +696,26 @@ const RETIRED_PAGES = [
   "o-payments", "o-detail",
 ];
 
+const LAST_PAGE_KEY_PREFIX = "au-rgms-last-page-";
+
+function pageBelongsToRole(role, page) {
+  if (!page || RETIRED_PAGES.includes(page)) return false;
+  const prefix = { researcher: "r-", dean: "d-", iras: "i-", ofm: "o-", admin: "a-" }[role];
+  return !!(prefix && page.startsWith(prefix)) || page === "account" || (role === "researcher" && page === "forms");
+}
+
+function readLastPage(role) {
+  try {
+    const saved = sessionStorage.getItem(LAST_PAGE_KEY_PREFIX + role);
+    return pageBelongsToRole(role, saved) ? saved : null;
+  } catch (e) { return null; }
+}
+
+function rememberLastPage(role, page) {
+  if (!pageBelongsToRole(role, page)) return;
+  try { sessionStorage.setItem(LAST_PAGE_KEY_PREFIX + role, page); } catch (e) {}
+}
+
 
 function App() {
   const initial = readHash();
@@ -788,7 +808,7 @@ function App() {
     setDemoMode(nextDemoMode);
     setProfile(prof || null);
     setRole(r);
-    setPage(ROLE_CONFIG[r].homeKey);
+    setPage(readLastPage(r) || ROLE_CONFIG[r].homeKey);
     setLoggedIn(true);
   };
 
@@ -862,8 +882,9 @@ function App() {
             setProfile(prof);
             if (ROLE_CONFIG[prof.role]) setRole(prof.role);
             if (event === "SIGNED_IN" && ROLE_CONFIG[prof.role]) {
-              setSelectedApplicationId(null);
-              setPage(ROLE_CONFIG[prof.role].homeKey);
+              setPage(currentPage => pageBelongsToRole(prof.role, currentPage)
+                ? currentPage
+                : (readLastPage(prof.role) || ROLE_CONFIG[prof.role].homeKey));
             }
             setLoggedIn(true);
           }).catch(() => { setProfile(null); setLoggedIn(false); });
@@ -874,6 +895,10 @@ function App() {
       if (listener && listener.data && listener.data.subscription) listener.data.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    if (loggedIn && profile && profile.role === role) rememberLastPage(role, page);
+  }, [loggedIn, profile, role, page]);
 
   useEffect(() => {
     const supportedSystem = ACTIVE_GRANT_TYPES.includes(rSystem);

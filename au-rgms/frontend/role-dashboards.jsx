@@ -485,12 +485,12 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                   {row("Paper title", app.title)}{row("Field", app.field)}
                   {row("Applicant author type", ci.authorType || "Lead Author")}
                   {(app.co_members || []).map((author, index) => <div className="meta-row" key={index}><span className="l">{"Additional author " + (index + 1) + " · " + (author.authorType || "Co-author")}</span><span className="r">{author.name + (author.kind ? " · " + author.kind : "")}</span></div>)}
-                  {row("Corresponding author", ci.correspondingAuthor)}{row("Abstract", ci.paperAbstract)}{row("Keywords", app.keywords)}
+                  {row("Abstract", ci.paperAbstract)}{row("Keywords", app.keywords)}
                   <ResearcherServiceEligibilityRows app={app} />
                   <ReviewCommentHistory app={app} roles={["dean"]} />
                 </div></div>
-                <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Conference Classification</h3></div>
-                  <div className="card-body">{row("Conference Database / Index", ci.journalDb)}{row("Conference Classification", ci.journalClassification)}{row("Fixed AU-R3 grant", fmtBaht(3500))}</div>
+                <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Conference Qualities</h3></div>
+                  <div className="card-body">{row("Conference Database / Index", ci.journalDb)}{row("Qualities", ci.journalClassification)}{row("Fixed AU-R3 grant", fmtBaht(3500))}</div>
                 </div>
                 <div className="card card-pad-0"><div className="card-head"><h3>Documents</h3></div><div>
                   {docs.length === 0 && <Empty title="No documents" desc="No files forwarded." icon="FileText" />}
@@ -498,7 +498,7 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 </div></div>
               </div>
               <div className="card card-pad-0" style={{ alignSelf: "start" }}><div className="card-head"><h3>IRAS Decision</h3></div><div className="card-body">
-                <p className="text-sm text-muted mb-4">Confirm the conference, paper, conference classification, three required documents, and fixed 3,500 THB grant are eligible, then forward to Finance for payment.</p>
+                <p className="text-sm text-muted mb-4">Confirm the conference, paper, conference qualities, three required documents, and fixed 3,500 THB grant are eligible, then forward to Finance for payment.</p>
                 <div className="flex flex-col gap-2">
                   <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Finance</button>
                   <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
