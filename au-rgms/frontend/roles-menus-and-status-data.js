@@ -63,7 +63,7 @@ const NAV_IRAS = [
   { key: "i-analytics", label: "Analytics", icon: "BarChart3" },
   { key: "i-ai", label: "AI Chatbot", icon: "Bot" },
   { section: "REVIEW" },
-  { key: "i-screening", label: "IRAS Screening", icon: "ClipboardCheck", disabled: true, activeFor: ["i-r3-verify", "i-r4-verify"], hint: "Choose Verify from the AU-R3 or AU-R4 dashboard first." },
+  { key: "i-screening", label: "IRAS Verification", icon: "ClipboardCheck", disabled: true, activeFor: ["i-r3-verify", "i-r4-verify"], hint: "Choose Verify from the AU-R3 or AU-R4 Summary first." },
 ];
 
 const NAV_OFM = [
@@ -161,7 +161,7 @@ const GRANT_SYSTEMS = [
   },
   {
     id: "au_r4", code: "AU-R4", enabled: true, collaborative: false,
-    name: "Publication Fees & Reward",
+    name: "Publication Fees and Reward",
     tagline: "Submit a published or accepted journal article for publication-fee review.",
     maxAmount: 80000, maxLabel: "฿80,000 / article",
     icon: "Award", accent: "#9E1B1B", accentSoft: "#F8E8E8",

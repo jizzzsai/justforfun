@@ -24,7 +24,7 @@ function messageOf(value, fallback) {
 }
 function bodyOf(req) {
   let body = req.body;
-  if (typeof body === "string") { try { body = JSON.parse(body); } catch (e) { body = {}; } }
+  if (typeof body === "string") { try { body = JSON.parse(body); } catch { body = {}; } }
   return body || {};
 }
 async function detachProfileReferences(id) {
@@ -69,6 +69,7 @@ function validateProfile(body, requirePassword) {
 }
 
 module.exports = async (req, res) => {
+  res.setHeader("Cache-Control", "no-store");
   if (["POST", "PATCH", "DELETE"].indexOf(req.method) === -1) {
     res.status(405).json({ error: "Method not allowed." }); return;
   }
@@ -76,8 +77,11 @@ module.exports = async (req, res) => {
   const host = req.headers.host || "", origin = req.headers.origin || "";
   if (origin) {
     let ok = false;
-    try { ok = new URL(origin).host === host; } catch (e) {}
+    try { ok = new URL(origin).host === host; } catch {}
     if (!ok) { res.status(403).json({ error: "Forbidden." }); return; }
+  }
+  if (Number(req.headers["content-length"] || 0) > 32768) {
+    res.status(413).json({ error: "Request is too large." }); return;
   }
 
   if (!supabaseUrl() || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -94,7 +98,7 @@ module.exports = async (req, res) => {
     const me = await meRes.json();
     if (!meRes.ok || !me || !me.id) { res.status(401).json({ error: "Invalid session." }); return; }
 
-    const profRes = await fetch(sb("/rest/v1/profiles?select=role&id=eq." + encodeURIComponent(me.id)), { headers: svcHeaders() });
+    const profRes = await fetch(sb("/rest/v1/profiles?select=role&id=eq." + encodeURIComponent(me.id) + "&is_active=eq.true"), { headers: svcHeaders() });
     const prof = await profRes.json();
     if (!Array.isArray(prof) || !prof[0] || prof[0].role !== "admin") {
       res.status(403).json({ error: "Only an administrator can manage accounts." }); return;
@@ -143,6 +147,9 @@ module.exports = async (req, res) => {
       if (f.error) { res.status(400).json({ error: f.error }); return; }
       if (targetId === me.id && f.role !== "admin") {
         res.status(400).json({ error: "You cannot remove your own administrator role." }); return;
+      }
+      if (targetId === me.id && !f.isActive) {
+        res.status(400).json({ error: "You cannot deactivate the administrator account you are currently using." }); return;
       }
 
       const authPatch = { email: f.email, email_confirm: true, user_metadata: { full_name: f.fullName } };

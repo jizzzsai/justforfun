@@ -50,7 +50,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
       grantType="au_r3"
       strictStatus={true}
       applicationId={applicationId}
-      title="AU-R3 Screening"
+      title="AU-R3 · Dean Review"
       desc="Review the conference, paper, conference qualities, and documents before forwarding to IRAS."
       render={(app, load) => {
         const docs = app.documents || [];
@@ -98,7 +98,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
         return (
           <>
             <PageHeader
-              title={"AU-R3 Screening — " + app.code}
+              title={"AU-R3 · Dean Review — " + app.code}
               desc={(ci.researcherName || r.full_name || "Researcher") + " · " + (app.faculty || "Faculty") + " · " + (app.department || "Department")}
               actions={<Badge status={r3Badge(app.status)} />}
             />
@@ -237,7 +237,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
       grantType="au_r4"
       strictStatus={true}
       applicationId={applicationId}
-      title="AU-R4 Screening"
+      title="AU-R4 · Dean Review"
       desc="Review the publication, journal, author, claim and supporting documents, then forward the application to IRAS."
       render={(app, load) => {
         const docs = app.documents || [];
@@ -261,7 +261,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
         const forward = () => setConfirm({
           kind: "success",
           title: "Confirm AU-R4 Approval",
-          message: "By approving, you confirm the Dean screening is complete. IRAS will verify the application next.",
+          message: "By approving, you confirm the Dean Review is complete. IRAS will verify the application next.",
           confirmLabel: "Confirm & Forward to IRAS", withReason: true, reasonLabel: "Dean comment",
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "advance", reason || ""); toast(app.code + " approved — forwarded to IRAS."); navigate("d-r4-screen"); }
@@ -290,7 +290,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
 
         return (
           <>
-            <PageHeader title={"AU-R4 Screening — " + app.code}
+            <PageHeader title={"AU-R4 · Dean Review — " + app.code}
               desc={(r.full_name || "Researcher") + " · " + (app.faculty || "Faculty") + " · " + (app.department || "Department") + " · " + (pi.journal || "")}
               actions={<Badge status={r4Badge(app.status)} />} />
             <div className="mb-4"><AnnualFundingSummaryCard summary={app.annual_funding} currentAmount={Number(app.requested_amount || 0)} compact /></div>

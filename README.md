@@ -1,111 +1,65 @@
 # AU Research Grant Management System
 
-A full-stack portal for **Assumption University**'s research grant lifecycle —
-from proposal submission through faculty and RASSC review,
-approval and Finance disbursement.
+AU-RGMS is Assumption University's role-based portal for AU-R3 paper-presentation grants and AU-R4 publication fees and rewards. The production portal is the static React application in `au-rgms/`; Supabase provides authentication, PostgreSQL data, file storage, and row-level security.
 
-Built with **Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 ·
-Supabase** (Postgres + Auth + RLS). The design recreates the original AU
-prototype: a warm cream canvas, brown/gold accent, Newsreader + Inter type.
+## Active roles and workflow
 
-## Roles & workflow
+The active roles are Researcher, Dean, IRAS, Finance/OFM, and Administrator.
 
-```
-Researcher → Dean (first screening) → Faculty Committee → Dean (sign & forward)
-→ RASSC (university review + approval) → OFM / Finance
+```text
+Researcher submission → Dean Review → IRAS Verification → Finance → Completed
 ```
 
-Plus an **Administrator** for users, journal tiers, audit log and settings.
-There are 6 roles; access is role-gated by the proxy + per-role
-layouts, enforced again at the database with Row Level Security.
+- Researchers can create AU-R3 and AU-R4 drafts, submit applications, revise returned applications, view comments and timelines, and use the role-scoped AU AI assistant.
+- Deans can access only applications and analytics in their assigned faculty.
+- IRAS can verify AU-R3 and AU-R4 applications across all faculties.
+- Finance can access only applications forwarded to Finance.
+- Administrators manage accounts and university-wide operational analytics.
 
-## Getting started
+AU-R1, Faculty Committee, and RASSC are retired from the production portal. Historical database migrations remain in the repository so an existing database can be rebuilt safely; the current policies hide retired data and deactivate retired roles.
 
-### 1. Environment
+## Funding rule
 
-Copy `.env.example` to `.env.local` and fill in your Supabase project values:
+One researcher may have no more than 100,000 THB committed across AU-R3 and AU-R4 in one academic year. Academic years use the `YYYY/YYYY` format. Drafts do not reserve funding; submitted, under-review, approved, Finance, and completed applications do. The database enforces the limit atomically.
+
+## Environment
+
+Copy `.env.example` to `.env.local` and configure the required values. Never commit `.env.local`, the Supabase service-role key, the database password, or the Gemini API key.
 
 ```bash
-NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sb_publishable_...      # browser-safe (Settings → API)
-SUPABASE_SERVICE_ROLE_KEY=sb_secret_...               # server only — never commit
-SUPABASE_DB_URL=postgresql://postgres:<password>@db.<ref>.supabase.co:5432/postgres
-SUPABASE_PROJECT_REF=<ref>
+NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<browser-safe-anon-key>
+SUPABASE_URL=https://<project-ref>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=<server-only-service-key>
+SUPABASE_DB_URL=postgresql://postgres:<password>@db.<project-ref>.supabase.co:5432/postgres
+GEMINI_API_KEY=<server-only-key>
 ```
 
-`.env.local` is gitignored. **Never commit the service-role key.**
-
-### 2. Install & provision the database
+## Commands
 
 ```bash
 npm install
-npm run db:push     # applies supabase/migrations/*.sql (schema + RLS + reference data)
-npm run db:seed     # creates demo users + sample applications across every stage
+npm run lint
+npm run build
+npm run build:portal
+npm run db:push
 ```
 
-> `db:push` needs `SUPABASE_DB_URL` with the real password. Alternatively paste
-> the files in `supabase/migrations/` into the Supabase SQL editor in order.
-> `db:seed` only needs the URL + service-role key.
+- `npm run build:portal` compiles the portal's JSX source into browser-ready JavaScript. Run it whenever a file in `au-rgms/frontend/*.jsx` changes.
+- `npm run db:push` applies the ordered SQL migrations in `supabase/migrations/`.
+- `npm run build` verifies the repository's Next.js application and TypeScript code.
 
-### 3. Run
+## Production portal structure
 
-```bash
-npm run dev         # http://localhost:3000
+```text
+au-rgms/
+  api/                  # authenticated Vercel API functions, including AU AI
+  database/             # browser database/authentication client
+  frontend/             # JSX source, compiled JavaScript, and CSS
+  index.html            # production entry point
+  vercel.json           # security headers and deployment configuration
+supabase/migrations/    # schema, RLS, workflow, and security migrations
+scripts/                # database and static-portal build utilities
 ```
 
-## Test accounts
-
-All test accounts use password **`123456789`**. The login accepts either the username or the complete `@au.edu` email.
-
-| Faculty | Researcher | Dean | Committee |
-|---------|------------|------|-----------|
-| VMES | `vmesresearcher` | `vmesdean` | `vmescommittee` |
-| MSME | `msmeresearcher` | `msmedean` | `msmecommittee` |
-| ARTS | `artsresearcher` | `artsdean` | `artscommittee` |
-| COMM | `commresearcher` | `commdean` | `commcommittee` |
-| ARCH | `archresearcher` | `archdean` | `archcommittee` |
-| NURSE | `nurseresearcher` | `nursedean` | `nursecommittee` |
-| LAW | `lawresearcher` | `lawdean` | `lawcommittee` |
-| BIOTECH | `biotechresearcher` | `biotechdean` | `biotechcommittee` |
-| MUSIC | `musicresearcher` | `musicdean` | `musiccommittee` |
-
-University-wide accounts: `rassc`, `finance`, and `admin`.
-
-The login screen includes a faculty selector and one-click test-account buttons.
-
-## Scripts
-
-| Command          | Description                                            |
-|------------------|--------------------------------------------------------|
-| `npm run dev`    | Start the dev server                                   |
-| `npm run build`  | Production build                                       |
-| `npm run db:push`| Apply SQL migrations over a direct Postgres connection |
-| `npm run db:seed`| Seed demo users + sample data (service role)           |
-| `npm run db:test-accounts` | Create or refresh faculty test accounts without changing application data |
-
-## Project structure
-
-```
-src/
-  app/
-    login/                 # AU-branded sign-in
-    (app)/                 # authenticated shell (sidebar + topbar)
-      researcher/ dean/ committee/ iras/ ofm/ admin/
-  components/              # UI kit + shared detail/table components
-  lib/
-    supabase/              # browser / server / admin clients + session refresh
-    queries.ts             # data access
-    workflow-actions.ts    # state-transition server actions
-    admin-actions.ts       # admin server actions
-    roles.ts  workflow.ts  types.ts  format.ts  auth.ts
-  proxy.ts                 # route protection + auth cookie refresh
-supabase/migrations/       # schema, RLS, reference data
-scripts/                   # apply-sql.mjs, seed.mjs
-reference/                 # original AU prototype HTML (design reference)
-```
-
-## Deploy
-
-Deploys cleanly to **Vercel**. Set the same environment variables in the project
-settings (the `NEXT_PUBLIC_*` ones are exposed to the browser; keep
-`SUPABASE_SERVICE_ROLE_KEY` and `SUPABASE_DB_URL` server-side only).
+The portal is deployed with Vercel. Keep `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_DB_URL`, and `GEMINI_API_KEY` server-side only.

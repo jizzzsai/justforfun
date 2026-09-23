@@ -732,7 +732,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
 
         <div className="form-section">
           <h4><span className="num">5</span> Required Documents</h4>
-          <p className="section-sub">Upload the AU-R3 PDF documents. You can add or delete files while the application is still waiting for Dean screening.</p>
+          <p className="section-sub">Upload the AU-R3 PDF documents. You can add or delete files while the application is still waiting for Dean Review.</p>
           <div className="section-body">
             <div style={{ background: "var(--paper-warm)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: "12px 14px", marginBottom: 14 }}>
               <div style={{ fontSize: 12, fontWeight: 700, marginBottom: 8, color: "var(--ink-2)" }}>Documents required for an AU-R3 Paper Presentation Grant:</div>
@@ -1690,7 +1690,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
                   <input type="file" accept="application/pdf,.pdf" multiple style={{ display: "none" }} onChange={uploadMore} disabled={busy} />
                   <Icon name="Upload" size={13} /> {busy ? "Uploading..." : "Add / Replace Files"}
                 </label>
-                <span className="text-sm text-muted" style={{ marginLeft: 12 }}>You can add or delete files while this is waiting for Dean screening.</span>
+                <span className="text-sm text-muted" style={{ marginLeft: 12 }}>You can add or delete files while this is waiting for Dean Review.</span>
               </div>
             )}
           </div>

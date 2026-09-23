@@ -11,11 +11,11 @@ const ROLE_INTRO = {
   _default: "Hi, I'm AU AI — Assumption University's research-grant assistant. Ask me about AU-R3 conference grants, AU-R4 publication rewards, reviews, documents, or payments.",
 };
 const ROLE_SUGGEST = {
-  researcher: ["What needs my action now?", "Give me a resubmission checklist", "Which documents am I missing?"],
+  researcher: ["What needs my action now?", "How much annual funding do I have left?", "Which documents am I missing?"],
   dean: ["What needs my review now?", "Which department has the highest approved spending?", "Summarize my faculty's R3 and R4 applications"],
-  iras: ["What needs IRAS verification now?", "Which faculty has the highest approved amount?", "Give me an R3 and R4 management summary"],
-  ofm: ["What payments need action now?", "Which faculty has the highest disbursement?", "Summarize completed R3 and R4 payments"],
-  admin: ["Give me a management summary", "Which faculty has the most applications?", "What needs attention now?"],
+  iras: ["What needs IRAS verification now?", "Which faculty has the highest approved amount?", "Where are applications getting delayed?"],
+  ofm: ["What payments need action now?", "Which faculty has the highest disbursement?", "Compare pending and completed payments"],
+  admin: ["Give me a management summary", "Which faculty has the most applications?", "What workflow or access issues need attention?"],
   _default: ["How does the AU-R3 workflow work?", "What documents do I need to apply?", "Reward for a Scopus Q1 paper?"],
 };
 const ROLE_LABEL = {
@@ -30,47 +30,15 @@ async function buildAIContext(grantSystem, mode) {
   let prof = null;
   try { prof = await window.AUTH.profile(); } catch (e) {}
   const role = prof ? prof.role : null;
-  const ctx = { role: role, name: prof ? prof.full_name : null, faculty: prof ? prof.faculty : null, grantSystem: grantSystem || null };
-  try {
-    if (role === "researcher") {
-      const apps = await window.DB.myApplications(grantSystem || undefined);
-      const details = await Promise.all((apps || []).slice(0, 20).map(async a => {
-        try { return await window.DB.applicationDetail(a.id); }
-        catch (e) { return a; }
-      }));
-      ctx.myApplications = details.map(a => ({
-        code: a.code,
-        title: a.title,
-        grantSystem: (a.grant_type || "au_r3").replace("au_r", "AU-R").toUpperCase(),
-        status: a.status,
-        statusLabel: window.DB.statusBadge(a.status).label,
-        faculty: a.faculty,
-        department: a.department,
-        requestedAmount: Number(a.requested_amount || 0),
-        approvedAmount: a.approved_amount == null ? null : Number(a.approved_amount),
-        submittedAt: a.submitted_at || null,
-        updatedAt: a.updated_at || null,
-        documents: (a.documents || []).map(d => ({
-          name: /\bau[-_\s]?r1\b/i.test(String(d.name || "")) ? (d.doc_type || "Uploaded document") : d.name,
-          type: d.doc_type || null,
-        })),
-        authors: (a.co_members || []).map(member => ({ name: member.name, email: member.email, type: member.authorType || member.type || member.kind || "Author" })),
-        reviews: (a.reviews || []).map(review => ({ type: review.kind, recommendation: review.recommendation, comments: review.comments, submittedAt: review.submitted_at })),
-        recentEvents: (a.events || []).slice(-12).map(event => ({ action: event.action, note: event.note, date: event.created_at })),
-        payments: (a.payments || []).map(payment => ({ phase: payment.instalment, percent: payment.pct, amount: Number(payment.amount || 0), status: payment.status, paidAt: payment.paid_at })),
-        reports: (a.reports || []).map(report => ({ type: report.kind, status: report.status, submittedAt: report.submitted_at })),
-      }));
-      try {
-        const g = await window.DB.myGrant(grantSystem || "au_r3");
-        if (g) ctx.myGrant = { code: g.code, approvedAmount: g.approved_amount, requestedAmount: g.requested_amount, status: g.status, payments: (g.payments || []).map(p => ({ phase: p.instalment, percent: p.pct, amount: p.amount, status: p.status, paidAt: p.paid_at })), reports: g.reports || [] };
-      } catch (e) {}
-    } else if (["dean", "iras", "ofm"].includes(role) && mode === "role") {
-      ctx.roleAnalytics = await window.DB.roleAnalyticsSnapshot();
-    } else if (role === "admin" && mode === "analytics") {
-      ctx.analytics = await window.DB.adminAnalyticsSnapshot();
-    }
-  } catch (e) {}
-  return ctx;
+  // Only the requested module is sent by the browser. The API verifies the
+  // session and loads fresh, role-scoped records server-side for every answer.
+  return {
+    role: role,
+    name: prof ? prof.full_name : null,
+    faculty: prof ? prof.faculty : null,
+    grantSystem: grantSystem || null,
+    mode: mode || null,
+  };
 }
 
 function AIInlineText({ text }) {

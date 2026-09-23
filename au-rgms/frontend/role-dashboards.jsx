@@ -108,12 +108,12 @@ function DeanDashboard({ navigate, setSelectedApplicationId }) {
   return (
     <>
       <PageHeader
-        title={isR4 ? "AU-R4 Dean Summary" : "AU-R3 Dean Summary"}
+        title={isR4 ? "AU-R4 · Dean Summary" : "AU-R3 · Dean Summary"}
         actions={
           <>
             {sysToggle}
             <button className="btn btn-primary" onClick={openQueue}>
-              <Icon name="Inbox" size={14} /> {isR4 ? "Open AU-R4 Screening Queue" : "Open AU-R3 Screening Queue"}
+              <Icon name="Inbox" size={14} /> {isR4 ? "Open AU-R4 Review Queue" : "Open AU-R3 Review Queue"}
             </button>
           </>
         }
@@ -137,7 +137,7 @@ function DeanDashboard({ navigate, setSelectedApplicationId }) {
 
       <div className="card card-pad-0">
         <div className="card-head">
-          <h3>{isR4 ? "AU-R4 Screening Queue" : "AU-R3 Screening Queue"}</h3>
+          <h3>{isR4 ? "AU-R4 · Dean Review Queue" : "AU-R3 · Dean Review Queue"}</h3>
           <div className="grow"></div>
           <button className="btn btn-ghost btn-sm" onClick={openQueue}>
             Open queue <Icon name="ArrowRight" size={12} />
@@ -176,7 +176,7 @@ function DeanR3Queue({ navigate, setSelectedApplicationId }) {
   return (
     <>
       <PageHeader
-        title="AU-R3 Screening Queue"
+        title="AU-R3 · Dean Review Queue"
         desc="Paper presentation grant requests from your faculty awaiting Dean review before IRAS."
       />
       <div className="card card-pad-0">
@@ -248,7 +248,7 @@ function DeanR4Queue({ navigate, setSelectedApplicationId }) {
   });
   return (
     <>
-      <PageHeader title="AU-R4 Screening Queue" desc="Review submitted publication fee and reward applications from your faculty." />
+      <PageHeader title="AU-R4 · Dean Review Queue" desc="Review submitted publication fee and reward applications from your faculty." />
       <div className="card card-pad-0">
         <div className="toolbar">
           <div className="search">

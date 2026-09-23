@@ -98,7 +98,7 @@
   function badge(status, grantType) {
     var base = STATUS_MAP[status] || { label: status || "—", cls: "badge-draft" };
     if (status === "iras_review" && ACTIVE_GRANT_TYPES.indexOf(grantType) >= 0) {
-      return { label: "IRAS Screening", cls: base.cls };
+      return { label: "IRAS Verification", cls: base.cls };
     }
     if (status === "active" && ACTIVE_GRANT_TYPES.indexOf(grantType) >= 0) {
       return { label: "At Finance", cls: "badge-contract" };
@@ -128,7 +128,7 @@
   function fmtDate(iso) {
     if (!iso) return "—";
     try { return new Date(iso).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "2-digit" }); }
-    catch (e) { return iso; }
+      catch { return iso; }
   }
   function fmtBytes(n) {
     var v = Number(n || 0);
@@ -325,7 +325,7 @@
           to_status: res.data.status,
           note: submit ? (wasReturned ? "Revised application submitted again for review." : (existing ? "Submitted from saved draft." : "Initial submission.")) : "Draft saved.",
         });
-      } catch (e) {}
+      } catch {}
       return res.data;
     },
 
@@ -339,7 +339,7 @@
         application_id: appId, name: file.name, doc_type: docType || null, storage_path: key, uploaded_by: me,
       }).select().single();
       if (res.error) {
-        try { await sb.storage.from("documents").remove([key]); } catch (e) {}
+        try { await sb.storage.from("documents").remove([key]); } catch {}
         throw res.error;
       }
       return res.data;
@@ -357,7 +357,7 @@
     async deleteDocument(doc) {
       if (!doc || !doc.id) throw new Error("No document selected.");
       if (doc.storage_path) {
-        try { await sb.storage.from("documents").remove([doc.storage_path]); } catch (e) {}
+          try { await sb.storage.from("documents").remove([doc.storage_path]); } catch {}
       }
       var res = await sb.from("application_documents").delete().eq("id", doc.id);
       if (res.error) throw res.error;
@@ -465,7 +465,7 @@
           totalWithApplication: funding.used + currentAmount,
           remainingAfterApplication: Math.max(0, funding.limit - funding.used - currentAmount),
         });
-      } catch (e) { a.annual_funding = null; }
+      } catch { a.annual_funding = null; }
       return a;
     },
 
@@ -481,7 +481,7 @@
       return first ? this.applicationDetail(first.id) : null;
     },
 
-    async transition(appId, fromStatus, kind, note, requestedLabel) {
+    async transition(appId, fromStatus, kind, note) {
       // Always re-read the authenticated account and application.  The screen
       // may be older than the current session after an account switch or a
       // token refresh, and a queued item may have moved while it was open.
@@ -499,75 +499,30 @@
       if (currentApp.status !== fromStatus) {
         throw new Error((currentApp.code || "This application") + " is already at " + (STATUS_MAP[currentApp.status] ? STATUS_MAP[currentApp.status].label : currentApp.status) + ". Refresh the queue before taking another action.");
       }
-      var me = actor.id;
-      var role = actor.role;
-      var scopedGrantType = currentApp.grant_type;
-      var to, labelOverride = requestedLabel || null;
-      if (kind === "return") to = "returned";
-      else if (kind === "reject") to = "rejected";
-      else {
-        var n = NEXT[fromStatus]; if (!n) throw new Error("No next step from " + fromStatus); to = n.to;
-        if (["submitted", "iras_review"].indexOf(fromStatus) >= 0) {
-          try {
-            var grantType = scopedGrantType;
-            if (fromStatus === "submitted" && (grantType === "au_r3" || grantType === "au_r4")) {
-              to = "iras_review";
-              labelOverride = "Dean approved — forwarded to IRAS";
-            }
-            if (fromStatus === "iras_review" && (grantType === "au_r3" || grantType === "au_r4")) {
-              labelOverride = "IRAS approved — sent to Finance Office";
-            }
-          } catch (e) {}
-        }
-      }
-      var patch = { status: to };
-      if (to === "approved" || to === "rejected") patch.decided_at = new Date().toISOString();
-      var upd = await sb.from("applications").update(patch).eq("id", appId).eq("status", fromStatus).select();
-      if (upd.error) throw upd.error;
-      if (!upd.data || upd.data.length === 0) {
-        var latest = await sb.from("applications").select("code,status").eq("id", appId).maybeSingle();
-        if (latest.error) throw latest.error;
-        if (latest.data && latest.data.status !== fromStatus) {
-          throw new Error((latest.data.code || "This application") + " was already moved to " + (STATUS_MAP[latest.data.status] ? STATUS_MAP[latest.data.status].label : latest.data.status) + ". Refresh the queue.");
-        }
-        throw new Error("Your " + roleLabel(role) + " session could not complete this action. Please sign out, sign in again, and reopen the queue.");
-      }
-      if (upd.data.length > 1) {
-        throw new Error("More than one application matched this action. Refresh and try again.");
-      }
-      var app = upd.data[0];
-      var label = kind === "return" ? "Returned to researcher"
-        : kind === "reject" ? "Application rejected"
-        : (labelOverride || (NEXT[fromStatus] ? NEXT[fromStatus].verb : "Advanced"));
-      try {
-        await sb.from("application_events").insert({
-          application_id: appId, actor_id: me, actor_role: role,
-          action: label, from_status: fromStatus, to_status: to, note: note || null,
-        });
-      } catch (e) {}
-      if (to === "approved") {
-        try {
-          var amt = app.grant_type === "au_r3" ? 3500 : Number(app.approved_amount || app.requested_amount || 0);
-          if (app.grant_type === "au_r3") {
-            await sb.from("applications").update({ requested_amount: 3500, approved_amount: 3500, budget_breakdown: [{ item: "Fixed AU-R3 Grant", amount: 3500 }] }).eq("id", appId);
-            app.requested_amount = 3500;
-            app.approved_amount = 3500;
-          } else if (!app.approved_amount) await sb.from("applications").update({ approved_amount: amt }).eq("id", appId);
-          await sb.from("contracts").insert({ application_id: appId, contract_no: "CT-" + app.code, amount: amt, status: "issued" });
-        } catch (e) {}
-      }
-      return app;
+      var decision = kind === "return" ? "return" : kind === "reject" ? "reject" : "advance";
+      var result = await sb.rpc("transition_r3_r4_application", {
+        p_application_id: appId,
+        p_from_status: fromStatus,
+        p_decision: decision,
+        p_note: note || null,
+      });
+      if (result.error) throw result.error;
+      return result.data;
     },
 
     async setApprovedAmount(appId, amount) {
-      var res = await sb.from("applications").update({ approved_amount: Number(amount) || 0 }).eq("id", appId).select();
+      var actor = await currentActor();
+      if (!actor.id || ["iras", "admin"].indexOf(actor.role) === -1) throw new Error("Only IRAS or an administrator can set the verified amount.");
+      var approved = Math.max(0, Number(amount) || 0);
+      if (approved > 80000) throw new Error("The verified AU-R4 amount cannot exceed 80,000 THB.");
+      var res = await sb.from("applications").update({ approved_amount: approved }).eq("id", appId).eq("status", "iras_review").eq("grant_type", "au_r4").select();
       if (res.error) throw res.error;
-      return res.data && res.data[0];
+      if (!res.data || !res.data.length) throw new Error("This AU-R4 application is no longer awaiting IRAS Verification.");
+      return res.data[0];
     },
     async payGrantOnce(appId, fromStatus, note) {
       var kind = "advance";
-      var label = fromStatus === "approved" ? "Finance marked payment as paid" : "Finance completed payment record";
-      return await this.transition(appId, fromStatus, kind, note, label);
+      return await this.transition(appId, fromStatus, kind, note);
     },
 
     async completeSingleGrant(appId) {
@@ -580,17 +535,13 @@
       if (["au_r3", "au_r4"].indexOf(app.grant_type) === -1) throw new Error("This action is only for AU-R3 and AU-R4 payments.");
       if (app.status === "completed") return app;
       if (["approved", "active"].indexOf(app.status) === -1) throw new Error("This application is not ready for Finance completion.");
-      var updated = await sb.from("applications").update({ status: "completed" })
-        .eq("id", appId).in("status", ["approved", "active"]).select().single();
+      var updated = await sb.rpc("transition_r3_r4_application", {
+        p_application_id: appId,
+        p_from_status: app.status,
+        p_decision: "complete",
+        p_note: "Payment confirmed complete.",
+      });
       if (updated.error) throw updated.error;
-      try {
-        await sb.from("application_events").insert({
-          application_id: appId, actor_id: me, actor_role: role,
-          action: "Finance completed payment and closed application",
-          from_status: app.status, to_status: "completed",
-          note: "Payment confirmed complete.",
-        });
-      } catch (e) {}
       return updated.data;
     },
 
@@ -625,7 +576,7 @@
 
     async notifications() {
       var prof = null;
-      try { prof = await window.AUTH.profile(); } catch (e) {}
+      try { prof = await window.AUTH.profile(); } catch {}
       var role = prof && prof.role;
       var items = [];
       function push(id, icon, who, text, page, unread) {
@@ -661,7 +612,7 @@
         } else if (role === "admin") {
           var ev = await this.auditEvents(); ev.slice(0, 5).forEach(function (e) { push("audit-" + e.id, "Clock", e.application ? e.application.code : "System", e.action, "a-audit", false); });
         }
-      } catch (e) {}
+      } catch {}
       if (!items.length) push("quiet", "CheckCircle", "AU-RGMS", "No urgent items for your role right now.", null, false);
       return items.sort(function (a, b) {
         if (a.created_at && b.created_at) return new Date(b.created_at) - new Date(a.created_at);

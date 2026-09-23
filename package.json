@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint",
+    "lint": "eslint \"src/**/*.{ts,tsx}\" \"au-rgms/api/*.js\" \"au-rgms/database/website-database-actions.js\" \"au-rgms/frontend/roles-menus-and-status-data.js\" \"scripts/build-static-portal.mjs\" --no-warn-ignored",
+    "build:portal": "node scripts/build-static-portal.mjs",
     "db:push": "node scripts/apply-sql.mjs",
     "db:seed": "node scripts/seed.mjs",
     "db:test-accounts": "node scripts/create-test-accounts.mjs"
@@ -15,18 +16,21 @@
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.107.0",
     "lucide-react": "^1.17.0",
-    "next": "16.2.7",
+    "next": "16.3.6",
     "react": "19.2.4",
     "react-dom": "19.2.4"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.0",
+    "@babel/preset-env": "^7.29.0",
+    "@babel/preset-react": "^7.28.5",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^16.6.1",
     "eslint": "^9",
-    "eslint-config-next": "16.2.7",
+    "eslint-config-next": "16.3.6",
     "pg": "^8.21.0",
     "tailwindcss": "^4",
     "typescript": "^5"
