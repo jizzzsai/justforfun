@@ -17,7 +17,10 @@ const s = (fd: FormData, k: string) => String(fd.get(k) ?? "").trim();
 export async function adminCreateUser(formData: FormData) {
   await ensureAdmin();
   const email = s(formData, "email");
-  const password = s(formData, "password") || "123456789";
+  const password = s(formData, "password");
+  if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(password)) {
+    throw new Error("Temporary password must be 12+ characters and include upper case, lower case, a number, and a symbol.");
+  }
   const admin = createAdminClient();
 
   await admin.auth.admin.createUser({

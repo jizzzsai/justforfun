@@ -403,7 +403,6 @@ function readHash() {
     return {
       role: params.get("role"),
       page: params.get("page"),
-      skipLogin: params.get("skipLogin") === "1",
     };
   } catch (e) { return {}; }
 }
@@ -414,7 +413,7 @@ function App() {
   const startingRole = initial.role && ROLE_CONFIG[initial.role] ? initial.role : "researcher";
   const startingPage = initial.page || ROLE_CONFIG[startingRole].homeKey;
 
-  const [loggedIn, setLoggedIn] = useState(!!initial.skipLogin);
+  const [loggedIn, setLoggedIn] = useState(false);
   const [role, setRole] = useState(startingRole);
   const [page, setPage] = useState(startingPage);
 

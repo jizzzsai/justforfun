@@ -8,7 +8,10 @@ const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
 if (!url || !key) throw new Error("NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY are required.");
 
 const db = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
-const password = "123456789";
+const password = process.env.TEST_ACCOUNT_PASSWORD || "";
+if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(password)) {
+  throw new Error("TEST_ACCOUNT_PASSWORD must be 12+ characters and include upper case, lower case, a number, and a symbol.");
+}
 const faculties = [
   { code: "vmes", name: "Vincent Mary School of Engineering, Science and Technology", department: "Computer Science" },
   { code: "msme", name: "Martin de Tours School of Management and Economics", department: "Business Administration" },

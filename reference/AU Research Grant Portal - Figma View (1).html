@@ -50,18 +50,16 @@
     // -----------------------------------------------------------------
     // AU RGMS · Figma-style design canvas
     //
-    // Each artboard iframes the production prototype at a deep-link hash
-    // so it boots directly to that screen (skip login, jump to page).
+    // Each artboard links to the prototype without bypassing authentication.
     // -----------------------------------------------------------------
 
     const PROTO = "AU Research Grant Portal.html";
     const W = 1280;  // prototype's design width
 
-    // Build the iframe src for a given role + page. The hash makes the
-    // prototype skip login and boot straight to that screen.
+    // Build the iframe src. Protected screens still require a valid session.
     function src(role, page) {
       if (!page) return PROTO; // login
-      return `${PROTO}#role=${role}&page=${page}&skipLogin=1`;
+      return `${PROTO}#role=${role}&page=${page}`;
     }
 
     // Render one artboard. DCSection filters by child.type === DCArtboard,

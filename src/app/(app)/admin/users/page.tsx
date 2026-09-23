@@ -76,8 +76,8 @@ export default async function AdminUsers() {
               ))}
             </Select>
           </Field>
-          <Field label="Temporary password" hint="Defaults to 123456789">
-            <Input name="password" placeholder="123456789" />
+          <Field label="Temporary password" hint="Use 12+ characters with mixed case, a number, and a symbol." required>
+            <Input name="password" type="password" autoComplete="new-password" placeholder="Strong temporary password" required />
           </Field>
           <Field label="Title">
             <Input name="title" placeholder="Dr. / Assoc. Prof." />

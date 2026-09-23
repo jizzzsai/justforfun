@@ -14,7 +14,10 @@ if (!URL || !KEY) {
 }
 
 const db = createClient(URL, KEY, { auth: { autoRefreshToken: false, persistSession: false } });
-const DEMO_PASSWORD = "123456789";
+const DEMO_PASSWORD = process.env.TEST_ACCOUNT_PASSWORD || "";
+if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(DEMO_PASSWORD)) {
+  throw new Error("TEST_ACCOUNT_PASSWORD must be 12+ characters and include upper case, lower case, a number, and a symbol.");
+}
 
 const day = 86_400_000;
 const daysAgo = (n) => new Date(Date.now() - n * day).toISOString();
@@ -67,7 +70,7 @@ const profileRows = USERS.map((u) => ({
   expertise: u.expertise || null, is_active: true,
 }));
 must((await db.from("profiles").upsert(profileRows, { onConflict: "id" })).error, "upsert profiles");
-console.log(`  ${USERS.length} users ready (password: ${DEMO_PASSWORD})`);
+console.log(`  ${USERS.length} test users ready.`);
 
 
 const { data: tiers, error: tierErr } = await db.from("journal_tiers").select("id, code");
@@ -176,5 +179,5 @@ must((await db.from("reports").insert([
 ])).error, "insert reports");
 
 console.log("✓ Seed complete.\n");
-console.log("Demo logins (all use password: " + DEMO_PASSWORD + "):");
+console.log("Test logins created. The password is read from TEST_ACCOUNT_PASSWORD and is never printed.");
 for (const u of USERS) console.log(`  ${u.role.padEnd(11)} ${u.email}`);

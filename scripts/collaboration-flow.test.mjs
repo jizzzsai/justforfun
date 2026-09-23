@@ -7,7 +7,8 @@ dotenv.config({ path: ".env.local" });
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const service = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!url || !anon || !service) throw new Error("Supabase test configuration is missing.");
+const testPassword = process.env.TEST_ACCOUNT_PASSWORD || "";
+if (!url || !anon || !service || !testPassword) throw new Error("Supabase test configuration or TEST_ACCOUNT_PASSWORD is missing.");
 
 const client = () => createClient(url, anon, { auth: { autoRefreshToken: false, persistSession: false } });
 const admin = createClient(url, service, { auth: { autoRefreshToken: false, persistSession: false } });
@@ -16,8 +17,8 @@ const james = client();
 const createdIds = [];
 
 try {
-  const felixLogin = await felix.auth.signInWithPassword({ email: "felix@au.edu", password: "123456789" });
-  const jamesLogin = await james.auth.signInWithPassword({ email: "james@au.edu", password: "123456789" });
+  const felixLogin = await felix.auth.signInWithPassword({ email: "felix@au.edu", password: testPassword });
+  const jamesLogin = await james.auth.signInWithPassword({ email: "james@au.edu", password: testPassword });
   assert.ifError(felixLogin.error);
   assert.ifError(jamesLogin.error);
   const people = [
