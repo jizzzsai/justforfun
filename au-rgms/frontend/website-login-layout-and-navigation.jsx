@@ -4,37 +4,9 @@
 
 
 const APP = window.AU;
-const TEST_PASSWORD = "123456789";
-const DEMO_MODE_KEY = "au-rgms-demo-mode";
 function isPasswordRecoveryRoute() {
   return new URLSearchParams(window.location.search).get("reset-password") === "1" || /(?:^|[&#])type=recovery(?:&|$)/.test(window.location.hash || "");
 }
-function readDemoMode() {
-  try {
-    return sessionStorage.getItem(DEMO_MODE_KEY) === "true" || localStorage.getItem(DEMO_MODE_KEY) === "true";
-  } catch (e) { return false; }
-}
-function writeDemoMode(enabled, persist = false) {
-  try {
-    sessionStorage.removeItem(DEMO_MODE_KEY);
-    localStorage.removeItem(DEMO_MODE_KEY);
-    if (enabled) window[persist ? "localStorage" : "sessionStorage"].setItem(DEMO_MODE_KEY, "true");
-  } catch (e) {}
-}
-const FACULTY_TEST_ROLES = [
-  { key: "researcher", label: "Researcher" },
-  { key: "dean", label: "Dean" },
-];
-function facultyTestEmail(code, role) {
-  return String(code || "VMES").toLowerCase() + role + "@au.edu";
-}
-const TEST_EMAIL_FOR = {
-  researcher: "vmesresearcher@au.edu",
-  dean: "vmesdean@au.edu",
-  iras: "iras@au.edu",
-  ofm: "finance@au.edu",
-  admin: "admin@au.edu",
-};
 function LoginPage({ onLogin }) {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
@@ -43,7 +15,6 @@ function LoginPage({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(() => !!(window.AUTH && window.AUTH.remembersSession()));
   const [helpTopic, setHelpTopic] = useState(null);
-  const [demoFaculty, setDemoFaculty] = useState("VMES");
   const [resetSent, setResetSent] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -60,7 +31,7 @@ function LoginPage({ onLogin }) {
     return () => viewport.setAttribute("content", previous || "width=1280");
   }, []);
 
-  async function signInWith(em, pw, isDemo = false) {
+  async function signInWith(em, pw) {
     if (loginPending.current) return;
     loginPending.current = true;
     setErr(""); setBusy(true);
@@ -71,7 +42,7 @@ function LoginPage({ onLogin }) {
         try { await window.AUTH.signOut(); } catch (e) {}
         throw new Error("This account belongs to an inactive role and no longer has portal access.");
       }
-      onLogin(prof, { isDemo, persistDemo: isDemo && remember });
+      onLogin(prof);
     } catch (ex) {
       const message = String((ex && ex.message) || "");
       setErr(/invalid login credentials/i.test(message)
@@ -94,8 +65,6 @@ function LoginPage({ onLogin }) {
     if (!pass) { setErr("Enter your password."); passwordInput.current.focus(); return; }
     signInWith(auEmail, pass);
   }
-  function demoLogin(testEmail) { signInWith(testEmail, TEST_PASSWORD, true); }
-
   async function requestPasswordReset() {
     const auEmail = email.trim().toLowerCase();
     setErr(""); setResetSent("");
@@ -111,7 +80,7 @@ function LoginPage({ onLogin }) {
 
   async function changeRecoveredPassword(e) {
     e.preventDefault(); setErr("");
-    if (newPassword.length < 8) return setErr("New password must be at least 8 characters.");
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(newPassword)) return setErr("New password must be 12+ characters and include upper case, lower case, a number, and a symbol.");
     if (newPassword !== confirmPassword) return setErr("The two passwords do not match.");
     setBusy(true);
     try {
@@ -212,30 +181,6 @@ function LoginPage({ onLogin }) {
               <span>Having trouble signing in?</span>
               <button type="button" onClick={() => setHelpTopic("access")}>Contact Research Affairs / IT Support</button>
             </div>
-            <details className="au-login-demo">
-              <summary>Developer Demo Access <Icon name="ChevronDown" size={12} /></summary>
-              <div className="au-login-demo-panel">
-                <p>Select a faculty account. Every test account uses password <strong>{TEST_PASSWORD}</strong>.</p>
-                <label className="au-login-demo-select">
-                  <span>Faculty</span>
-                  <select value={demoFaculty} onChange={e => setDemoFaculty(e.target.value)} disabled={busy}>
-                    {APP.FACULTIES.map(f => <option key={f.code} value={f.code}>{f.code} · {f.name}</option>)}
-                  </select>
-                </label>
-                <div className="au-login-demo-grid">
-                  {FACULTY_TEST_ROLES.map(r => {
-                    const username = demoFaculty.toLowerCase() + r.key;
-                    return <button key={r.key} type="button" disabled={busy} title={username + "@au.edu"} onClick={() => demoLogin(facultyTestEmail(demoFaculty, r.key))}><strong>{username}</strong><span>{r.label}</span></button>;
-                  })}
-                </div>
-                <div className="au-login-demo-section">University-wide</div>
-                <div className="au-login-demo-grid au-login-demo-grid-wide">
-                  <button type="button" disabled={busy} title="iras@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.iras)}><strong>iras</strong><span>AU-R3 / AU-R4 Office</span></button>
-                  <button type="button" disabled={busy} title="finance@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.ofm)}><strong>finance</strong><span>OFM / Finance</span></button>
-                  <button type="button" disabled={busy} title="admin@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.admin)}><strong>admin</strong><span>Administrator</span></button>
-                </div>
-              </div>
-            </details>
           </div>
         </section>
       </main>
@@ -260,7 +205,7 @@ function LoginHelpDialog({ topic, onClose }) {
       </>}
       {topic === "help" && <>
         <p>Enter your registered email ending in @au.edu and your password. Your account determines which role and workspace you can access.</p>
-        <p>Researchers can select AU-R3 or AU-R4 after signing in. Developer Demo Access opens shared test accounts and is separate from your personal account.</p>
+        <p>Researchers can select AU-R3 or AU-R4 after signing in. Staff workspaces are selected automatically from the authenticated account role.</p>
         <p>Select Remember me only on your own device. Leave it unchecked on shared computers and sign out when you finish.</p>
       </>}
       {topic === "privacy" && <>
@@ -446,13 +391,13 @@ function rolesForSystem(sys) {
   return list;
 }
 
-function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSystem, demoMode }) {
+function AppHeader({ role, profile, onLogout, onNavigate, grantSystem }) {
   const [roleOpen, setRoleOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifItems, setNotifItems] = useState(APP.NOTIFS || []);
   const current = rolesForSystem(grantSystem).find(r => r.key === role) || APP.ROLES.find(r => r.key === role);
   const displayName = (profile && profile.full_name) || current.full;
-  const displaySubtitle = demoMode ? current.subtitle : current.name;
+  const displaySubtitle = current.name;
   const displayInitials = displayName
     ? displayName.trim().split(/\s+/).slice(-2).map(s => s[0]).join("").toUpperCase()
     : current.initials;
@@ -515,26 +460,6 @@ function AppHeader({ role, profile, onSwitchRole, onLogout, onNavigate, grantSys
           </button>
           {roleOpen && (
             <div className="dropdown" onClick={e => e.stopPropagation()} style={{minWidth: 320}}>
-              {demoMode && <>
-                <div className="dropdown-section">
-                  Switch test account{grantSystem ? " · " + (grantSystem === "au_r3" ? "AU-R3" : "AU-R4") : ""}
-                </div>
-                {rolesForSystem(grantSystem).map(r => (
-                  <div
-                    key={r.key}
-                    className={`dropdown-item ${role === r.key ? "active" : ""}`}
-                    onClick={() => { onSwitchRole(r.key); setRoleOpen(false); }}
-                  >
-                    <div className="role-icon"><Icon name={r.iconName} size={14} /></div>
-                    <div className="meta">
-                      <div className="t">{r.name}</div>
-                      <div className="s">{r.subtitle}</div>
-                    </div>
-                    {role === r.key && <Icon name="Check" size={14} />}
-                  </div>
-                ))}
-                <div className="dropdown-divider"></div>
-              </>}
               <div className="dropdown-section">Account</div>
               <div className="dropdown-item">
                 <div className="role-icon" style={{background: "var(--paper-warm)", color: "var(--ink-2)"}}>
@@ -681,7 +606,6 @@ function readHash() {
     return {
       role: params.get("role"),
       page: params.get("page"),
-      skipLogin: params.get("skipLogin") === "1",
     };
   } catch (e) { return {}; }
 }
@@ -738,11 +662,10 @@ function App() {
     ? initial.page
     : (readLastPage(startingRole) || ROLE_CONFIG[startingRole].homeKey);
 
-  const [loggedIn, setLoggedIn] = useState(!!initial.skipLogin);
+  const [loggedIn, setLoggedIn] = useState(false);
   const [role, setRole] = useState(startingRole);
   const [page, setPage] = useState(startingPage);
   const [profile, setProfile] = useState(null);
-  const [demoMode, setDemoMode] = useState(() => !!initial.skipLogin || readDemoMode());
   const [selectedApplicationId, setSelectedApplicationId] = useState(null);
   const hiddenPageRef = useRef(null);
   const [rSystem, setRSystem] = useState(() => { try { const stored = localStorage.getItem("au-rgms-r-system"); return ACTIVE_GRANT_TYPES.includes(stored) ? stored : null; } catch (e) { return null; } });
@@ -797,59 +720,22 @@ function App() {
   };
   const toast = (msg) => setToastMsg(msg);
 
-  const switchToTestRole = async (newRole, opts = {}) => {
-    if (!ROLE_CONFIG[newRole]) return null;
-    const email = opts.email || TEST_EMAIL_FOR[newRole];
-    if (!email) return null;
-    try {
-      const prof = await window.AUTH.signIn(email, TEST_PASSWORD);
-      const r = prof && ROLE_CONFIG[prof.role] ? prof.role : newRole;
-      setProfile(prof || null);
-      setRole(r);
-      setSelectedApplicationId(null);
-      setLoggedIn(true);
-      writeDemoMode(true, !!(window.AUTH && window.AUTH.remembersSession()));
-      setDemoMode(true);
-      if (!opts.keepPage) setPage(ROLE_CONFIG[r].homeKey);
-      return prof;
-    } catch (ex) {
-      toast("Could not switch test account: " + ((ex && ex.message) || "sign-in failed."));
-      return null;
-    }
-  };
-
-  const onLogin = (prof, opts = {}) => {
+  const onLogin = (prof) => {
     if (!prof || prof.is_active === false || !ROLE_CONFIG[prof.role]) {
       window.AUTH.signOut().catch(() => {});
       setProfile(null); setLoggedIn(false);
       return;
     }
     const r = prof.role;
-    const nextDemoMode = opts.isDemo === true;
-    const persistDemo = opts.persistDemo === true || (nextDemoMode && !!(window.AUTH && window.AUTH.remembersSession()));
-    writeDemoMode(nextDemoMode, persistDemo);
-    setDemoMode(nextDemoMode);
     setProfile(prof || null);
     setRole(r);
     setPage(readLastPage(r) || ROLE_CONFIG[r].homeKey);
     setLoggedIn(true);
   };
 
-  const onSwitchRole = (newRole, email) => {
-    if (!demoMode) return;
-    if (!ROLE_CONFIG[newRole]) return;
-    const faculty = profile && (APP.FACULTIES || []).find(f => f.name === profile.faculty);
-    const facultyEmail = faculty && FACULTY_TEST_ROLES.some(r => r.key === newRole)
-      ? facultyTestEmail(faculty.code, newRole)
-      : null;
-    switchToTestRole(newRole, { email: email || facultyEmail || TEST_EMAIL_FOR[newRole] });
-  };
-
   const onLogout = async () => {
     try { await window.AUTH.signOut(); } catch (e) {}
     switchSystem();
-    writeDemoMode(false);
-    setDemoMode(false);
     setProfile(null); setLoggedIn(false);
   };
 
@@ -858,10 +744,7 @@ function App() {
       try {
         if (isPasswordRecoveryRoute()) return;
         const sess = await window.AUTH.session();
-        if (!sess) {
-          if (initial.skipLogin) await switchToTestRole(startingRole, { keepPage: true });
-          return;
-        }
+        if (!sess) return;
         const prof = await window.AUTH.profile();
         if (!prof) return;
         if (prof.is_active === false || !ROLE_CONFIG[prof.role]) {
@@ -869,15 +752,7 @@ function App() {
           setProfile(null); setLoggedIn(false);
           return;
         }
-        if (initial.skipLogin) {
-          if (initial.role && ROLE_CONFIG[initial.role] && prof.role !== initial.role) {
-            await switchToTestRole(initial.role, { keepPage: true });
-          } else {
-            setProfile(prof);
-            if (ROLE_CONFIG[prof.role]) setRole(prof.role);
-          }
-        }
-        else onLogin(prof, { isDemo: readDemoMode() });
+        onLogin(prof);
       } catch (e) {}
     })();
   }, []);
@@ -1003,7 +878,7 @@ function App() {
 
   return (
     <div className="app">
-      <AppHeader role={role} profile={profile} onSwitchRole={onSwitchRole} onLogout={onLogout} onNavigate={setPage} grantSystem={effectiveGrantSystem} demoMode={demoMode} />
+      <AppHeader role={role} profile={profile} onLogout={onLogout} onNavigate={setPage} grantSystem={effectiveGrantSystem} />
       <SubBar
         crumbs={crumbs}
         onHome={() => setPage(cfg.homeKey)}

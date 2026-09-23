@@ -13,43 +13,9 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 var APP = window.AU;
-var TEST_PASSWORD = "123456789";
-var DEMO_MODE_KEY = "au-rgms-demo-mode";
 function isPasswordRecoveryRoute() {
   return new URLSearchParams(window.location.search).get("reset-password") === "1" || /(?:^|[&#])type=recovery(?:&|$)/.test(window.location.hash || "");
 }
-function readDemoMode() {
-  try {
-    return sessionStorage.getItem(DEMO_MODE_KEY) === "true" || localStorage.getItem(DEMO_MODE_KEY) === "true";
-  } catch (e) {
-    return false;
-  }
-}
-function writeDemoMode(enabled) {
-  var persist = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
-  try {
-    sessionStorage.removeItem(DEMO_MODE_KEY);
-    localStorage.removeItem(DEMO_MODE_KEY);
-    if (enabled) window[persist ? "localStorage" : "sessionStorage"].setItem(DEMO_MODE_KEY, "true");
-  } catch (e) {}
-}
-var FACULTY_TEST_ROLES = [{
-  key: "researcher",
-  label: "Researcher"
-}, {
-  key: "dean",
-  label: "Dean"
-}];
-function facultyTestEmail(code, role) {
-  return String(code || "VMES").toLowerCase() + role + "@au.edu";
-}
-var TEST_EMAIL_FOR = {
-  researcher: "vmesresearcher@au.edu",
-  dean: "vmesdean@au.edu",
-  iras: "iras@au.edu",
-  ofm: "finance@au.edu",
-  admin: "admin@au.edu"
-};
 function LoginPage(_ref) {
   var onLogin = _ref.onLogin;
   var _useState = useState(""),
@@ -82,26 +48,22 @@ function LoginPage(_ref) {
     _useState12 = _slicedToArray(_useState11, 2),
     helpTopic = _useState12[0],
     setHelpTopic = _useState12[1];
-  var _useState13 = useState("VMES"),
+  var _useState13 = useState(""),
     _useState14 = _slicedToArray(_useState13, 2),
-    demoFaculty = _useState14[0],
-    setDemoFaculty = _useState14[1];
+    resetSent = _useState14[0],
+    setResetSent = _useState14[1];
   var _useState15 = useState(""),
     _useState16 = _slicedToArray(_useState15, 2),
-    resetSent = _useState16[0],
-    setResetSent = _useState16[1];
+    newPassword = _useState16[0],
+    setNewPassword = _useState16[1];
   var _useState17 = useState(""),
     _useState18 = _slicedToArray(_useState17, 2),
-    newPassword = _useState18[0],
-    setNewPassword = _useState18[1];
-  var _useState19 = useState(""),
+    confirmPassword = _useState18[0],
+    setConfirmPassword = _useState18[1];
+  var _useState19 = useState(false),
     _useState20 = _slicedToArray(_useState19, 2),
-    confirmPassword = _useState20[0],
-    setConfirmPassword = _useState20[1];
-  var _useState21 = useState(false),
-    _useState22 = _slicedToArray(_useState21, 2),
-    passwordChanged = _useState22[0],
-    setPasswordChanged = _useState22[1];
+    passwordChanged = _useState20[0],
+    setPasswordChanged = _useState20[1];
   var loginPending = useRef(false);
   var emailInput = useRef(null);
   var passwordInput = useRef(null);
@@ -119,16 +81,10 @@ function LoginPage(_ref) {
   }
   function _signInWith() {
     _signInWith = _asyncToGenerator(_regenerator().m(function _callee2(em, pw) {
-      var isDemo,
-        prof,
-        message,
-        _args2 = arguments,
-        _t2,
-        _t3;
+      var prof, message, _t2, _t3;
       return _regenerator().w(function (_context2) {
         while (1) switch (_context2.p = _context2.n) {
           case 0:
-            isDemo = _args2.length > 2 && _args2[2] !== undefined ? _args2[2] : false;
             if (!loginPending.current) {
               _context2.n = 1;
               break;
@@ -165,10 +121,7 @@ function LoginPage(_ref) {
           case 8:
             throw new Error("This account belongs to an inactive role and no longer has portal access.");
           case 9:
-            onLogin(prof, {
-              isDemo: isDemo,
-              persistDemo: isDemo && remember
-            });
+            onLogin(prof);
             _context2.n = 11;
             break;
           case 10:
@@ -203,9 +156,6 @@ function LoginPage(_ref) {
       return;
     }
     signInWith(auEmail, pass);
-  }
-  function demoLogin(testEmail) {
-    signInWith(testEmail, TEST_PASSWORD, true);
   }
   function requestPasswordReset() {
     return _requestPasswordReset.apply(this, arguments);
@@ -259,11 +209,11 @@ function LoginPage(_ref) {
           case 0:
             e.preventDefault();
             setErr("");
-            if (!(newPassword.length < 8)) {
+            if (/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(newPassword)) {
               _context4.n = 1;
               break;
             }
-            return _context4.a(2, setErr("New password must be at least 8 characters."));
+            return _context4.a(2, setErr("New password must be 12+ characters and include upper case, lower case, a number, and a symbol."));
           case 1:
             if (!(newPassword !== confirmPassword)) {
               _context4.n = 2;
@@ -567,65 +517,7 @@ function LoginPage(_ref) {
     onClick: function onClick() {
       return setHelpTopic("access");
     }
-  }, "Contact Research Affairs / IT Support")), React.createElement("details", {
-    className: "au-login-demo"
-  }, React.createElement("summary", null, "Developer Demo Access ", React.createElement(Icon, {
-    name: "ChevronDown",
-    size: 12
-  })), React.createElement("div", {
-    className: "au-login-demo-panel"
-  }, React.createElement("p", null, "Select a faculty account. Every test account uses password ", React.createElement("strong", null, TEST_PASSWORD), "."), React.createElement("label", {
-    className: "au-login-demo-select"
-  }, React.createElement("span", null, "Faculty"), React.createElement("select", {
-    value: demoFaculty,
-    onChange: function onChange(e) {
-      return setDemoFaculty(e.target.value);
-    },
-    disabled: busy
-  }, APP.FACULTIES.map(function (f) {
-    return React.createElement("option", {
-      key: f.code,
-      value: f.code
-    }, f.code, " \xB7 ", f.name);
-  }))), React.createElement("div", {
-    className: "au-login-demo-grid"
-  }, FACULTY_TEST_ROLES.map(function (r) {
-    var username = demoFaculty.toLowerCase() + r.key;
-    return React.createElement("button", {
-      key: r.key,
-      type: "button",
-      disabled: busy,
-      title: username + "@au.edu",
-      onClick: function onClick() {
-        return demoLogin(facultyTestEmail(demoFaculty, r.key));
-      }
-    }, React.createElement("strong", null, username), React.createElement("span", null, r.label));
-  })), React.createElement("div", {
-    className: "au-login-demo-section"
-  }, "University-wide"), React.createElement("div", {
-    className: "au-login-demo-grid au-login-demo-grid-wide"
-  }, React.createElement("button", {
-    type: "button",
-    disabled: busy,
-    title: "iras@au.edu",
-    onClick: function onClick() {
-      return demoLogin(TEST_EMAIL_FOR.iras);
-    }
-  }, React.createElement("strong", null, "iras"), React.createElement("span", null, "AU-R3 / AU-R4 Office")), React.createElement("button", {
-    type: "button",
-    disabled: busy,
-    title: "finance@au.edu",
-    onClick: function onClick() {
-      return demoLogin(TEST_EMAIL_FOR.ofm);
-    }
-  }, React.createElement("strong", null, "finance"), React.createElement("span", null, "OFM / Finance")), React.createElement("button", {
-    type: "button",
-    disabled: busy,
-    title: "admin@au.edu",
-    onClick: function onClick() {
-      return demoLogin(TEST_EMAIL_FOR.admin);
-    }
-  }, React.createElement("strong", null, "admin"), React.createElement("span", null, "Administrator")))))))), React.createElement(LoginHelpDialog, {
+  }, "Contact Research Affairs / IT Support"))))), React.createElement(LoginHelpDialog, {
     topic: helpTopic,
     onClose: function onClose() {
       return setHelpTopic(null);
@@ -655,7 +547,7 @@ function LoginHelpDialog(_ref3) {
     }
   }, React.createElement("h2", {
     id: "au-login-help-title"
-  }, titles[topic] || "Login help"), topic === "access" && React.createElement(React.Fragment, null, React.createElement("p", null, "Contact administrator.")), topic === "help" && React.createElement(React.Fragment, null, React.createElement("p", null, "Enter your registered email ending in @au.edu and your password. Your account determines which role and workspace you can access."), React.createElement("p", null, "Researchers can select AU-R3 or AU-R4 after signing in. Developer Demo Access opens shared test accounts and is separate from your personal account."), React.createElement("p", null, "Select Remember me only on your own device. Leave it unchecked on shared computers and sign out when you finish.")), topic === "privacy" && React.createElement(React.Fragment, null, React.createElement("p", null, "AU-RGMS uses your signed-in account to load your profile and the applications available to your role."), React.createElement("p", null, "Remember me saves a login session in this browser. Without it, the session is kept in the current tab. Signing out clears the saved session from this browser; the checkbox never saves your password."), React.createElement("p", null, "For the university's official privacy policy or questions about your research data, contact Research Affairs.")), React.createElement("button", {
+  }, titles[topic] || "Login help"), topic === "access" && React.createElement(React.Fragment, null, React.createElement("p", null, "Contact administrator.")), topic === "help" && React.createElement(React.Fragment, null, React.createElement("p", null, "Enter your registered email ending in @au.edu and your password. Your account determines which role and workspace you can access."), React.createElement("p", null, "Researchers can select AU-R3 or AU-R4 after signing in. Staff workspaces are selected automatically from the authenticated account role."), React.createElement("p", null, "Select Remember me only on your own device. Leave it unchecked on shared computers and sign out when you finish.")), topic === "privacy" && React.createElement(React.Fragment, null, React.createElement("p", null, "AU-RGMS uses your signed-in account to load your profile and the applications available to your role."), React.createElement("p", null, "Remember me saves a login session in this browser. Without it, the session is kept in the current tab. Signing out clears the saved session from this browser; the checkbox never saves your password."), React.createElement("p", null, "For the university's official privacy policy or questions about your research data, contact Research Affairs.")), React.createElement("button", {
     className: "au-login-submit",
     type: "button",
     autoFocus: true,
@@ -668,25 +560,25 @@ var CHOOSER_INTRO = "Hi, I'm AU AI. Not sure whether AU-R3 or AU-R4 fits you? As
 var CHOOSER_CHIPS = ["What's the difference between AU-R3 and AU-R4?", "Which grant is for presenting a paper at a conference?", "How do I submit an AU-R4 publication fee application?", "Can students apply together with me?"];
 function GrantHelperChat(_ref4) {
   var profile = _ref4.profile;
-  var _useState23 = useState([{
+  var _useState21 = useState([{
       role: "assistant",
       content: CHOOSER_INTRO
     }]),
+    _useState22 = _slicedToArray(_useState21, 2),
+    msgs = _useState22[0],
+    setMsgs = _useState22[1];
+  var _useState23 = useState(""),
     _useState24 = _slicedToArray(_useState23, 2),
-    msgs = _useState24[0],
-    setMsgs = _useState24[1];
-  var _useState25 = useState(""),
+    input = _useState24[0],
+    setInput = _useState24[1];
+  var _useState25 = useState(false),
     _useState26 = _slicedToArray(_useState25, 2),
-    input = _useState26[0],
-    setInput = _useState26[1];
+    busy = _useState26[0],
+    setBusy = _useState26[1];
   var _useState27 = useState(false),
     _useState28 = _slicedToArray(_useState27, 2),
-    busy = _useState28[0],
-    setBusy = _useState28[1];
-  var _useState29 = useState(false),
-    _useState30 = _slicedToArray(_useState29, 2),
-    open = _useState30[0],
-    setOpen = _useState30[1];
+    open = _useState28[0],
+    setOpen = _useState28[1];
   var bodyRef = useRef(null);
   var ctx = {
     role: "researcher",
@@ -985,30 +877,28 @@ function rolesForSystem(sys) {
 function AppHeader(_ref6) {
   var role = _ref6.role,
     profile = _ref6.profile,
-    onSwitchRole = _ref6.onSwitchRole,
     onLogout = _ref6.onLogout,
     onNavigate = _ref6.onNavigate,
-    grantSystem = _ref6.grantSystem,
-    demoMode = _ref6.demoMode;
+    grantSystem = _ref6.grantSystem;
+  var _useState29 = useState(false),
+    _useState30 = _slicedToArray(_useState29, 2),
+    roleOpen = _useState30[0],
+    setRoleOpen = _useState30[1];
   var _useState31 = useState(false),
     _useState32 = _slicedToArray(_useState31, 2),
-    roleOpen = _useState32[0],
-    setRoleOpen = _useState32[1];
-  var _useState33 = useState(false),
+    notifOpen = _useState32[0],
+    setNotifOpen = _useState32[1];
+  var _useState33 = useState(APP.NOTIFS || []),
     _useState34 = _slicedToArray(_useState33, 2),
-    notifOpen = _useState34[0],
-    setNotifOpen = _useState34[1];
-  var _useState35 = useState(APP.NOTIFS || []),
-    _useState36 = _slicedToArray(_useState35, 2),
-    notifItems = _useState36[0],
-    setNotifItems = _useState36[1];
+    notifItems = _useState34[0],
+    setNotifItems = _useState34[1];
   var current = rolesForSystem(grantSystem).find(function (r) {
     return r.key === role;
   }) || APP.ROLES.find(function (r) {
     return r.key === role;
   });
   var displayName = profile && profile.full_name || current.full;
-  var displaySubtitle = demoMode ? current.subtitle : current.name;
+  var displaySubtitle = current.name;
   var displayInitials = displayName ? displayName.trim().split(/\s+/).slice(-2).map(function (s) {
     return s[0];
   }).join("").toUpperCase() : current.initials;
@@ -1125,34 +1015,7 @@ function AppHeader(_ref6) {
     style: {
       minWidth: 320
     }
-  }, demoMode && React.createElement(React.Fragment, null, React.createElement("div", {
-    className: "dropdown-section"
-  }, "Switch test account", grantSystem ? " · " + (grantSystem === "au_r3" ? "AU-R3" : "AU-R4") : ""), rolesForSystem(grantSystem).map(function (r) {
-    return React.createElement("div", {
-      key: r.key,
-      className: "dropdown-item ".concat(role === r.key ? "active" : ""),
-      onClick: function onClick() {
-        onSwitchRole(r.key);
-        setRoleOpen(false);
-      }
-    }, React.createElement("div", {
-      className: "role-icon"
-    }, React.createElement(Icon, {
-      name: r.iconName,
-      size: 14
-    })), React.createElement("div", {
-      className: "meta"
-    }, React.createElement("div", {
-      className: "t"
-    }, r.name), React.createElement("div", {
-      className: "s"
-    }, r.subtitle)), role === r.key && React.createElement(Icon, {
-      name: "Check",
-      size: 14
-    }));
-  }), React.createElement("div", {
-    className: "dropdown-divider"
-  })), React.createElement("div", {
+  }, React.createElement("div", {
     className: "dropdown-section"
   }, "Account"), React.createElement("div", {
     className: "dropdown-item"
@@ -1526,8 +1389,7 @@ function readHash() {
     var params = new URLSearchParams(q);
     return {
       role: params.get("role"),
-      page: params.get("page"),
-      skipLogin: params.get("skipLogin") === "1"
+      page: params.get("page")
     };
   } catch (e) {
     return {};
@@ -1575,34 +1437,28 @@ function App() {
   var initial = readHash();
   var startingRole = initial.role && ROLE_CONFIG[initial.role] ? initial.role : "researcher";
   var startingPage = initial.page && !RETIRED_PAGES.includes(initial.page) ? initial.page : readLastPage(startingRole) || ROLE_CONFIG[startingRole].homeKey;
-  var _useState37 = useState(!!initial.skipLogin),
+  var _useState35 = useState(false),
+    _useState36 = _slicedToArray(_useState35, 2),
+    loggedIn = _useState36[0],
+    setLoggedIn = _useState36[1];
+  var _useState37 = useState(startingRole),
     _useState38 = _slicedToArray(_useState37, 2),
-    loggedIn = _useState38[0],
-    setLoggedIn = _useState38[1];
-  var _useState39 = useState(startingRole),
+    role = _useState38[0],
+    setRole = _useState38[1];
+  var _useState39 = useState(startingPage),
     _useState40 = _slicedToArray(_useState39, 2),
-    role = _useState40[0],
-    setRole = _useState40[1];
-  var _useState41 = useState(startingPage),
+    page = _useState40[0],
+    setPage = _useState40[1];
+  var _useState41 = useState(null),
     _useState42 = _slicedToArray(_useState41, 2),
-    page = _useState42[0],
-    setPage = _useState42[1];
+    profile = _useState42[0],
+    setProfile = _useState42[1];
   var _useState43 = useState(null),
     _useState44 = _slicedToArray(_useState43, 2),
-    profile = _useState44[0],
-    setProfile = _useState44[1];
-  var _useState45 = useState(function () {
-      return !!initial.skipLogin || readDemoMode();
-    }),
-    _useState46 = _slicedToArray(_useState45, 2),
-    demoMode = _useState46[0],
-    setDemoMode = _useState46[1];
-  var _useState47 = useState(null),
-    _useState48 = _slicedToArray(_useState47, 2),
-    selectedApplicationId = _useState48[0],
-    setSelectedApplicationId = _useState48[1];
+    selectedApplicationId = _useState44[0],
+    setSelectedApplicationId = _useState44[1];
   var hiddenPageRef = useRef(null);
-  var _useState49 = useState(function () {
+  var _useState45 = useState(function () {
       try {
         var stored = localStorage.getItem("au-rgms-r-system");
         return ACTIVE_GRANT_TYPES.includes(stored) ? stored : null;
@@ -1610,9 +1466,9 @@ function App() {
         return null;
       }
     }),
-    _useState50 = _slicedToArray(_useState49, 2),
-    rSystem = _useState50[0],
-    setRSystem = _useState50[1];
+    _useState46 = _slicedToArray(_useState45, 2),
+    rSystem = _useState46[0],
+    setRSystem = _useState46[1];
   var chooseSystem = function chooseSystem(sys, nextPage) {
     if (!ACTIVE_GRANT_TYPES.includes(sys)) return;
     try {
@@ -1648,18 +1504,18 @@ function App() {
     writePageRoute(role, key);
     setPage(key);
   };
+  var _useState47 = useState(null),
+    _useState48 = _slicedToArray(_useState47, 2),
+    previewDoc = _useState48[0],
+    setPreviewDoc = _useState48[1];
+  var _useState49 = useState(null),
+    _useState50 = _slicedToArray(_useState49, 2),
+    toastMsg = _useState50[0],
+    setToastMsg = _useState50[1];
   var _useState51 = useState(null),
     _useState52 = _slicedToArray(_useState51, 2),
-    previewDoc = _useState52[0],
-    setPreviewDoc = _useState52[1];
-  var _useState53 = useState(null),
-    _useState54 = _slicedToArray(_useState53, 2),
-    toastMsg = _useState54[0],
-    setToastMsg = _useState54[1];
-  var _useState55 = useState(null),
-    _useState56 = _slicedToArray(_useState55, 2),
-    confirm = _useState56[0],
-    setConfirm = _useState56[1];
+    confirm = _useState52[0],
+    setConfirm = _useState52[1];
   var onDownload = function () {
     var _ref0 = _asyncToGenerator(_regenerator().m(function _callee6(doc) {
       var url, _t7;
@@ -1723,59 +1579,7 @@ function App() {
   var toast = function toast(msg) {
     return setToastMsg(msg);
   };
-  var switchToTestRole = function () {
-    var _ref10 = _asyncToGenerator(_regenerator().m(function _callee8(newRole) {
-      var opts,
-        email,
-        prof,
-        r,
-        _args8 = arguments,
-        _t9;
-      return _regenerator().w(function (_context8) {
-        while (1) switch (_context8.p = _context8.n) {
-          case 0:
-            opts = _args8.length > 1 && _args8[1] !== undefined ? _args8[1] : {};
-            if (ROLE_CONFIG[newRole]) {
-              _context8.n = 1;
-              break;
-            }
-            return _context8.a(2, null);
-          case 1:
-            email = opts.email || TEST_EMAIL_FOR[newRole];
-            if (email) {
-              _context8.n = 2;
-              break;
-            }
-            return _context8.a(2, null);
-          case 2:
-            _context8.p = 2;
-            _context8.n = 3;
-            return window.AUTH.signIn(email, TEST_PASSWORD);
-          case 3:
-            prof = _context8.v;
-            r = prof && ROLE_CONFIG[prof.role] ? prof.role : newRole;
-            setProfile(prof || null);
-            setRole(r);
-            setSelectedApplicationId(null);
-            setLoggedIn(true);
-            writeDemoMode(true, !!(window.AUTH && window.AUTH.remembersSession()));
-            setDemoMode(true);
-            if (!opts.keepPage) setPage(ROLE_CONFIG[r].homeKey);
-            return _context8.a(2, prof);
-          case 4:
-            _context8.p = 4;
-            _t9 = _context8.v;
-            toast("Could not switch test account: " + (_t9 && _t9.message || "sign-in failed."));
-            return _context8.a(2, null);
-        }
-      }, _callee8, null, [[2, 4]]);
-    }));
-    return function switchToTestRole(_x7) {
-      return _ref10.apply(this, arguments);
-    };
-  }();
   var onLogin = function onLogin(prof) {
-    var opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
     if (!prof || prof.is_active === false || !ROLE_CONFIG[prof.role]) {
       window.AUTH.signOut().catch(function () {});
       setProfile(null);
@@ -1783,146 +1587,93 @@ function App() {
       return;
     }
     var r = prof.role;
-    var nextDemoMode = opts.isDemo === true;
-    var persistDemo = opts.persistDemo === true || nextDemoMode && !!(window.AUTH && window.AUTH.remembersSession());
-    writeDemoMode(nextDemoMode, persistDemo);
-    setDemoMode(nextDemoMode);
     setProfile(prof || null);
     setRole(r);
     setPage(readLastPage(r) || ROLE_CONFIG[r].homeKey);
     setLoggedIn(true);
   };
-  var onSwitchRole = function onSwitchRole(newRole, email) {
-    if (!demoMode) return;
-    if (!ROLE_CONFIG[newRole]) return;
-    var faculty = profile && (APP.FACULTIES || []).find(function (f) {
-      return f.name === profile.faculty;
-    });
-    var facultyEmail = faculty && FACULTY_TEST_ROLES.some(function (r) {
-      return r.key === newRole;
-    }) ? facultyTestEmail(faculty.code, newRole) : null;
-    switchToTestRole(newRole, {
-      email: email || facultyEmail || TEST_EMAIL_FOR[newRole]
-    });
-  };
   var onLogout = function () {
-    var _ref11 = _asyncToGenerator(_regenerator().m(function _callee9() {
-      var _t0;
+    var _ref10 = _asyncToGenerator(_regenerator().m(function _callee8() {
+      var _t9;
+      return _regenerator().w(function (_context8) {
+        while (1) switch (_context8.p = _context8.n) {
+          case 0:
+            _context8.p = 0;
+            _context8.n = 1;
+            return window.AUTH.signOut();
+          case 1:
+            _context8.n = 3;
+            break;
+          case 2:
+            _context8.p = 2;
+            _t9 = _context8.v;
+          case 3:
+            switchSystem();
+            setProfile(null);
+            setLoggedIn(false);
+          case 4:
+            return _context8.a(2);
+        }
+      }, _callee8, null, [[0, 2]]);
+    }));
+    return function onLogout() {
+      return _ref10.apply(this, arguments);
+    };
+  }();
+  useEffect(function () {
+    _asyncToGenerator(_regenerator().m(function _callee9() {
+      var sess, prof, _t0;
       return _regenerator().w(function (_context9) {
         while (1) switch (_context9.p = _context9.n) {
           case 0:
             _context9.p = 0;
-            _context9.n = 1;
-            return window.AUTH.signOut();
-          case 1:
-            _context9.n = 3;
-            break;
-          case 2:
-            _context9.p = 2;
-            _t0 = _context9.v;
-          case 3:
-            switchSystem();
-            writeDemoMode(false);
-            setDemoMode(false);
-            setProfile(null);
-            setLoggedIn(false);
-          case 4:
-            return _context9.a(2);
-        }
-      }, _callee9, null, [[0, 2]]);
-    }));
-    return function onLogout() {
-      return _ref11.apply(this, arguments);
-    };
-  }();
-  useEffect(function () {
-    _asyncToGenerator(_regenerator().m(function _callee0() {
-      var sess, prof, _t1;
-      return _regenerator().w(function (_context0) {
-        while (1) switch (_context0.p = _context0.n) {
-          case 0:
-            _context0.p = 0;
             if (!isPasswordRecoveryRoute()) {
-              _context0.n = 1;
+              _context9.n = 1;
               break;
             }
-            return _context0.a(2);
+            return _context9.a(2);
           case 1:
-            _context0.n = 2;
+            _context9.n = 2;
             return window.AUTH.session();
           case 2:
-            sess = _context0.v;
+            sess = _context9.v;
             if (sess) {
-              _context0.n = 4;
+              _context9.n = 3;
               break;
             }
-            if (!initial.skipLogin) {
-              _context0.n = 3;
-              break;
-            }
-            _context0.n = 3;
-            return switchToTestRole(startingRole, {
-              keepPage: true
-            });
+            return _context9.a(2);
           case 3:
-            return _context0.a(2);
-          case 4:
-            _context0.n = 5;
+            _context9.n = 4;
             return window.AUTH.profile();
-          case 5:
-            prof = _context0.v;
+          case 4:
+            prof = _context9.v;
             if (prof) {
-              _context0.n = 6;
+              _context9.n = 5;
               break;
             }
-            return _context0.a(2);
-          case 6:
+            return _context9.a(2);
+          case 5:
             if (!(prof.is_active === false || !ROLE_CONFIG[prof.role])) {
-              _context0.n = 8;
+              _context9.n = 7;
               break;
             }
-            _context0.n = 7;
+            _context9.n = 6;
             return window.AUTH.signOut();
-          case 7:
+          case 6:
             setProfile(null);
             setLoggedIn(false);
-            return _context0.a(2);
+            return _context9.a(2);
+          case 7:
+            onLogin(prof);
+            _context9.n = 9;
+            break;
           case 8:
-            if (!initial.skipLogin) {
-              _context0.n = 12;
-              break;
-            }
-            if (!(initial.role && ROLE_CONFIG[initial.role] && prof.role !== initial.role)) {
-              _context0.n = 10;
-              break;
-            }
-            _context0.n = 9;
-            return switchToTestRole(initial.role, {
-              keepPage: true
-            });
+            _context9.p = 8;
+            _t0 = _context9.v;
           case 9:
-            _context0.n = 11;
-            break;
-          case 10:
-            setProfile(prof);
-            if (ROLE_CONFIG[prof.role]) setRole(prof.role);
-          case 11:
-            _context0.n = 13;
-            break;
-          case 12:
-            onLogin(prof, {
-              isDemo: readDemoMode()
-            });
-          case 13:
-            _context0.n = 15;
-            break;
-          case 14:
-            _context0.p = 14;
-            _t1 = _context0.v;
-          case 15:
-            return _context0.a(2);
+            return _context9.a(2);
         }
-      }, _callee0, null, [[0, 14]]);
+      }, _callee9, null, [[0, 8]]);
     }))();
   }, []);
   useEffect(function () {
@@ -2059,11 +1810,9 @@ function App() {
   }, React.createElement(AppHeader, {
     role: role,
     profile: profile,
-    onSwitchRole: onSwitchRole,
     onLogout: onLogout,
     onNavigate: setPage,
-    grantSystem: effectiveGrantSystem,
-    demoMode: demoMode
+    grantSystem: effectiveGrantSystem
   }), React.createElement(SubBar, {
     crumbs: crumbs,
     onHome: function onHome() {
