@@ -17,7 +17,7 @@ var _React = React,
   useRef = _React.useRef,
   useEffect = _React.useEffect;
 var ROLE_INTRO = {
-  researcher: "Hi, I'm AU AI. Ask me about your applications, forms, documents, authors, reviews, reports, or payments.",
+  researcher: "Hi, I'm AU AI. I can explain AU-R3 and AU-R4, help you choose the correct grant, and list the exact information, forms, and documents needed before submission.",
   dean: "Hi, I'm AU AI for Deans. I can summarize only the AU-R3 and AU-R4 applications in your assigned faculty.",
   iras: "Hi, I'm AU AI for IRAS. Ask me about university-wide R3/R4 verification queues, workflow totals, faculties, and approved funding.",
   ofm: "Hi, I'm AU AI for Finance. Ask me about R3/R4 applications forwarded to Finance, pending payments, disbursements, and completed payments.",
@@ -25,7 +25,7 @@ var ROLE_INTRO = {
   _default: "Hi, I'm AU AI — Assumption University's research-grant assistant. Ask me about AU-R3 conference grants, AU-R4 publication rewards, reviews, documents, or payments."
 };
 var ROLE_SUGGEST = {
-  researcher: ["What needs my action now?", "How much annual funding do I have left?", "Which documents am I missing?"],
+  researcher: ["What is AU-R3 and who should apply?", "What is AU-R4 and who should apply?", "Compare AU-R3 and AU-R4, including all required forms and documents"],
   dean: ["What needs my review now?", "Which department has the highest approved spending?", "Summarize my faculty's R3 and R4 applications"],
   iras: ["What needs IRAS verification now?", "Which faculty has the highest approved amount?", "Where are applications getting delayed?"],
   ofm: ["What payments need action now?", "Which faculty has the highest disbursement?", "Compare pending and completed payments"],
