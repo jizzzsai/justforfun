@@ -2422,7 +2422,7 @@ function ResearcherSubmitR4(_ref8) {
               _context8.n = 6;
               break;
             }
-            return _context8.a(2, setErr("Select or enter the journal classification."));
+            return _context8.a(2, setErr("Select or enter the conference classification."));
           case 6:
             if (!(published && !draft.articleUrl.trim())) {
               _context8.n = 7;
@@ -2877,7 +2877,7 @@ function ResearcherSubmitR4(_ref8) {
     className: "form-section"
   }, React.createElement("h4", null, React.createElement("span", {
     className: "num"
-  }, "2"), " Journal Classification"), React.createElement("p", {
+  }, "2"), " Conference Classification"), React.createElement("p", {
     className: "section-sub"
   }, "Select the journal database / index and its matching classification. The research office makes the final verification."), React.createElement("div", {
     className: "section-body"

@@ -998,7 +998,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       if (!draft.website.trim()) return setErr("Enter the journal website.");
       if (!draft.issn.trim()) return setErr("Enter the ISSN or eISSN.");
       if (!draft.journalDb) return setErr("Select the Journal Database / Index.");
-      if (!draft.journalClassification.trim()) return setErr("Select or enter the journal classification.");
+      if (!draft.journalClassification.trim()) return setErr("Select or enter the conference classification.");
       if (published && !draft.articleUrl.trim()) return setErr("Enter the Article URL for the published article.");
       if (published && !draft.pageNumber.trim()) return setErr("Enter the Page Number(s) for the published article.");
       if (!published && !draft.acceptDate) return setErr("Select the Acceptance Date.");
@@ -1134,7 +1134,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
 
         {                               }
         <div className="form-section">
-          <h4><span className="num">2</span> Journal Classification</h4>
+          <h4><span className="num">2</span> Conference Classification</h4>
           <p className="section-sub">Select the journal database / index and its matching classification. The research office makes the final verification.</p>
           <div className="section-body">
             <div className="form-grid">

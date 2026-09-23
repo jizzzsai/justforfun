@@ -43,7 +43,7 @@ AU-R4 — PUBLICATION FEES AND REWARD
 - Maximum eligible amount: 80,000 THB per article. The publication fee is entered manually; the research office verifies the final eligible amount.
 - Publication Status = Published: include Publication Date, Volume, Issue, and Page Number(s). Academic Year is AD and uses the YYYY/YYYY format, for example 2025/2026.
 - Publication Status = Accepted for Publication: Article URL, DOI, ISSN/eISSN, and Expected Publication Date are not required. An Acceptance Letter upload is required instead.
-- Journal Classification uses two fields: Journal Database / Index and its matching Classification. The Beall's List link is for checking predatory journals. The confirmation checkbox appears at the bottom with the other confirmations.
+- Conference Classification uses two fields: Journal Database / Index and its matching Classification. The Beall's List link is for checking predatory journals. The confirmation checkbox appears at the bottom with the other confirmations.
 - The author section uses First Author and Co-author only. Author Email Address is used instead of AU ID. An Author Contribution File is required only when a second author is listed. When exactly two authors are listed, changing one contribution automatically makes the other value equal 100 minus that value.
 - The Publication Fee and Claim Information section is shown only when TCI Tier 1 or TCI Tier 2 is selected. It uses a manually entered Publication Fee and has no receipt-number field.
 

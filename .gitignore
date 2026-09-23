@@ -37,6 +37,7 @@ yarn-error.log*
 # vercel
 .vercel
 .firecrawl/
+/private-backups/
 
 # typescript
 *.tsbuildinfo

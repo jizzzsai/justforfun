@@ -13,6 +13,22 @@ function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length)
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
 var APP = window.AU;
+var TEST_PASSWORD = "123456789";
+var FACULTY_TEST_ROLES = [{
+  key: "researcher",
+  label: "Researcher"
+}, {
+  key: "dean",
+  label: "Dean"
+}];
+function facultyTestEmail(code, role) {
+  return String(code || "VMES").toLowerCase() + role + "@au.edu";
+}
+var TEST_EMAIL_FOR = {
+  iras: "iras@au.edu",
+  ofm: "finance@au.edu",
+  admin: "admin@au.edu"
+};
 function isPasswordRecoveryRoute() {
   return new URLSearchParams(window.location.search).get("reset-password") === "1" || /(?:^|[&#])type=recovery(?:&|$)/.test(window.location.hash || "");
 }
@@ -48,22 +64,26 @@ function LoginPage(_ref) {
     _useState12 = _slicedToArray(_useState11, 2),
     helpTopic = _useState12[0],
     setHelpTopic = _useState12[1];
-  var _useState13 = useState(""),
+  var _useState13 = useState("VMES"),
     _useState14 = _slicedToArray(_useState13, 2),
-    resetSent = _useState14[0],
-    setResetSent = _useState14[1];
+    demoFaculty = _useState14[0],
+    setDemoFaculty = _useState14[1];
   var _useState15 = useState(""),
     _useState16 = _slicedToArray(_useState15, 2),
-    newPassword = _useState16[0],
-    setNewPassword = _useState16[1];
+    resetSent = _useState16[0],
+    setResetSent = _useState16[1];
   var _useState17 = useState(""),
     _useState18 = _slicedToArray(_useState17, 2),
-    confirmPassword = _useState18[0],
-    setConfirmPassword = _useState18[1];
-  var _useState19 = useState(false),
+    newPassword = _useState18[0],
+    setNewPassword = _useState18[1];
+  var _useState19 = useState(""),
     _useState20 = _slicedToArray(_useState19, 2),
-    passwordChanged = _useState20[0],
-    setPasswordChanged = _useState20[1];
+    confirmPassword = _useState20[0],
+    setConfirmPassword = _useState20[1];
+  var _useState21 = useState(false),
+    _useState22 = _slicedToArray(_useState21, 2),
+    passwordChanged = _useState22[0],
+    setPasswordChanged = _useState22[1];
   var loginPending = useRef(false);
   var emailInput = useRef(null);
   var passwordInput = useRef(null);
@@ -157,6 +177,9 @@ function LoginPage(_ref) {
     }
     signInWith(auEmail, pass);
   }
+  function demoLogin(testEmail) {
+    signInWith(testEmail, TEST_PASSWORD);
+  }
   function requestPasswordReset() {
     return _requestPasswordReset.apply(this, arguments);
   }
@@ -209,11 +232,11 @@ function LoginPage(_ref) {
           case 0:
             e.preventDefault();
             setErr("");
-            if (/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(newPassword)) {
+            if (!(newPassword.length < 8)) {
               _context4.n = 1;
               break;
             }
-            return _context4.a(2, setErr("New password must be 12+ characters and include upper case, lower case, a number, and a symbol."));
+            return _context4.a(2, setErr("New password must be at least 8 characters."));
           case 1:
             if (!(newPassword !== confirmPassword)) {
               _context4.n = 2;
@@ -517,7 +540,65 @@ function LoginPage(_ref) {
     onClick: function onClick() {
       return setHelpTopic("access");
     }
-  }, "Contact Research Affairs / IT Support"))))), React.createElement(LoginHelpDialog, {
+  }, "Contact Research Affairs / IT Support")), React.createElement("details", {
+    className: "au-login-demo"
+  }, React.createElement("summary", null, "Developer Demo Access ", React.createElement(Icon, {
+    name: "ChevronDown",
+    size: 12
+  })), React.createElement("div", {
+    className: "au-login-demo-panel"
+  }, React.createElement("p", null, "Select a test account. Every demo account uses password ", React.createElement("strong", null, TEST_PASSWORD), "."), React.createElement("label", {
+    className: "au-login-demo-select"
+  }, React.createElement("span", null, "Faculty"), React.createElement("select", {
+    value: demoFaculty,
+    onChange: function onChange(e) {
+      return setDemoFaculty(e.target.value);
+    },
+    disabled: busy
+  }, APP.FACULTIES.map(function (f) {
+    return React.createElement("option", {
+      key: f.code,
+      value: f.code
+    }, f.code, " \xB7 ", f.name);
+  }))), React.createElement("div", {
+    className: "au-login-demo-grid"
+  }, FACULTY_TEST_ROLES.map(function (r) {
+    var username = demoFaculty.toLowerCase() + r.key;
+    return React.createElement("button", {
+      key: r.key,
+      type: "button",
+      disabled: busy,
+      title: username + "@au.edu",
+      onClick: function onClick() {
+        return demoLogin(facultyTestEmail(demoFaculty, r.key));
+      }
+    }, React.createElement("strong", null, username), React.createElement("span", null, r.label));
+  })), React.createElement("div", {
+    className: "au-login-demo-section"
+  }, "University-wide"), React.createElement("div", {
+    className: "au-login-demo-grid au-login-demo-grid-wide"
+  }, React.createElement("button", {
+    type: "button",
+    disabled: busy,
+    title: "iras@au.edu",
+    onClick: function onClick() {
+      return demoLogin(TEST_EMAIL_FOR.iras);
+    }
+  }, React.createElement("strong", null, "iras"), React.createElement("span", null, "AU-R3 / AU-R4 Office")), React.createElement("button", {
+    type: "button",
+    disabled: busy,
+    title: "finance@au.edu",
+    onClick: function onClick() {
+      return demoLogin(TEST_EMAIL_FOR.ofm);
+    }
+  }, React.createElement("strong", null, "finance"), React.createElement("span", null, "OFM / Finance")), React.createElement("button", {
+    type: "button",
+    disabled: busy,
+    title: "admin@au.edu",
+    onClick: function onClick() {
+      return demoLogin(TEST_EMAIL_FOR.admin);
+    }
+  }, React.createElement("strong", null, "admin"), React.createElement("span", null, "Administrator")))))))), React.createElement(LoginHelpDialog, {
     topic: helpTopic,
     onClose: function onClose() {
       return setHelpTopic(null);
@@ -560,25 +641,25 @@ var CHOOSER_INTRO = "Hi, I'm AU AI. Not sure whether AU-R3 or AU-R4 fits you? As
 var CHOOSER_CHIPS = ["What's the difference between AU-R3 and AU-R4?", "Which grant is for presenting a paper at a conference?", "How do I submit an AU-R4 publication fee application?", "Can students apply together with me?"];
 function GrantHelperChat(_ref4) {
   var profile = _ref4.profile;
-  var _useState21 = useState([{
+  var _useState23 = useState([{
       role: "assistant",
       content: CHOOSER_INTRO
     }]),
-    _useState22 = _slicedToArray(_useState21, 2),
-    msgs = _useState22[0],
-    setMsgs = _useState22[1];
-  var _useState23 = useState(""),
     _useState24 = _slicedToArray(_useState23, 2),
-    input = _useState24[0],
-    setInput = _useState24[1];
-  var _useState25 = useState(false),
+    msgs = _useState24[0],
+    setMsgs = _useState24[1];
+  var _useState25 = useState(""),
     _useState26 = _slicedToArray(_useState25, 2),
-    busy = _useState26[0],
-    setBusy = _useState26[1];
+    input = _useState26[0],
+    setInput = _useState26[1];
   var _useState27 = useState(false),
     _useState28 = _slicedToArray(_useState27, 2),
-    open = _useState28[0],
-    setOpen = _useState28[1];
+    busy = _useState28[0],
+    setBusy = _useState28[1];
+  var _useState29 = useState(false),
+    _useState30 = _slicedToArray(_useState29, 2),
+    open = _useState30[0],
+    setOpen = _useState30[1];
   var bodyRef = useRef(null);
   var ctx = {
     role: "researcher",
@@ -880,18 +961,18 @@ function AppHeader(_ref6) {
     onLogout = _ref6.onLogout,
     onNavigate = _ref6.onNavigate,
     grantSystem = _ref6.grantSystem;
-  var _useState29 = useState(false),
-    _useState30 = _slicedToArray(_useState29, 2),
-    roleOpen = _useState30[0],
-    setRoleOpen = _useState30[1];
   var _useState31 = useState(false),
     _useState32 = _slicedToArray(_useState31, 2),
-    notifOpen = _useState32[0],
-    setNotifOpen = _useState32[1];
-  var _useState33 = useState(APP.NOTIFS || []),
+    roleOpen = _useState32[0],
+    setRoleOpen = _useState32[1];
+  var _useState33 = useState(false),
     _useState34 = _slicedToArray(_useState33, 2),
-    notifItems = _useState34[0],
-    setNotifItems = _useState34[1];
+    notifOpen = _useState34[0],
+    setNotifOpen = _useState34[1];
+  var _useState35 = useState(APP.NOTIFS || []),
+    _useState36 = _slicedToArray(_useState35, 2),
+    notifItems = _useState36[0],
+    setNotifItems = _useState36[1];
   var current = rolesForSystem(grantSystem).find(function (r) {
     return r.key === role;
   }) || APP.ROLES.find(function (r) {
@@ -1437,28 +1518,28 @@ function App() {
   var initial = readHash();
   var startingRole = initial.role && ROLE_CONFIG[initial.role] ? initial.role : "researcher";
   var startingPage = initial.page && !RETIRED_PAGES.includes(initial.page) ? initial.page : readLastPage(startingRole) || ROLE_CONFIG[startingRole].homeKey;
-  var _useState35 = useState(false),
-    _useState36 = _slicedToArray(_useState35, 2),
-    loggedIn = _useState36[0],
-    setLoggedIn = _useState36[1];
-  var _useState37 = useState(startingRole),
+  var _useState37 = useState(false),
     _useState38 = _slicedToArray(_useState37, 2),
-    role = _useState38[0],
-    setRole = _useState38[1];
-  var _useState39 = useState(startingPage),
+    loggedIn = _useState38[0],
+    setLoggedIn = _useState38[1];
+  var _useState39 = useState(startingRole),
     _useState40 = _slicedToArray(_useState39, 2),
-    page = _useState40[0],
-    setPage = _useState40[1];
-  var _useState41 = useState(null),
+    role = _useState40[0],
+    setRole = _useState40[1];
+  var _useState41 = useState(startingPage),
     _useState42 = _slicedToArray(_useState41, 2),
-    profile = _useState42[0],
-    setProfile = _useState42[1];
+    page = _useState42[0],
+    setPage = _useState42[1];
   var _useState43 = useState(null),
     _useState44 = _slicedToArray(_useState43, 2),
-    selectedApplicationId = _useState44[0],
-    setSelectedApplicationId = _useState44[1];
+    profile = _useState44[0],
+    setProfile = _useState44[1];
+  var _useState45 = useState(null),
+    _useState46 = _slicedToArray(_useState45, 2),
+    selectedApplicationId = _useState46[0],
+    setSelectedApplicationId = _useState46[1];
   var hiddenPageRef = useRef(null);
-  var _useState45 = useState(function () {
+  var _useState47 = useState(function () {
       try {
         var stored = localStorage.getItem("au-rgms-r-system");
         return ACTIVE_GRANT_TYPES.includes(stored) ? stored : null;
@@ -1466,9 +1547,9 @@ function App() {
         return null;
       }
     }),
-    _useState46 = _slicedToArray(_useState45, 2),
-    rSystem = _useState46[0],
-    setRSystem = _useState46[1];
+    _useState48 = _slicedToArray(_useState47, 2),
+    rSystem = _useState48[0],
+    setRSystem = _useState48[1];
   var chooseSystem = function chooseSystem(sys, nextPage) {
     if (!ACTIVE_GRANT_TYPES.includes(sys)) return;
     try {
@@ -1504,18 +1585,18 @@ function App() {
     writePageRoute(role, key);
     setPage(key);
   };
-  var _useState47 = useState(null),
-    _useState48 = _slicedToArray(_useState47, 2),
-    previewDoc = _useState48[0],
-    setPreviewDoc = _useState48[1];
   var _useState49 = useState(null),
     _useState50 = _slicedToArray(_useState49, 2),
-    toastMsg = _useState50[0],
-    setToastMsg = _useState50[1];
+    previewDoc = _useState50[0],
+    setPreviewDoc = _useState50[1];
   var _useState51 = useState(null),
     _useState52 = _slicedToArray(_useState51, 2),
-    confirm = _useState52[0],
-    setConfirm = _useState52[1];
+    toastMsg = _useState52[0],
+    setToastMsg = _useState52[1];
+  var _useState53 = useState(null),
+    _useState54 = _slicedToArray(_useState53, 2),
+    confirm = _useState54[0],
+    setConfirm = _useState54[1];
   var onDownload = function () {
     var _ref0 = _asyncToGenerator(_regenerator().m(function _callee6(doc) {
       var url, _t7;

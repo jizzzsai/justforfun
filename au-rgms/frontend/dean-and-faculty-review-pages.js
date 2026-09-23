@@ -736,7 +736,7 @@ function DeanR4Detail(_ref3) {
         className: "card card-pad-0 mb-4"
       }, React.createElement("div", {
         className: "card-head"
-      }, React.createElement("h3", null, "Journal Classification")), React.createElement("div", {
+      }, React.createElement("h3", null, "Conference Classification")), React.createElement("div", {
         className: "card-body"
       }, row("Database / index", pi.journalDb), row("Classification", pi.journalClassification || pi.openAccess), row("Publication fee", fmtBaht(Number(pi.feePaid || 0))), row("Predatory-journal declaration", pi.predatory ? "Confirmed not predatory" : "Not confirmed"))), React.createElement("div", {
         className: "card card-pad-0 mb-4"

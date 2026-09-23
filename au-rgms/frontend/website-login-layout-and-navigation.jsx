@@ -4,6 +4,19 @@
 
 
 const APP = window.AU;
+const TEST_PASSWORD = "123456789";
+const FACULTY_TEST_ROLES = [
+  { key: "researcher", label: "Researcher" },
+  { key: "dean", label: "Dean" },
+];
+function facultyTestEmail(code, role) {
+  return String(code || "VMES").toLowerCase() + role + "@au.edu";
+}
+const TEST_EMAIL_FOR = {
+  iras: "iras@au.edu",
+  ofm: "finance@au.edu",
+  admin: "admin@au.edu",
+};
 function isPasswordRecoveryRoute() {
   return new URLSearchParams(window.location.search).get("reset-password") === "1" || /(?:^|[&#])type=recovery(?:&|$)/.test(window.location.hash || "");
 }
@@ -15,6 +28,7 @@ function LoginPage({ onLogin }) {
   const [showPassword, setShowPassword] = useState(false);
   const [remember, setRemember] = useState(() => !!(window.AUTH && window.AUTH.remembersSession()));
   const [helpTopic, setHelpTopic] = useState(null);
+  const [demoFaculty, setDemoFaculty] = useState("VMES");
   const [resetSent, setResetSent] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -65,6 +79,7 @@ function LoginPage({ onLogin }) {
     if (!pass) { setErr("Enter your password."); passwordInput.current.focus(); return; }
     signInWith(auEmail, pass);
   }
+  function demoLogin(testEmail) { signInWith(testEmail, TEST_PASSWORD); }
   async function requestPasswordReset() {
     const auEmail = email.trim().toLowerCase();
     setErr(""); setResetSent("");
@@ -80,7 +95,7 @@ function LoginPage({ onLogin }) {
 
   async function changeRecoveredPassword(e) {
     e.preventDefault(); setErr("");
-    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(newPassword)) return setErr("New password must be 12+ characters and include upper case, lower case, a number, and a symbol.");
+    if (newPassword.length < 8) return setErr("New password must be at least 8 characters.");
     if (newPassword !== confirmPassword) return setErr("The two passwords do not match.");
     setBusy(true);
     try {
@@ -181,6 +196,30 @@ function LoginPage({ onLogin }) {
               <span>Having trouble signing in?</span>
               <button type="button" onClick={() => setHelpTopic("access")}>Contact Research Affairs / IT Support</button>
             </div>
+            <details className="au-login-demo">
+              <summary>Developer Demo Access <Icon name="ChevronDown" size={12} /></summary>
+              <div className="au-login-demo-panel">
+                <p>Select a test account. Every demo account uses password <strong>{TEST_PASSWORD}</strong>.</p>
+                <label className="au-login-demo-select">
+                  <span>Faculty</span>
+                  <select value={demoFaculty} onChange={e => setDemoFaculty(e.target.value)} disabled={busy}>
+                    {APP.FACULTIES.map(f => <option key={f.code} value={f.code}>{f.code} · {f.name}</option>)}
+                  </select>
+                </label>
+                <div className="au-login-demo-grid">
+                  {FACULTY_TEST_ROLES.map(r => {
+                    const username = demoFaculty.toLowerCase() + r.key;
+                    return <button key={r.key} type="button" disabled={busy} title={username + "@au.edu"} onClick={() => demoLogin(facultyTestEmail(demoFaculty, r.key))}><strong>{username}</strong><span>{r.label}</span></button>;
+                  })}
+                </div>
+                <div className="au-login-demo-section">University-wide</div>
+                <div className="au-login-demo-grid au-login-demo-grid-wide">
+                  <button type="button" disabled={busy} title="iras@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.iras)}><strong>iras</strong><span>AU-R3 / AU-R4 Office</span></button>
+                  <button type="button" disabled={busy} title="finance@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.ofm)}><strong>finance</strong><span>OFM / Finance</span></button>
+                  <button type="button" disabled={busy} title="admin@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.admin)}><strong>admin</strong><span>Administrator</span></button>
+                </div>
+              </div>
+            </details>
           </div>
         </section>
       </main>

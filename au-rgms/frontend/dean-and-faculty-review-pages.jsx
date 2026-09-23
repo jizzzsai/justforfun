@@ -312,7 +312,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 </div>
 
                 <div className="card card-pad-0 mb-4">
-                  <div className="card-head"><h3>Journal Classification</h3></div>
+                  <div className="card-head"><h3>Conference Classification</h3></div>
                   <div className="card-body">
                     {row("Database / index", pi.journalDb)}
                     {row("Classification", pi.journalClassification || pi.openAccess)}

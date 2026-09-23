@@ -2529,11 +2529,11 @@ function AdminAddUserForm(_ref17) {
             }
             return _context9.a(2, toast("Pick a faculty for a Dean account."));
           case 4:
-            if (/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(f.password || "")) {
+            if (!((f.password || "").length < 8)) {
               _context9.n = 5;
               break;
             }
-            return _context9.a(2, toast("Temporary password must be 12+ characters and include upper case, lower case, a number, and a symbol."));
+            return _context9.a(2, toast("Temporary password must be at least 8 characters."));
           case 5:
             setBusy(true);
             _context9.p = 6;
@@ -2694,7 +2694,7 @@ function AdminAddUserForm(_ref17) {
     onChange: function onChange(e) {
       return set("password", e.target.value);
     },
-    placeholder: "12+ characters with mixed case, number, and symbol"
+    placeholder: "At least 8 characters"
   }))), React.createElement("div", {
     className: "flex justify-end gap-2 mt-2"
   }, React.createElement("button", {
@@ -2780,11 +2780,11 @@ function AdminEditUserForm(_ref20) {
             }
             return _context0.a(2, toast("Pick a faculty for a Dean account."));
           case 4:
-            if (!(f.password && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(f.password))) {
+            if (!(f.password && f.password.length < 8)) {
               _context0.n = 5;
               break;
             }
-            return _context0.a(2, toast("A new password must be 12+ characters and include upper case, lower case, a number, and a symbol."));
+            return _context0.a(2, toast("A new password must be at least 8 characters."));
           case 5:
             setBusy(true);
             _context0.p = 6;
@@ -2954,7 +2954,7 @@ function AdminEditUserForm(_ref20) {
     onChange: function onChange(e) {
       return set("password", e.target.value);
     },
-    placeholder: "Leave blank, or use a strong 12+ character password"
+    placeholder: "Leave blank to keep the current password"
   }))), React.createElement("div", {
     className: "flex justify-end gap-2 mt-2"
   }, React.createElement("button", {
