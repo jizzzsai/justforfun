@@ -41,6 +41,7 @@ AU-R3 — PAPER PRESENTATION GRANT
 - Conference Information includes a manually typed conference location and a presentation date.
 - Research Paper Information requires the abstract, followed by keywords, and supports adding or removing co-authors and students.
 - Conference Qualities uses Conference Database / Index and a matching Qualities value. Database options include SCOPUS, Web of Science (WoS), IIIE, TCI, ERIC, MathSciNet, PubMed, JSTOR, Project MUSE, and Other.
+- Preserve the configured option spelling IIIE (I-I-I-E) exactly. Never substitute IEEE, expand IIIE into an organization name, or invent extra eligibility restrictions from database names.
 - There is no editable Conference Budget Information section.
 - Exactly three PDF uploads are required: Full Conference Paper, Turnitin Report, and Conference Acceptance Letter.
 - Academic Year uses the YYYY/YYYY format, for example 2025/2026.
@@ -417,7 +418,7 @@ module.exports = async (req, res) => {
           generationConfig: {
             thinkingConfig: { thinkingLevel: "low" },
             temperature: 0.2,
-            maxOutputTokens: 800,
+            maxOutputTokens: 4096,
           },
         }),
       });
