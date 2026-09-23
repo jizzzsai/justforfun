@@ -59,7 +59,9 @@ function validateProfile(body, requirePassword) {
   if (joinedDate && (!/^\d{4}-\d{2}-\d{2}$/.test(joinedDate) || Number.isNaN(Date.parse(joinedDate + "T00:00:00Z")))) return { error: "Date joined must be a valid date." };
   if (joinedDate && joinedDate > new Date().toISOString().slice(0, 10)) return { error: "Date joined cannot be in the future." };
   if (ROLES.indexOf(role) === -1) return { error: "Invalid role." };
-  if ((requirePassword || password) && password.length < 8) return { error: "Password must be at least 8 characters." };
+  if ((requirePassword || password) && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(password)) {
+    return { error: "Password must be 12+ characters and include upper case, lower case, a number, and a symbol." };
+  }
   if (role === "dean" && !faculty) return { error: "Dean accounts need a faculty." };
 
   return {

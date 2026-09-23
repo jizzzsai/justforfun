@@ -933,7 +933,7 @@ const ADMIN_ROLE_OPTIONS = [
 ];
 
 function AdminAddUserForm({ onCreated, onClose, toast }) {
-  const blank = { name_title: "", full_name: "", email: "", au_id: "", phone: "", office_room: "", joined_date: "", role: "dean", faculty: "", department: "", password: "123456789" };
+  const blank = { name_title: "", full_name: "", email: "", au_id: "", phone: "", office_room: "", joined_date: "", role: "dean", faculty: "", department: "", password: "" };
   const [f, setF] = useState(blank);
   const [busy, setBusy] = useState(false);
   const set = (k, v) => setF(s => Object.assign({}, s, k === "faculty" ? { faculty: v, department: "" } : { [k]: v }));
@@ -944,7 +944,7 @@ function AdminAddUserForm({ onCreated, onClose, toast }) {
     if (!/^[^@\s]+@au\.edu$/i.test(f.email.trim())) return toast("Email must end in @au.edu.");
     if (f.phone && !isValidThaiPhone(f.phone)) return toast("Phone must be a Thai number with 9–10 digits starting with 0.");
     if (needsFaculty && !f.faculty) return toast("Pick a faculty for a Dean account.");
-    if ((f.password || "").length < 8) return toast("Temp password must be at least 8 characters.");
+    if (!/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(f.password || "")) return toast("Temporary password must be 12+ characters and include upper case, lower case, a number, and a symbol.");
     setBusy(true);
     try {
       await window.DB.adminCreateUser(f);
@@ -976,7 +976,7 @@ function AdminAddUserForm({ onCreated, onClose, toast }) {
           <div className="field"><label>Department</label>
             <select value={f.department} onChange={e => set("department", e.target.value)} disabled={!f.faculty}><option value="">{f.faculty ? "Select department…" : "Pick a faculty first"}</option>{depts.map(d => <option key={d} value={d}>{d}</option>)}</select>
           </div>
-          <div className="field"><label>Temporary password</label><input value={f.password} onChange={e => set("password", e.target.value)} /></div>
+          <div className="field"><label>Temporary password</label><input type="password" autoComplete="new-password" value={f.password} onChange={e => set("password", e.target.value)} placeholder="12+ characters with mixed case, number, and symbol" /></div>
         </div>
         <div className="flex justify-end gap-2 mt-2">
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
@@ -1012,7 +1012,7 @@ function AdminEditUserForm({ user, onSaved, onClose, toast }) {
     if (!/^[^@\s]+@au\.edu$/i.test(f.email.trim())) return toast("Email must end in @au.edu.");
     if (f.phone && !isValidThaiPhone(f.phone)) return toast("Phone must be a Thai number with 9–10 digits starting with 0.");
     if (needsFaculty && !f.faculty) return toast("Pick a faculty for a Dean account.");
-    if (f.password && f.password.length < 8) return toast("A new password must be at least 8 characters.");
+    if (f.password && !/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{12,}$/.test(f.password)) return toast("A new password must be 12+ characters and include upper case, lower case, a number, and a symbol.");
     setBusy(true);
     try {
       await window.DB.adminUpdateUser(f);
@@ -1047,7 +1047,7 @@ function AdminEditUserForm({ user, onSaved, onClose, toast }) {
           <div className="field"><label>Department</label>
             <select value={f.department} onChange={e => set("department", e.target.value)} disabled={!f.faculty}><option value="">{f.faculty ? "Select department…" : "Pick a faculty first"}</option>{depts.map(d => <option key={d} value={d}>{d}</option>)}</select>
           </div>
-          <div className="field"><label>New password (optional)</label><input type="password" value={f.password} onChange={e => set("password", e.target.value)} placeholder="Leave blank to keep current password" /></div>
+          <div className="field"><label>New password (optional)</label><input type="password" autoComplete="new-password" value={f.password} onChange={e => set("password", e.target.value)} placeholder="Leave blank, or use a strong 12+ character password" /></div>
         </div>
         <div className="flex justify-end gap-2 mt-2">
           <button className="btn btn-secondary" onClick={onClose}>Cancel</button>
