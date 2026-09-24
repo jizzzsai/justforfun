@@ -351,6 +351,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
   const [draft, setDraft] = useState({ ...R3_DEFAULT_DRAFT });
   const upd = (k, v) => setDraft(d => ({ ...d, [k]: v }));
   const classificationOptions = (RA.R4_JOURNAL_CLASSIFICATIONS || {})[draft.journalDb] || null;
+  const selectedConferenceQuality = !!draft.journalDb && (!classificationOptions || classificationOptions.includes(draft.journalClassification));
 
   const [authors, setAuthors] = useState([]);
   const addAuthor = () => setAuthors(m => m.concat([{ name: "", authorType: "Co-author", kind: "Researcher", auId: "", email: "" }]));
@@ -455,7 +456,7 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
     if (submit && !draft.field.trim()) { setErr("Enter the research field."); return; }
     if (submit && !draft.paperAbstract.trim()) { setErr("Enter the paper abstract."); return; }
     if (submit && !draft.journalDb) { setErr("Select the Conference Database / Index."); return; }
-    if (submit && !draft.journalClassification.trim()) { setErr("Select or enter the conference qualities."); return; }
+    if (submit && classificationOptions && !classificationOptions.includes(draft.journalClassification)) { setErr("Select the conference qualities."); return; }
     if (submit && !draft.school) { setErr("Select your faculty so the application routes to the right reviewers."); return; }
     if (submit && !draft.name.trim()) { setErr("Enter your full name."); return; }
     if (submit && !draft.email.trim()) { setErr("Enter your AU email address."); return; }
@@ -706,27 +707,35 @@ function ResearcherSubmitR3({ applicationId, navigate, onDownload, onView, toast
 
         <div className="form-section">
           <h4><span className="num">4</span> Conference Qualities</h4>
-          <p className="section-sub">Select the conference proceedings database and enter its qualities. The AU-R3 grant amount is fixed at 3,500 THB.</p>
+          <p className="section-sub">Select the conference proceedings database and its qualities, when available.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field"><label>Conference Database / Index *</label>
-                <select value={draft.journalDb} onChange={e => setDraft(d => ({ ...d, journalDb: e.target.value, journalClassification: "" }))}>
+                <select value={draft.journalDb} onChange={e => { const database = e.target.value; setDraft(d => ({ ...d, journalDb: database, journalClassification: database && !(RA.R4_JOURNAL_CLASSIFICATIONS || {})[database] ? "Not applicable" : "" })); }}>
                   <option value="">Select database / index…</option>
                   {(RA.R3_CONFERENCE_DBS || RA.R4_JOURNAL_DBS || []).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="field"><label>Qualities *</label>
+              <div className="field"><label>Qualities{classificationOptions ? " *" : ""}</label>
                 {classificationOptions ? (
                   <select value={draft.journalClassification} onChange={e => upd("journalClassification", e.target.value)} disabled={!draft.journalDb}>
                     <option value="">Select qualities…</option>
                     {classificationOptions.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 ) : (
-                  <input value={draft.journalClassification} onChange={e => upd("journalClassification", e.target.value)} disabled={!draft.journalDb}
-                    placeholder={draft.journalDb === "Other" ? "Enter qualities manually" : draft.journalDb ? "Enter conference qualities" : "Select a database / index first"} />
+                  <input value={draft.journalDb ? "No qualities listed" : ""} disabled
+                    placeholder="Select a database / index first" />
                 )}
               </div>
             </div>
+            {selectedConferenceQuality && (
+              <div className="r4-reward-estimate">
+                <div className="r4-reward-estimate-head">
+                  <div className="r4-reward-estimate-label"><Icon name="Coins" size={20} /> AU-R3 fixed grant amount</div>
+                  <div className="r4-reward-estimate-amount">{fmtBaht(fixedGrantAmount)}</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -864,8 +873,8 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
   const requested = tierSelected ? Math.min(MAX, Number(draft.feePaid) || 0) : automaticReward;
   const normalizedAcademicYear = window.DB.academicYearLabel(draft.academicYear, draft.pubDate || draft.acceptDate || new Date());
   const annualLimitExceeded = !!annualFunding && requested > annualFunding.remaining;
-  const catLabel = [draft.journalDb, draft.journalClassification].filter(Boolean).join(" — ");
-  const showPreliminaryReward = !!draft.journalDb && !!draft.journalClassification.trim() && !tierSelected;
+  const catLabel = [draft.journalDb, draft.journalClassification === "Not applicable" ? "" : draft.journalClassification].filter(Boolean).join(" — ");
+  const showPreliminaryReward = !!draft.journalDb && (!classificationOptions || classificationOptions.includes(draft.journalClassification));
   const totalContrib = authors.reduce((s, a) => s + (Number(a.contribution) || 0), 0);
   const hasSecondAuthor = authors.length > 1;
   const firstContrib = Number((authors.find(a => a.type === "First Author") || {}).contribution) || 0;
@@ -998,7 +1007,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       if (!draft.website.trim()) return setErr("Enter the journal website.");
       if (!draft.issn.trim()) return setErr("Enter the ISSN or eISSN.");
       if (!draft.journalDb) return setErr("Select the Journal Database / Index.");
-      if (!draft.journalClassification.trim()) return setErr("Select or enter the conference classification.");
+      if (classificationOptions && !classificationOptions.includes(draft.journalClassification)) return setErr("Select the conference classification.");
       if (published && !draft.articleUrl.trim()) return setErr("Enter the Article URL for the published article.");
       if (published && !draft.pageNumber.trim()) return setErr("Enter the Page Number(s) for the published article.");
       if (!published && !draft.acceptDate) return setErr("Select the Acceptance Date.");
@@ -1139,20 +1148,20 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
           <div className="section-body">
             <div className="form-grid">
               <div className="field"><label>Journal Database / Index *</label>
-                <select value={draft.journalDb} onChange={e => setDraft(d => ({ ...d, journalDb: e.target.value, journalClassification: "" }))}>
+                <select value={draft.journalDb} onChange={e => { const database = e.target.value; setDraft(d => ({ ...d, journalDb: database, journalClassification: database && !(RA.R4_JOURNAL_CLASSIFICATIONS || {})[database] ? "Not applicable" : "" })); }}>
                   <option value="">Select database / index…</option>
                   {(RA.R4_JOURNAL_DBS || []).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="field"><label>Classification *</label>
+              <div className="field"><label>Classification{classificationOptions ? " *" : ""}</label>
                 {classificationOptions ? (
                   <select value={draft.journalClassification} onChange={e => upd("journalClassification", e.target.value)} disabled={!draft.journalDb}>
                     <option value="">Select classification…</option>
                     {classificationOptions.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 ) : (
-                  <input value={draft.journalClassification} onChange={e => upd("journalClassification", e.target.value)} disabled={!draft.journalDb}
-                    placeholder={draft.journalDb === "Other" ? "Enter database / index name manually" : draft.journalDb ? "Enter additional tier" : "Select a database / index first"} />
+                  <input value={draft.journalDb ? "No classification listed" : ""} disabled
+                    placeholder="Select a database / index first" />
                 )}
               </div>
             </div>
@@ -1160,7 +1169,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
               <div className="r4-reward-estimate">
                 <div className="r4-reward-estimate-head">
                   <div className="r4-reward-estimate-label"><Icon name="Award" size={20} /> Preliminary reward estimate ({catLabel})</div>
-                  <div className="r4-reward-estimate-amount">{automaticReward > 0 ? fmtBaht(automaticReward) : "Pending IRAS verification"}</div>
+                  <div className="r4-reward-estimate-amount">{tierSelected ? (requested > 0 ? fmtBaht(requested) : "Enter publication fee") : automaticReward > 0 ? fmtBaht(automaticReward) : "Pending IRAS verification"}</div>
                 </div>
                 <p>This is a preliminary estimate only. The final eligible amount will be determined by IRAS after verifying the journal, documents, publication fee, author contribution, and previous claims. Maximum 80,000 THB per article.</p>
               </div>

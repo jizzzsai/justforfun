@@ -17,6 +17,17 @@ const TEST_EMAIL_FOR = {
   ofm: "finance@au.edu",
   admin: "admin@au.edu",
 };
+function demoRoleForEmail(email) {
+  const normalized = String(email || "").trim().toLowerCase();
+  const centralRole = Object.keys(TEST_EMAIL_FOR).find(role => TEST_EMAIL_FOR[role] === normalized);
+  if (centralRole) return centralRole;
+  for (const faculty of (APP.FACULTIES || [])) {
+    for (const role of FACULTY_TEST_ROLES) {
+      if (facultyTestEmail(faculty.code, role.key) === normalized) return role.key;
+    }
+  }
+  return null;
+}
 function isPasswordRecoveryRoute() {
   return new URLSearchParams(window.location.search).get("reset-password") === "1" || /(?:^|[&#])type=recovery(?:&|$)/.test(window.location.hash || "");
 }
@@ -430,10 +441,14 @@ function rolesForSystem(sys) {
   return list;
 }
 
-function AppHeader({ role, profile, onLogout, onNavigate, grantSystem }) {
+function AppHeader({ role, profile, onLogout, onNavigate, onDemoSwitch, grantSystem }) {
   const [roleOpen, setRoleOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [notifItems, setNotifItems] = useState(APP.NOTIFS || []);
+  const [demoVerified, setDemoVerified] = useState(false);
+  const [demoSwitchBusy, setDemoSwitchBusy] = useState(false);
+  const [demoSwitchError, setDemoSwitchError] = useState("");
+  const [demoFaculty, setDemoFaculty] = useState(() => (APP.FACULTIES || []).find(f => f.name === (profile && profile.faculty))?.code || "VMES");
   const current = rolesForSystem(grantSystem).find(r => r.key === role) || APP.ROLES.find(r => r.key === role);
   const displayName = (profile && profile.full_name) || current.full;
   const displaySubtitle = current.name;
@@ -464,6 +479,31 @@ function AppHeader({ role, profile, onLogout, onNavigate, grantSystem }) {
     const timer = window.setInterval(refreshNotifications, 30000);
     return () => { alive = false; window.clearInterval(timer); };
   }, [role, profile && profile.id]);
+
+  useEffect(() => {
+    let alive = true;
+    setDemoVerified(false);
+    setDemoFaculty((APP.FACULTIES || []).find(f => f.name === (profile && profile.faculty))?.code || "VMES");
+    if (window.sb && window.sb.auth && profile && profile.id) {
+      window.sb.auth.getUser().then(result => {
+        const user = result && result.data && result.data.user;
+        if (alive) setDemoVerified(!!(user && user.id === profile.id && demoRoleForEmail(user.email) === role));
+      }).catch(() => { if (alive) setDemoVerified(false); });
+    }
+    return () => { alive = false; };
+  }, [role, profile && profile.id, profile && profile.faculty]);
+
+  async function selectDemoAccount(email) {
+    if (demoSwitchBusy || !demoVerified || !onDemoSwitch) return;
+    setDemoSwitchBusy(true);
+    setDemoSwitchError("");
+    try {
+      await onDemoSwitch(email);
+    } catch (error) {
+      setDemoSwitchError((error && error.message) || "Could not switch demo account.");
+      setDemoSwitchBusy(false);
+    }
+  }
 
   return (
     <header className="app-header">
@@ -499,6 +539,23 @@ function AppHeader({ role, profile, onLogout, onNavigate, grantSystem }) {
           </button>
           {roleOpen && (
             <div className="dropdown" onClick={e => e.stopPropagation()} style={{minWidth: 320}}>
+              {demoVerified && <>
+                <div className="dropdown-section">Demo workspaces</div>
+                <label className="demo-switch-faculty">Faculty
+                  <select value={demoFaculty} onChange={e => setDemoFaculty(e.target.value)} disabled={demoSwitchBusy}>
+                    {(APP.FACULTIES || []).map(f => <option key={f.code} value={f.code}>{f.name}</option>)}
+                  </select>
+                </label>
+                {FACULTY_TEST_ROLES.map(item => <button key={item.key} type="button" className="dropdown-item demo-switch-item" disabled={demoSwitchBusy} onClick={() => selectDemoAccount(facultyTestEmail(demoFaculty, item.key))}>
+                  <Icon name={item.key === "researcher" ? "User" : "Building2"} size={16} />
+                  <span>{item.label} dashboard</span>
+                </button>)}
+                {[{ key: "iras", label: "IRAS" }, { key: "ofm", label: "Finance" }, { key: "admin", label: "Administrator" }].map(item => <button key={item.key} type="button" className="dropdown-item demo-switch-item" disabled={demoSwitchBusy} onClick={() => selectDemoAccount(TEST_EMAIL_FOR[item.key])}>
+                  <Icon name={item.key === "iras" ? "ClipboardCheck" : item.key === "ofm" ? "Coins" : "Settings"} size={16} />
+                  <span>{item.label} dashboard</span>
+                </button>)}
+                {demoSwitchError && <div className="demo-switch-error" role="alert">{demoSwitchError}</div>}
+              </>}
               <div className="dropdown-section">Account</div>
               <div className="dropdown-item">
                 <div className="role-icon" style={{background: "var(--paper-warm)", color: "var(--ink-2)"}}>
@@ -778,6 +835,25 @@ function App() {
     setProfile(null); setLoggedIn(false);
   };
 
+  const onDemoSwitch = async (email) => {
+    const targetRole = demoRoleForEmail(email);
+    if (!targetRole) throw new Error("Choose a listed demo account.");
+    const identity = await window.AUTH.identity();
+    if (!identity || !profile || identity.user.id !== profile.id || demoRoleForEmail(identity.user.email) !== profile.role) {
+      throw new Error("Demo switching is available only to signed-in demo accounts.");
+    }
+    const nextProfile = await window.AUTH.signIn(email, TEST_PASSWORD, window.AUTH.remembersSession());
+    if (!nextProfile || nextProfile.is_active === false || nextProfile.role !== targetRole) {
+      await window.AUTH.signOut();
+      throw new Error("The selected test account is unavailable.");
+    }
+    try { localStorage.removeItem("au-rgms-r-system"); } catch (e) {}
+    const nextPage = ROLE_CONFIG[targetRole].homeKey;
+    rememberLastPage(targetRole, nextPage);
+    writePageRoute(targetRole, nextPage);
+    window.location.reload();
+  };
+
   useEffect(() => {
     (async () => {
       try {
@@ -917,7 +993,7 @@ function App() {
 
   return (
     <div className="app">
-      <AppHeader role={role} profile={profile} onLogout={onLogout} onNavigate={setPage} grantSystem={effectiveGrantSystem} />
+      <AppHeader role={role} profile={profile} onLogout={onLogout} onNavigate={setPage} onDemoSwitch={onDemoSwitch} grantSystem={effectiveGrantSystem} />
       <SubBar
         crumbs={crumbs}
         onHome={() => setPage(cfg.homeKey)}

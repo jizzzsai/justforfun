@@ -694,6 +694,7 @@ function ResearcherSubmitR3(_ref5) {
     });
   };
   var classificationOptions = (RA.R4_JOURNAL_CLASSIFICATIONS || {})[draft.journalDb] || null;
+  var selectedConferenceQuality = !!draft.journalDb && (!classificationOptions || classificationOptions.includes(draft.journalClassification));
   var _useState1 = useState([]),
     _useState10 = _slicedToArray(_useState1, 2),
     authors = _useState10[0],
@@ -1053,11 +1054,11 @@ function ResearcherSubmitR3(_ref5) {
             setErr("Select the Conference Database / Index.");
             return _context4.a(2);
           case 8:
-            if (!(submit && !draft.journalClassification.trim())) {
+            if (!(submit && classificationOptions && !classificationOptions.includes(draft.journalClassification))) {
               _context4.n = 9;
               break;
             }
-            setErr("Select or enter the conference qualities.");
+            setErr("Select the conference qualities.");
             return _context4.a(2);
           case 9:
             if (!(submit && !draft.school)) {
@@ -1648,7 +1649,7 @@ function ResearcherSubmitR3(_ref5) {
     className: "num"
   }, "4"), " Conference Qualities"), React.createElement("p", {
     className: "section-sub"
-  }, "Select the conference proceedings database and enter its qualities. The AU-R3 grant amount is fixed at 3,500 THB."), React.createElement("div", {
+  }, "Select the conference proceedings database and its qualities, when available."), React.createElement("div", {
     className: "section-body"
   }, React.createElement("div", {
     className: "form-grid"
@@ -1657,10 +1658,11 @@ function ResearcherSubmitR3(_ref5) {
   }, React.createElement("label", null, "Conference Database / Index *"), React.createElement("select", {
     value: draft.journalDb,
     onChange: function onChange(e) {
-      return setDraft(function (d) {
+      var database = e.target.value;
+      setDraft(function (d) {
         return _objectSpread(_objectSpread({}, d), {}, {
-          journalDb: e.target.value,
-          journalClassification: ""
+          journalDb: database,
+          journalClassification: database && !(RA.R4_JOURNAL_CLASSIFICATIONS || {})[database] ? "Not applicable" : ""
         });
       });
     }
@@ -1673,7 +1675,7 @@ function ResearcherSubmitR3(_ref5) {
     }, t);
   }))), React.createElement("div", {
     className: "field"
-  }, React.createElement("label", null, "Qualities *"), classificationOptions ? React.createElement("select", {
+  }, React.createElement("label", null, "Qualities", classificationOptions ? " *" : ""), classificationOptions ? React.createElement("select", {
     value: draft.journalClassification,
     onChange: function onChange(e) {
       return upd("journalClassification", e.target.value);
@@ -1687,13 +1689,21 @@ function ResearcherSubmitR3(_ref5) {
       value: t
     }, t);
   })) : React.createElement("input", {
-    value: draft.journalClassification,
-    onChange: function onChange(e) {
-      return upd("journalClassification", e.target.value);
-    },
-    disabled: !draft.journalDb,
-    placeholder: draft.journalDb === "Other" ? "Enter qualities manually" : draft.journalDb ? "Enter conference qualities" : "Select a database / index first"
-  }))))), React.createElement("div", {
+    value: draft.journalDb ? "No qualities listed" : "",
+    disabled: true,
+    placeholder: "Select a database / index first"
+  }))), selectedConferenceQuality && React.createElement("div", {
+    className: "r4-reward-estimate"
+  }, React.createElement("div", {
+    className: "r4-reward-estimate-head"
+  }, React.createElement("div", {
+    className: "r4-reward-estimate-label"
+  }, React.createElement(Icon, {
+    name: "Coins",
+    size: 20
+  }), " AU-R3 fixed grant amount"), React.createElement("div", {
+    className: "r4-reward-estimate-amount"
+  }, fmtBaht(fixedGrantAmount)))))), React.createElement("div", {
     className: "form-section"
   }, React.createElement("h4", null, React.createElement("span", {
     className: "num"
@@ -2092,8 +2102,8 @@ function ResearcherSubmitR4(_ref8) {
   var requested = tierSelected ? Math.min(MAX, Number(draft.feePaid) || 0) : automaticReward;
   var normalizedAcademicYear = window.DB.academicYearLabel(draft.academicYear, draft.pubDate || draft.acceptDate || new Date());
   var annualLimitExceeded = !!annualFunding && requested > annualFunding.remaining;
-  var catLabel = [draft.journalDb, draft.journalClassification].filter(Boolean).join(" — ");
-  var showPreliminaryReward = !!draft.journalDb && !!draft.journalClassification.trim() && !tierSelected;
+  var catLabel = [draft.journalDb, draft.journalClassification === "Not applicable" ? "" : draft.journalClassification].filter(Boolean).join(" — ");
+  var showPreliminaryReward = !!draft.journalDb && (!classificationOptions || classificationOptions.includes(draft.journalClassification));
   var totalContrib = authors.reduce(function (s, a) {
     return s + (Number(a.contribution) || 0);
   }, 0);
@@ -2418,11 +2428,11 @@ function ResearcherSubmitR4(_ref8) {
             }
             return _context8.a(2, setErr("Select the Journal Database / Index."));
           case 5:
-            if (draft.journalClassification.trim()) {
+            if (!(classificationOptions && !classificationOptions.includes(draft.journalClassification))) {
               _context8.n = 6;
               break;
             }
-            return _context8.a(2, setErr("Select or enter the conference classification."));
+            return _context8.a(2, setErr("Select the conference classification."));
           case 6:
             if (!(published && !draft.articleUrl.trim())) {
               _context8.n = 7;
@@ -2888,10 +2898,11 @@ function ResearcherSubmitR4(_ref8) {
   }, React.createElement("label", null, "Journal Database / Index *"), React.createElement("select", {
     value: draft.journalDb,
     onChange: function onChange(e) {
-      return setDraft(function (d) {
+      var database = e.target.value;
+      setDraft(function (d) {
         return _objectSpread(_objectSpread({}, d), {}, {
-          journalDb: e.target.value,
-          journalClassification: ""
+          journalDb: database,
+          journalClassification: database && !(RA.R4_JOURNAL_CLASSIFICATIONS || {})[database] ? "Not applicable" : ""
         });
       });
     }
@@ -2904,7 +2915,7 @@ function ResearcherSubmitR4(_ref8) {
     }, t);
   }))), React.createElement("div", {
     className: "field"
-  }, React.createElement("label", null, "Classification *"), classificationOptions ? React.createElement("select", {
+  }, React.createElement("label", null, "Classification", classificationOptions ? " *" : ""), classificationOptions ? React.createElement("select", {
     value: draft.journalClassification,
     onChange: function onChange(e) {
       return upd("journalClassification", e.target.value);
@@ -2918,12 +2929,9 @@ function ResearcherSubmitR4(_ref8) {
       value: t
     }, t);
   })) : React.createElement("input", {
-    value: draft.journalClassification,
-    onChange: function onChange(e) {
-      return upd("journalClassification", e.target.value);
-    },
-    disabled: !draft.journalDb,
-    placeholder: draft.journalDb === "Other" ? "Enter database / index name manually" : draft.journalDb ? "Enter additional tier" : "Select a database / index first"
+    value: draft.journalDb ? "No classification listed" : "",
+    disabled: true,
+    placeholder: "Select a database / index first"
   }))), showPreliminaryReward && React.createElement("div", {
     className: "r4-reward-estimate"
   }, React.createElement("div", {
@@ -2935,7 +2943,7 @@ function ResearcherSubmitR4(_ref8) {
     size: 20
   }), " Preliminary reward estimate (", catLabel, ")"), React.createElement("div", {
     className: "r4-reward-estimate-amount"
-  }, automaticReward > 0 ? fmtBaht(automaticReward) : "Pending IRAS verification")), React.createElement("p", null, "This is a preliminary estimate only. The final eligible amount will be determined by IRAS after verifying the journal, documents, publication fee, author contribution, and previous claims. Maximum 80,000 THB per article.")))), React.createElement("div", {
+  }, tierSelected ? requested > 0 ? fmtBaht(requested) : "Enter publication fee" : automaticReward > 0 ? fmtBaht(automaticReward) : "Pending IRAS verification")), React.createElement("p", null, "This is a preliminary estimate only. The final eligible amount will be determined by IRAS after verifying the journal, documents, publication fee, author contribution, and previous claims. Maximum 80,000 THB per article.")))), React.createElement("div", {
     className: "form-section"
   }, React.createElement("h4", null, React.createElement("span", {
     className: "num"

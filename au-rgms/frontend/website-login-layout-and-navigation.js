@@ -8,10 +8,11 @@ function asyncGeneratorStep(n, t, e, r, o, a, c) { try { var i = n[a](c), u = i.
 function _asyncToGenerator(n) { return function () { var t = this, e = arguments; return new Promise(function (r, o) { var a = n.apply(t, e); function _next(n) { asyncGeneratorStep(a, r, o, _next, _throw, "next", n); } function _throw(n) { asyncGeneratorStep(a, r, o, _next, _throw, "throw", n); } _next(void 0); }); }; }
 function _slicedToArray(r, e) { return _arrayWithHoles(r) || _iterableToArrayLimit(r, e) || _unsupportedIterableToArray(r, e) || _nonIterableRest(); }
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); }
-function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
-function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 function _iterableToArrayLimit(r, l) { var t = null == r ? null : "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (null != t) { var e, n, i, u, a = [], f = !0, o = !1; try { if (i = (t = t.call(r)).next, 0 === l) { if (Object(t) !== t) return; f = !1; } else for (; !(f = (e = i.call(t)).done) && (a.push(e.value), a.length !== l); f = !0); } catch (r) { o = !0, n = r; } finally { try { if (!f && null != t.return && (u = t.return(), Object(u) !== u)) return; } finally { if (o) throw n; } } return a; } }
 function _arrayWithHoles(r) { if (Array.isArray(r)) return r; }
+function _createForOfIteratorHelper(r, e) { var t = "undefined" != typeof Symbol && r[Symbol.iterator] || r["@@iterator"]; if (!t) { if (Array.isArray(r) || (t = _unsupportedIterableToArray(r)) || e && r && "number" == typeof r.length) { t && (r = t); var _n = 0, F = function F() {}; return { s: F, n: function n() { return _n >= r.length ? { done: !0 } : { done: !1, value: r[_n++] }; }, e: function e(r) { throw r; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var o, a = !0, u = !1; return { s: function s() { t = t.call(r); }, n: function n() { var r = t.next(); return a = r.done, r; }, e: function e(r) { u = !0, o = r; }, f: function f() { try { a || null == t.return || t.return(); } finally { if (u) throw o; } } }; }
+function _unsupportedIterableToArray(r, a) { if (r) { if ("string" == typeof r) return _arrayLikeToArray(r, a); var t = {}.toString.call(r).slice(8, -1); return "Object" === t && r.constructor && (t = r.constructor.name), "Map" === t || "Set" === t ? Array.from(r) : "Arguments" === t || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(t) ? _arrayLikeToArray(r, a) : void 0; } }
+function _arrayLikeToArray(r, a) { (null == a || a > r.length) && (a = r.length); for (var e = 0, n = Array(a); e < a; e++) n[e] = r[e]; return n; }
 var APP = window.AU;
 var TEST_PASSWORD = "123456789";
 var FACULTY_TEST_ROLES = [{
@@ -29,6 +30,37 @@ var TEST_EMAIL_FOR = {
   ofm: "finance@au.edu",
   admin: "admin@au.edu"
 };
+function demoRoleForEmail(email) {
+  var normalized = String(email || "").trim().toLowerCase();
+  var centralRole = Object.keys(TEST_EMAIL_FOR).find(function (role) {
+    return TEST_EMAIL_FOR[role] === normalized;
+  });
+  if (centralRole) return centralRole;
+  var _iterator = _createForOfIteratorHelper(APP.FACULTIES || []),
+    _step;
+  try {
+    for (_iterator.s(); !(_step = _iterator.n()).done;) {
+      var faculty = _step.value;
+      var _iterator2 = _createForOfIteratorHelper(FACULTY_TEST_ROLES),
+        _step2;
+      try {
+        for (_iterator2.s(); !(_step2 = _iterator2.n()).done;) {
+          var role = _step2.value;
+          if (facultyTestEmail(faculty.code, role.key) === normalized) return role.key;
+        }
+      } catch (err) {
+        _iterator2.e(err);
+      } finally {
+        _iterator2.f();
+      }
+    }
+  } catch (err) {
+    _iterator.e(err);
+  } finally {
+    _iterator.f();
+  }
+  return null;
+}
 function isPasswordRecoveryRoute() {
   return new URLSearchParams(window.location.search).get("reset-password") === "1" || /(?:^|[&#])type=recovery(?:&|$)/.test(window.location.hash || "");
 }
@@ -960,6 +992,7 @@ function AppHeader(_ref6) {
     profile = _ref6.profile,
     onLogout = _ref6.onLogout,
     onNavigate = _ref6.onNavigate,
+    onDemoSwitch = _ref6.onDemoSwitch,
     grantSystem = _ref6.grantSystem;
   var _useState31 = useState(false),
     _useState32 = _slicedToArray(_useState31, 2),
@@ -973,6 +1006,27 @@ function AppHeader(_ref6) {
     _useState36 = _slicedToArray(_useState35, 2),
     notifItems = _useState36[0],
     setNotifItems = _useState36[1];
+  var _useState37 = useState(false),
+    _useState38 = _slicedToArray(_useState37, 2),
+    demoVerified = _useState38[0],
+    setDemoVerified = _useState38[1];
+  var _useState39 = useState(false),
+    _useState40 = _slicedToArray(_useState39, 2),
+    demoSwitchBusy = _useState40[0],
+    setDemoSwitchBusy = _useState40[1];
+  var _useState41 = useState(""),
+    _useState42 = _slicedToArray(_useState41, 2),
+    demoSwitchError = _useState42[0],
+    setDemoSwitchError = _useState42[1];
+  var _useState43 = useState(function () {
+      var _find;
+      return ((_find = (APP.FACULTIES || []).find(function (f) {
+        return f.name === (profile && profile.faculty);
+      })) === null || _find === void 0 ? void 0 : _find.code) || "VMES";
+    }),
+    _useState44 = _slicedToArray(_useState43, 2),
+    demoFaculty = _useState44[0],
+    setDemoFaculty = _useState44[1];
   var current = rolesForSystem(grantSystem).find(function (r) {
     return r.key === role;
   }) || APP.ROLES.find(function (r) {
@@ -1014,6 +1068,60 @@ function AppHeader(_ref6) {
       window.clearInterval(timer);
     };
   }, [role, profile && profile.id]);
+  useEffect(function () {
+    var _find2;
+    var alive = true;
+    setDemoVerified(false);
+    setDemoFaculty(((_find2 = (APP.FACULTIES || []).find(function (f) {
+      return f.name === (profile && profile.faculty);
+    })) === null || _find2 === void 0 ? void 0 : _find2.code) || "VMES");
+    if (window.sb && window.sb.auth && profile && profile.id) {
+      window.sb.auth.getUser().then(function (result) {
+        var user = result && result.data && result.data.user;
+        if (alive) setDemoVerified(!!(user && user.id === profile.id && demoRoleForEmail(user.email) === role));
+      }).catch(function () {
+        if (alive) setDemoVerified(false);
+      });
+    }
+    return function () {
+      alive = false;
+    };
+  }, [role, profile && profile.id, profile && profile.faculty]);
+  function selectDemoAccount(_x5) {
+    return _selectDemoAccount.apply(this, arguments);
+  }
+  function _selectDemoAccount() {
+    _selectDemoAccount = _asyncToGenerator(_regenerator().m(function _callee6(email) {
+      var _t7;
+      return _regenerator().w(function (_context6) {
+        while (1) switch (_context6.p = _context6.n) {
+          case 0:
+            if (!(demoSwitchBusy || !demoVerified || !onDemoSwitch)) {
+              _context6.n = 1;
+              break;
+            }
+            return _context6.a(2);
+          case 1:
+            setDemoSwitchBusy(true);
+            setDemoSwitchError("");
+            _context6.p = 2;
+            _context6.n = 3;
+            return onDemoSwitch(email);
+          case 3:
+            _context6.n = 5;
+            break;
+          case 4:
+            _context6.p = 4;
+            _t7 = _context6.v;
+            setDemoSwitchError(_t7 && _t7.message || "Could not switch demo account.");
+            setDemoSwitchBusy(false);
+          case 5:
+            return _context6.a(2);
+        }
+      }, _callee6, null, [[2, 4]]);
+    }));
+    return _selectDemoAccount.apply(this, arguments);
+  }
   return React.createElement("header", {
     className: "app-header"
   }, React.createElement("div", {
@@ -1096,7 +1204,60 @@ function AppHeader(_ref6) {
     style: {
       minWidth: 320
     }
-  }, React.createElement("div", {
+  }, demoVerified && React.createElement(React.Fragment, null, React.createElement("div", {
+    className: "dropdown-section"
+  }, "Demo workspaces"), React.createElement("label", {
+    className: "demo-switch-faculty"
+  }, "Faculty", React.createElement("select", {
+    value: demoFaculty,
+    onChange: function onChange(e) {
+      return setDemoFaculty(e.target.value);
+    },
+    disabled: demoSwitchBusy
+  }, (APP.FACULTIES || []).map(function (f) {
+    return React.createElement("option", {
+      key: f.code,
+      value: f.code
+    }, f.name);
+  }))), FACULTY_TEST_ROLES.map(function (item) {
+    return React.createElement("button", {
+      key: item.key,
+      type: "button",
+      className: "dropdown-item demo-switch-item",
+      disabled: demoSwitchBusy,
+      onClick: function onClick() {
+        return selectDemoAccount(facultyTestEmail(demoFaculty, item.key));
+      }
+    }, React.createElement(Icon, {
+      name: item.key === "researcher" ? "User" : "Building2",
+      size: 16
+    }), React.createElement("span", null, item.label, " dashboard"));
+  }), [{
+    key: "iras",
+    label: "IRAS"
+  }, {
+    key: "ofm",
+    label: "Finance"
+  }, {
+    key: "admin",
+    label: "Administrator"
+  }].map(function (item) {
+    return React.createElement("button", {
+      key: item.key,
+      type: "button",
+      className: "dropdown-item demo-switch-item",
+      disabled: demoSwitchBusy,
+      onClick: function onClick() {
+        return selectDemoAccount(TEST_EMAIL_FOR[item.key]);
+      }
+    }, React.createElement(Icon, {
+      name: item.key === "iras" ? "ClipboardCheck" : item.key === "ofm" ? "Coins" : "Settings",
+      size: 16
+    }), React.createElement("span", null, item.label, " dashboard"));
+  }), demoSwitchError && React.createElement("div", {
+    className: "demo-switch-error",
+    role: "alert"
+  }, demoSwitchError)), React.createElement("div", {
     className: "dropdown-section"
   }, "Account"), React.createElement("div", {
     className: "dropdown-item"
@@ -1518,28 +1679,28 @@ function App() {
   var initial = readHash();
   var startingRole = initial.role && ROLE_CONFIG[initial.role] ? initial.role : "researcher";
   var startingPage = initial.page && !RETIRED_PAGES.includes(initial.page) ? initial.page : readLastPage(startingRole) || ROLE_CONFIG[startingRole].homeKey;
-  var _useState37 = useState(false),
-    _useState38 = _slicedToArray(_useState37, 2),
-    loggedIn = _useState38[0],
-    setLoggedIn = _useState38[1];
-  var _useState39 = useState(startingRole),
-    _useState40 = _slicedToArray(_useState39, 2),
-    role = _useState40[0],
-    setRole = _useState40[1];
-  var _useState41 = useState(startingPage),
-    _useState42 = _slicedToArray(_useState41, 2),
-    page = _useState42[0],
-    setPage = _useState42[1];
-  var _useState43 = useState(null),
-    _useState44 = _slicedToArray(_useState43, 2),
-    profile = _useState44[0],
-    setProfile = _useState44[1];
-  var _useState45 = useState(null),
+  var _useState45 = useState(false),
     _useState46 = _slicedToArray(_useState45, 2),
-    selectedApplicationId = _useState46[0],
-    setSelectedApplicationId = _useState46[1];
+    loggedIn = _useState46[0],
+    setLoggedIn = _useState46[1];
+  var _useState47 = useState(startingRole),
+    _useState48 = _slicedToArray(_useState47, 2),
+    role = _useState48[0],
+    setRole = _useState48[1];
+  var _useState49 = useState(startingPage),
+    _useState50 = _slicedToArray(_useState49, 2),
+    page = _useState50[0],
+    setPage = _useState50[1];
+  var _useState51 = useState(null),
+    _useState52 = _slicedToArray(_useState51, 2),
+    profile = _useState52[0],
+    setProfile = _useState52[1];
+  var _useState53 = useState(null),
+    _useState54 = _slicedToArray(_useState53, 2),
+    selectedApplicationId = _useState54[0],
+    setSelectedApplicationId = _useState54[1];
   var hiddenPageRef = useRef(null);
-  var _useState47 = useState(function () {
+  var _useState55 = useState(function () {
       try {
         var stored = localStorage.getItem("au-rgms-r-system");
         return ACTIVE_GRANT_TYPES.includes(stored) ? stored : null;
@@ -1547,9 +1708,9 @@ function App() {
         return null;
       }
     }),
-    _useState48 = _slicedToArray(_useState47, 2),
-    rSystem = _useState48[0],
-    setRSystem = _useState48[1];
+    _useState56 = _slicedToArray(_useState55, 2),
+    rSystem = _useState56[0],
+    setRSystem = _useState56[1];
   var chooseSystem = function chooseSystem(sys, nextPage) {
     if (!ACTIVE_GRANT_TYPES.includes(sys)) return;
     try {
@@ -1585,75 +1746,75 @@ function App() {
     writePageRoute(role, key);
     setPage(key);
   };
-  var _useState49 = useState(null),
-    _useState50 = _slicedToArray(_useState49, 2),
-    previewDoc = _useState50[0],
-    setPreviewDoc = _useState50[1];
-  var _useState51 = useState(null),
-    _useState52 = _slicedToArray(_useState51, 2),
-    toastMsg = _useState52[0],
-    setToastMsg = _useState52[1];
-  var _useState53 = useState(null),
-    _useState54 = _slicedToArray(_useState53, 2),
-    confirm = _useState54[0],
-    setConfirm = _useState54[1];
+  var _useState57 = useState(null),
+    _useState58 = _slicedToArray(_useState57, 2),
+    previewDoc = _useState58[0],
+    setPreviewDoc = _useState58[1];
+  var _useState59 = useState(null),
+    _useState60 = _slicedToArray(_useState59, 2),
+    toastMsg = _useState60[0],
+    setToastMsg = _useState60[1];
+  var _useState61 = useState(null),
+    _useState62 = _slicedToArray(_useState61, 2),
+    confirm = _useState62[0],
+    setConfirm = _useState62[1];
   var onDownload = function () {
-    var _ref0 = _asyncToGenerator(_regenerator().m(function _callee6(doc) {
-      var url, _t7;
-      return _regenerator().w(function (_context6) {
-        while (1) switch (_context6.p = _context6.n) {
-          case 0:
-            _context6.p = 0;
-            _context6.n = 1;
-            return window.DB.documentUrl(doc, true);
-          case 1:
-            url = _context6.v;
-            window.open(url, "_blank", "noopener,noreferrer");
-            setToastMsg("Opening download for " + doc.name);
-            _context6.n = 3;
-            break;
-          case 2:
-            _context6.p = 2;
-            _t7 = _context6.v;
-            setToastMsg((doc && doc.name ? doc.name : "Document") + " has no uploaded file attached yet.");
-          case 3:
-            return _context6.a(2);
-        }
-      }, _callee6, null, [[0, 2]]);
-    }));
-    return function onDownload(_x5) {
-      return _ref0.apply(this, arguments);
-    };
-  }();
-  var onView = function () {
-    var _ref1 = _asyncToGenerator(_regenerator().m(function _callee7(doc) {
+    var _ref0 = _asyncToGenerator(_regenerator().m(function _callee7(doc) {
       var url, _t8;
       return _regenerator().w(function (_context7) {
         while (1) switch (_context7.p = _context7.n) {
           case 0:
-            if (!(doc && doc.storage_path)) {
-              _context7.n = 4;
-              break;
-            }
-            _context7.p = 1;
-            _context7.n = 2;
-            return window.DB.documentUrl(doc, false);
-          case 2:
+            _context7.p = 0;
+            _context7.n = 1;
+            return window.DB.documentUrl(doc, true);
+          case 1:
             url = _context7.v;
             window.open(url, "_blank", "noopener,noreferrer");
-            return _context7.a(2);
-          case 3:
-            _context7.p = 3;
+            setToastMsg("Opening download for " + doc.name);
+            _context7.n = 3;
+            break;
+          case 2:
+            _context7.p = 2;
             _t8 = _context7.v;
-            setToastMsg("Could not open " + doc.name + ": " + (_t8 && _t8.message || _t8));
+            setToastMsg((doc && doc.name ? doc.name : "Document") + " has no uploaded file attached yet.");
+          case 3:
+            return _context7.a(2);
+        }
+      }, _callee7, null, [[0, 2]]);
+    }));
+    return function onDownload(_x6) {
+      return _ref0.apply(this, arguments);
+    };
+  }();
+  var onView = function () {
+    var _ref1 = _asyncToGenerator(_regenerator().m(function _callee8(doc) {
+      var url, _t9;
+      return _regenerator().w(function (_context8) {
+        while (1) switch (_context8.p = _context8.n) {
+          case 0:
+            if (!(doc && doc.storage_path)) {
+              _context8.n = 4;
+              break;
+            }
+            _context8.p = 1;
+            _context8.n = 2;
+            return window.DB.documentUrl(doc, false);
+          case 2:
+            url = _context8.v;
+            window.open(url, "_blank", "noopener,noreferrer");
+            return _context8.a(2);
+          case 3:
+            _context8.p = 3;
+            _t9 = _context8.v;
+            setToastMsg("Could not open " + doc.name + ": " + (_t9 && _t9.message || _t9));
           case 4:
             setPreviewDoc(doc);
           case 5:
-            return _context7.a(2);
+            return _context8.a(2);
         }
-      }, _callee7, null, [[1, 3]]);
+      }, _callee8, null, [[1, 3]]);
     }));
-    return function onView(_x6) {
+    return function onView(_x7) {
       return _ref1.apply(this, arguments);
     };
   }();
@@ -1674,87 +1835,139 @@ function App() {
     setLoggedIn(true);
   };
   var onLogout = function () {
-    var _ref10 = _asyncToGenerator(_regenerator().m(function _callee8() {
-      var _t9;
-      return _regenerator().w(function (_context8) {
-        while (1) switch (_context8.p = _context8.n) {
+    var _ref10 = _asyncToGenerator(_regenerator().m(function _callee9() {
+      var _t0;
+      return _regenerator().w(function (_context9) {
+        while (1) switch (_context9.p = _context9.n) {
           case 0:
-            _context8.p = 0;
-            _context8.n = 1;
+            _context9.p = 0;
+            _context9.n = 1;
             return window.AUTH.signOut();
           case 1:
-            _context8.n = 3;
+            _context9.n = 3;
             break;
           case 2:
-            _context8.p = 2;
-            _t9 = _context8.v;
+            _context9.p = 2;
+            _t0 = _context9.v;
           case 3:
             switchSystem();
             setProfile(null);
             setLoggedIn(false);
           case 4:
-            return _context8.a(2);
+            return _context9.a(2);
         }
-      }, _callee8, null, [[0, 2]]);
+      }, _callee9, null, [[0, 2]]);
     }));
     return function onLogout() {
       return _ref10.apply(this, arguments);
     };
   }();
-  useEffect(function () {
-    _asyncToGenerator(_regenerator().m(function _callee9() {
-      var sess, prof, _t0;
-      return _regenerator().w(function (_context9) {
-        while (1) switch (_context9.p = _context9.n) {
+  var onDemoSwitch = function () {
+    var _ref11 = _asyncToGenerator(_regenerator().m(function _callee0(email) {
+      var targetRole, identity, nextProfile, nextPage;
+      return _regenerator().w(function (_context0) {
+        while (1) switch (_context0.n) {
           case 0:
-            _context9.p = 0;
-            if (!isPasswordRecoveryRoute()) {
-              _context9.n = 1;
+            targetRole = demoRoleForEmail(email);
+            if (targetRole) {
+              _context0.n = 1;
               break;
             }
-            return _context9.a(2);
+            throw new Error("Choose a listed demo account.");
           case 1:
-            _context9.n = 2;
+            _context0.n = 2;
+            return window.AUTH.identity();
+          case 2:
+            identity = _context0.v;
+            if (!(!identity || !profile || identity.user.id !== profile.id || demoRoleForEmail(identity.user.email) !== profile.role)) {
+              _context0.n = 3;
+              break;
+            }
+            throw new Error("Demo switching is available only to signed-in demo accounts.");
+          case 3:
+            _context0.n = 4;
+            return window.AUTH.signIn(email, TEST_PASSWORD, window.AUTH.remembersSession());
+          case 4:
+            nextProfile = _context0.v;
+            if (!(!nextProfile || nextProfile.is_active === false || nextProfile.role !== targetRole)) {
+              _context0.n = 6;
+              break;
+            }
+            _context0.n = 5;
+            return window.AUTH.signOut();
+          case 5:
+            throw new Error("The selected test account is unavailable.");
+          case 6:
+            try {
+              localStorage.removeItem("au-rgms-r-system");
+            } catch (e) {}
+            nextPage = ROLE_CONFIG[targetRole].homeKey;
+            rememberLastPage(targetRole, nextPage);
+            writePageRoute(targetRole, nextPage);
+            window.location.reload();
+          case 7:
+            return _context0.a(2);
+        }
+      }, _callee0);
+    }));
+    return function onDemoSwitch(_x8) {
+      return _ref11.apply(this, arguments);
+    };
+  }();
+  useEffect(function () {
+    _asyncToGenerator(_regenerator().m(function _callee1() {
+      var sess, prof, _t1;
+      return _regenerator().w(function (_context1) {
+        while (1) switch (_context1.p = _context1.n) {
+          case 0:
+            _context1.p = 0;
+            if (!isPasswordRecoveryRoute()) {
+              _context1.n = 1;
+              break;
+            }
+            return _context1.a(2);
+          case 1:
+            _context1.n = 2;
             return window.AUTH.session();
           case 2:
-            sess = _context9.v;
+            sess = _context1.v;
             if (sess) {
-              _context9.n = 3;
+              _context1.n = 3;
               break;
             }
-            return _context9.a(2);
+            return _context1.a(2);
           case 3:
-            _context9.n = 4;
+            _context1.n = 4;
             return window.AUTH.profile();
           case 4:
-            prof = _context9.v;
+            prof = _context1.v;
             if (prof) {
-              _context9.n = 5;
+              _context1.n = 5;
               break;
             }
-            return _context9.a(2);
+            return _context1.a(2);
           case 5:
             if (!(prof.is_active === false || !ROLE_CONFIG[prof.role])) {
-              _context9.n = 7;
+              _context1.n = 7;
               break;
             }
-            _context9.n = 6;
+            _context1.n = 6;
             return window.AUTH.signOut();
           case 6:
             setProfile(null);
             setLoggedIn(false);
-            return _context9.a(2);
+            return _context1.a(2);
           case 7:
             onLogin(prof);
-            _context9.n = 9;
+            _context1.n = 9;
             break;
           case 8:
-            _context9.p = 8;
-            _t0 = _context9.v;
+            _context1.p = 8;
+            _t1 = _context1.v;
           case 9:
-            return _context9.a(2);
+            return _context1.a(2);
         }
-      }, _callee9, null, [[0, 8]]);
+      }, _callee1, null, [[0, 8]]);
     }))();
   }, []);
   useEffect(function () {
@@ -1893,6 +2106,7 @@ function App() {
     profile: profile,
     onLogout: onLogout,
     onNavigate: setPage,
+    onDemoSwitch: onDemoSwitch,
     grantSystem: effectiveGrantSystem
   }), React.createElement(SubBar, {
     crumbs: crumbs,
