@@ -1358,7 +1358,7 @@ function IRASr4Detail(_ref1) {
         className: "card-head"
       }, React.createElement("h3", null, "Publication & Journal")), React.createElement("div", {
         className: "card-body"
-      }, row("Article", app.title), row("Publication status", pi.pubStatus), row("Journal", pi.journal), row("Publisher", pi.publisher), pi.pubStatus === "Published" && React.createElement(React.Fragment, null, row("Article URL", pi.articleUrl), row("DOI", pi.doi), row("ISSN / eISSN", pi.issn), row("Page number(s)", pi.pageNumber || [pi.startPage, pi.endPage].filter(Boolean).join("–"))), row("Database / index", pi.journalDb), row("Classification", pi.journalClassification || pi.openAccess), row("Academic year (AD)", pi.academicYear), row("Publication fee", fmtBaht(Number(pi.feePaid || 0))), React.createElement(ReviewCommentHistory, {
+      }, row("Article", app.title), row("Publication status", pi.pubStatus), row("Journal", pi.journal), row("Publisher", pi.publisher), pi.pubStatus === "Published" && React.createElement(React.Fragment, null, row("Article URL", pi.articleUrl), row("DOI", pi.doi), row("ISSN / eISSN", pi.issn), row("Page number(s)", pi.pageNumber || [pi.startPage, pi.endPage].filter(Boolean).join("–"))), row("Database / index", pi.journalDb), row("Qualities", pi.journalClassification || pi.openAccess), row("Academic year (AD)", pi.academicYear), row("Publication fee", fmtBaht(Number(pi.feePaid || 0))), React.createElement(ReviewCommentHistory, {
         app: app,
         roles: ["dean"]
       }))), React.createElement("div", {

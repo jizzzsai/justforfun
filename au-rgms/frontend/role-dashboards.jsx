@@ -556,7 +556,7 @@ function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setC
             <div className="grid-2">
               <div>
                 <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Publication &amp; Journal</h3></div><div className="card-body">
-                  {row("Article", app.title)}{row("Publication status", pi.pubStatus)}{row("Journal", pi.journal)}{row("Publisher", pi.publisher)}{pi.pubStatus === "Published" && <>{row("Article URL", pi.articleUrl)}{row("DOI", pi.doi)}{row("ISSN / eISSN", pi.issn)}{row("Page number(s)", pi.pageNumber || [pi.startPage, pi.endPage].filter(Boolean).join("–"))}</>}{row("Database / index", pi.journalDb)}{row("Classification", pi.journalClassification || pi.openAccess)}{row("Academic year (AD)", pi.academicYear)}{row("Publication fee", fmtBaht(Number(pi.feePaid || 0)))}
+                  {row("Article", app.title)}{row("Publication status", pi.pubStatus)}{row("Journal", pi.journal)}{row("Publisher", pi.publisher)}{pi.pubStatus === "Published" && <>{row("Article URL", pi.articleUrl)}{row("DOI", pi.doi)}{row("ISSN / eISSN", pi.issn)}{row("Page number(s)", pi.pageNumber || [pi.startPage, pi.endPage].filter(Boolean).join("–"))}</>}{row("Database / index", pi.journalDb)}{row("Qualities", pi.journalClassification || pi.openAccess)}{row("Academic year (AD)", pi.academicYear)}{row("Publication fee", fmtBaht(Number(pi.feePaid || 0)))}
                   <ReviewCommentHistory app={app} roles={["dean"]} />
                 </div></div>
                 <div className="card card-pad-0 mb-4"><div className="card-head"><h3>Authors &amp; Eligibility</h3></div><div className="card-body" style={{ padding: 0 }}>

@@ -50,12 +50,12 @@ AU-R3 — PAPER PRESENTATION GRANT
 AU-R4 — PUBLICATION FEES AND REWARD
 - Use AU-R4 for a published article or an article accepted for publication.
 - Maximum eligible amount: 80,000 THB per article. The publication fee is entered manually; the research office verifies the final eligible amount.
-- Main form sections are Publication Information, Conference Classification, Author and Contribution Information, Researcher Information, Publication Fee and Claim Information when applicable, Required Documents, and one final Eligibility Declaration checkbox.
+- Main form sections are Publication Information, Journal Classification, Author and Contribution Information, Researcher Information, Publication Fee and Claim Information when applicable, Required Documents, and one final Eligibility Declaration checkbox.
 - Publication Information asks for article title and type, publication status, journal name, publisher, journal website, ISSN/eISSN, academic year, and publication-specific dates/details.
 - Publication Status = Published: include Publication Date, Volume, Issue, and Page Number(s). Academic Year is AD and uses the YYYY/YYYY format, for example 2025/2026.
 - Publication Status = Accepted for Publication: Article URL and DOI are not required. Journal Website and ISSN/eISSN remain required, and an Acceptance Letter upload is required.
-- Conference Classification uses two fields: Journal Database / Index and its matching Classification. The Beall's List link is for checking predatory journals. The confirmation checkbox appears at the bottom with the other confirmations.
-- The exact AU-R4 section title is "Conference Classification". Preserve this UI label; do not rename it "Journal Classification" or "Conference/Journal Classification".
+- Journal Classification uses two fields: Journal Database / Index and its matching Qualities. The Beall's List link is for checking predatory journals. The confirmation checkbox appears at the bottom with the other confirmations.
+- The exact AU-R4 section title is "Journal Classification" and the field label is "Qualities". Do not call this section "Conference Classification".
 - The author section uses First Author and Co-author only. Author Email Address is used instead of AU ID. An Author Contribution File is required only when a second author is listed. When exactly two authors are listed, changing one contribution automatically makes the other value equal 100 minus that value.
 - The Publication Fee and Claim Information section is shown only when TCI Tier 1 or TCI Tier 2 is selected. It uses a manually entered Publication Fee and has no receipt-number field.
 - Required AU-R4 uploads are Full Research Article, Turnitin Report with similarity at or below 20%, and Original Publication Fee Receipt.

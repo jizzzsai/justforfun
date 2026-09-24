@@ -2432,7 +2432,7 @@ function ResearcherSubmitR4(_ref8) {
               _context8.n = 6;
               break;
             }
-            return _context8.a(2, setErr("Select the conference classification."));
+            return _context8.a(2, setErr("Select the journal qualities."));
           case 6:
             if (!(published && !draft.articleUrl.trim())) {
               _context8.n = 7;
@@ -2887,9 +2887,9 @@ function ResearcherSubmitR4(_ref8) {
     className: "form-section"
   }, React.createElement("h4", null, React.createElement("span", {
     className: "num"
-  }, "2"), " Conference Classification"), React.createElement("p", {
+  }, "2"), " Journal Classification"), React.createElement("p", {
     className: "section-sub"
-  }, "Select the journal database / index and its matching classification. The research office makes the final verification."), React.createElement("div", {
+  }, "Select the journal database / index and its matching qualities. The research office makes the final verification."), React.createElement("div", {
     className: "section-body"
   }, React.createElement("div", {
     className: "form-grid"
@@ -2915,7 +2915,7 @@ function ResearcherSubmitR4(_ref8) {
     }, t);
   }))), React.createElement("div", {
     className: "field"
-  }, React.createElement("label", null, "Classification", classificationOptions ? " *" : ""), classificationOptions ? React.createElement("select", {
+  }, React.createElement("label", null, "Qualities", classificationOptions ? " *" : ""), classificationOptions ? React.createElement("select", {
     value: draft.journalClassification,
     onChange: function onChange(e) {
       return upd("journalClassification", e.target.value);
@@ -2923,13 +2923,13 @@ function ResearcherSubmitR4(_ref8) {
     disabled: !draft.journalDb
   }, React.createElement("option", {
     value: ""
-  }, "Select classification\u2026"), classificationOptions.map(function (t) {
+  }, "Select qualities\u2026"), classificationOptions.map(function (t) {
     return React.createElement("option", {
       key: t,
       value: t
     }, t);
   })) : React.createElement("input", {
-    value: draft.journalDb ? "No classification listed" : "",
+    value: draft.journalDb ? "No qualities listed" : "",
     disabled: true,
     placeholder: "Select a database / index first"
   }))), showPreliminaryReward && React.createElement("div", {
@@ -4277,7 +4277,7 @@ function ResearcherApplicationDetail(_ref11) {
     className: "meta-row"
   }, React.createElement("span", {
     className: "l"
-  }, "Classification"), React.createElement("span", {
+  }, "Qualities"), React.createElement("span", {
     className: "r"
   }, app.pub_info.journalClassification || app.pub_info.openAccess || "-")), React.createElement("div", {
     className: "meta-row"

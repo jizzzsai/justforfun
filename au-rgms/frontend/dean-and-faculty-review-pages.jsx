@@ -312,10 +312,10 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 </div>
 
                 <div className="card card-pad-0 mb-4">
-                  <div className="card-head"><h3>Conference Classification</h3></div>
+                  <div className="card-head"><h3>Journal Classification</h3></div>
                   <div className="card-body">
                     {row("Database / index", pi.journalDb)}
-                    {row("Classification", pi.journalClassification || pi.openAccess)}
+                    {row("Qualities", pi.journalClassification || pi.openAccess)}
                     {row("Publication fee", fmtBaht(Number(pi.feePaid || 0)))}
                     {row("Predatory-journal declaration", pi.predatory ? "Confirmed not predatory" : "Not confirmed")}
                   </div>

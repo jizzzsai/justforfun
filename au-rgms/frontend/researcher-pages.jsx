@@ -1007,7 +1007,7 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
       if (!draft.website.trim()) return setErr("Enter the journal website.");
       if (!draft.issn.trim()) return setErr("Enter the ISSN or eISSN.");
       if (!draft.journalDb) return setErr("Select the Journal Database / Index.");
-      if (classificationOptions && !classificationOptions.includes(draft.journalClassification)) return setErr("Select the conference classification.");
+      if (classificationOptions && !classificationOptions.includes(draft.journalClassification)) return setErr("Select the journal qualities.");
       if (published && !draft.articleUrl.trim()) return setErr("Enter the Article URL for the published article.");
       if (published && !draft.pageNumber.trim()) return setErr("Enter the Page Number(s) for the published article.");
       if (!published && !draft.acceptDate) return setErr("Select the Acceptance Date.");
@@ -1143,8 +1143,8 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
 
         {                               }
         <div className="form-section">
-          <h4><span className="num">2</span> Conference Classification</h4>
-          <p className="section-sub">Select the journal database / index and its matching classification. The research office makes the final verification.</p>
+          <h4><span className="num">2</span> Journal Classification</h4>
+          <p className="section-sub">Select the journal database / index and its matching qualities. The research office makes the final verification.</p>
           <div className="section-body">
             <div className="form-grid">
               <div className="field"><label>Journal Database / Index *</label>
@@ -1153,14 +1153,14 @@ function ResearcherSubmitR4({ applicationId, navigate, onDownload, onView, toast
                   {(RA.R4_JOURNAL_DBS || []).map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="field"><label>Classification{classificationOptions ? " *" : ""}</label>
+              <div className="field"><label>Qualities{classificationOptions ? " *" : ""}</label>
                 {classificationOptions ? (
                   <select value={draft.journalClassification} onChange={e => upd("journalClassification", e.target.value)} disabled={!draft.journalDb}>
-                    <option value="">Select classification…</option>
+                    <option value="">Select qualities…</option>
                     {classificationOptions.map(t => <option key={t} value={t}>{t}</option>)}
                   </select>
                 ) : (
-                  <input value={draft.journalDb ? "No classification listed" : ""} disabled
+                  <input value={draft.journalDb ? "No qualities listed" : ""} disabled
                     placeholder="Select a database / index first" />
                 )}
               </div>
@@ -1649,7 +1649,7 @@ function ResearcherApplicationDetail({ applicationId, navigate, onDownload, onVi
                   <div className="eyebrow" style={{ marginBottom: 6 }}>Publication (AU-R4)</div>
                   <div className="meta-row"><span className="l">Journal</span><span className="r">{app.pub_info.journal || "-"}</span></div>
                   <div className="meta-row"><span className="l">Indexing</span><span className="r">{app.pub_info.indexLabel || app.pub_info.indexType || "-"}{app.pub_info.quartile ? " · " + app.pub_info.quartile : ""}</span></div>
-                  <div className="meta-row"><span className="l">Classification</span><span className="r">{app.pub_info.journalClassification || app.pub_info.openAccess || "-"}</span></div>
+                  <div className="meta-row"><span className="l">Qualities</span><span className="r">{app.pub_info.journalClassification || app.pub_info.openAccess || "-"}</span></div>
                   <div className="meta-row"><span className="l">Status</span><span className="r">{app.pub_info.pubStatus || "-"}</span></div>
                   <div className="meta-row"><span className="l">Publication fee</span><span className="r">{fmtBaht(Number(app.pub_info.feePaid || app.pub_info.feeAmount || 0))}</span></div>
                   <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(Number(app.pub_info.reward || app.requested_amount || 0))}</span></div>
