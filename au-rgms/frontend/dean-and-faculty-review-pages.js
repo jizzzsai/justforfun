@@ -169,7 +169,7 @@ function DeanR3Detail(_ref2) {
           withReason: true,
           reasonRequired: true,
           reasonLabel: "Dean comment",
-          finalConfirm: false,
+          finalConfirm: true,
           onConfirm: function () {
             var _onConfirm2 = _asyncToGenerator(_regenerator().m(function _callee2(reason) {
               var _t2;
@@ -210,6 +210,7 @@ function DeanR3Detail(_ref2) {
           withReason: true,
           reasonRequired: true,
           reasonLabel: "Dean rejection reason",
+          finalConfirm: true,
           onConfirm: function () {
             var _onConfirm3 = _asyncToGenerator(_regenerator().m(function _callee3(reason) {
               var _t3;
@@ -631,7 +632,7 @@ function DeanR4Detail(_ref3) {
           withReason: true,
           reasonRequired: true,
           reasonLabel: "Dean comment",
-          finalConfirm: false,
+          finalConfirm: true,
           onConfirm: function () {
             var _onConfirm5 = _asyncToGenerator(_regenerator().m(function _callee5(reason) {
               var _t5;
@@ -672,6 +673,7 @@ function DeanR4Detail(_ref3) {
           withReason: true,
           reasonRequired: true,
           reasonLabel: "Dean rejection reason",
+          finalConfirm: true,
           onConfirm: function () {
             var _onConfirm6 = _asyncToGenerator(_regenerator().m(function _callee6(reason) {
               var _t6;

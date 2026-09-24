@@ -467,9 +467,9 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
-        const ret = () => setConfirm({ kind: "danger", title: "Return for revision?", message: app.code + " will be returned to the researcher.", confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "IRAS comment", finalConfirm: false,
+        const ret = () => setConfirm({ kind: "danger", title: "Return for revision?", message: app.code + " will be returned to the researcher.", confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "IRAS comment", finalConfirm: true,
           onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "return", reason); toast(app.code + " returned."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); } } });
-        const reject = () => setConfirm({ kind: "danger", title: "Reject application?", message: app.code + " will be rejected. This is a final decision and will close the application.", confirmLabel: "Reject Application", withReason: true, reasonRequired: true, reasonLabel: "IRAS rejection reason",
+        const reject = () => setConfirm({ kind: "danger", title: "Reject application?", message: app.code + " will be rejected. This is a final decision and will close the application.", confirmLabel: "Reject Application", withReason: true, reasonRequired: true, reasonLabel: "IRAS rejection reason", finalConfirm: true,
           onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "reject", reason); toast(app.code + " rejected."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); load(); } } });
         return (
           <>
@@ -545,9 +545,9 @@ function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setC
             },
           });
         };
-        const ret = () => setConfirm({ kind: "danger", title: "Return for revision?", message: app.code + " will be returned to the researcher.", confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "IRAS comment", finalConfirm: false,
+        const ret = () => setConfirm({ kind: "danger", title: "Return for revision?", message: app.code + " will be returned to the researcher.", confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "IRAS comment", finalConfirm: true,
           onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "return", reason); toast(app.code + " returned."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); } } });
-        const reject = () => setConfirm({ kind: "danger", title: "Reject application?", message: app.code + " will be rejected. This is a final decision and will close the application.", confirmLabel: "Reject Application", withReason: true, reasonRequired: true, reasonLabel: "IRAS rejection reason",
+        const reject = () => setConfirm({ kind: "danger", title: "Reject application?", message: app.code + " will be rejected. This is a final decision and will close the application.", confirmLabel: "Reject Application", withReason: true, reasonRequired: true, reasonLabel: "IRAS rejection reason", finalConfirm: true,
           onConfirm: async (reason) => { try { await window.DB.transition(app.id, "iras_review", "reject", reason); toast(app.code + " rejected."); navigate("i-dashboard"); } catch (e) { toast("Error: " + ((e && e.message) || e)); load(); } } });
         return (
           <>

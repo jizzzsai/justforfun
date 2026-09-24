@@ -1007,7 +1007,7 @@ function IRASr3Detail(_ref0) {
           withReason: true,
           reasonRequired: true,
           reasonLabel: "IRAS comment",
-          finalConfirm: false,
+          finalConfirm: true,
           onConfirm: function () {
             var _onConfirm3 = _asyncToGenerator(_regenerator().m(function _callee3(reason) {
               var _t3;
@@ -1047,6 +1047,7 @@ function IRASr3Detail(_ref0) {
           withReason: true,
           reasonRequired: true,
           reasonLabel: "IRAS rejection reason",
+          finalConfirm: true,
           onConfirm: function () {
             var _onConfirm4 = _asyncToGenerator(_regenerator().m(function _callee4(reason) {
               var _t4;
@@ -1267,7 +1268,7 @@ function IRASr4Detail(_ref1) {
           withReason: true,
           reasonRequired: true,
           reasonLabel: "IRAS comment",
-          finalConfirm: false,
+          finalConfirm: true,
           onConfirm: function () {
             var _onConfirm6 = _asyncToGenerator(_regenerator().m(function _callee6(reason) {
               var _t6;
@@ -1307,6 +1308,7 @@ function IRASr4Detail(_ref1) {
           withReason: true,
           reasonRequired: true,
           reasonLabel: "IRAS rejection reason",
+          finalConfirm: true,
           onConfirm: function () {
             var _onConfirm7 = _asyncToGenerator(_regenerator().m(function _callee7(reason) {
               var _t7;

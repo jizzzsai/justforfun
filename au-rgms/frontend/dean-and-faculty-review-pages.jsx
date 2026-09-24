@@ -78,7 +78,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
           kind: "danger",
           title: "Return for revision?",
           message: app.code + " will be sent back to the researcher. Explain what needs to be fixed (for example, a clearer Turnitin report or corrected conference qualities).",
-          confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment", finalConfirm: false,
+          confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment", finalConfirm: true,
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-r3-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -87,7 +87,7 @@ function DeanR3Detail({ applicationId, navigate, onDownload, onView, toast, setC
         const reject = () => setConfirm({
           kind: "danger", title: "Reject application?",
           message: app.code + " will be rejected. This is a final decision and will close the application.",
-          confirmLabel: "Reject Application", withReason: true, reasonRequired: true, reasonLabel: "Dean rejection reason",
+          confirmLabel: "Reject Application", withReason: true, reasonRequired: true, reasonLabel: "Dean rejection reason", finalConfirm: true,
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "reject", reason); toast(app.code + " rejected."); navigate("d-r3-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -271,7 +271,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
         const ret = () => setConfirm({
           kind: "danger", title: "Return for Revision?",
           message: app.code + " will be returned to the researcher. State what must be corrected (e.g. upload the original receipt, fix the author contribution percentages).",
-          confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment", finalConfirm: false,
+          confirmLabel: "Return", withReason: true, reasonRequired: true, reasonLabel: "Dean comment", finalConfirm: true,
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "return", reason); toast(app.code + " returned for revision."); navigate("d-r4-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
@@ -280,7 +280,7 @@ function DeanR4Detail({ applicationId, navigate, onDownload, onView, toast, setC
         const reject = () => setConfirm({
           kind: "danger", title: "Reject application?",
           message: app.code + " will be rejected. This is a final decision and will close the application.",
-          confirmLabel: "Reject Application", withReason: true, reasonRequired: true, reasonLabel: "Dean rejection reason",
+          confirmLabel: "Reject Application", withReason: true, reasonRequired: true, reasonLabel: "Dean rejection reason", finalConfirm: true,
           onConfirm: async (reason) => {
             try { await window.DB.transition(app.id, "submitted", "reject", reason); toast(app.code + " rejected."); navigate("d-r4-screen"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
