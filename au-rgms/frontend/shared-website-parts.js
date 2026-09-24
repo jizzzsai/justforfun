@@ -670,6 +670,7 @@ function ConfirmModal(_ref11) {
         marginTop: 10
       }
     }, "This decision is recorded in the application timeline and cannot be undone."), React.createElement("div", {
+      className: "confirm-modal-final-actions",
       style: {
         display: "flex",
         gap: 8,
@@ -677,6 +678,12 @@ function ConfirmModal(_ref11) {
         marginTop: 8
       }
     }, React.createElement("button", {
+      className: "btn ".concat(btnCls),
+      disabled: !finalReady,
+      onClick: function onClick() {
+        return onConfirm(reason);
+      }
+    }, "Yes, ", confirmLabel), React.createElement("button", {
       className: "btn btn-secondary",
       onClick: function onClick() {
         return setStep(1);
@@ -684,13 +691,7 @@ function ConfirmModal(_ref11) {
     }, React.createElement(Icon, {
       name: "ChevronLeft",
       size: 14
-    }), " Back"), React.createElement("button", {
-      className: "btn ".concat(btnCls),
-      disabled: !finalReady,
-      onClick: function onClick() {
-        return onConfirm(reason);
-      }
-    }, "Yes, ", confirmLabel)));
+    }), " Back")));
   }
   return React.createElement(Modal, {
     open: true,

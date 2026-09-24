@@ -353,9 +353,9 @@ function ConfirmModal({ open, onClose, onConfirm, title, message, kind = "primar
         <p style={{ fontSize: 12, color: "var(--ink-3)", marginTop: 10 }}>
           This decision is recorded in the application timeline and cannot be undone.
         </p>
-        <div style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8 }}>
-          <button className="btn btn-secondary" onClick={() => setStep(1)}><Icon name="ChevronLeft" size={14} /> Back</button>
+        <div className="confirm-modal-final-actions" style={{ display: "flex", gap: 8, justifyContent: "center", marginTop: 8 }}>
           <button className={`btn ${btnCls}`} disabled={!finalReady} onClick={() => onConfirm(reason)}>Yes, {confirmLabel}</button>
+          <button className="btn btn-secondary" onClick={() => setStep(1)}><Icon name="ChevronLeft" size={14} /> Back</button>
         </div>
       </Modal>
     );
