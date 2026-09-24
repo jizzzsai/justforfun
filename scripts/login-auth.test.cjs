@@ -107,6 +107,37 @@ test("existing role switching calls preserve the selected persistence", async ()
   assert.equal(app.auth.remembersSession(), true);
 });
 
+test("only an explicitly marked demo login can switch, including after a tab reload", async () => {
+  const app = boot();
+  const profile = { id: "test-user", role: "dean" };
+  const user = { id: "test-user", email: "vmesdean@au.edu" };
+  await app.auth.signIn(user.email, "test", true);
+  assert.equal(app.auth.isDemoLogin(profile, user), false);
+
+  app.auth.setDemoLogin(profile, user.email, true);
+  assert.equal(app.auth.isDemoLogin(profile, user), true);
+  assert.equal(app.auth.isDemoLogin(profile, { ...user, id: "someone-else" }), false);
+  assert.equal(app.auth.isDemoLogin(profile, { ...user, email: "iras@au.edu" }), false);
+  assert.equal(boot({ local: app.local, session: app.session }).auth.isDemoLogin(profile, user), true);
+  assert.equal(boot({ local: app.local }).auth.isDemoLogin(profile, user), false);
+
+  await app.auth.signIn(user.email, "test", true);
+  assert.equal(app.auth.isDemoLogin(profile, user), false);
+  app.auth.setDemoLogin(profile, user.email, true);
+  app.auth.setDemoLogin(profile, user.email, false);
+  assert.equal(app.auth.isDemoLogin(profile, user), false);
+});
+
+test("signing out removes demo switch access", async () => {
+  const app = boot();
+  const profile = { id: "test-user", role: "dean" };
+  const user = { id: "test-user", email: "vmesdean@au.edu" };
+  await app.auth.signIn(user.email, "test", false);
+  app.auth.setDemoLogin(profile, user.email, true);
+  await app.auth.signOut();
+  assert.equal(app.auth.isDemoLogin(profile, user), false);
+});
+
 test("invalid credentials propagate without creating a session", async () => {
   const app = boot({ authError: new Error("Invalid login credentials") });
   await assert.rejects(app.auth.signIn("example@au.edu", "test", false), /Invalid login credentials/);

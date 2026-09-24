@@ -56,7 +56,7 @@ function LoginPage({ onLogin }) {
     return () => viewport.setAttribute("content", previous || "width=1280");
   }, []);
 
-  async function signInWith(em, pw) {
+  async function signInWith(em, pw, isDemo = false) {
     if (loginPending.current) return;
     loginPending.current = true;
     setErr(""); setBusy(true);
@@ -67,6 +67,7 @@ function LoginPage({ onLogin }) {
         try { await window.AUTH.signOut(); } catch (e) {}
         throw new Error("This account belongs to an inactive role and no longer has portal access.");
       }
+      window.AUTH.setDemoLogin(prof, em, isDemo);
       onLogin(prof);
     } catch (ex) {
       const message = String((ex && ex.message) || "");
@@ -88,9 +89,9 @@ function LoginPage({ onLogin }) {
       return;
     }
     if (!pass) { setErr("Enter your password."); passwordInput.current.focus(); return; }
-    signInWith(auEmail, pass);
+    signInWith(auEmail, pass, false);
   }
-  function demoLogin(testEmail) { signInWith(testEmail, TEST_PASSWORD); }
+  function demoLogin(testEmail) { signInWith(testEmail, TEST_PASSWORD, true); }
   async function requestPasswordReset() {
     const auEmail = email.trim().toLowerCase();
     setErr(""); setResetSent("");
@@ -491,11 +492,11 @@ function AppHeader({ role, profile, onLogout, onNavigate, onDemoSwitch, grantSys
     if (window.sb && window.sb.auth && profile && profile.id) {
       window.sb.auth.getUser().then(result => {
         const user = result && result.data && result.data.user;
-        if (alive) setDemoVerified(!!(user && user.id === profile.id && demoRoleForEmail(user.email) === role));
+        if (alive) setDemoVerified(!!(user && demoRoleForEmail(user.email) === role && window.AUTH.isDemoLogin(profile, user)));
       }).catch(() => { if (alive) setDemoVerified(false); });
     }
     return () => { alive = false; };
-  }, [role, profile && profile.id, profile && profile.faculty]);
+  }, [role, profile]);
 
   async function selectDemoAccount(email) {
     if (demoSwitchBusy || !demoVerified || !onDemoSwitch) return;
@@ -849,7 +850,7 @@ function App() {
     const targetRole = demoRoleForEmail(email);
     if (!targetRole) throw new Error("Choose a listed demo account.");
     const identity = await window.AUTH.identity();
-    if (!identity || !profile || identity.user.id !== profile.id || demoRoleForEmail(identity.user.email) !== profile.role) {
+    if (!identity || !profile || !window.AUTH.isDemoLogin(profile, identity.user) || demoRoleForEmail(identity.user.email) !== profile.role) {
       throw new Error("Demo switching is available only to signed-in demo accounts.");
     }
     const nextProfile = await window.AUTH.signIn(email, TEST_PASSWORD, window.AUTH.remembersSession());
@@ -857,6 +858,7 @@ function App() {
       await window.AUTH.signOut();
       throw new Error("The selected test account is unavailable.");
     }
+    window.AUTH.setDemoLogin(nextProfile, email, true);
     try { localStorage.removeItem("au-rgms-r-system"); } catch (e) {}
     const nextPage = ROLE_CONFIG[targetRole].homeKey;
     rememberLastPage(targetRole, nextPage);

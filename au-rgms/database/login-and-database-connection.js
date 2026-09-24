@@ -11,6 +11,7 @@
   }
   var authKey = "au-rgms-auth";
   var preferenceKey = "au-rgms-remember";
+  var demoLoginKey = "au-rgms-demo-login";
   var memoryStorage = {};
   function readStorage(store, key) {
     try { return window[store].getItem(key); } catch (e) { return null; }
@@ -57,10 +58,31 @@
 
   window.AUTH = {
     remembersSession: function () { return rememberSession; },
+    setDemoLogin: function (profile, email, enabled) {
+      removeStorage("sessionStorage", demoLoginKey);
+      if (enabled && profile && profile.id) {
+        try {
+          window.sessionStorage.setItem(demoLoginKey, JSON.stringify({
+            id: profile.id,
+            email: String(email || "").trim().toLowerCase(),
+          }));
+        } catch (e) {}
+      }
+    },
+    isDemoLogin: function (profile, user) {
+      if (!profile || !user || profile.id !== user.id) return false;
+      try {
+        var marker = JSON.parse(window.sessionStorage.getItem(demoLoginKey) || "null");
+        return !!(marker && marker.id === user.id && marker.email === String(user.email || "").trim().toLowerCase());
+      } catch (e) { return false; }
+    },
     async signIn(email, password, remember) {
       if (typeof remember === "boolean") setRememberSession(remember);
       var res = await sb.auth.signInWithPassword({ email: (email || "").trim(), password: password });
       if (res.error) throw res.error;
+      // A fresh password sign-in never inherits demo-switch access. Only the
+      // explicit Developer Demo Access path can enable it after login succeeds.
+      removeStorage("sessionStorage", demoLoginKey);
       try {
         var profile = await window.AUTH.profile();
         if (!profile) throw new Error("No profile found for this account. Contact your administrator.");
@@ -79,6 +101,7 @@
       try { await sb.auth.signOut(); }
       finally {
         clearStoredSession();
+        removeStorage("sessionStorage", demoLoginKey);
       }
     },
     async session() {

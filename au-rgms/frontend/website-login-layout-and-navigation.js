@@ -133,10 +133,16 @@ function LoginPage(_ref) {
   }
   function _signInWith() {
     _signInWith = _asyncToGenerator(_regenerator().m(function _callee2(em, pw) {
-      var prof, message, _t2, _t3;
+      var isDemo,
+        prof,
+        message,
+        _args2 = arguments,
+        _t2,
+        _t3;
       return _regenerator().w(function (_context2) {
         while (1) switch (_context2.p = _context2.n) {
           case 0:
+            isDemo = _args2.length > 2 && _args2[2] !== undefined ? _args2[2] : false;
             if (!loginPending.current) {
               _context2.n = 1;
               break;
@@ -173,6 +179,7 @@ function LoginPage(_ref) {
           case 8:
             throw new Error("This account belongs to an inactive role and no longer has portal access.");
           case 9:
+            window.AUTH.setDemoLogin(prof, em, isDemo);
             onLogin(prof);
             _context2.n = 11;
             break;
@@ -207,10 +214,10 @@ function LoginPage(_ref) {
       passwordInput.current.focus();
       return;
     }
-    signInWith(auEmail, pass);
+    signInWith(auEmail, pass, false);
   }
   function demoLogin(testEmail) {
-    signInWith(testEmail, TEST_PASSWORD);
+    signInWith(testEmail, TEST_PASSWORD, true);
   }
   function requestPasswordReset() {
     return _requestPasswordReset.apply(this, arguments);
@@ -1082,7 +1089,7 @@ function AppHeader(_ref6) {
     if (window.sb && window.sb.auth && profile && profile.id) {
       window.sb.auth.getUser().then(function (result) {
         var user = result && result.data && result.data.user;
-        if (alive) setDemoVerified(!!(user && user.id === profile.id && demoRoleForEmail(user.email) === role));
+        if (alive) setDemoVerified(!!(user && demoRoleForEmail(user.email) === role && window.AUTH.isDemoLogin(profile, user)));
       }).catch(function () {
         if (alive) setDemoVerified(false);
       });
@@ -1090,7 +1097,7 @@ function AppHeader(_ref6) {
     return function () {
       alive = false;
     };
-  }, [role, profile && profile.id, profile && profile.faculty]);
+  }, [role, profile]);
   function selectDemoAccount(_x5) {
     return _selectDemoAccount.apply(this, arguments);
   }
@@ -1863,7 +1870,7 @@ function App() {
             return window.AUTH.identity();
           case 2:
             identity = _context0.v;
-            if (!(!identity || !profile || identity.user.id !== profile.id || demoRoleForEmail(identity.user.email) !== profile.role)) {
+            if (!(!identity || !profile || !window.AUTH.isDemoLogin(profile, identity.user) || demoRoleForEmail(identity.user.email) !== profile.role)) {
               _context0.n = 3;
               break;
             }
@@ -1882,6 +1889,7 @@ function App() {
           case 5:
             throw new Error("The selected test account is unavailable.");
           case 6:
+            window.AUTH.setDemoLogin(nextProfile, email, true);
             try {
               localStorage.removeItem("au-rgms-r-system");
             } catch (e) {}
