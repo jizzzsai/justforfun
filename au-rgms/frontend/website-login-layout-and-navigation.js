@@ -1022,7 +1022,7 @@ function AppHeader(_ref6) {
       var _find;
       return ((_find = (APP.FACULTIES || []).find(function (f) {
         return f.name === (profile && profile.faculty);
-      })) === null || _find === void 0 ? void 0 : _find.code) || "VMES";
+      })) === null || _find === void 0 ? void 0 : _find.code) || sessionStorage.getItem("au-rgms-demo-faculty") || "VMES";
     }),
     _useState44 = _slicedToArray(_useState43, 2),
     demoFaculty = _useState44[0],
@@ -1072,9 +1072,13 @@ function AppHeader(_ref6) {
     var _find2;
     var alive = true;
     setDemoVerified(false);
-    setDemoFaculty(((_find2 = (APP.FACULTIES || []).find(function (f) {
+    var facultyCode = (_find2 = (APP.FACULTIES || []).find(function (f) {
       return f.name === (profile && profile.faculty);
-    })) === null || _find2 === void 0 ? void 0 : _find2.code) || "VMES");
+    })) === null || _find2 === void 0 ? void 0 : _find2.code;
+    if (facultyCode) {
+      setDemoFaculty(facultyCode);
+      sessionStorage.setItem("au-rgms-demo-faculty", facultyCode);
+    }
     if (window.sb && window.sb.auth && profile && profile.id) {
       window.sb.auth.getUser().then(function (result) {
         var user = result && result.data && result.data.user;
@@ -1206,54 +1210,34 @@ function AppHeader(_ref6) {
     }
   }, demoVerified && React.createElement(React.Fragment, null, React.createElement("div", {
     className: "dropdown-section"
-  }, "Demo workspaces"), React.createElement("label", {
-    className: "demo-switch-faculty"
-  }, "Faculty", React.createElement("select", {
-    value: demoFaculty,
-    onChange: function onChange(e) {
-      return setDemoFaculty(e.target.value);
-    },
-    disabled: demoSwitchBusy
-  }, (APP.FACULTIES || []).map(function (f) {
-    return React.createElement("option", {
-      key: f.code,
-      value: f.code
-    }, f.name);
-  }))), FACULTY_TEST_ROLES.map(function (item) {
+  }, "Switch test account \xB7 ", grantSystem === "au_r4" ? "AU-R4" : "AU-R3"), rolesForSystem(grantSystem).map(function (item) {
     return React.createElement("button", {
       key: item.key,
       type: "button",
-      className: "dropdown-item demo-switch-item",
+      className: "dropdown-item demo-switch-item ".concat(role === item.key ? "active" : ""),
       disabled: demoSwitchBusy,
       onClick: function onClick() {
-        return selectDemoAccount(facultyTestEmail(demoFaculty, item.key));
+        if (role === item.key) return;
+        var email = FACULTY_TEST_ROLES.some(function (facultyRole) {
+          return facultyRole.key === item.key;
+        }) ? facultyTestEmail(demoFaculty, item.key) : TEST_EMAIL_FOR[item.key];
+        selectDemoAccount(email);
       }
+    }, React.createElement("div", {
+      className: "role-icon"
     }, React.createElement(Icon, {
-      name: item.key === "researcher" ? "User" : "Building2",
-      size: 16
-    }), React.createElement("span", null, item.label, " dashboard"));
-  }), [{
-    key: "iras",
-    label: "IRAS"
-  }, {
-    key: "ofm",
-    label: "Finance"
-  }, {
-    key: "admin",
-    label: "Administrator"
-  }].map(function (item) {
-    return React.createElement("button", {
-      key: item.key,
-      type: "button",
-      className: "dropdown-item demo-switch-item",
-      disabled: demoSwitchBusy,
-      onClick: function onClick() {
-        return selectDemoAccount(TEST_EMAIL_FOR[item.key]);
-      }
-    }, React.createElement(Icon, {
-      name: item.key === "iras" ? "ClipboardCheck" : item.key === "ofm" ? "Coins" : "Settings",
-      size: 16
-    }), React.createElement("span", null, item.label, " dashboard"));
+      name: item.iconName,
+      size: 14
+    })), React.createElement("div", {
+      className: "meta"
+    }, React.createElement("div", {
+      className: "t"
+    }, item.name), React.createElement("div", {
+      className: "s"
+    }, item.subtitle)), role === item.key && React.createElement(Icon, {
+      name: "Check",
+      size: 14
+    }));
   }), demoSwitchError && React.createElement("div", {
     className: "demo-switch-error",
     role: "alert"

@@ -448,7 +448,7 @@ function AppHeader({ role, profile, onLogout, onNavigate, onDemoSwitch, grantSys
   const [demoVerified, setDemoVerified] = useState(false);
   const [demoSwitchBusy, setDemoSwitchBusy] = useState(false);
   const [demoSwitchError, setDemoSwitchError] = useState("");
-  const [demoFaculty, setDemoFaculty] = useState(() => (APP.FACULTIES || []).find(f => f.name === (profile && profile.faculty))?.code || "VMES");
+  const [demoFaculty, setDemoFaculty] = useState(() => (APP.FACULTIES || []).find(f => f.name === (profile && profile.faculty))?.code || sessionStorage.getItem("au-rgms-demo-faculty") || "VMES");
   const current = rolesForSystem(grantSystem).find(r => r.key === role) || APP.ROLES.find(r => r.key === role);
   const displayName = (profile && profile.full_name) || current.full;
   const displaySubtitle = current.name;
@@ -483,7 +483,11 @@ function AppHeader({ role, profile, onLogout, onNavigate, onDemoSwitch, grantSys
   useEffect(() => {
     let alive = true;
     setDemoVerified(false);
-    setDemoFaculty((APP.FACULTIES || []).find(f => f.name === (profile && profile.faculty))?.code || "VMES");
+    const facultyCode = (APP.FACULTIES || []).find(f => f.name === (profile && profile.faculty))?.code;
+    if (facultyCode) {
+      setDemoFaculty(facultyCode);
+      sessionStorage.setItem("au-rgms-demo-faculty", facultyCode);
+    }
     if (window.sb && window.sb.auth && profile && profile.id) {
       window.sb.auth.getUser().then(result => {
         const user = result && result.data && result.data.user;
@@ -540,20 +544,26 @@ function AppHeader({ role, profile, onLogout, onNavigate, onDemoSwitch, grantSys
           {roleOpen && (
             <div className="dropdown" onClick={e => e.stopPropagation()} style={{minWidth: 320}}>
               {demoVerified && <>
-                <div className="dropdown-section">Demo workspaces</div>
-                <label className="demo-switch-faculty">Faculty
-                  <select value={demoFaculty} onChange={e => setDemoFaculty(e.target.value)} disabled={demoSwitchBusy}>
-                    {(APP.FACULTIES || []).map(f => <option key={f.code} value={f.code}>{f.name}</option>)}
-                  </select>
-                </label>
-                {FACULTY_TEST_ROLES.map(item => <button key={item.key} type="button" className="dropdown-item demo-switch-item" disabled={demoSwitchBusy} onClick={() => selectDemoAccount(facultyTestEmail(demoFaculty, item.key))}>
-                  <Icon name={item.key === "researcher" ? "User" : "Building2"} size={16} />
-                  <span>{item.label} dashboard</span>
-                </button>)}
-                {[{ key: "iras", label: "IRAS" }, { key: "ofm", label: "Finance" }, { key: "admin", label: "Administrator" }].map(item => <button key={item.key} type="button" className="dropdown-item demo-switch-item" disabled={demoSwitchBusy} onClick={() => selectDemoAccount(TEST_EMAIL_FOR[item.key])}>
-                  <Icon name={item.key === "iras" ? "ClipboardCheck" : item.key === "ofm" ? "Coins" : "Settings"} size={16} />
-                  <span>{item.label} dashboard</span>
-                </button>)}
+                <div className="dropdown-section">Switch test account · {grantSystem === "au_r4" ? "AU-R4" : "AU-R3"}</div>
+                {rolesForSystem(grantSystem).map(item => (
+                  <button
+                    key={item.key}
+                    type="button"
+                    className={`dropdown-item demo-switch-item ${role === item.key ? "active" : ""}`}
+                    disabled={demoSwitchBusy}
+                    onClick={() => {
+                      if (role === item.key) return;
+                      const email = FACULTY_TEST_ROLES.some(facultyRole => facultyRole.key === item.key)
+                        ? facultyTestEmail(demoFaculty, item.key)
+                        : TEST_EMAIL_FOR[item.key];
+                      selectDemoAccount(email);
+                    }}
+                  >
+                    <div className="role-icon"><Icon name={item.iconName} size={14} /></div>
+                    <div className="meta"><div className="t">{item.name}</div><div className="s">{item.subtitle}</div></div>
+                    {role === item.key && <Icon name="Check" size={14} />}
+                  </button>
+                ))}
                 {demoSwitchError && <div className="demo-switch-error" role="alert">{demoSwitchError}</div>}
               </>}
               <div className="dropdown-section">Account</div>
