@@ -34,7 +34,7 @@ function r3Badge(status) {
   var labels = {
     submitted: "Pending Dean Review",
     iras_review: "Under IRAS Review",
-    approved: "Awaiting Finance Approval",
+    approved: "Awaiting Academic Approval",
     active: "Paid",
     completed: "Paid / Completed",
     returned: "Returned for Revision",
@@ -224,7 +224,7 @@ function r4Badge(status) {
   var base = window.DB.statusBadge(status);
   var labels = {
     submitted: "Pending Dean Review", iras_review: "Under IRAS Verification",
-    approved: "Awaiting Finance Payment", active: "Paid", completed: "Paid / Completed",
+    approved: "Awaiting Academic Payment", active: "Paid", completed: "Paid / Completed",
     returned: "Returned for Revision", rejected: "Rejected",
   };
   return { key: base.key, cls: base.cls, label: labels[status] || base.label };

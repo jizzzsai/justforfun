@@ -748,7 +748,7 @@ function ApplicationEventTimeline(_ref12) {
       researcher: "Researcher",
       dean: "Dean",
       iras: officeName,
-      ofm: "Finance Office",
+      ofm: "Academic Office",
       admin: "Administrator"
     }[role] || "System";
   };
@@ -775,7 +775,7 @@ function ApplicationEventTimeline(_ref12) {
     if (event.to_status === "returned") return actor + " requested revision";
     if (event.from_status === "returned" || /resubmitted/i.test(event.action || "")) return "Researcher resubmitted the application";
     if (/submitted application/i.test(event.action || "")) return "Researcher submitted the application";
-    return event.action || actor + " action recorded";
+    return event.action ? event.action.replace(/\bFinance\b/g, "Academic") : actor + " action recorded";
   };
   var events = (app && app.events ? app.events : []).filter(function (event) {
     return event.action !== "Saved draft";
@@ -864,9 +864,9 @@ function ReviewCommentHistory(_ref13) {
       initials: "IR"
     },
     ofm: {
-      label: "Finance comment",
-      author: "Finance Office",
-      initials: "FN"
+      label: "Academic comment",
+      author: "Academic Office",
+      initials: "AC"
     }
   };
   roles.forEach(function (role) {

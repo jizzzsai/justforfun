@@ -6,7 +6,7 @@ const ROLE_INTRO = {
   researcher: "Hi, I'm AU AI. I can explain AU-R3 and AU-R4, help you choose the correct grant, and list the exact information, forms, and documents needed before submission.",
   dean: "Hi, I'm AU AI for Deans. I can summarize only the AU-R3 and AU-R4 applications in your assigned faculty.",
   iras: "Hi, I'm AU AI for IRAS. Ask me about university-wide R3/R4 verification queues, workflow totals, faculties, and approved funding.",
-  ofm: "Hi, I'm AU AI for Finance. Ask me about R3/R4 applications forwarded to Finance, pending payments, disbursements, and completed payments.",
+  ofm: "Hi, I'm AU AI for Academic. Ask me about R3/R4 applications forwarded to Academic, pending payments, disbursements, and completed payments.",
   admin: "Hi, I'm AU AI for Admin Analytics. Ask me to summarize or compare live applications, faculties, budgets, users, workflows, and payments.",
   _default: "Hi, I'm AU AI — Assumption University's research-grant assistant. Ask me about AU-R3 conference grants, AU-R4 publication rewards, reviews, documents, or payments.",
 };
@@ -26,7 +26,7 @@ const ROLE_LABEL = {
   researcher: "Researcher assistant",
   dean: "Dean faculty assistant",
   iras: "IRAS analytics assistant",
-  ofm: "Finance analytics assistant",
+  ofm: "Academic analytics assistant",
   admin: "Admin analytics assistant",
 };
 

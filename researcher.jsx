@@ -550,7 +550,7 @@ function ResearcherProgress({ onDownload, onView, toast }) {
                 </div>
               </div>
               <div className="flex justify-between items-center mt-4">
-                <span className="text-sm text-muted">Once submitted, the IRAS office and Finance will be notified.</span>
+                <span className="text-sm text-muted">Once submitted, the IRAS office and Academic will be notified.</span>
                 <button className="btn btn-primary" onClick={() => toast("Progress report submitted (demo)")}>
                   <Icon name="Send" size={13} /> Submit Report
                 </button>
@@ -717,8 +717,8 @@ function ResearcherPayments({ onDownload, toast }) {
                 onClick={() => onDownload({ name: `Receipt_Tranche_${p.n}.pdf` })}>
                 <Icon name="Download" size={12} /> Receipt
               </button>
-              <button className="btn btn-ghost btn-sm" onClick={() => toast("Demo only: contact OFM")}>
-                <Icon name="Mail" size={12} /> Contact OFM
+              <button className="btn btn-ghost btn-sm" onClick={() => toast("Demo only: contact Academic")}>
+                <Icon name="Mail" size={12} /> Contact Academic
               </button>
             </div>
           </div>

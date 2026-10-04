@@ -123,14 +123,14 @@ function DeanDashboard({ navigate, setSelectedApplicationId }) {
         <div className="stats">
           <Stat label="Pending Dean Review"    value={n("submitted")} icon="ClipboardCheck" tone="gold" />
           <Stat label="Awaiting IRAS Verification" value={n("iras_review")} icon="Send" tone="navy" />
-          <Stat label="At Finance"              value={n("approved")} icon="Coins" />
+          <Stat label="At Academic"              value={n("approved")} icon="Coins" />
           <Stat label="Paid / Completed" value={(c ? (c.active || 0) + (c.completed || 0) : "…")} icon="CheckCircle" tone="green" />
         </div>
       ) : (
         <div className="stats">
           <Stat label="Pending Dean Review" value={n("submitted")} icon="ClipboardCheck" tone="gold" />
           <Stat label="Forwarded to IRAS"   value={n("iras_review")} icon="Send" tone="navy" />
-          <Stat label="At Finance"          value={n("approved")} icon="Coins" />
+          <Stat label="At Academic"          value={n("approved")} icon="Coins" />
           <Stat label="Paid / Completed" value={(c ? (c.active || 0) + (c.completed || 0) : "…")} icon="CheckCircle" tone="green" />
         </div>
       )}
@@ -395,7 +395,7 @@ function IRASGrantDashboard({ navigate, setSelectedApplicationId, sys }) {
       <div className="stats">
         <Stat label="Pending Verification"  value={n("iras_review")} icon="ClipboardCheck" tone="gold" />
         <Stat label="Returned for Revision" value={n("returned")} icon="Repeat" tone="navy" />
-        <Stat label="Forwarded to Finance"  value={n("approved")} icon="Send" />
+        <Stat label="Forwarded to Academic"  value={n("approved")} icon="Send" />
         <Stat label="Paid / Completed"  value={(c ? (c.active || 0) + (c.completed || 0) : "…")} icon="CheckCircle" tone="green" />
       </div>
       <div className="card card-pad-0">
@@ -440,8 +440,8 @@ function IRASDashboard({ navigate, setSelectedApplicationId, grantType = "au_r3"
       <PageHeader
         title={(isR4 ? "AU-R4" : "AU-R3") + " · IRAS Summary"}
         desc={isR4
-          ? "Verify Dean-approved AU-R4 publication-fee applications before forwarding eligible claims to Finance."
-          : "Verify Dean-approved paper presentation applications before forwarding them to Finance."}
+          ? "Verify Dean-approved AU-R4 publication-fee applications before forwarding eligible claims to Academic."
+          : "Verify Dean-approved paper presentation applications before forwarding them to Academic."}
         actions={sysToggle}
       />
       <IRASGrantDashboard navigate={navigate} setSelectedApplicationId={setSelectedApplicationId} sys={sys} />
@@ -453,17 +453,17 @@ function IRASDashboard({ navigate, setSelectedApplicationId, grantType = "au_r3"
 function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setConfirm }) {
   return (
     <LiveAppLoader status="iras_review" applicationId={applicationId}
-      title="AU-R3 Verification" desc="Verify the Dean-approved paper presentation request, then forward it to Finance."
+      title="AU-R3 Verification" desc="Verify the Dean-approved paper presentation request, then forward it to Academic."
       render={(app, load) => {
         const docs = app.documents || [];
         const ci = app.conference_info || {};
         const row = (l, v) => <div className="meta-row"><span className="l">{l}</span><span className="r">{v || "-"}</span></div>;
         const forward = () => setConfirm({
-          kind: "success", title: "Approve & forward to Finance?",
-          message: app.code + " will be marked IRAS-approved and forwarded to the Finance Office for payment.",
+          kind: "success", title: "Approve & forward to Academic?",
+          message: app.code + " will be marked IRAS-approved and forwarded to the Academic Office for payment.",
           confirmLabel: "Approve & Forward", withReason: true, reasonLabel: "IRAS comment",
           onConfirm: async (reason) => {
-            try { await window.DB.transition(app.id, "iras_review", "advance", reason); toast(app.code + " approved — forwarded to Finance."); navigate("i-dashboard"); }
+            try { await window.DB.transition(app.id, "iras_review", "advance", reason); toast(app.code + " approved — forwarded to Academic."); navigate("i-dashboard"); }
             catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
           },
         });
@@ -499,9 +499,9 @@ function IRASr3Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 </div></div>
               </div>
               <div className="card card-pad-0" style={{ alignSelf: "start" }}><div className="card-head"><h3>IRAS Decision</h3></div><div className="card-body">
-                <p className="text-sm text-muted mb-4">Confirm the conference, paper, conference qualities, three required documents, and fixed 3,500 THB grant are eligible, then forward to Finance for payment.</p>
+                <p className="text-sm text-muted mb-4">Confirm the conference, paper, conference qualities, three required documents, and fixed 3,500 THB grant are eligible, then forward to Academic for payment.</p>
                 <div className="flex flex-col gap-2">
-                  <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Finance</button>
+                  <button className="btn btn-primary btn-block" onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Academic</button>
                   <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
                   <button className="btn btn-danger btn-block" onClick={reject}><Icon name="X" size={14} /> Reject Application</button>
                 </div>
@@ -518,7 +518,7 @@ function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setC
   const [finalAmt, setFinalAmt] = useState("");
   return (
     <LiveAppLoader status="iras_review" applicationId={applicationId}
-      title="AU-R4 Verification" desc="Verify eligibility, confirm the final eligible amount, then forward to Finance."
+      title="AU-R4 Verification" desc="Verify eligibility, confirm the final eligible amount, then forward to Academic."
       render={(app, load) => {
         const pi = app.pub_info || {};
         const authors = Array.isArray(app.co_members) ? app.co_members : [];
@@ -532,14 +532,14 @@ function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setC
           if (finalNum <= 0) { toast("Enter the final eligible amount first."); return; }
           if (overMax) { toast("Final amount cannot exceed 80,000 THB."); return; }
           setConfirm({
-            kind: "success", title: "Approve & forward to Finance?",
-            message: app.code + " will be approved at " + fmtBaht(finalNum) + " and forwarded to the Finance Office for payment.",
-            confirmLabel: "Confirm & Forward to Finance", withReason: true, reasonRequired: true, reasonLabel: "IRAS comment",
+            kind: "success", title: "Approve & forward to Academic?",
+            message: app.code + " will be approved at " + fmtBaht(finalNum) + " and forwarded to the Academic Office for payment.",
+            confirmLabel: "Confirm & Forward to Academic", withReason: true, reasonRequired: true, reasonLabel: "IRAS comment",
             onConfirm: async (reason) => {
               try {
                 await window.DB.setApprovedAmount(app.id, finalNum);
                 await window.DB.transition(app.id, "iras_review", "advance", reason || "");
-                toast(app.code + " approved at " + fmtBaht(finalNum) + " — forwarded to Finance.");
+                toast(app.code + " approved at " + fmtBaht(finalNum) + " — forwarded to Academic.");
                 navigate("i-dashboard");
               } catch (e) { toast("Error: " + ((e && e.message) || e)); load(); }
             },
@@ -575,7 +575,7 @@ function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 </div></div>
               </div>
               <div className="card card-pad-0" style={{ alignSelf: "start" }}><div className="card-head"><h3>Final Eligible Amount</h3></div><div className="card-body">
-                <p className="text-sm text-muted mb-4">Set the final eligible amount from the verified journal category, then forward to Finance. Maximum 80,000 THB per article.</p>
+                <p className="text-sm text-muted mb-4">Set the final eligible amount from the verified journal category, then forward to Academic. Maximum 80,000 THB per article.</p>
                 <div className="field"><label>Final Approved Amount (THB)</label>
                   <input value={finalAmt === "" ? "" : Number(finalAmt || 0).toLocaleString()} onChange={e => setFinalAmt((e.target.value + "").replace(/[^0-9]/g, ""))}
                     placeholder={Number(requested || 0).toLocaleString()}
@@ -586,7 +586,7 @@ function IRASr4Detail({ applicationId, navigate, onDownload, onView, toast, setC
                 <div className="meta-row"><span className="l">Publication fee</span><span className="r">{fmtBaht(Number(pi.feePaid || 0))}</span></div>
                 <div className="meta-row"><span className="l">Requested amount</span><span className="r">{fmtBaht(requested)}</span></div>
                 <div className="flex flex-col gap-2 mt-4">
-                  <button className="btn btn-primary btn-block" disabled={overMax || finalNum <= 0} onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Finance</button>
+                  <button className="btn btn-primary btn-block" disabled={overMax || finalNum <= 0} onClick={forward}><Icon name="Send" size={14} /> Approve &amp; Forward to Academic</button>
                   <button className="btn btn-secondary btn-block" onClick={ret}><Icon name="Repeat" size={14} /> Return for Revision</button>
                   <button className="btn btn-danger btn-block" onClick={reject}><Icon name="X" size={14} /> Reject Application</button>
                 </div>
@@ -608,7 +608,7 @@ function OFMGrantPayments({ sys, toast, setConfirm, onDownload, onView }) {
   useEffect(() => { setRows(null); load(); }, [sys]);
   const complete = (a) => setConfirm({
     kind: "success", title: "Confirm payment completion?",
-    message: a.id + " will be recorded as completed (" + fmtBaht(Number(a.approved_amount || a.requested_amount || 0)) + "). This closes the Finance workflow.",
+    message: a.id + " will be recorded as completed (" + fmtBaht(Number(a.approved_amount || a.requested_amount || 0)) + "). This closes the Academic workflow.",
     confirmLabel: "Continue", finalConfirm: true, reasonLabel: "Payment confirmation",
     onConfirm: async () => {
       try { await window.DB.completeSingleGrant(a._uuid); toast(a.id + " completed."); load(); }
@@ -630,7 +630,7 @@ function OFMGrantPayments({ sys, toast, setConfirm, onDownload, onView }) {
               <td className="title-cell"><div className="t" style={{ maxWidth: 240, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{a.title}</div></td>
               <td style={{ fontSize: 12 }}>{a.researcher?.name}</td>
               <td style={{ textAlign: "right", fontFamily: "ui-monospace, monospace" }}>{fmtBaht(Number(a.approved_amount || a.requested_amount || 0))}</td>
-              <td><Badge status={a.statusKey === "completed" ? { key: "completed", cls: "badge-check", label: "Completed" } : { key: "approved", cls: "badge-contract", label: "At Finance" }} /></td>
+              <td><Badge status={a.statusKey === "completed" ? { key: "completed", cls: "badge-check", label: "Completed" } : { key: "approved", cls: "badge-contract", label: "At Academic" }} /></td>
               <td className="actions">
                 <div className="flex justify-end gap-2">
                   <button className="btn btn-secondary btn-sm" onClick={e => { e.stopPropagation(); setSelectedId(a._uuid); }}><Icon name="Eye" size={12} /> View</button>
@@ -715,13 +715,13 @@ function OFMTotalSummary({ onDownload, onView }) {
   ];
   return (
     <>
-      <PageHeader title="Total Summary" desc="Today’s finance summary for AU-R3 and AU-R4 applications forwarded to Finance." />
+      <PageHeader title="Total Summary" desc="Today’s Academic summary for AU-R3 and AU-R4 applications forwarded to Academic." />
       <div className="stats" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
         {summary.map(item => <Stat key={item.label} label={item.label} value={item.value} icon={item.icon} tone={item.tone} />)}
       </div>
       <div className="card card-pad-0">
         <div className="card-head">
-          <h3>Applications Forwarded to Finance</h3><div className="grow"></div>
+          <h3>Applications Forwarded to Academic</h3><div className="grow"></div>
           <div style={{ display: "inline-flex", border: "1px solid var(--line)", borderRadius: 999, overflow: "hidden" }}>
             {[{ id: "all", label: "All" }, { id: "au_r3", label: "AU-R3" }, { id: "au_r4", label: "AU-R4" }].map(tab => (
               <button key={tab.id} onClick={() => setFilter(tab.id)} style={{ padding: "7px 12px", fontSize: 11, fontWeight: 700, border: "none", cursor: "pointer", background: filter === tab.id ? "var(--au-crimson)" : "transparent", color: filter === tab.id ? "#fff" : "var(--ink-2)" }}>{tab.label}</button>
@@ -733,7 +733,7 @@ function OFMTotalSummary({ onDownload, onView }) {
             <thead><tr><th>Application</th><th>Researcher</th><th>Grant</th><th>Submitted</th><th style={{ textAlign: "right" }}>Amount</th><th>Status</th><th style={{ textAlign: "right" }}>Details</th></tr></thead>
             <tbody>
               {apps === null && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>Loading applications…</td></tr>}
-              {apps && rows.length === 0 && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No applications have reached Finance in this view.</td></tr>}
+              {apps && rows.length === 0 && <tr><td colSpan="7" style={{ textAlign: "center", padding: "32px", color: "var(--ink-3)" }}>No applications have reached Academic in this view.</td></tr>}
               {rows.map(app => (
                 <tr key={app.id} style={{ cursor: "pointer" }} onClick={() => setSelectedId(app.id)}>
                   <td><div className="id">{app.code || "-"}</div><div style={{ fontSize: 12, fontWeight: 600, marginTop: 3, maxWidth: 260, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{app.title || "Untitled application"}</div></td>
@@ -766,11 +766,11 @@ function OFMDashboard({ navigate, toast, setConfirm, grantType, onGrantSwitch, o
   const sysToggle = <FinanceGrantTabs sys={sys} onChange={next => onGrantSwitch(next, "o-dashboard")} />;
   return (
     <>
-      <PageHeader title={(isR4 ? "AU-R4" : "AU-R3") + " · Finance Summary"}
+      <PageHeader title={(isR4 ? "AU-R4" : "AU-R3") + " · Academic Summary"}
         desc={"Process payments for IRAS-approved " + (isR4 ? "publication fee and reward" : "paper presentation grant") + " applications."}
         actions={sysToggle} />
       <div className="stats">
-        <Stat label="At Finance" value={gc ? (gc.approved || 0) + (gc.active || 0) : "…"} icon="Clock" tone="gold" />
+        <Stat label="At Academic" value={gc ? (gc.approved || 0) + (gc.active || 0) : "…"} icon="Clock" tone="gold" />
         <Stat label="Completed" value={gn("completed")} icon="CheckCircle" tone="navy" />
         <Stat label="Total" value={(gc ? (gc.approved || 0) + (gc.active || 0) + (gc.completed || 0) : "…")} icon="Coins" />
       </div>
@@ -789,7 +789,7 @@ function OFMHistory({ grantType, onGrantSwitch }) {
   const label = sys.replace("au_r", "AU-R").toUpperCase();
   return (
     <>
-      <PageHeader title={label + " · Payment History"} desc={"Only completed " + label + " Finance transactions are shown."} actions={
+      <PageHeader title={label + " · Payment History"} desc={"Only completed " + label + " Academic transactions are shown."} actions={
         <FinanceGrantTabs sys={sys} onChange={next => onGrantSwitch(next, "o-history")} />
       } />
       <div className="card card-pad-0">
@@ -913,7 +913,7 @@ function AdminDashboard({ navigate }) {
                 <div style={{ width: 28, height: 28, borderRadius: "50%", background: "var(--paper-warm)", color: "var(--ink-2)", display: "grid", placeItems: "center", flexShrink: 0 }}><Icon name="Clock" size={12} /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontSize: 12, color: "var(--ink-1)" }}>{e.action}</div>
-                  <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{(e.actor ? e.actor.full_name : (e.actor_role || "System"))}{e.application ? " · " + e.application.code : ""} · {window.DB.fmtDate(e.created_at)}</div>
+                  <div style={{ fontSize: 11, color: "var(--ink-3)" }}>{(e.actor ? e.actor.full_name : (e.actor_role === "ofm" ? "Academic" : (e.actor_role || "System")))}{e.application ? " · " + e.application.code : ""} · {window.DB.fmtDate(e.created_at)}</div>
                 </div>
               </div>
             ))}
@@ -929,7 +929,7 @@ function AdminDashboard({ navigate }) {
 const ADMIN_ROLE_OPTIONS = [
   { key: "researcher", label: "Researcher" }, { key: "dean", label: "Dean" },
   { key: "iras", label: "IRAS (AU-R3 / AU-R4)" },
-  { key: "ofm", label: "OFM / Finance" }, { key: "admin", label: "Administrator" },
+  { key: "ofm", label: "Academic" }, { key: "admin", label: "Administrator" },
 ];
 
 function AdminAddUserForm({ onCreated, onClose, toast }) {
@@ -1141,7 +1141,7 @@ function AdminAudit() {
             {(events || []).map(e => (
               <tr key={e.id}>
                 <td style={{fontSize: 12}}>{window.DB.fmtDate(e.created_at)}</td>
-                <td style={{fontSize: 12, fontWeight: 600}}>{e.actor ? e.actor.full_name : (e.actor_role || "-")}</td>
+                <td style={{fontSize: 12, fontWeight: 600}}>{e.actor ? e.actor.full_name : (e.actor_role === "ofm" ? "Academic" : (e.actor_role || "-"))}</td>
                 <td style={{fontSize: 12}}>{e.application ? e.application.code : "-"}</td>
                 <td style={{fontSize: 12, color: "var(--ink-2)"}}>{e.action}</td>
               </tr>
@@ -1382,7 +1382,7 @@ function RoleAnalyticsDashboard({ role }) {
       pending: "Awaiting IRAS Verification", groupTitle: "Top Approved Spending by Faculty", groupKey: "byFaculty",
     },
     ofm: {
-      title: "Finance Analytics", desc: "University-wide analytics for applications forwarded to Finance.",
+      title: "Academic Analytics", desc: "University-wide analytics for applications forwarded to Academic.",
       pending: "Awaiting Payment", groupTitle: "Top Disbursement by Faculty", groupKey: "byFaculty",
     },
   }[role] || { title: "Role Analytics", desc: "Role-scoped analytics.", pending: "Pending", groupTitle: "Top Spending", groupKey: "byFaculty" };
@@ -1439,7 +1439,7 @@ function RoleAIChatbotPage({ role }) {
   const config = {
     dean: { title: "Dean AI Chatbot", desc: "Chat with AU AI about live AU-R3 and AU-R4 data from your assigned faculty." },
     iras: { title: "IRAS AI Chatbot", desc: "Chat with AU AI about university-wide AU-R3 and AU-R4 verification data." },
-    ofm: { title: "Finance AI Chatbot", desc: "Chat with AU AI about applications forwarded to Finance, payments, and disbursements." },
+    ofm: { title: "Academic AI Chatbot", desc: "Chat with AU AI about applications forwarded to Academic, payments, and disbursements." },
   }[role];
   return (
     <>

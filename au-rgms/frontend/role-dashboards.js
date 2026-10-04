@@ -260,7 +260,7 @@ function DeanDashboard(_ref3) {
     icon: "Send",
     tone: "navy"
   }), React.createElement(Stat, {
-    label: "At Finance",
+    label: "At Academic",
     value: n("approved"),
     icon: "Coins"
   }), React.createElement(Stat, {
@@ -281,7 +281,7 @@ function DeanDashboard(_ref3) {
     icon: "Send",
     tone: "navy"
   }), React.createElement(Stat, {
-    label: "At Finance",
+    label: "At Academic",
     value: n("approved"),
     icon: "Coins"
   }), React.createElement(Stat, {
@@ -809,7 +809,7 @@ function IRASGrantDashboard(_ref8) {
     icon: "Repeat",
     tone: "navy"
   }), React.createElement(Stat, {
-    label: "Forwarded to Finance",
+    label: "Forwarded to Academic",
     value: n("approved"),
     icon: "Send"
   }), React.createElement(Stat, {
@@ -927,7 +927,7 @@ function IRASDashboard(_ref9) {
   }));
   return React.createElement(React.Fragment, null, React.createElement(PageHeader, {
     title: (isR4 ? "AU-R4" : "AU-R3") + " · IRAS Summary",
-    desc: isR4 ? "Verify Dean-approved AU-R4 publication-fee applications before forwarding eligible claims to Finance." : "Verify Dean-approved paper presentation applications before forwarding them to Finance.",
+    desc: isR4 ? "Verify Dean-approved AU-R4 publication-fee applications before forwarding eligible claims to Academic." : "Verify Dean-approved paper presentation applications before forwarding them to Academic.",
     actions: sysToggle
   }), React.createElement(IRASGrantDashboard, {
     navigate: navigate,
@@ -946,7 +946,7 @@ function IRASr3Detail(_ref0) {
     status: "iras_review",
     applicationId: applicationId,
     title: "AU-R3 Verification",
-    desc: "Verify the Dean-approved paper presentation request, then forward it to Finance.",
+    desc: "Verify the Dean-approved paper presentation request, then forward it to Academic.",
     render: function render(app, load) {
       var docs = app.documents || [];
       var ci = app.conference_info || {};
@@ -962,8 +962,8 @@ function IRASr3Detail(_ref0) {
       var forward = function forward() {
         return setConfirm({
           kind: "success",
-          title: "Approve & forward to Finance?",
-          message: app.code + " will be marked IRAS-approved and forwarded to the Finance Office for payment.",
+          title: "Approve & forward to Academic?",
+          message: app.code + " will be marked IRAS-approved and forwarded to the Academic Office for payment.",
           confirmLabel: "Approve & Forward",
           withReason: true,
           reasonLabel: "IRAS comment",
@@ -977,7 +977,7 @@ function IRASr3Detail(_ref0) {
                     _context2.n = 1;
                     return window.DB.transition(app.id, "iras_review", "advance", reason);
                   case 1:
-                    toast(app.code + " approved — forwarded to Finance.");
+                    toast(app.code + " approved — forwarded to Academic.");
                     navigate("i-dashboard");
                     _context2.n = 3;
                     break;
@@ -1151,7 +1151,7 @@ function IRASr3Detail(_ref0) {
         className: "card-body"
       }, React.createElement("p", {
         className: "text-sm text-muted mb-4"
-      }, "Confirm the conference, paper, conference qualities, three required documents, and fixed 3,500 THB grant are eligible, then forward to Finance for payment."), React.createElement("div", {
+      }, "Confirm the conference, paper, conference qualities, three required documents, and fixed 3,500 THB grant are eligible, then forward to Academic for payment."), React.createElement("div", {
         className: "flex flex-col gap-2"
       }, React.createElement("button", {
         className: "btn btn-primary btn-block",
@@ -1159,7 +1159,7 @@ function IRASr3Detail(_ref0) {
       }, React.createElement(Icon, {
         name: "Send",
         size: 14
-      }), " Approve & Forward to Finance"), React.createElement("button", {
+      }), " Approve & Forward to Academic"), React.createElement("button", {
         className: "btn btn-secondary btn-block",
         onClick: ret
       }, React.createElement(Icon, {
@@ -1190,7 +1190,7 @@ function IRASr4Detail(_ref1) {
     status: "iras_review",
     applicationId: applicationId,
     title: "AU-R4 Verification",
-    desc: "Verify eligibility, confirm the final eligible amount, then forward to Finance.",
+    desc: "Verify eligibility, confirm the final eligible amount, then forward to Academic.",
     render: function render(app, load) {
       var pi = app.pub_info || {};
       var authors = Array.isArray(app.co_members) ? app.co_members : [];
@@ -1219,9 +1219,9 @@ function IRASr4Detail(_ref1) {
         }
         setConfirm({
           kind: "success",
-          title: "Approve & forward to Finance?",
-          message: app.code + " will be approved at " + fmtBaht(finalNum) + " and forwarded to the Finance Office for payment.",
-          confirmLabel: "Confirm & Forward to Finance",
+          title: "Approve & forward to Academic?",
+          message: app.code + " will be approved at " + fmtBaht(finalNum) + " and forwarded to the Academic Office for payment.",
+          confirmLabel: "Confirm & Forward to Academic",
           withReason: true,
           reasonRequired: true,
           reasonLabel: "IRAS comment",
@@ -1238,7 +1238,7 @@ function IRASr4Detail(_ref1) {
                     _context5.n = 2;
                     return window.DB.transition(app.id, "iras_review", "advance", reason || "");
                   case 2:
-                    toast(app.code + " approved at " + fmtBaht(finalNum) + " — forwarded to Finance.");
+                    toast(app.code + " approved at " + fmtBaht(finalNum) + " — forwarded to Academic.");
                     navigate("i-dashboard");
                     _context5.n = 4;
                     break;
@@ -1438,7 +1438,7 @@ function IRASr4Detail(_ref1) {
         className: "card-body"
       }, React.createElement("p", {
         className: "text-sm text-muted mb-4"
-      }, "Set the final eligible amount from the verified journal category, then forward to Finance. Maximum 80,000 THB per article."), React.createElement("div", {
+      }, "Set the final eligible amount from the verified journal category, then forward to Academic. Maximum 80,000 THB per article."), React.createElement("div", {
         className: "field"
       }, React.createElement("label", null, "Final Approved Amount (THB)"), React.createElement("input", {
         value: finalAmt === "" ? "" : Number(finalAmt || 0).toLocaleString(),
@@ -1484,7 +1484,7 @@ function IRASr4Detail(_ref1) {
       }, React.createElement(Icon, {
         name: "Send",
         size: 14
-      }), " Approve & Forward to Finance"), React.createElement("button", {
+      }), " Approve & Forward to Academic"), React.createElement("button", {
         className: "btn btn-secondary btn-block",
         onClick: ret
       }, React.createElement(Icon, {
@@ -1528,7 +1528,7 @@ function OFMGrantPayments(_ref10) {
     return setConfirm({
       kind: "success",
       title: "Confirm payment completion?",
-      message: a.id + " will be recorded as completed (" + fmtBaht(Number(a.approved_amount || a.requested_amount || 0)) + "). This closes the Finance workflow.",
+      message: a.id + " will be recorded as completed (" + fmtBaht(Number(a.approved_amount || a.requested_amount || 0)) + "). This closes the Academic workflow.",
       confirmLabel: "Continue",
       finalConfirm: true,
       reasonLabel: "Payment confirmation",
@@ -1633,7 +1633,7 @@ function OFMGrantPayments(_ref10) {
       } : {
         key: "approved",
         cls: "badge-contract",
-        label: "At Finance"
+        label: "At Academic"
       }
     })), React.createElement("td", {
       className: "actions"
@@ -1887,7 +1887,7 @@ function OFMTotalSummary(_ref13) {
   }];
   return React.createElement(React.Fragment, null, React.createElement(PageHeader, {
     title: "Total Summary",
-    desc: "Today\u2019s finance summary for AU-R3 and AU-R4 applications forwarded to Finance."
+    desc: "Today\u2019s Academic summary for AU-R3 and AU-R4 applications forwarded to Academic."
   }), React.createElement("div", {
     className: "stats",
     style: {
@@ -1905,7 +1905,7 @@ function OFMTotalSummary(_ref13) {
     className: "card card-pad-0"
   }, React.createElement("div", {
     className: "card-head"
-  }, React.createElement("h3", null, "Applications Forwarded to Finance"), React.createElement("div", {
+  }, React.createElement("h3", null, "Applications Forwarded to Academic"), React.createElement("div", {
     className: "grow"
   }), React.createElement("div", {
     style: {
@@ -1967,7 +1967,7 @@ function OFMTotalSummary(_ref13) {
       padding: "32px",
       color: "var(--ink-3)"
     }
-  }, "No applications have reached Finance in this view.")), rows.map(function (app) {
+  }, "No applications have reached Academic in this view.")), rows.map(function (app) {
     var _app$researcher3;
     return React.createElement("tr", {
       key: app.id,
@@ -2062,13 +2062,13 @@ function OFMDashboard(_ref14) {
     }
   });
   return React.createElement(React.Fragment, null, React.createElement(PageHeader, {
-    title: (isR4 ? "AU-R4" : "AU-R3") + " · Finance Summary",
+    title: (isR4 ? "AU-R4" : "AU-R3") + " · Academic Summary",
     desc: "Process payments for IRAS-approved " + (isR4 ? "publication fee and reward" : "paper presentation grant") + " applications.",
     actions: sysToggle
   }), React.createElement("div", {
     className: "stats"
   }, React.createElement(Stat, {
-    label: "At Finance",
+    label: "At Academic",
     value: gc ? (gc.approved || 0) + (gc.active || 0) : "…",
     icon: "Clock",
     tone: "gold"
@@ -2106,7 +2106,7 @@ function OFMHistory(_ref15) {
   var label = sys.replace("au_r", "AU-R").toUpperCase();
   return React.createElement(React.Fragment, null, React.createElement(PageHeader, {
     title: label + " · Payment History",
-    desc: "Only completed " + label + " Finance transactions are shown.",
+    desc: "Only completed " + label + " Academic transactions are shown.",
     actions: React.createElement(FinanceGrantTabs, {
       sys: sys,
       onChange: function onChange(next) {
@@ -2443,7 +2443,7 @@ function AdminDashboard(_ref16) {
         fontSize: 11,
         color: "var(--ink-3)"
       }
-    }, e.actor ? e.actor.full_name : e.actor_role || "System", e.application ? " · " + e.application.code : "", " \xB7 ", window.DB.fmtDate(e.created_at))));
+    }, e.actor ? e.actor.full_name : e.actor_role === "ofm" ? "Academic" : e.actor_role || "System", e.application ? " · " + e.application.code : "", " \xB7 ", window.DB.fmtDate(e.created_at))));
   })))));
 }
 var ADMIN_ROLE_OPTIONS = [{
@@ -2457,7 +2457,7 @@ var ADMIN_ROLE_OPTIONS = [{
   label: "IRAS (AU-R3 / AU-R4)"
 }, {
   key: "ofm",
-  label: "OFM / Finance"
+  label: "Academic"
 }, {
   key: "admin",
   label: "Administrator"
@@ -3265,7 +3265,7 @@ function AdminAudit() {
         fontSize: 12,
         fontWeight: 600
       }
-    }, e.actor ? e.actor.full_name : e.actor_role || "-"), React.createElement("td", {
+    }, e.actor ? e.actor.full_name : e.actor_role === "ofm" ? "Academic" : e.actor_role || "-"), React.createElement("td", {
       style: {
         fontSize: 12
       }
@@ -3791,8 +3791,8 @@ function RoleAnalyticsDashboard(_ref31) {
       groupKey: "byFaculty"
     },
     ofm: {
-      title: "Finance Analytics",
-      desc: "University-wide analytics for applications forwarded to Finance.",
+      title: "Academic Analytics",
+      desc: "University-wide analytics for applications forwarded to Academic.",
       pending: "Awaiting Payment",
       groupTitle: "Top Disbursement by Faculty",
       groupKey: "byFaculty"
@@ -3946,8 +3946,8 @@ function RoleAIChatbotPage(_ref32) {
       desc: "Chat with AU AI about university-wide AU-R3 and AU-R4 verification data."
     },
     ofm: {
-      title: "Finance AI Chatbot",
-      desc: "Chat with AU AI about applications forwarded to Finance, payments, and disbursements."
+      title: "Academic AI Chatbot",
+      desc: "Chat with AU AI about applications forwarded to Academic, payments, and disbursements."
     }
   }[role];
   return React.createElement(React.Fragment, null, React.createElement(PageHeader, {

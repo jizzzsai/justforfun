@@ -68,9 +68,9 @@ export const ROLE_META: Record<Role, RoleMeta> = {
     blurb: "Receive forwarded proposals, complete university review and approve eligible grants.",
   },
   ofm: {
-    label: "OFM / Finance",
-    short: "OFM",
-    unit: "Office of Financial Management",
+    label: "Academic",
+    short: "Academic",
+    unit: "Academic Office",
     blurb: "30 / 40 / 30 disbursement tracking.",
   },
   admin: {

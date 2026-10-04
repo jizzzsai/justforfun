@@ -27,7 +27,7 @@ const R4_PIPELINE = [
   { key: "dean", label: "Dean Review" },
   { key: "iras", label: "IRAS Verification" },
   { key: "approved", label: "Approved by Research Office" },
-  { key: "payment", label: "Finance Payment" },
+  { key: "payment", label: "Academic Payment" },
   { key: "completed", label: "Completed" },
 ];
 function buildR4Timeline(statusKey) {
@@ -62,7 +62,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
   const isSingle = isR3 || isR4;
   const exampleSteps = isR4 ? R4_PIPELINE : R3_PIPELINE;
   const singleGrant = isSingle && grant && grant.grant_type === grantType ? grant : null;
-  const r3PayLabel = { approved: "Awaiting Finance Completion", active: "At Finance", completed: "Completed" };
+  const r3PayLabel = { approved: "Awaiting Academic Completion", active: "At Academic", completed: "Completed" };
   const pays = grant && grant.payments && grant.payments.length ? grant.payments.slice().sort((a, b) => a.instalment - b.instalment) : [];
   const grantTotal = grant ? Number(grant.approved_amount || grant.requested_amount || 0) : 0;
   const paidTotal = pays.filter(p => p.status === "paid").reduce((s, p) => s + Number(p.amount || 0), 0);
@@ -137,7 +137,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
           </div>
           <div className="card-body">
             {grant === null && <div className="text-sm text-muted">Loading…</div>}
-            {grant === false && <Empty title="No approved grant yet" desc="Once your application is approved, your 30 / 40 / 30 Finance approvals appear here." icon="Coins" />}
+            {grant === false && <Empty title="No approved grant yet" desc="Once your application is approved, your 30 / 40 / 30 Academic approvals appear here." icon="Coins" />}
             {grant && (
               <>
                 <div style={{ fontFamily: "var(--font-serif)", fontWeight: 500, fontSize: 17, marginBottom: 4 }}>
@@ -146,7 +146,7 @@ function ResearcherDashboard({ navigate, onDownload, onView, setSelectedApplicat
                 <div className="text-sm text-muted mb-4">{grant.faculty || "—"}{grant.department ? " · " + grant.department : ""}</div>
 
                 <div className="flex items-center justify-between mb-2">
-                  <span className="text-sm text-muted">Finance approval progress</span>
+                  <span className="text-sm text-muted">Academic approval progress</span>
                   <span className="text-sm font-semi">{fmtBaht(paidTotal)} of {fmtBaht(grantTotal)} paid</span>
                 </div>
                 <div className="progress mb-4">
@@ -262,7 +262,7 @@ function ApplicationDecisionNotice({ app }) {
   const decision = events[0] || null;
   const actorName = decision && decision.actor && decision.actor.full_name
     ? decision.actor.full_name
-    : ({ dean: "Dean", iras: "IRAS", ofm: "Finance Office" }[(decision && decision.actor_role) || ""] || "Reviewer");
+    : ({ dean: "Dean", iras: "IRAS", ofm: "Academic Office" }[(decision && decision.actor_role) || ""] || "Reviewer");
   const rejected = app.status === "rejected";
   const reason = decision && String(decision.note || "").trim();
   return (

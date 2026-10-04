@@ -14,12 +14,12 @@ export default async function IrasDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="IRAS Research Office" subtitle="Complete university review and send eligible grants to Finance." />
+      <PageHeader title="IRAS Research Office" subtitle="Complete university review and send eligible grants to Academic." />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Received" value={counts.iras_review ?? 0} icon={Inbox} tone="info" />
         <StatCard label="Awaiting screening" value={counts.iras_review ?? 0} icon={ClipboardCheck} tone="warn" />
-        <StatCard label="Approved for Finance" value={counts.approved ?? 0} icon={Send} tone="gold" />
+        <StatCard label="Approved for Academic" value={counts.approved ?? 0} icon={Send} tone="gold" />
         <StatCard label="Active grants" value={counts.active ?? 0} icon={BadgeCheck} tone="ok" />
       </div>
 

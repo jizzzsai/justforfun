@@ -29,7 +29,7 @@ function LoginPage({ onLogin }) {
           </h1>
           <p>
             A unified portal for AU researchers, deans, committees, IRAS,
-            the President, and the Office of Financial Management to submit,
+            the President, and the Academic Office to submit,
             review, and disburse research grants — across the fourteen-stage
             workflow.
           </p>
@@ -157,9 +157,9 @@ const ROLE_CONFIG = {
   ofm: {
     nav: APP.NAV_OFM,
     homeKey: "o-dashboard",
-    crumbRoot: "OFM / Finance",
+    crumbRoot: "Academic",
     sidebarFooter: {
-      title: "OFM Office",
+      title: "Academic Office",
       body: "Process disbursements only after the relevant milestone document is approved.",
     },
   },

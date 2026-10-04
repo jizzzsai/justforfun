@@ -65,7 +65,7 @@ const PRIMARY_APP = {
   abstract: "This study proposes a web-based grant lifecycle platform that consolidates the fourteen-stage AU research grant workflow into a single transparent dashboard. The system applies machine-learning techniques to flag missing documents, predict review duration, and surface anomalous budget items at submission time. A pilot will be conducted with three faculties over two academic semesters.",
   objectives: [
     "Reduce average submission-to-disbursement cycle time by 35%.",
-    "Provide unified visibility across Faculty Office, IRAS, and Finance.",
+    "Provide unified visibility across Faculty Office, IRAS, and Academic.",
     "Automate document completeness checks at submission.",
     "Enable expert-review scoring with explainable recommendations.",
   ],
@@ -273,7 +273,7 @@ const APPLICATIONS = [
 const NOTIFS = [
   { id: 1, unread: true,  icon: "Bell",      who: "IRAS Office",    text: "Your application <b>RG-2025-001</b> has been assigned to three expert reviewers.", when: "2 hours ago" },
   { id: 2, unread: true,  icon: "FileCheck", who: "Faculty Committee", text: "Comments added to <b>RG-2025-001</b> by Assoc. Prof. Dr. Watcharee.", when: "Yesterday, 4:12 PM" },
-  { id: 3, unread: true,  icon: "Coins",     who: "Finance / OFM",  text: "First disbursement of <b>30,000 THB</b> is scheduled after contract signing.", when: "2 days ago" },
+  { id: 3, unread: true,  icon: "Coins",     who: "Academic / Academic",  text: "First disbursement of <b>30,000 THB</b> is scheduled after contract signing.", when: "2 days ago" },
   { id: 4, unread: false, icon: "Send",      who: "Dean's Office",  text: "Application <b>RG-2025-001</b> was forwarded to IRAS on Oct 28.", when: "Oct 28, 2025" },
   { id: 5, unread: false, icon: "FileText",  who: "Faculty Office", text: "Document check completed for <b>RG-2025-001</b>.", when: "Oct 20, 2025" },
 ];
@@ -302,7 +302,7 @@ const ROLES = [
   { key: "iras",       name: "HR / IRAS",             full: "Prof. Dr. Sirilak Khempila",       subtitle: "Director · IRAS Office",              initials: "SK", iconName: "Landmark" },
   { key: "expert",     name: "Expert Reviewer",       full: "Assoc. Prof. Dr. Suthep Lertsiri", subtitle: "External · Chulalongkorn",            initials: "SL", iconName: "FileSearch" },
   { key: "president",  name: "President",             full: "Rev. Bro. Dr. Bancha Saenghiran",  subtitle: "President · Assumption University",   initials: "BS", iconName: "Award" },
-  { key: "ofm",        name: "OFM / Finance",         full: "K. Wanida Charoenphon",            subtitle: "Director · OFM",                      initials: "WC", iconName: "Coins" },
+  { key: "ofm",        name: "Academic",         full: "K. Wanida Charoenphon",            subtitle: "Director · Academic",                      initials: "WC", iconName: "Coins" },
   { key: "admin",      name: "Administrator",         full: "K. Tanapong Wisetphan",            subtitle: "System Administrator",                initials: "TW", iconName: "Settings" },
 ];
 
@@ -315,7 +315,7 @@ const NAV_RESEARCHER = [
   { section: "REPORTING" },
   { key: "r-progress",    label: "Progress Report",    icon: "FileText" },
   { key: "r-final",       label: "Final Report",       icon: "FileCheck" },
-  { section: "FINANCE" },
+  { section: "ACADEMIC" },
   { key: "r-payments",    label: "Payment Status",     icon: "Coins" },
 ];
 
@@ -398,7 +398,7 @@ const SYSTEM_USERS = [
   { id: "U006", name: "Asst. Prof. Dr. Marisa Anuwong",         email: "marisa.a@mahidol.ac.th", role: "Expert Reviewer",    dept: "Mahidol University",         status: "Active",   lastLogin: "Yesterday" },
   { id: "U007", name: "Dr. Kittipan Chaiprasart",               email: "kittipan.c@au.edu",      role: "Expert Reviewer",    dept: "VMS-EST",                    status: "Active",   lastLogin: "3 days ago" },
   { id: "U008", name: "Rev. Bro. Dr. Bancha Saenghiran",        email: "president@au.edu",       role: "President",          dept: "Office of the President",    status: "Active",   lastLogin: "Today, 07:30" },
-  { id: "U009", name: "K. Wanida Charoenphon",                  email: "wanida.c@au.edu",        role: "OFM / Finance",      dept: "Office of Financial Mgmt.",  status: "Active",   lastLogin: "Today, 09:15" },
+  { id: "U009", name: "K. Wanida Charoenphon",                  email: "wanida.c@au.edu",        role: "Academic",      dept: "Academic Office",  status: "Active",   lastLogin: "Today, 09:15" },
   { id: "U010", name: "K. Tanapong Wisetphan",                  email: "admin@au.edu",           role: "Administrator",      dept: "IT Services",                status: "Active",   lastLogin: "Today, 06:55" },
   { id: "U011", name: "Asst. Prof. Dr. Naphat Wongsakulchai",   email: "naphat.w@au.edu",        role: "Researcher",         dept: "Educational Technology",     status: "Active",   lastLogin: "Yesterday" },
   { id: "U012", name: "Dr. Rattana Boonchareon",                email: "rattana.b@au.edu",       role: "Researcher",         dept: "Biotechnology",              status: "Active",   lastLogin: "2 days ago" },

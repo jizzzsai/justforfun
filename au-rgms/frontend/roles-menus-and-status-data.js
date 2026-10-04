@@ -19,7 +19,7 @@ const ROLES = [
   { key: "researcher", name: "Researcher", full: "Researcher Test", subtitle: "Researcher - Test Account", initials: "RT", iconName: "GraduationCap" },
   { key: "dean", name: "Dean", full: "Dean Test", subtitle: "Dean - Test Account", initials: "DT", iconName: "Building2" },
   { key: "iras", name: "IRAS", full: "IRAS Test", subtitle: "IRAS - Test Account", initials: "IR", iconName: "ShieldCheck" },
-  { key: "ofm", name: "OFM / Finance", full: "Finance Test", subtitle: "Finance - Test Account", initials: "FT", iconName: "Coins" },
+  { key: "ofm", name: "Academic", full: "Academic Test", subtitle: "Academic - Test Account", initials: "AT", iconName: "Coins" },
   { key: "admin", name: "Administrator", full: "Admin Test", subtitle: "Admin - Test Account", initials: "AT", iconName: "Settings" },
 ];
 
@@ -89,7 +89,7 @@ const SYSTEM_USERS = [
   { id: "U001", name: "Researcher Test", email: "researcher.test@au.edu", role: "Researcher", dept: "Computer Science", status: "Active", lastLogin: "Test account" },
   { id: "U002", name: "Dean Test", email: "dean.sci@au.edu", role: "Dean", dept: "Computer Science", status: "Active", lastLogin: "Test account" },
   { id: "U005", name: "IRAS Test", email: "iras@au.edu", role: "IRAS", dept: "IRAS", status: "Active", lastLogin: "Test account" },
-  { id: "U009", name: "Finance Test", email: "finance@au.edu", role: "OFM / Finance", dept: "Office of Financial Management", status: "Active", lastLogin: "Test account" },
+  { id: "U009", name: "Academic Test", email: "academic@au.edu", role: "Academic", dept: "Academic Office", status: "Active", lastLogin: "Test account" },
   { id: "U010", name: "Admin Test", email: "admin@au.edu", role: "Administrator", dept: "IT Services", status: "Active", lastLogin: "Test account" },
 ];
 

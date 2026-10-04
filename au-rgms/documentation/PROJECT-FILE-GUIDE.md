@@ -25,7 +25,7 @@ au-rgms/
 | Shared buttons, icons, badges, modal, timeline, date picker, file preview | `frontend/shared-website-parts.jsx` |
 | Researcher dashboard and AU-R3/AU-R4 forms, application details, and payments | `frontend/researcher-pages.jsx` |
 | AU-R3/AU-R4 Dean review pages | `frontend/dean-and-faculty-review-pages.jsx` |
-| IRAS verification and Finance/OFM workflow | `frontend/role-dashboards.jsx` |
+| IRAS verification and Academic workflow | `frontend/role-dashboards.jsx` |
 | Role dashboards, queues, histories, admin user-management UI | `frontend/role-dashboards.jsx` |
 | Forms & Templates page | `frontend/forms-and-templates-page.jsx` |
 | Roles, sidebar menus, statuses, grant types, journal options | `frontend/roles-menus-and-status-data.js` |
@@ -94,8 +94,8 @@ rg -n "AU-R4|ResearcherR4" frontend/researcher-pages.jsx
 # Find Dean comment/review code
 rg -n "comment|review|decision" frontend/dean-and-faculty-review-pages.jsx
 
-# Find Finance/payment workflow
-rg -n "Finance|payment" frontend/role-dashboards.jsx database/website-database-actions.js
+# Find Academic/payment workflow
+rg -n "Academic|payment" frontend/role-dashboards.jsx database/website-database-actions.js
 
 # Find Admin user-management backend
 rg -n "POST|PATCH|DELETE|validateProfile" api/admin-user-management.js

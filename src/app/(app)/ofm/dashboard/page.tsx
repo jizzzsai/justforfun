@@ -17,7 +17,7 @@ export default async function OfmDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="OFM / Finance" subtitle="Track and release the 30 / 40 / 30 grant disbursement." />
+      <PageHeader title="Academic" subtitle="Track and release the 30 / 40 / 30 grant disbursement." />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label="Awaiting disbursement" value={thbCompact(awaiting)} icon={CircleDollarSign} tone="warn" />

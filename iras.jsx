@@ -773,7 +773,7 @@ function IRASContract({ onDownload, toast, setConfirm }) {
                   setConfirm({
                     kind: "success",
                     title: "Mark contract as signed?",
-                    message: "First payment (30%) will be released to OFM for processing.",
+                    message: "First payment (30%) will be released to Academic for processing.",
                     confirmLabel: "Mark Signed",
                     onConfirm: () => toast("Contract marked as signed (demo)"),
                   })
@@ -890,7 +890,7 @@ function IRASPayment({ onDownload, toast, setConfirm }) {
   return (
     <>
       <PageHeader
-        title="Finance / OFM Payment"
+        title="Academic / Academic Payment"
         desc="Process disbursements after each milestone: contract, progress report, final report."
       />
 
@@ -1136,7 +1136,7 @@ function IRASFullTimeline() {
                 { n: "Assoc. Prof. Dr. Watcharee S.",       r: "Academic Committee Chair",   c: "var(--au-gold)" },
                 { n: "Dean, VMS-EST",                       r: "Faculty Approval",           c: "var(--au-navy)" },
                 { n: "Prof. Dr. Sirilak Khempila",          r: "IRAS Director",              c: "var(--au-crimson)" },
-                { n: "Office of Financial Management",      r: "Disbursement",               c: "var(--au-gold)" },
+                { n: "Academic Office",      r: "Disbursement",               c: "var(--au-gold)" },
               ].map((p, i) => (
                 <div key={i} style={{display: "flex", alignItems: "center", gap: 10, padding: "10px 20px"}}>
                   <Avatar initials={p.n.split(" ").slice(-1)[0].slice(0, 2).toUpperCase()} size={28} color={p.c} />

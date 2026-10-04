@@ -816,7 +816,7 @@ function OFMDashboard({ navigate }) {
   return (
     <>
       <PageHeader
-        title="Finance / OFM Dashboard"
+        title="Academic / Academic Dashboard"
         desc="Disburse the 30% / 40% / 30% payment tranches as researchers reach each milestone."
         actions={
           <button className="btn btn-primary" onClick={() => navigate("o-payments")}>
@@ -959,15 +959,15 @@ function OFMDetail({ onDownload, toast, setConfirm }) {
 
 function OFMHistory({ onDownload }) {
   const rows = [
-    { id: "RG-2024-114", who: "Dr. Phyo Min Tun",         stage: "Final 30%", amount: 24000, date: "Jul 28, 2024", ref: "OFM-2024-0331" },
-    { id: "RG-2025-007", who: "Dr. Apichat Phongphan",    stage: "2nd 40%",   amount: 84000, date: "May 14, 2025", ref: "OFM-2025-0144" },
-    { id: "RG-2025-007", who: "Dr. Apichat Phongphan",    stage: "1st 30%",   amount: 63000, date: "Nov 03, 2025", ref: "OFM-2025-0099" },
-    { id: "RG-2025-006", who: "Dr. Karunee Sritrakul",    stage: "1st 30%",   amount: 42000, date: "Oct 12, 2025", ref: "OFM-2025-0088" },
-    { id: "RG-2025-005", who: "Dr. Nisachon Charoenwong", stage: "1st 30%",   amount: 22500, date: "Today, 09:15", ref: "OFM-2025-0102" },
+    { id: "RG-2024-114", who: "Dr. Phyo Min Tun",         stage: "Final 30%", amount: 24000, date: "Jul 28, 2024", ref: "Academic-2024-0331" },
+    { id: "RG-2025-007", who: "Dr. Apichat Phongphan",    stage: "2nd 40%",   amount: 84000, date: "May 14, 2025", ref: "Academic-2025-0144" },
+    { id: "RG-2025-007", who: "Dr. Apichat Phongphan",    stage: "1st 30%",   amount: 63000, date: "Nov 03, 2025", ref: "Academic-2025-0099" },
+    { id: "RG-2025-006", who: "Dr. Karunee Sritrakul",    stage: "1st 30%",   amount: 42000, date: "Oct 12, 2025", ref: "Academic-2025-0088" },
+    { id: "RG-2025-005", who: "Dr. Nisachon Charoenwong", stage: "1st 30%",   amount: 22500, date: "Today, 09:15", ref: "Academic-2025-0102" },
   ];
   return (
     <>
-      <PageHeader title="Payment History" desc="All disbursements processed by OFM." />
+      <PageHeader title="Payment History" desc="All disbursements processed by Academic." />
       <div className="card card-pad-0">
         <table className="tbl">
           <thead><tr><th>Date</th><th>Application</th><th>Researcher</th><th>Tranche</th><th style={{textAlign: "right"}}>Amount</th><th>Reference</th><th style={{textAlign: "right"}}>Receipt</th></tr></thead>
@@ -1137,7 +1137,7 @@ function AdminJournals({ toast }) {
     <>
       <PageHeader
         title="Journal Tier Reference"
-        desc="Incentive tiers used when researchers report publications. Used by OFM for publication bonuses."
+        desc="Incentive tiers used when researchers report publications. Used by Academic for publication bonuses."
         actions={<button className="btn btn-primary"><Icon name="Plus" size={14} /> Add Tier</button>}
       />
       <div className="grid-2eq mb-6">

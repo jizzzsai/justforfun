@@ -10,7 +10,7 @@ export default async function IrasScreen() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Office Screening" subtitle="Verify documentation and send eligible grants to Finance." />
+      <PageHeader title="Office Screening" subtitle="Verify documentation and send eligible grants to Academic." />
       <Card>
         <ApplicationsTable
           applications={apps}

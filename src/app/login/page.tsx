@@ -28,7 +28,7 @@ export default async function LoginPage() {
           </h1>
           <p className="mt-4 text-white/80">
             Submit applications, complete Dean, Committee and RASSC review,
-            and track Finance disbursements from one portal.
+            and track Academic disbursements from one portal.
           </p>
         </div>
 
@@ -38,7 +38,7 @@ export default async function LoginPage() {
             "Dean",
             "Committee",
             "IRAS",
-            "OFM",
+            "Academic",
             "Admin",
           ].map((r) => (
             <span

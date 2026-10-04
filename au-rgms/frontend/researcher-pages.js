@@ -77,7 +77,7 @@ var R4_PIPELINE = [{
   label: "Approved by Research Office"
 }, {
   key: "payment",
-  label: "Finance Payment"
+  label: "Academic Payment"
 }, {
   key: "completed",
   label: "Completed"
@@ -159,8 +159,8 @@ function ResearcherDashboard(_ref) {
   var exampleSteps = isR4 ? R4_PIPELINE : R3_PIPELINE;
   var singleGrant = isSingle && grant && grant.grant_type === grantType ? grant : null;
   var r3PayLabel = {
-    approved: "Awaiting Finance Completion",
-    active: "At Finance",
+    approved: "Awaiting Academic Completion",
+    active: "At Academic",
     completed: "Completed"
   };
   var pays = grant && grant.payments && grant.payments.length ? grant.payments.slice().sort(function (a, b) {
@@ -316,7 +316,7 @@ function ResearcherDashboard(_ref) {
     className: "text-sm text-muted"
   }, "Loading\u2026"), grant === false && React.createElement(Empty, {
     title: "No approved grant yet",
-    desc: "Once your application is approved, your 30 / 40 / 30 Finance approvals appear here.",
+    desc: "Once your application is approved, your 30 / 40 / 30 Academic approvals appear here.",
     icon: "Coins"
   }), grant && React.createElement(React.Fragment, null, React.createElement("div", {
     style: {
@@ -331,7 +331,7 @@ function ResearcherDashboard(_ref) {
     className: "flex items-center justify-between mb-2"
   }, React.createElement("span", {
     className: "text-sm text-muted"
-  }, "Finance approval progress"), React.createElement("span", {
+  }, "Academic approval progress"), React.createElement("span", {
     className: "text-sm font-semi"
   }, fmtBaht(paidTotal), " of ", fmtBaht(grantTotal), " paid")), React.createElement("div", {
     className: "progress mb-4"
@@ -542,7 +542,7 @@ function ApplicationDecisionNotice(_ref3) {
   var actorName = decision && decision.actor && decision.actor.full_name ? decision.actor.full_name : {
     dean: "Dean",
     iras: "IRAS",
-    ofm: "Finance Office"
+    ofm: "Academic Office"
   }[decision && decision.actor_role || ""] || "Reviewer";
   var rejected = app.status === "rejected";
   var reason = decision && String(decision.note || "").trim();

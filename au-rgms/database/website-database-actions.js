@@ -65,7 +65,7 @@
 
   var NEXT = {
     submitted:        { to: "iras_review",      verb: "Dean approved — forwarded to IRAS" },
-    iras_review:      { to: "approved",         verb: "IRAS verified — sent to Finance Office" },
+    iras_review:      { to: "approved",         verb: "IRAS verified — sent to Academic Office" },
     approved:         { to: "active",           verb: "Contract signed — project active" },
     active:           { to: "completed",        verb: "Payment completed — application closed" },
   };
@@ -90,7 +90,7 @@
   }
   function roleLabel(role) {
     var labels = {
-      researcher: "Researcher", dean: "Dean", iras: "IRAS", ofm: "Finance", admin: "Administrator",
+      researcher: "Researcher", dean: "Dean", iras: "IRAS", ofm: "Academic", admin: "Administrator",
       expert: "Expert Reviewer", president: "President"
     };
     return labels[role] || (role ? String(role) : "an unassigned account");
@@ -101,7 +101,7 @@
       return { label: "IRAS Verification", cls: base.cls };
     }
     if (status === "active" && ACTIVE_GRANT_TYPES.indexOf(grantType) >= 0) {
-      return { label: "At Finance", cls: "badge-contract" };
+      return { label: "At Academic", cls: "badge-contract" };
     }
     return base;
   }
@@ -418,10 +418,10 @@
     },
     async financeApplicationDetail(appId) {
       var role = await myRole();
-      if (role !== "ofm" && role !== "admin") throw new Error("Finance access required.");
+      if (role !== "ofm" && role !== "admin") throw new Error("Academic access required.");
       var app = await this.applicationDetail(appId);
       if (!app || ACTIVE_GRANT_TYPES.indexOf(app.grant_type) < 0 || ["approved", "active", "completed"].indexOf(app.status) < 0) {
-        throw new Error("This application has not been forwarded to Finance.");
+        throw new Error("This application has not been forwarded to Academic.");
       }
       return app;
     },
@@ -528,13 +528,13 @@
     async completeSingleGrant(appId) {
       var me = await uid();
       var role = await myRole();
-      if (!me || ["ofm", "admin"].indexOf(role) === -1) throw new Error("Only Finance or an administrator can complete this payment.");
+      if (!me || ["ofm", "admin"].indexOf(role) === -1) throw new Error("Only Academic or an administrator can complete this payment.");
       var current = await sb.from("applications").select("id,code,status,grant_type").eq("id", appId).single();
       if (current.error) throw current.error;
       var app = current.data;
       if (["au_r3", "au_r4"].indexOf(app.grant_type) === -1) throw new Error("This action is only for AU-R3 and AU-R4 payments.");
       if (app.status === "completed") return app;
-      if (["approved", "active"].indexOf(app.status) === -1) throw new Error("This application is not ready for Finance completion.");
+      if (["approved", "active"].indexOf(app.status) === -1) throw new Error("This application is not ready for Academic completion.");
       var updated = await sb.rpc("transition_r3_r4_application", {
         p_application_id: appId,
         p_from_status: app.status,
@@ -608,7 +608,7 @@
           var finance3 = await this.grantPaymentQueue("au_r3");
           var finance4 = await this.grantPaymentQueue("au_r4");
           var readyGrants = finance3.concat(finance4).filter(function (a) { return a.statusKey === "approved" || a.statusKey === "active"; });
-          if (readyGrants.length) push("ofm", "Coins", "Finance Office", readyGrants.length + " AU-R3/AU-R4 payment(s) ready for completion.", "o-dashboard", true);
+          if (readyGrants.length) push("ofm", "Coins", "Academic Office", readyGrants.length + " AU-R3/AU-R4 payment(s) ready for completion.", "o-dashboard", true);
         } else if (role === "admin") {
           var ev = await this.auditEvents(); ev.slice(0, 5).forEach(function (e) { push("audit-" + e.id, "Clock", e.application ? e.application.code : "System", e.action, "a-audit", false); });
         }
@@ -699,7 +699,7 @@
       (results[1].data || []).forEach(function (app) {
         var events = app.events || [];
         var paidEvent = events.filter(function (event) {
-          return (event.from_status === "approved" && event.to_status === "active") || event.action === "Finance marked payment as paid";
+          return (event.from_status === "approved" && event.to_status === "active") || ["Academic marked payment as paid", "Finance marked payment as paid"].indexOf(event.action) >= 0;
         }).sort(function (a, b) { return String(b.created_at || "").localeCompare(String(a.created_at || "")); })[0];
         rows.push({
           key: "grant-" + app.id,
@@ -718,7 +718,7 @@
     },
     async roleAnalyticsSnapshot() {
       var actor = await currentActor();
-      if (["dean", "iras", "ofm"].indexOf(actor.role) < 0) throw new Error("Dean, IRAS, or Finance access required.");
+      if (["dean", "iras", "ofm"].indexOf(actor.role) < 0) throw new Error("Dean, IRAS, or Academic access required.");
       if (actor.role === "dean" && !(actor.profile && actor.profile.faculty)) throw new Error("Your Dean account is not assigned to a faculty.");
 
       var query = sb.from("applications")
@@ -846,7 +846,9 @@
         .in("application.grant_type", ACTIVE_GRANT_TYPES)
         .order("created_at", { ascending: false }).limit(80);
       if (res.error) throw res.error;
-      return res.data || [];
+      return (res.data || []).map(function (event) {
+        return Object.assign({}, event, { action: event.action ? event.action.replace(/\bFinance\b/g, "Academic") : event.action });
+      });
     },
     async saveSetting(key, value, label) {
       var me = await uid();

@@ -4,23 +4,26 @@ AU-RGMS is Assumption University's role-based portal for AU-R3 paper-presentatio
 
 ## Active roles and workflow
 
-The active roles are Researcher, Dean, IRAS, Finance/OFM, and Administrator.
+The active roles are Researcher, Dean, IRAS, Academic, and Administrator.
+
+Academic uses the existing internal `ofm` role key so existing account permissions
+remain compatible. The central demo account is `academic@au.edu`.
 
 ```text
-Researcher submission → Dean Review → IRAS Verification → Finance → Completed
+Researcher submission → Dean Review → IRAS Verification → Academic → Completed
 ```
 
 - Researchers can create AU-R3 and AU-R4 drafts, submit applications, revise returned applications, view comments and timelines, and use the role-scoped AU AI assistant.
 - Deans can access only applications and analytics in their assigned faculty.
 - IRAS can verify AU-R3 and AU-R4 applications across all faculties.
-- Finance can access only applications forwarded to Finance.
+- Academic can access only applications forwarded to Academic.
 - Administrators manage accounts and university-wide operational analytics.
 
 AU-R1, Faculty Committee, and RASSC are retired from the production portal. Historical database migrations remain in the repository so an existing database can be rebuilt safely; the current policies hide retired data and deactivate retired roles.
 
 ## Funding rule
 
-One researcher may have no more than 100,000 THB committed across AU-R3 and AU-R4 in one academic year. Academic years use the `YYYY/YYYY` format. Drafts do not reserve funding; submitted, under-review, approved, Finance, and completed applications do. The database enforces the limit atomically.
+One researcher may have no more than 100,000 THB committed across AU-R3 and AU-R4 in one academic year. Academic years use the `YYYY/YYYY` format. Drafts do not reserve funding; submitted, under-review, approved, Academic, and completed applications do. The database enforces the limit atomically.
 
 ## Environment
 

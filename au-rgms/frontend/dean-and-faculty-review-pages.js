@@ -73,7 +73,7 @@ function r3Badge(status) {
   var labels = {
     submitted: "Pending Dean Review",
     iras_review: "Under IRAS Review",
-    approved: "Awaiting Finance Approval",
+    approved: "Awaiting Academic Approval",
     active: "Paid",
     completed: "Paid / Completed",
     returned: "Returned for Revision",
@@ -519,7 +519,7 @@ function r4Badge(status) {
   var labels = {
     submitted: "Pending Dean Review",
     iras_review: "Under IRAS Verification",
-    approved: "Awaiting Finance Payment",
+    approved: "Awaiting Academic Payment",
     active: "Paid",
     completed: "Paid / Completed",
     returned: "Returned for Revision",

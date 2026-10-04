@@ -27,7 +27,7 @@ function facultyTestEmail(code, role) {
 }
 var TEST_EMAIL_FOR = {
   iras: "iras@au.edu",
-  ofm: "finance@au.edu",
+  ofm: "academic@au.edu",
   admin: "admin@au.edu"
 };
 function demoRoleForEmail(email) {
@@ -626,11 +626,11 @@ function LoginPage(_ref) {
   }, React.createElement("strong", null, "iras"), React.createElement("span", null, "AU-R3 / AU-R4 Office")), React.createElement("button", {
     type: "button",
     disabled: busy,
-    title: "finance@au.edu",
+    title: "academic@au.edu",
     onClick: function onClick() {
       return demoLogin(TEST_EMAIL_FOR.ofm);
     }
-  }, React.createElement("strong", null, "finance"), React.createElement("span", null, "OFM / Finance")), React.createElement("button", {
+  }, React.createElement("strong", null, "academic"), React.createElement("span", null, "Academic")), React.createElement("button", {
     type: "button",
     disabled: busy,
     title: "admin@au.edu",
@@ -972,7 +972,7 @@ var ROLE_CONFIG = {
   ofm: {
     nav: APP.NAV_OFM,
     homeKey: "o-dashboard",
-    crumbRoot: "OFM / Finance"
+    crumbRoot: "Academic"
   },
   admin: {
     nav: APP.NAV_ADMIN,
@@ -1560,16 +1560,16 @@ function PageRouter(_ref9) {
       return c.profile && c.profile.role === "ofm" ? React.createElement(RoleAnalyticsDashboard, {
         role: "ofm"
       }) : React.createElement(Empty, {
-        title: "Finance access required",
-        desc: "Finance Analytics is restricted to Finance accounts.",
+        title: "Academic access required",
+        desc: "Academic Analytics is restricted to Academic accounts.",
         icon: "Lock"
       });
     case "o-ai":
       return c.profile && c.profile.role === "ofm" ? React.createElement(RoleAIChatbotPage, {
         role: "ofm"
       }) : React.createElement(Empty, {
-        title: "Finance access required",
-        desc: "This AI workspace is restricted to Finance accounts.",
+        title: "Academic access required",
+        desc: "This AI workspace is restricted to Academic accounts.",
         icon: "Lock"
       });
     case "o-history":

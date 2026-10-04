@@ -33,7 +33,7 @@ const accounts = faculties.flatMap(faculty => [
   { email: "james@au.edu", full_name: "James Researcher", role: "researcher", faculty: "Vincent Mary School of Engineering, Science and Technology", department: "Information Technology", name_title: "Mr." },
   { email: "rassc@au.edu", full_name: "RASSC Test", role: "rassc", faculty: "Research Affairs", department: "RASSC", name_title: "" },
   { email: "iras@au.edu", full_name: "IRAS Test", role: "iras", faculty: "Research Affairs", department: "IRAS", name_title: "" },
-  { email: "finance@au.edu", full_name: "Finance Test", role: "ofm", faculty: "Office of Financial Management", department: "Finance", name_title: "" },
+  { email: "academic@au.edu", full_name: "Academic Test", role: "ofm", faculty: "Academic Office", department: "Academic", name_title: "" },
   { email: "admin@au.edu", full_name: "Administrator Test", role: "admin", faculty: "Information Technology", department: "Administration", name_title: "" },
 ]);
 

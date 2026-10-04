@@ -224,7 +224,7 @@ export async function irasScreen(formData: FormData) {
       { application_id: appId, contract_id: contract?.id, instalment: 2, pct: 40, amount: phase2, trigger: "On approved progress report", status: "pending" },
       { application_id: appId, contract_id: contract?.id, instalment: 3, pct: 30, amount: amount - phase1 - phase2, trigger: "On approved final report", status: "pending" },
     ]);
-    await logEvent(supabase, appId, profile, "Approved by RASSC and sent to Finance", "approved", notes);
+    await logEvent(supabase, appId, profile, "Approved by RASSC and sent to Academic", "approved", notes);
   }
   revalidatePath("/iras/screen");
   redirect("/iras/screen");

@@ -39,7 +39,7 @@ const USERS = [
   { key: "com2", email: "comm.member@au.edu",  full_name: "Dr. Anan Kittisak",        role: "committee",  title: "Dr.",           faculty: "Engineering",          department: "Academic Committee" },
   { key: "rassc", email: "rassc@au.edu",       full_name: "RASSC Test",               role: "rassc",      title: "",              faculty: "Research Affairs",     department: "RASSC" },
   { key: "iras",  email: "iras@au.edu",        full_name: "IRAS Test",                role: "iras",       title: "",              faculty: "Research Affairs",     department: "IRAS" },
-  { key: "ofm",  email: "finance@au.edu",      full_name: "Ratana Srisuk",            role: "ofm",        title: "Khun",          faculty: "Finance",              department: "OFM" },
+  { key: "ofm",  email: "academic@au.edu",      full_name: "Ratana Srisuk",            role: "ofm",        title: "Khun",          faculty: "Academic",              department: "Academic" },
   { key: "admin",email: "admin@au.edu",        full_name: "System Administrator",     role: "admin",      title: "",              faculty: "IT",                   department: "Administration" },
 ];
 

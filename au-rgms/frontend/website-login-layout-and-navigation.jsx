@@ -14,7 +14,7 @@ function facultyTestEmail(code, role) {
 }
 const TEST_EMAIL_FOR = {
   iras: "iras@au.edu",
-  ofm: "finance@au.edu",
+  ofm: "academic@au.edu",
   admin: "admin@au.edu",
 };
 function demoRoleForEmail(email) {
@@ -227,7 +227,7 @@ function LoginPage({ onLogin }) {
                 <div className="au-login-demo-section">University-wide</div>
                 <div className="au-login-demo-grid au-login-demo-grid-wide">
                   <button type="button" disabled={busy} title="iras@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.iras)}><strong>iras</strong><span>AU-R3 / AU-R4 Office</span></button>
-                  <button type="button" disabled={busy} title="finance@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.ofm)}><strong>finance</strong><span>OFM / Finance</span></button>
+                  <button type="button" disabled={busy} title="academic@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.ofm)}><strong>academic</strong><span>Academic</span></button>
                   <button type="button" disabled={busy} title="admin@au.edu" onClick={() => demoLogin(TEST_EMAIL_FOR.admin)}><strong>admin</strong><span>Administrator</span></button>
                 </div>
               </div>
@@ -421,7 +421,7 @@ const ROLE_CONFIG = {
   ofm: {
     nav: APP.NAV_OFM,
     homeKey: "o-dashboard",
-    crumbRoot: "OFM / Finance",
+    crumbRoot: "Academic",
   },
   admin: {
     nav: APP.NAV_ADMIN,
@@ -682,8 +682,8 @@ function PageRouter({ pageKey, navigate, ctx }) {
     case "i-r4-verify":      return c.role === "iras" ? <IRASr4Detail applicationId={c.selectedApplicationId} navigate={navigate} onDownload={c.onDownload} onView={c.onView} toast={c.toast} setConfirm={c.setConfirm} /> : <Empty title="IRAS access required" desc="AU-R4 verification is available only to IRAS." icon="Lock" />;
     case "o-dashboard":      return <OFMDashboard navigate={navigate} toast={c.toast} setConfirm={c.setConfirm} grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} onDownload={c.onDownload} onView={c.onView} />;
     case "o-summary":        return <OFMTotalSummary onDownload={c.onDownload} onView={c.onView} />;
-    case "o-analytics":      return c.profile && c.profile.role === "ofm" ? <RoleAnalyticsDashboard role="ofm" /> : <Empty title="Finance access required" desc="Finance Analytics is restricted to Finance accounts." icon="Lock" />;
-    case "o-ai":             return c.profile && c.profile.role === "ofm" ? <RoleAIChatbotPage role="ofm" /> : <Empty title="Finance access required" desc="This AI workspace is restricted to Finance accounts." icon="Lock" />;
+    case "o-analytics":      return c.profile && c.profile.role === "ofm" ? <RoleAnalyticsDashboard role="ofm" /> : <Empty title="Academic access required" desc="Academic Analytics is restricted to Academic accounts." icon="Lock" />;
+    case "o-ai":             return c.profile && c.profile.role === "ofm" ? <RoleAIChatbotPage role="ofm" /> : <Empty title="Academic access required" desc="This AI workspace is restricted to Academic accounts." icon="Lock" />;
     case "o-history":        return <OFMHistory grantType={c.grantType} onGrantSwitch={c.onGrantSwitch} />;
 
 
